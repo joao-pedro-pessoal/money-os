@@ -15,6 +15,10 @@ import {
   reducePosition,
 } from "@/lib/portfolio";
 import { isStablecoin } from "@/lib/portfolio/tags";
+import { STABLE_ASSET_TYPES } from "@/lib/portfolio/tags";
+import { toBase } from "@/lib/fx";
+import { getRates } from "./fx";
+import { getBaseCurrency } from "./settings";
 import {
   breakdownBy,
   stableVsFloating,
@@ -408,54 +412,56 @@ export async function getGroupedPerformance(groupBy: GroupByKey, sortKey: SortKe
 }
 
 /**
- * Total market value of everything in the portfolio, plus the market-exposed
- * portion. Used to show Net Worth as cash + portfolio, with the floating part
- * in parentheses so it's always clear how much of it isn't guaranteed.
+ * Total market value of everything in the portfolio, converted to the base
+ * currency, plus the market-exposed portion.
+ *
+ * Conversion matters here: holdings carry their own currency and synced spot
+ * balances are valued in USD. Summing them raw and adding the result to
+ * already-converted cash would report dollars as euros.
  *
  * Includes synced spot balances (USDC and friends). Those are NOT in the
  * connected account's balance — sync writes only perps equity there — so
  * counting them here adds them exactly once.
  */
 export async function getPortfolioContribution() {
-  const { holdings: rows, totals } = await listHoldingsWithPnL();
-  const synced = await syncedBalanceContribution();
-
-  const split = stableVsFloating(
-    rows.map((h) => ({
-      id: h.id,
-      symbol: h.symbol,
-      quantity: h.quantity,
-      avgEntryPrice: h.avgEntryPrice,
-      currentPrice: h.currentPrice,
-      assetType: h.assetType,
-    }))
-  );
-
-  return {
-    portfolioValue: round2(totals.totalValue + synced.total),
-    floating: round2(split.floating + synced.floating),
-    stable: round2(split.stable + synced.stable),
-  };
-}
-
-/**
- * Synced spot balances valued for the portfolio. Stablecoins count as stable
- * (capital-guaranteed); anything else is market-exposed. Unpriced tokens are
- * left out rather than counted as zero.
- */
-export async function syncedBalanceContribution() {
-  const rows = await db.select().from(platformBalances);
+  const { holdings: rows } = await listHoldingsWithPnL();
+  const [rates, base] = await Promise.all([getRates(), getBaseCurrency()]);
 
   let stable = 0;
   let floating = 0;
-  for (const b of rows) {
-    const value = b.usdValue === null ? null : Number(b.usdValue);
-    if (value === null) continue;
-    if (isStablecoin(b.coin)) stable += value;
-    else floating += value;
+  const unconverted: { amount: number; currency: string }[] = [];
+
+  const add = (amount: number, currency: string, isStable: boolean) => {
+    if (amount === 0) return;
+    const converted = toBase(amount, currency, rates, base);
+    if (converted === null) {
+      unconverted.push({ amount, currency });
+      return;
+    }
+    if (isStable) stable += converted;
+    else floating += converted;
+  };
+
+  for (const h of rows) {
+    // Cash and stablecoins are capital-stable; everything else can move.
+    const isStable = h.assetType !== null && STABLE_ASSET_TYPES.includes(h.assetType);
+    add(marketValue(h), h.currency, isStable);
   }
 
-  return { stable: round2(stable), floating: round2(floating), total: round2(stable + floating) };
+  // Synced spot balances are valued in USD by the connector.
+  const balances = await db.select().from(platformBalances);
+  for (const b of balances) {
+    if (b.usdValue === null) continue;
+    add(Number(b.usdValue), "USD", isStablecoin(b.coin));
+  }
+
+  return {
+    portfolioValue: round2(stable + floating),
+    floating: round2(floating),
+    stable: round2(stable),
+    baseCurrency: base,
+    unconverted,
+  };
 }
 
 function round2(n: number): number {

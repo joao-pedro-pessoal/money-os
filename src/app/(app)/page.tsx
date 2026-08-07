@@ -3,7 +3,7 @@ import { listTransactions } from "@/actions/transactions";
 import { getPortfolioContribution } from "@/actions/investments";
 import { getRates } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
-import { sumInBase } from "@/lib/fx";
+import { sumInBase, toBase } from "@/lib/fx";
 import { netWorth } from "@/lib/accounting";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
@@ -18,11 +18,12 @@ export default async function DashboardPage() {
   // Balances can be in different currencies (e.g. a USD exchange account), so
   // they are converted to EUR before being summed. Anything with no known rate
   // is reported rather than added at 1:1.
-  const { total: cash, unconverted } = sumInBase(
+  const { total: cash, unconverted: cashUnconverted } = sumInBase(
     accounts.map((a) => ({ amount: a.balance, currency: a.currency })),
     rates,
     base
   );
+  const unconverted = [...cashUnconverted, ...portfolio.unconverted];
 
   // Positions are tracked separately in /investments and added on top of cash;
   // the two never overlap.
@@ -50,8 +51,24 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <h1 className="text-lg font-semibold">Dashboard</h1>
 
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard label="Net Worth" value={nw} floating={portfolio.floating} currency={base} />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <StatCard
+          label="Net Worth"
+          value={nw}
+          floating={portfolio.floating}
+          currency={base}
+          note={
+            portfolio.portfolioValue > 0
+              ? `cash ${fmt(cash, base)} + investments ${fmt(portfolio.portfolioValue, base)}`
+              : undefined
+          }
+        />
+        <StatCard
+          label="Investments"
+          value={portfolio.portfolioValue}
+          floating={portfolio.floating}
+          currency={base}
+        />
         <StatCard label="Free Cash" value={totalFree} currency={base} />
         <StatCard label="Allocated Cash" value={totalAllocated} currency={base} />
         <StatCard label="Net Cash Flow (month)" value={income - expenses} currency={base} />
@@ -106,6 +123,11 @@ export default async function DashboardPage() {
                   </td>
                   <td>
                     <Money value={a.balance} currency={a.currency} />
+                    {a.currency !== base && (
+                      <div className="text-xs text-[var(--muted)]">
+                        ≈ {fmt(toBase(a.balance, a.currency, rates, base) ?? 0, base)}
+                      </div>
+                    )}
                   </td>
                   <td>
                     <Money value={a.free} currency={a.currency} />
@@ -148,16 +170,23 @@ export default async function DashboardPage() {
  * `floating` is the market-exposed slice of the value — shown in parentheses so
  * the headline number never hides how much of it isn't guaranteed.
  */
+/** Formats an amount for the small note lines, respecting nothing but locale. */
+function fmt(value: number, currency: string): string {
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency }).format(value);
+}
+
 function StatCard({
   label,
   value,
   floating,
   currency = "EUR",
+  note,
 }: {
   label: string;
   value: number;
   floating?: number;
   currency?: string;
+  note?: string;
 }) {
   return (
     <div className="card p-4">
@@ -174,6 +203,7 @@ function StatCard({
       {floating !== undefined && floating > 0 && (
         <div className="text-[10px] text-[var(--muted)] mt-1">in parentheses: not guaranteed</div>
       )}
+      {note && <div className="text-[10px] text-[var(--muted)] mt-1">{note}</div>}
     </div>
   );
 }

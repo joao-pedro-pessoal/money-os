@@ -70,7 +70,7 @@ export default async function InvestmentsPage({
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Stat label="Portfolio Value" value={contribution.portfolioValue} />
+        <Stat label="Portfolio Value" value={contribution.portfolioValue} currency={contribution.baseCurrency} />
         <Stat label="Cost Basis" value={totals.totalCost} />
         <Stat label="Unrealized P&L" value={totals.totalPnL} className={pnlColor} />
         <div className="card p-4">
@@ -280,12 +280,22 @@ export default async function InvestmentsPage({
   );
 }
 
-function Stat({ label, value, className = "" }: { label: string; value: number; className?: string }) {
+function Stat({
+  label,
+  value,
+  className = "",
+  currency = "EUR",
+}: {
+  label: string;
+  value: number;
+  className?: string;
+  currency?: string;
+}) {
   return (
     <div className="card p-4">
       <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
       <div className={`text-xl font-semibold truncate ${className}`}>
-        <Money value={value} />
+        <Money value={value} currency={currency} />
       </div>
     </div>
   );
