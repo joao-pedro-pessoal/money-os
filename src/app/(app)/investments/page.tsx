@@ -2,15 +2,26 @@ import { listHoldingsWithPnL, createHolding, getPortfolioValueOverTime } from "@
 import { Money } from "@/components/PrivacyContext";
 import DonutChart from "@/components/DonutChart";
 import NetWorthChart from "@/components/NetWorthChart";
+import HoldingTags from "@/components/HoldingTags";
+import { RISK_LEVELS, EXPECTED_RETURNS, TIME_HORIZONS, LIQUIDITY_LEVELS } from "@/lib/portfolio/tags";
 import Link from "next/link";
 
-export default async function InvestmentsPage() {
+export default async function InvestmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ risk?: string; time?: string }>;
+}) {
+  const { risk, time } = await searchParams;
   const [{ holdings, totals }, valueSeries] = await Promise.all([
     listHoldingsWithPnL(),
     getPortfolioValueOverTime(),
   ]);
 
-  const allocation = holdings
+  const filtered = holdings.filter(
+    (h) => (!risk || h.riskLevel === risk) && (!time || h.timeHorizon === time)
+  );
+
+  const allocation = filtered
     .filter((h) => h.marketValue > 0)
     .map((h) => ({ name: h.symbol, value: h.marketValue }));
 
@@ -58,10 +69,33 @@ export default async function InvestmentsPage() {
 
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 card p-4">
-          <div className="text-sm font-medium mb-3">Holdings</div>
-          {holdings.length === 0 ? (
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium">Holdings</div>
+            <form className="flex gap-2 text-xs" method="GET">
+              <select name="risk" defaultValue={risk ?? ""} className="input py-1">
+                <option value="">All risk levels</option>
+                {RISK_LEVELS.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+              <select name="time" defaultValue={time ?? ""} className="input py-1">
+                <option value="">All time horizons</option>
+                {TIME_HORIZONS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="btn py-1 px-3">
+                Filter
+              </button>
+            </form>
+          </div>
+          {filtered.length === 0 ? (
             <div className="text-sm text-[var(--muted)] py-8 text-center">
-              No holdings yet. Add your first position below.
+              {holdings.length === 0 ? "No holdings yet. Add your first position below." : "No holdings match this filter."}
             </div>
           ) : (
             <table className="data-table">
@@ -77,13 +111,19 @@ export default async function InvestmentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {holdings.map((h) => (
+                {filtered.map((h) => (
                   <tr key={h.id}>
                     <td>
                       <Link href={`/investments/${h.id}`} className="hover:underline font-medium">
                         {h.symbol}
                       </Link>
                       {h.name && <div className="text-xs text-[var(--muted)]">{h.name}</div>}
+                      <HoldingTags
+                        riskLevel={h.riskLevel}
+                        expectedReturn={h.expectedReturn}
+                        timeHorizon={h.timeHorizon}
+                        liquidity={h.liquidity}
+                      />
                     </td>
                     <td>{h.platform}</td>
                     <td>{h.quantity}</td>
@@ -129,6 +169,43 @@ export default async function InvestmentsPage() {
             <input name="avgEntryPrice" type="number" step="0.0001" placeholder="Avg entry price" className="input" required />
             <input name="currentPrice" type="number" step="0.0001" placeholder="Current price (defaults to entry)" className="input" />
           </div>
+
+          <div className="pt-1 text-xs text-[var(--muted)]">Asset allocation tags (optional)</div>
+          <div className="grid grid-cols-2 gap-2">
+            <select name="riskLevel" className="input" defaultValue="">
+              <option value="">Risk — unset</option>
+              {RISK_LEVELS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <select name="timeHorizon" className="input" defaultValue="">
+              <option value="">Time horizon — unset</option>
+              {TIME_HORIZONS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            <select name="expectedReturn" className="input" defaultValue="">
+              <option value="">Expected return — unset</option>
+              {EXPECTED_RETURNS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <select name="liquidity" className="input" defaultValue="">
+              <option value="">Liquidity — unset</option>
+              {LIQUIDITY_LEVELS.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button type="submit" className="btn w-full">
             Add position
           </button>

@@ -7,6 +7,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { marketValue, costBasis, unrealizedPnL, unrealizedPnLPercent, portfolioTotals } from "@/lib/portfolio";
 
+/** "" from an unselected <select> becomes NULL instead of an empty string in the DB. */
+function tagValue(formData: FormData, field: string): string | null {
+  const v = String(formData.get(field) ?? "").trim();
+  return v === "" ? null : v;
+}
+
 export async function listHoldingsWithPnL() {
   const rows = await db.select().from(holdings);
   const parsed = rows.map((h) => ({
@@ -44,12 +50,29 @@ export async function createHolding(formData: FormData) {
   const avgEntryPrice = String(formData.get("avgEntryPrice") ?? "0");
   const currentPrice = String(formData.get("currentPrice") ?? formData.get("avgEntryPrice") ?? "0");
   const currency = String(formData.get("currency") ?? "EUR");
+  const riskLevel = tagValue(formData, "riskLevel");
+  const expectedReturn = tagValue(formData, "expectedReturn");
+  const timeHorizon = tagValue(formData, "timeHorizon");
+  const liquidity = tagValue(formData, "liquidity");
 
   if (!symbol || !platform) throw new Error("Symbol and platform are required");
 
   const [h] = await db
     .insert(holdings)
-    .values({ symbol, name, platform, quantity, avgEntryPrice, currentPrice, currency, lastPriceUpdate: new Date() })
+    .values({
+      symbol,
+      name,
+      platform,
+      quantity,
+      avgEntryPrice,
+      currentPrice,
+      currency,
+      riskLevel,
+      expectedReturn,
+      timeHorizon,
+      liquidity,
+      lastPriceUpdate: new Date(),
+    })
     .returning();
 
   await db.insert(holdingSnapshots).values({
@@ -77,12 +100,28 @@ export async function updateHolding(formData: FormData) {
   const quantity = String(formData.get("quantity") ?? "0");
   const avgEntryPrice = String(formData.get("avgEntryPrice") ?? "0");
   const currency = String(formData.get("currency") ?? "EUR");
+  const riskLevel = tagValue(formData, "riskLevel");
+  const expectedReturn = tagValue(formData, "expectedReturn");
+  const timeHorizon = tagValue(formData, "timeHorizon");
+  const liquidity = tagValue(formData, "liquidity");
 
   if (!symbol || !platform) throw new Error("Symbol and platform are required");
 
   await db
     .update(holdings)
-    .set({ symbol, name, platform, quantity, avgEntryPrice, currency, updatedAt: new Date() })
+    .set({
+      symbol,
+      name,
+      platform,
+      quantity,
+      avgEntryPrice,
+      currency,
+      riskLevel,
+      expectedReturn,
+      timeHorizon,
+      liquidity,
+      updatedAt: new Date(),
+    })
     .where(eq(holdings.id, id));
 
   revalidatePath("/investments");

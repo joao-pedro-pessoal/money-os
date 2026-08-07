@@ -189,6 +189,15 @@ export const holdings = pgTable("holdings", {
   currentPrice: numeric("current_price", { precision: 18, scale: 4 }).notNull(),
   currency: text("currency").notNull().default("EUR"),
   notes: text("notes"),
+  // ---- Asset allocation tags (classification only — never affect P&L math) ----
+  // risk: low | medium | high | very_high
+  // expectedReturn: conservative | moderate | aggressive
+  // timeHorizon: short | medium | long
+  // liquidity: high | low
+  riskLevel: text("risk_level"),
+  expectedReturn: text("expected_return"),
+  timeHorizon: text("time_horizon"),
+  liquidity: text("liquidity"),
   lastPriceUpdate: timestamp("last_price_update", { withTimezone: true }).defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

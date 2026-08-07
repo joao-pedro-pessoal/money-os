@@ -1,4 +1,6 @@
 import { getHolding, getHoldingSnapshots, updateHolding, updateHoldingPrice, deleteHolding } from "@/actions/investments";
+import HoldingTags from "@/components/HoldingTags";
+import { RISK_LEVELS, EXPECTED_RETURNS, TIME_HORIZONS, LIQUIDITY_LEVELS } from "@/lib/portfolio/tags";
 import { marketValue, costBasis, unrealizedPnL, unrealizedPnLPercent } from "@/lib/portfolio";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
@@ -27,6 +29,12 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             {holding.symbol}
             {holding.name && <span className="text-[var(--muted)] font-normal"> — {holding.name}</span>}
           </h1>
+          <HoldingTags
+            riskLevel={holding.riskLevel}
+            expectedReturn={holding.expectedReturn}
+            timeHorizon={holding.timeHorizon}
+            liquidity={holding.liquidity}
+          />
         </div>
         <form action={deleteHolding}>
           <input type="hidden" name="id" value={holding.id} />
@@ -139,6 +147,43 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             className="input"
             required
           />
+
+          <div className="pt-1 text-xs text-[var(--muted)]">Asset allocation tags</div>
+          <div className="grid grid-cols-2 gap-2">
+            <select name="riskLevel" className="input" defaultValue={holding.riskLevel ?? ""}>
+              <option value="">Risk — unset</option>
+              {RISK_LEVELS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <select name="timeHorizon" className="input" defaultValue={holding.timeHorizon ?? ""}>
+              <option value="">Time horizon — unset</option>
+              {TIME_HORIZONS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            <select name="expectedReturn" className="input" defaultValue={holding.expectedReturn ?? ""}>
+              <option value="">Expected return — unset</option>
+              {EXPECTED_RETURNS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <select name="liquidity" className="input" defaultValue={holding.liquidity ?? ""}>
+              <option value="">Liquidity — unset</option>
+              {LIQUIDITY_LEVELS.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button type="submit" className="btn w-full">
             Save changes
           </button>
