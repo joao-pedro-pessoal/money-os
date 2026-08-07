@@ -111,6 +111,56 @@ drizzle/                    Generated SQL migrations (commit these)
    actually matches your bank's export format — it likely won't on the first
    try, and the mapping is currently hardcoded rather than a UI step (that
    UI step is in `MVP_SPEC.md` §7 and wasn't built yet).
-3. Once V1 feels solid on real data for a few weeks, move to V1.5
-   (`PRODUCT_VISION.md` roadmap): HyperliquidConnector, which is where the
-   sync engine / normalizer architecture actually gets introduced.
+3. V1.5 (Hyperliquid) is now built — see below.
+
+## V1.5 — Hyperliquid (read-only)
+
+Add a connection in **Connections**: pick the account it feeds and paste your
+**public wallet address** (`0x…`, 42 characters). Hyperliquid's `info` endpoint
+is public, so there is no API key, no signature and nothing secret to store.
+
+**Accounting rule — read this before trusting the numbers.** The exchange
+reports `accountValue` (equity), which *already includes* the unrealized P&L of
+every open position. Sync writes that equity to the account's balance, and the
+positions on **/positions** are shown for detail only — they are never added on
+top. Adding them would count the same money twice (`PRODUCT_VISION.md` §9).
+
+Note this is the *opposite* rule to the manual Investments module, where an
+account balance is idle cash and positions add on top. Both are correct; they
+just describe different things.
+
+Balances are stored as `numeric(18,2)`, so equity is rounded to cent precision.
+
+### Automatic syncing
+
+The "Sync now" button always works. For unattended syncing, set `SYNC_SECRET`
+in `.env` and have your scheduler POST to the endpoint:
+
+```
+curl -X POST http://localhost:3000/api/sync -H "x-sync-secret: YOUR_SECRET"
+```
+
+On Windows, Task Scheduler can run that command on a timer. The endpoint is
+disabled (503) while `SYNC_SECRET` is unset, and returns 401 on a wrong secret,
+so it can never become an open trigger for outbound requests.
+
+### What was NOT built (deliberate deviation from TECH_STACK.md §4)
+
+`TECH_STACK.md` called for a separate worker service with BullMQ + Redis at
+V1.5. That was skipped: for one user and one connector it means running Redis
+and a second process for no functional gain. The part that actually matters —
+`Connector → Normalizer → DB → UI` — is in place (`src/lib/connectors/`), and
+Bybit/IBKR plug into `connectorFor()` in `src/actions/connections.ts` without
+touching anything else. Revisit the queue when there are several connectors
+with real rate-limit and retry pressure.
+
+### Verification status
+
+The parser, connector and freshness logic are unit tested (26 tests) against
+fixtures taken from Hyperliquid's official docs, and the sync path was verified
+end-to-end against a real Postgres with the network stubbed — including that
+Net Worth equals equity and not equity + position value. The one thing not
+verified here is the actual network call to `api.hyperliquid.xyz`, which the
+build sandbox blocks. **Your first real "Sync now" is the test that matters.**
+If it fails, the error appears on the Connections page and in `sync_logs`; the
+account balance is left untouched.

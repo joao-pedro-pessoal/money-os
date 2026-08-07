@@ -312,3 +312,104 @@ export const transactionsRelations = relations(transactions, ({ one, many }) => 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   subcategories: many(subcategories),
 }));
+
+// ================= Connector / Sync layer (V1.5) =================
+// Generic on purpose: Bybit and IBKR must reuse these tables unchanged.
+
+// ---------- AccountConnection ----------
+// Links one of our Accounts to an external platform.
+//
+// Hyperliquid's read-only info API needs only a public wallet address, so
+// there is nothing secret to store. `encryptedSecret` exists for platforms
+// that do require credentials (Bybit, IBKR) — it must never hold plaintext,
+// and no connector may ever write an API key into `externalId`.
+export const accountConnections = pgTable("account_connections", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  platform: text("platform").notNull(), // "hyperliquid" | "bybit" | ...
+  externalId: text("external_id").notNull(), // public wallet address / account id
+  label: text("label"),
+  encryptedSecret: text("encrypted_secret"),
+  active: boolean("active").notNull().default(true),
+  lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+  lastSyncStatus: text("last_sync_status"), // "ok" | "error"
+  lastSyncError: text("last_sync_error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------- Position (open position on an automated account) ----------
+// NOTE ON DOUBLE COUNTING: a position's value is already inside the account's
+// equity (accountValue), which sync writes to `accounts.balance`. Positions
+// here are therefore DISPLAY ONLY and must never be summed into Net Worth.
+// This is the opposite of manual `holdings`, where the balance is cash only
+// and positions add on top.
+export const positions = pgTable("positions", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  connectionId: text("connection_id")
+    .notNull()
+    .references(() => accountConnections.id, { onDelete: "cascade" }),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  coin: text("coin").notNull(),
+  side: text("side").notNull(), // "long" | "short" (derived from signed size)
+  size: numeric("size", { precision: 30, scale: 10 }).notNull(),
+  entryPrice: numeric("entry_price", { precision: 20, scale: 8 }),
+  markPrice: numeric("mark_price", { precision: 20, scale: 8 }),
+  positionValue: numeric("position_value", { precision: 20, scale: 4 }),
+  unrealizedPnl: numeric("unrealized_pnl", { precision: 20, scale: 4 }),
+  returnOnEquity: numeric("return_on_equity", { precision: 12, scale: 6 }),
+  leverage: numeric("leverage", { precision: 10, scale: 2 }),
+  leverageType: text("leverage_type"), // "cross" | "isolated"
+  liquidationPrice: numeric("liquidation_price", { precision: 20, scale: 8 }),
+  marginUsed: numeric("margin_used", { precision: 20, scale: 4 }),
+  cumFunding: numeric("cum_funding", { precision: 20, scale: 6 }),
+  openedAt: timestamp("opened_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const positionSnapshots = pgTable("position_snapshots", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  connectionId: text("connection_id")
+    .notNull()
+    .references(() => accountConnections.id, { onDelete: "cascade" }),
+  coin: text("coin").notNull(),
+  timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow().notNull(),
+  markPrice: numeric("mark_price", { precision: 20, scale: 8 }),
+  positionValue: numeric("position_value", { precision: 20, scale: 4 }),
+  unrealizedPnl: numeric("unrealized_pnl", { precision: 20, scale: 4 }),
+});
+
+// ---------- SyncLog ----------
+export const syncLogs = pgTable("sync_logs", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  connectionId: text("connection_id")
+    .notNull()
+    .references(() => accountConnections.id, { onDelete: "cascade" }),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  status: text("status").notNull(), // "ok" | "error"
+  positionsFound: numeric("positions_found", { precision: 6, scale: 0 }),
+  equity: numeric("equity", { precision: 20, scale: 4 }),
+  message: text("message"),
+  trigger: text("trigger"), // "manual" | "scheduled"
+});
+
+export const accountConnectionsRelations = relations(accountConnections, ({ one, many }) => ({
+  account: one(accounts, {
+    fields: [accountConnections.accountId],
+    references: [accounts.id],
+  }),
+  positions: many(positions),
+  logs: many(syncLogs),
+}));
+
+export const positionsRelations = relations(positions, ({ one }) => ({
+  connection: one(accountConnections, {
+    fields: [positions.connectionId],
+    references: [accountConnections.id],
+  }),
+}));

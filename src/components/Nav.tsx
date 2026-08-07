@@ -14,7 +14,11 @@ const links = [
   { href: "/settings", label: "Settings" },
 ];
 
-const investmentLinks = [{ href: "/investments", label: "Investments" }];
+const investmentLinks = [
+  { href: "/investments", label: "Investments" },
+  { href: "/positions", label: "Open Positions" },
+  { href: "/connections", label: "Connections" },
+];
 
 export default function Nav() {
   const pathname = usePathname();

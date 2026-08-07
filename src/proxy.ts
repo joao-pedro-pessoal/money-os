@@ -3,7 +3,14 @@ import { SESSION_COOKIE_NAME, expectedSessionValue } from "@/lib/auth";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (pathname.startsWith("/login") || pathname.startsWith("/_next") || pathname.startsWith("/api/public")) {
+  // /api/sync is exempt from the session cookie on purpose: it's called by a
+  // scheduler, not a browser, and enforces its own shared-secret check.
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api/public") ||
+    pathname.startsWith("/api/sync")
+  ) {
     return NextResponse.next();
   }
 
