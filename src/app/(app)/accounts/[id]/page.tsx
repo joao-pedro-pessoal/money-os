@@ -1,6 +1,7 @@
-import { getAccount, getAccountSnapshots, updateAccountBalance } from "@/actions/accounts";
+import { getAccount, getAccountSnapshots, updateAccountBalance, updateAccount, archiveAccount } from "@/actions/accounts";
 import { listBucketsWithTotals, setAllocation } from "@/actions/buckets";
 import { Money } from "@/components/PrivacyContext";
+import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { notFound } from "next/navigation";
 
 export default async function AccountDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -16,9 +17,18 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-8">
-      <div>
-        <div className="text-xs text-[var(--muted)]">{account.institution}</div>
-        <h1 className="text-lg font-semibold">{account.name}</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs text-[var(--muted)]">{account.institution}</div>
+          <h1 className="text-lg font-semibold">{account.name}</h1>
+        </div>
+        <form action={archiveAccount}>
+          <input type="hidden" name="id" value={account.id} />
+          <ConfirmSubmitButton
+            label={account.active ? "Archive account" : "Account archived"}
+            confirmMessage={`Archive "${account.name}"? Its history stays intact, it just leaves the active lists.`}
+          />
+        </form>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -52,14 +62,15 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               <option value="withdrawal">Withdrawal</option>
               <option value="income">Income</option>
               <option value="expense">Expense</option>
-              <option value="correction">Correction</option>
-              <option value="other">Other</option>
+              <option value="correction">Correction (no cash-flow impact)</option>
+              <option value="other">Other (no cash-flow impact)</option>
             </select>
             <button type="submit" className="btn w-full">
               Save
             </button>
             <p className="text-xs text-[var(--muted)]">
-              The difference vs. the current balance is logged to the audit log with this classification.
+              The difference vs. the current balance is recorded as a transaction of this type (except
+              Correction/Other, which just fixes the number without affecting cash flow).
             </p>
           </form>
         </div>
@@ -93,12 +104,36 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
                 </option>
               ))}
             </select>
-            <input name="amount" type="number" step="0.01" placeholder="Amount" className="input" required />
+            <input name="amount" type="number" step="0.01" placeholder="Amount (0 removes it)" className="input" required />
             <button type="submit" className="btn w-full">
               Set allocation
             </button>
           </form>
         </div>
+      </div>
+
+      <div className="card p-4 max-w-lg">
+        <div className="text-sm font-medium mb-3">Edit account details</div>
+        <form action={updateAccount} className="space-y-3">
+          <input type="hidden" name="id" value={account.id} />
+          <input name="institution" defaultValue={account.institution} className="input" required />
+          <input name="name" defaultValue={account.name} className="input" required />
+          <select name="accountType" defaultValue={account.accountType} className="input">
+            <option value="bank">Bank</option>
+            <option value="broker">Broker</option>
+            <option value="exchange">Exchange</option>
+            <option value="cash">Cash</option>
+            <option value="other">Other</option>
+          </select>
+          <select name="currency" defaultValue={account.currency} className="input">
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+          </select>
+          <textarea name="notes" defaultValue={account.notes ?? ""} placeholder="Notes" className="input" rows={2} />
+          <button type="submit" className="btn w-full">
+            Save changes
+          </button>
+        </form>
       </div>
     </div>
   );

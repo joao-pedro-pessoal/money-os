@@ -1,4 +1,4 @@
-import { listAccountsWithState, createAccount } from "@/actions/accounts";
+import { listAccountsWithState, createAccount, listArchivedAccounts, unarchiveAccount } from "@/actions/accounts";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
 
@@ -9,7 +9,7 @@ const STATE_COLOR: Record<string, string> = {
 };
 
 export default async function AccountsPage() {
-  const accounts = await listAccountsWithState();
+  const [accounts, archived] = await Promise.all([listAccountsWithState(), listArchivedAccounts()]);
 
   return (
     <div className="space-y-8">
@@ -76,6 +76,41 @@ export default async function AccountsPage() {
           </button>
         </form>
       </div>
+
+      {archived.length > 0 && (
+        <div className="card p-4">
+          <div className="text-sm font-medium mb-3 text-[var(--muted)]">Archived accounts</div>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Institution</th>
+                <th>Name</th>
+                <th>Balance</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {archived.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.institution}</td>
+                  <td>{a.name}</td>
+                  <td>
+                    <Money value={Number(a.balance)} currency={a.currency} />
+                  </td>
+                  <td>
+                    <form action={unarchiveAccount}>
+                      <input type="hidden" name="id" value={a.id} />
+                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
+                        Unarchive
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

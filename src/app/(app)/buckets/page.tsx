@@ -1,5 +1,6 @@
 import { listBucketsWithTotals, createBucket } from "@/actions/buckets";
 import { Money } from "@/components/PrivacyContext";
+import Link from "next/link";
 
 export default async function BucketsPage() {
   const buckets = await listBucketsWithTotals();
@@ -15,7 +16,7 @@ export default async function BucketsPage() {
           return (
             <div key={b.id} className="card p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium">{b.name}</div>
+                <Link href={`/buckets/${b.id}`} className="text-sm font-medium hover:underline">{b.name}</Link>
                 <div className="text-sm">
                   <Money value={b.total} />
                   {target ? <span className="text-[var(--muted)]"> / <Money value={target} /></span> : null}

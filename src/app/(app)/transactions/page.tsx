@@ -1,6 +1,8 @@
-import { listTransactions, createTransaction, createTransfer, listCategories } from "@/actions/transactions";
+import { listTransactions, createTransaction, createTransfer, listCategories, deleteTransaction } from "@/actions/transactions";
 import { listAccountsWithState } from "@/actions/accounts";
 import { Money } from "@/components/PrivacyContext";
+import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import Link from "next/link";
 
 export default async function TransactionsPage() {
   const [txs, accounts, categories] = await Promise.all([
@@ -88,6 +90,7 @@ export default async function TransactionsPage() {
               <th>Category</th>
               <th>Description</th>
               <th>Amount</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -99,6 +102,24 @@ export default async function TransactionsPage() {
                 <td>{t.description || t.merchant}</td>
                 <td>
                   <Money value={Number(t.amount)} />
+                </td>
+                <td className="whitespace-nowrap">
+                  {t.type !== "transfer" && (
+                    <Link href={`/transactions/${t.id}/edit`} className="text-xs text-[var(--accent)] hover:underline mr-3">
+                      Edit
+                    </Link>
+                  )}
+                  <form action={deleteTransaction} className="inline">
+                    <input type="hidden" name="id" value={t.id} />
+                    <ConfirmSubmitButton
+                      label="Delete"
+                      confirmMessage={
+                        t.type === "transfer"
+                          ? "Delete this transfer? Both legs will be removed and both account balances reversed."
+                          : "Delete this transaction? The account balance will be adjusted back."
+                      }
+                    />
+                  </form>
                 </td>
               </tr>
             ))}

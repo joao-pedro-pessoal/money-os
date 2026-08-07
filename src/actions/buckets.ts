@@ -34,6 +34,11 @@ export async function listBucketsWithTotals() {
   });
 }
 
+export async function getBucket(id: string) {
+  const [bucket] = await db.select().from(buckets).where(eq(buckets.id, id));
+  return bucket;
+}
+
 export async function createBucket(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "");
@@ -55,7 +60,43 @@ export async function createBucket(formData: FormData) {
   revalidatePath("/money-map");
 }
 
-/** Upsert an allocation of `amount` from `accountId` into `bucketId`. */
+export async function updateBucket(formData: FormData) {
+  const id = String(formData.get("id"));
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "");
+  const color = String(formData.get("color") ?? "#6366f1");
+  const targetAmount = formData.get("targetAmount") ? String(formData.get("targetAmount")) : null;
+
+  if (!name) throw new Error("Bucket name is required");
+
+  await db.update(buckets).set({ name, description, color, targetAmount }).where(eq(buckets.id, id));
+
+  await db.insert(auditLog).values({
+    entityType: "bucket",
+    entityId: id,
+    action: "bucket_edited",
+    details: JSON.stringify({ name }),
+  });
+
+  revalidatePath("/buckets");
+  revalidatePath(`/buckets/${id}`);
+  revalidatePath("/money-map");
+}
+
+/** Deletes the bucket and all its allocations (cascade) — freed money goes back to Free Cash. */
+export async function deleteBucket(formData: FormData) {
+  const id = String(formData.get("id"));
+
+  await db.insert(auditLog).values({ entityType: "bucket", entityId: id, action: "bucket_deleted" });
+  await db.delete(buckets).where(eq(buckets.id, id));
+
+  revalidatePath("/buckets");
+  revalidatePath("/money-map");
+  revalidatePath("/accounts");
+  revalidatePath("/");
+}
+
+/** Upsert an allocation of `amount` from `accountId` into `bucketId`. Amount 0 removes it. */
 export async function setAllocation(formData: FormData) {
   const accountId = String(formData.get("accountId"));
   const bucketId = String(formData.get("bucketId"));
@@ -66,12 +107,14 @@ export async function setAllocation(formData: FormData) {
     .from(bucketAllocations)
     .where(and(eq(bucketAllocations.accountId, accountId), eq(bucketAllocations.bucketId, bucketId)));
 
-  if (existing) {
+  if (Number(amount) === 0 && existing) {
+    await db.delete(bucketAllocations).where(eq(bucketAllocations.id, existing.id));
+  } else if (existing) {
     await db
       .update(bucketAllocations)
       .set({ amount, updatedAt: new Date() })
       .where(eq(bucketAllocations.id, existing.id));
-  } else {
+  } else if (Number(amount) !== 0) {
     await db.insert(bucketAllocations).values({ accountId, bucketId, amount });
   }
 
@@ -83,6 +126,7 @@ export async function setAllocation(formData: FormData) {
   });
 
   revalidatePath("/buckets");
+  revalidatePath(`/buckets/${bucketId}`);
   revalidatePath("/money-map");
   revalidatePath("/accounts");
   revalidatePath(`/accounts/${accountId}`);
