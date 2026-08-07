@@ -14,8 +14,17 @@ const links = [
   { href: "/settings", label: "Settings" },
 ];
 
+const investmentLinks = [{ href: "/investments", label: "Investments" }];
+
 export default function Nav() {
   const pathname = usePathname();
+
+  const linkClass = (href: string) =>
+    `block rounded-lg px-3 py-2 text-sm ${
+      pathname === href
+        ? "bg-[var(--surface-2)] text-[var(--foreground)]"
+        : "text-[var(--muted)] hover:text-[var(--foreground)]"
+    }`;
 
   return (
     <nav className="w-56 shrink-0 border-r border-[var(--border)] p-4 min-h-screen">
@@ -28,19 +37,27 @@ export default function Nav() {
       <ul className="space-y-1">
         {links.map((l) => (
           <li key={l.href}>
-            <Link
-              href={l.href}
-              className={`block rounded-lg px-3 py-2 text-sm ${
-                pathname === l.href
-                  ? "bg-[var(--surface-2)] text-[var(--foreground)]"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
+            <Link href={l.href} className={linkClass(l.href)}>
               {l.label}
             </Link>
           </li>
         ))}
       </ul>
+
+      <div className="mt-6 pt-4 border-t border-[var(--border)]">
+        <div className="px-3 mb-2 text-[10px] uppercase tracking-wider text-[var(--muted)]">
+          Not guaranteed
+        </div>
+        <ul className="space-y-1">
+          {investmentLinks.map((l) => (
+            <li key={l.href}>
+              <Link href={l.href} className={linkClass(l.href)}>
+                {l.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
     </nav>
   );
 }

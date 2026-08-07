@@ -174,6 +174,40 @@ export const auditLog = pgTable("audit_log", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ---------- Holding (Investment Portfolio — separate from Money OS accounts) ----------
+// This is deliberately NOT linked to `accounts`/`transactions`. Money OS tracks
+// cash you control; a Holding represents money you've put at risk in the
+// market — unrealized value, not guaranteed. Keeping them unlinked avoids any
+// double counting between Net Worth and Portfolio Value.
+export const holdings = pgTable("holdings", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  symbol: text("symbol").notNull(),
+  name: text("name"),
+  platform: text("platform").notNull(),
+  quantity: numeric("quantity", { precision: 20, scale: 8 }).notNull(),
+  avgEntryPrice: numeric("avg_entry_price", { precision: 18, scale: 4 }).notNull(),
+  currentPrice: numeric("current_price", { precision: 18, scale: 4 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  notes: text("notes"),
+  lastPriceUpdate: timestamp("last_price_update", { withTimezone: true }).defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const holdingSnapshots = pgTable("holding_snapshots", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  holdingId: text("holding_id")
+    .notNull()
+    .references(() => holdings.id, { onDelete: "cascade" }),
+  timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow().notNull(),
+  price: numeric("price", { precision: 18, scale: 4 }).notNull(),
+  value: numeric("value", { precision: 18, scale: 2 }).notNull(),
+});
+
+export const holdingsRelations = relations(holdings, ({ many }) => ({
+  snapshots: many(holdingSnapshots),
+}));
+
 // ---------- Relations ----------
 export const accountsRelations = relations(accounts, ({ many }) => ({
   transactions: many(transactions),

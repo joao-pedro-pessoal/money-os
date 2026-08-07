@@ -15,6 +15,13 @@
       "when": 1786123382438,
       "tag": "0001_eminent_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786124866571,
+      "tag": "0002_glorious_galactus",
+      "breakpoints": true
     }
   ]
 }
