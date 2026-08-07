@@ -1,5 +1,5 @@
 import { listBucketsWithTotals, createBucket, addToAllocation } from "@/actions/buckets";
-import { getBucketPlan, applyBucketPlan } from "@/actions/plan";
+import { getBucketPlan, applyBucketPlan, fitOtherPercentages } from "@/actions/plan";
 import { listAccountsWithState } from "@/actions/accounts";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
@@ -58,8 +58,13 @@ export default async function BucketsPage() {
               <div className="text-sm font-medium">Allocation plan</div>
               <div className="text-xs text-[var(--muted)] mt-1">
                 Give each bucket a share of your money and the app works out where you stand. Available:{" "}
-                <Money value={plan.available} currency={plan.baseCurrency} /> · planned {plan.totalPercent}%
-                {plan.unplannedPercent > 0 && <> · {plan.unplannedPercent}% left free</>}
+                <Money value={plan.available} currency={plan.baseCurrency} /> · planned{" "}
+                <span className={plan.overcommitted ? "text-[var(--red)]" : undefined}>
+                  {plan.totalPercent}%
+                </span>
+                {plan.unplannedPercent > 0 && (
+                  <> · <span className="text-[var(--green)]">{plan.unplannedPercent}% still free</span></>
+                )}
               </div>
             </div>
             {plan.totalPercent > 0 && !plan.overcommitted && (
@@ -72,8 +77,23 @@ export default async function BucketsPage() {
           </div>
 
           {plan.overcommitted && (
-            <div className="text-xs text-[var(--red)] mb-3">
-              Your percentages add up to {plan.totalPercent}%. Bring them to 100% or less before applying.
+            <div className="mb-3">
+              <div className="text-xs text-[var(--red)] mb-2">
+                Your percentages add up to {plan.totalPercent}%. Keep one as it is and I&apos;ll fit the others
+                around it:
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {plan.rows
+                  .filter((r) => r.targetPercent !== null)
+                  .map((r) => (
+                    <form action={fitOtherPercentages} key={r.id}>
+                      <input type="hidden" name="keepId" value={r.id} />
+                      <button type="submit" className="btn py-1 px-3 text-xs">
+                        Keep {r.name} at {r.targetPercent}%
+                      </button>
+                    </form>
+                  ))}
+              </div>
             </div>
           )}
 
@@ -223,8 +243,8 @@ export default async function BucketsPage() {
             type="number"
             step="0.01"
             min="0"
-            max="100"
-            placeholder="Plan % of available money (optional)"
+            max={plan.unplannedPercent}
+            placeholder={`Plan % (up to ${plan.unplannedPercent}% still free)`}
             className="input"
           />
           <button type="submit" className="btn w-full">

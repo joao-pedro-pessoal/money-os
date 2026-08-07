@@ -86,3 +86,50 @@ export function goalProgress(current: number, targetAmount: number | null): numb
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
+
+
+/**
+ * Rescales every bucket except `keepId` so the whole plan totals 100%.
+ *
+ * The bucket you just set is treated as fixed — that's the number you meant —
+ * and the rest share what's left, in proportion to what they had. This makes
+ * "I want 99% here" recoverable instead of an error you have to fix by hand.
+ *
+ * Returns the new percentage per bucket id, including the untouched one.
+ */
+export function fitOthersAround(
+  buckets: { id: string; targetPercent: number | null }[],
+  keepId: string
+): Record<string, number | null> {
+  const kept = buckets.find((b) => b.id === keepId);
+  const keptPercent = Math.min(100, Math.max(0, kept?.targetPercent ?? 0));
+  const others = buckets.filter((b) => b.id !== keepId && b.targetPercent !== null);
+
+  const remaining = round2(100 - keptPercent);
+  const othersTotal = others.reduce((s, b) => s + (b.targetPercent ?? 0), 0);
+
+  const result: Record<string, number | null> = {};
+  for (const b of buckets) result[b.id] = b.targetPercent;
+  result[keepId] = keptPercent;
+
+  if (others.length === 0) return result;
+
+  if (othersTotal === 0) {
+    // Nothing to scale proportionally — split what's left evenly.
+    const each = round2(remaining / others.length);
+    for (const b of others) result[b.id] = each;
+    return result;
+  }
+
+  let assigned = 0;
+  others.forEach((b, i) => {
+    const share =
+      i === others.length - 1
+        ? round2(remaining - assigned) // last one absorbs the rounding
+        : round2((remaining * (b.targetPercent ?? 0)) / othersTotal);
+    result[b.id] = share;
+    assigned = round2(assigned + share);
+  });
+
+  return result;
+}

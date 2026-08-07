@@ -18,29 +18,52 @@ const SORT_COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
 export default async function PortfolioAnalysisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ groupBy?: string; sort?: string; dir?: string }>;
+  searchParams: Promise<{ groupBy?: string; sort?: string; dir?: string; synced?: string }>;
 }) {
   const sp = await searchParams;
   const groupBy = (GROUP_BY_OPTIONS.find((o) => o.value === sp.groupBy)?.value ?? "playlist") as GroupByKey;
   const sort = (SORT_COLUMNS.find((c) => c.key === sp.sort)?.key ?? "value") as SortKey;
   const dir: "asc" | "desc" = sp.dir === "asc" ? "asc" : "desc";
+  // Spot/stablecoins count by default; "off" narrows the view to at-risk positions.
+  const includeSynced = sp.synced !== "off";
 
-  const a = await getPortfolioAnalysis();
-  const grouped = await getGroupedPerformance(groupBy, sort, dir);
+  const a = await getPortfolioAnalysis(includeSynced);
+  const grouped = await getGroupedPerformance(groupBy, sort, dir, includeSynced);
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
   const best = [...grouped].filter((g) => g.cost > 0).sort((x, y) => y.pnlPercent - x.pnlPercent)[0];
   const translateKeys = groupBy !== "playlist" && groupBy !== "account" && groupBy !== "symbol";
   const label = (k: string) => (translateKeys ? tagLabel(k) ?? k : k);
   const qs = (over: Record<string, string>) =>
-    "?" + new URLSearchParams({ groupBy, sort, dir, ...over }).toString();
+    "?" +
+    new URLSearchParams({ groupBy, sort, dir, synced: includeSynced ? "on" : "off", ...over }).toString();
   const pnlColor = a.totals.totalPnL >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
 
   if (a.holdings.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-lg font-semibold">Portfolio analysis</h1>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <h1 className="text-lg font-semibold">Portfolio analysis</h1>
+          {/* The toggle must stay reachable here, or switching it off with no
+              manual positions would leave no way to switch it back on. */}
+          <Link href={qs({ synced: includeSynced ? "off" : "on" })} className="btn whitespace-nowrap">
+            {includeSynced ? "Spot & stablecoins: ON" : "Spot & stablecoins: OFF"}
+          </Link>
+        </div>
         <div className="card p-8 text-center text-sm text-[var(--muted)]">
-          Nothing to analyse yet — <Link href="/investments" className="text-[var(--accent)]">add a position</Link> first.
+          {includeSynced ? (
+            <>
+              Nothing to analyse yet —{" "}
+              <Link href="/investments" className="text-[var(--accent)]">
+                add a position
+              </Link>{" "}
+              first.
+            </>
+          ) : (
+            <>
+              No at-risk positions. Your money is all in spot or stablecoins — turn them back on above to see
+              it here.
+            </>
+          )}
         </div>
       </div>
     );
@@ -52,12 +75,24 @@ export default async function PortfolioAnalysisPage({
         <div>
           <h1 className="text-lg font-semibold">Portfolio analysis</h1>
           <p className="text-xs text-[var(--muted)] mt-1">
-            Exposure, P&amp;L and yield across every position you track.
+            Exposure, P&amp;L and yield across every position you track.{" "}
+            {includeSynced
+              ? "Synced spot balances and stablecoins are included."
+              : "Showing only positions you're at risk on."}
           </p>
         </div>
-        <Link href="/investments" className="btn whitespace-nowrap">
-          Back to positions
-        </Link>
+        <div className="flex gap-2 items-center flex-wrap">
+          <Link
+            href={qs({ synced: includeSynced ? "off" : "on" })}
+            className="btn whitespace-nowrap"
+            title="Spot balances and stablecoins are portfolio money, but they flatten a risk breakdown."
+          >
+            {includeSynced ? "Spot & stablecoins: ON" : "Spot & stablecoins: OFF"}
+          </Link>
+          <Link href="/investments" className="btn whitespace-nowrap">
+            Back to positions
+          </Link>
+        </div>
       </div>
 
       {/* ---- Headline numbers ---- */}

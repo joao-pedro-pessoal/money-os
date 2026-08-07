@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildPlan, goalProgress, type PlannedBucket } from "../plan";
+import { buildPlan, goalProgress, fitOthersAround, type PlannedBucket } from "../plan";
 
 function b(over: Partial<PlannedBucket> = {}): PlannedBucket {
   return { id: "1", name: "B", targetPercent: null, current: 0, targetAmount: null, ...over };
@@ -106,5 +106,87 @@ describe("goalProgress", () => {
   it("returns null when there is no goal", () => {
     expect(goalProgress(100, null)).toBeNull();
     expect(goalProgress(100, 0)).toBeNull();
+  });
+});
+
+describe("fitOthersAround", () => {
+  it("keeps the bucket you just set and squeezes the rest into what's left", () => {
+    const result = fitOthersAround(
+      [
+        { id: "a", targetPercent: 99 },
+        { id: "b", targetPercent: 2 },
+      ],
+      "a"
+    );
+    expect(result.a).toBe(99);
+    expect(result.b).toBe(1);
+  });
+
+  it("scales several others in proportion", () => {
+    // Keep 50; others had 30 and 90 (ratio 1:3) sharing the remaining 50.
+    const result = fitOthersAround(
+      [
+        { id: "keep", targetPercent: 50 },
+        { id: "x", targetPercent: 30 },
+        { id: "y", targetPercent: 90 },
+      ],
+      "keep"
+    );
+    expect(result.keep).toBe(50);
+    expect(result.x).toBe(12.5);
+    expect(result.y).toBe(37.5);
+    expect(result.x! + result.y! + result.keep!).toBe(100);
+  });
+
+  it("always lands on exactly 100 even when the split doesn't divide evenly", () => {
+    const result = fitOthersAround(
+      [
+        { id: "keep", targetPercent: 10 },
+        { id: "a", targetPercent: 1 },
+        { id: "b", targetPercent: 1 },
+        { id: "c", targetPercent: 1 },
+      ],
+      "keep"
+    );
+    const total = Object.values(result).reduce<number>((sum, v) => sum + (v ?? 0), 0);
+    expect(total).toBe(100);
+  });
+
+  it("splits evenly when the others have no percentages to scale", () => {
+    const result = fitOthersAround(
+      [
+        { id: "keep", targetPercent: 60 },
+        { id: "a", targetPercent: 0 },
+        { id: "b", targetPercent: 0 },
+      ],
+      "keep"
+    );
+    expect(result.a).toBe(20);
+    expect(result.b).toBe(20);
+  });
+
+  it("leaves buckets with no plan alone", () => {
+    const result = fitOthersAround(
+      [
+        { id: "keep", targetPercent: 40 },
+        { id: "planned", targetPercent: 100 },
+        { id: "unplanned", targetPercent: null },
+      ],
+      "keep"
+    );
+    expect(result.unplanned).toBeNull();
+    expect(result.planned).toBe(60);
+  });
+
+  it("clamps a kept percentage above 100", () => {
+    const result = fitOthersAround(
+      [
+        { id: "keep", targetPercent: 150 },
+        { id: "a", targetPercent: 50 },
+      ],
+      "keep"
+    );
+    expect(result.keep).toBe(100);
+    expect(result.a).toBe(0);
   });
 });

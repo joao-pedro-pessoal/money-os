@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { buckets, bucketAllocations, accounts, auditLog } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { buildPlan, type PlannedBucket } from "@/lib/accounting/plan";
+import { buildPlan, fitOthersAround, type PlannedBucket } from "@/lib/accounting/plan";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 import { sumInBase } from "@/lib/fx";
@@ -106,4 +106,36 @@ export async function applyBucketPlan() {
   revalidatePath("/buckets");
   revalidatePath("/money-map");
   revalidatePath("/");
+}
+
+
+/**
+ * Keeps one bucket's percentage and rescales the others so the plan totals
+ * 100%. Lets "I want 99% here" be a one-click fix rather than an error the
+ * user has to unpick across every other bucket.
+ */
+export async function fitOtherPercentages(formData: FormData) {
+  const keepId = String(formData.get("keepId"));
+  const all = await db.select().from(buckets);
+
+  const next = fitOthersAround(
+    all.map((b) => ({ id: b.id, targetPercent: b.targetPercent === null ? null : Number(b.targetPercent) })),
+    keepId
+  );
+
+  for (const [id, percent] of Object.entries(next)) {
+    await db
+      .update(buckets)
+      .set({ targetPercent: percent === null ? null : String(percent) })
+      .where(eq(buckets.id, id));
+  }
+
+  await db.insert(auditLog).values({
+    entityType: "bucket_plan",
+    entityId: keepId,
+    action: "percentages_fitted",
+    details: JSON.stringify(next),
+  });
+
+  revalidatePath("/buckets");
 }

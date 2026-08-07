@@ -398,3 +398,53 @@ export async function syncAllConnections(trigger: "manual" | "scheduled" = "sche
   }
   return results;
 }
+
+/**
+ * What each connected account actually holds on its platform.
+ *
+ * The stored `balance` is perps equity only — spot lives in Portfolio Value —
+ * so an account whose money is all in USDC reads as 0, which looks broken even
+ * though Net Worth is right. This gives the display layer the real figure
+ * without changing what anything counts.
+ */
+export async function getAccountPlatformTotals() {
+  const [conns, balances, pos] = await Promise.all([
+    db.select().from(accountConnections),
+    db.select().from(platformBalances),
+    db.select().from(positions),
+  ]);
+
+  const byAccount = new Map<
+    string,
+    { equity: number; spot: number; total: number; unrealizedPnl: number; positions: number }
+  >();
+
+  for (const c of conns) {
+    const spot = balances
+      .filter((b) => b.connectionId === c.id)
+      .reduce((s, b) => s + (b.usdValue === null ? 0 : Number(b.usdValue)), 0);
+
+    const mine = pos.filter((p) => p.connectionId === c.id);
+    const unrealizedPnl = mine.reduce(
+      (s, p) => s + (p.unrealizedPnl === null ? 0 : Number(p.unrealizedPnl)),
+      0
+    );
+
+    const equity = Number(c.lastEquity ?? 0);
+    const existing = byAccount.get(c.accountId);
+
+    byAccount.set(c.accountId, {
+      equity: round2((existing?.equity ?? 0) + equity),
+      spot: round2((existing?.spot ?? 0) + spot),
+      total: round2((existing?.total ?? 0) + equity + spot),
+      unrealizedPnl: round2((existing?.unrealizedPnl ?? 0) + unrealizedPnl),
+      positions: (existing?.positions ?? 0) + mine.length,
+    });
+  }
+
+  return byAccount;
+}
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}

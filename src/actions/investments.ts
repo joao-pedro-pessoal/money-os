@@ -1,7 +1,15 @@
 "use server";
 
 import { db } from "@/db/client";
-import { holdings, holdingSnapshots, auditLog, accounts, playlists, platformBalances } from "@/db/schema";
+import {
+  holdings,
+  holdingSnapshots,
+  auditLog,
+  accounts,
+  playlists,
+  platformBalances,
+  accountConnections,
+} from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -360,7 +368,7 @@ export async function addRewards(formData: FormData) {
  * src/lib/portfolio/analysis.ts. Account names are resolved here so the
  * breakdown by wallet reads properly instead of showing raw ids.
  */
-export async function getPortfolioAnalysis() {
+export async function getPortfolioAnalysis(includeSynced = true) {
   const { holdings: rows, totals } = await listHoldingsWithPnL();
 
   const enriched: AnalysisHolding[] = rows.map((h) => ({
@@ -384,8 +392,62 @@ export async function getPortfolioAnalysis() {
     realizedPnl: h.realizedPnl,
   }));
 
+  // Synced spot balances (USDC and friends) are real portfolio money, but they
+  // drown out the at-risk positions in a risk breakdown, so including them is
+  // the caller's choice. Modelled as flat 1:1 holdings: no entry price to
+  // speak of, so cost equals value and P&L is zero by construction.
+  if (includeSynced) {
+    const [balances, conns, allAccounts] = await Promise.all([
+      db.select().from(platformBalances),
+      db.select().from(accountConnections),
+      db.select().from(accounts),
+    ]);
+    const accountOf = new Map(conns.map((c) => [c.id, c.accountId]));
+    const nameOf = new Map(allAccounts.map((a) => [a.id, a.name]));
+
+    for (const b of balances) {
+      if (b.usdValue === null) continue;
+      const value = Number(b.usdValue);
+      const stable = isStablecoin(b.coin);
+      enriched.push({
+        id: `synced:${b.id}`,
+        symbol: b.coin,
+        quantity: value,
+        avgEntryPrice: 1,
+        currentPrice: 1,
+        accountId: accountOf.get(b.connectionId) ?? null,
+        accountName: nameOf.get(accountOf.get(b.connectionId) ?? "") ?? "Synced",
+        assetType: stable ? "stablecoin" : "crypto",
+        riskLevel: stable ? "low" : "very_high",
+        expectedReturn: stable ? "conservative" : null,
+        timeHorizon: null,
+        liquidity: "high",
+        apr: null,
+        rewardsEarned: 0,
+        direction: "long",
+        playlistId: null,
+        playlistName: null,
+        realizedPnl: 0,
+      });
+    }
+  }
+
+  const syncedValue = enriched
+    .filter((h) => h.id.startsWith("synced:"))
+    .reduce((s, h) => s + marketValue(h), 0);
+
+  const adjustedTotals = {
+    totalValue: round2(totals.totalValue + syncedValue),
+    totalCost: round2(totals.totalCost + syncedValue),
+    totalPnL: totals.totalPnL,
+    totalPnLPercent:
+      totals.totalCost + syncedValue === 0
+        ? 0
+        : round2((totals.totalPnL / (totals.totalCost + syncedValue)) * 100),
+  };
+
   return {
-    totals,
+    totals: adjustedTotals,
     holdings: enriched,
     byAccount: breakdownBy(enriched, (h) => h.accountName, "No account"),
     byAssetType: breakdownBy(enriched, (h) => h.assetType),
@@ -406,8 +468,13 @@ export async function getPortfolioAnalysis() {
  * Performance grouped by any dimension, sorted by any column — this is what
  * answers "which playlist / category is doing best?".
  */
-export async function getGroupedPerformance(groupBy: GroupByKey, sortKey: SortKey, direction: "asc" | "desc") {
-  const { holdings: enriched } = await getPortfolioAnalysis();
+export async function getGroupedPerformance(
+  groupBy: GroupByKey,
+  sortKey: SortKey,
+  direction: "asc" | "desc",
+  includeSynced = true
+) {
+  const { holdings: enriched } = await getPortfolioAnalysis(includeSynced);
   return sortPerformance(performanceBy(enriched, groupBy), sortKey, direction);
 }
 

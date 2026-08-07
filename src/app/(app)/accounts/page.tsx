@@ -1,4 +1,5 @@
 import { listAccountsWithState, createAccount, listArchivedAccounts, unarchiveAccount } from "@/actions/accounts";
+import { getAccountPlatformTotals } from "@/actions/connections";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
 
@@ -9,7 +10,11 @@ const STATE_COLOR: Record<string, string> = {
 };
 
 export default async function AccountsPage() {
-  const [accounts, archived] = await Promise.all([listAccountsWithState(), listArchivedAccounts()]);
+  const [accounts, archived, platformTotals] = await Promise.all([
+    listAccountsWithState(),
+    listArchivedAccounts(),
+    getAccountPlatformTotals(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -37,7 +42,31 @@ export default async function AccountsPage() {
                   </Link>
                 </td>
                 <td>
-                  <Money value={a.balance} currency={a.currency} />
+                  {(() => {
+                    const p = platformTotals.get(a.id);
+                    const shown = p ? p.total : a.balance;
+                    return (
+                      <>
+                        <Money value={shown} currency={a.currency} />
+                        {p && p.unrealizedPnl !== 0 && (
+                          <span
+                            className={
+                              p.unrealizedPnl > 0 ? "text-[var(--green)]" : "text-[var(--red)]"
+                            }
+                          >
+                            {" "}
+                            ({p.unrealizedPnl > 0 ? "+" : "−"}
+                            {Math.abs(p.unrealizedPnl).toFixed(2)})
+                          </span>
+                        )}
+                        {p && p.spot > 0 && (
+                          <div className="text-[10px] text-[var(--muted)]">
+                            {p.equity.toFixed(2)} perps + {p.spot.toFixed(2)} spot
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </td>
                 <td>
                   <Money value={a.allocated} currency={a.currency} />

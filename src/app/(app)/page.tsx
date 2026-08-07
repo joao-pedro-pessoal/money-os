@@ -1,6 +1,7 @@
 import { listAccountsWithState } from "@/actions/accounts";
 import { listTransactions } from "@/actions/transactions";
 import { getPortfolioContribution } from "@/actions/investments";
+import { getAccountPlatformTotals } from "@/actions/connections";
 import { getRates } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
 import { sumInBase, toBase } from "@/lib/fx";
@@ -14,6 +15,7 @@ export default async function DashboardPage() {
   const portfolio = await getPortfolioContribution();
   const rates = await getRates();
   const base = await getBaseCurrency();
+  const platformTotals = await getAccountPlatformTotals();
 
   // Balances can be in different currencies (e.g. a USD exchange account), so
   // they are converted to EUR before being summed. Anything with no known rate
@@ -122,12 +124,38 @@ export default async function DashboardPage() {
                     <Link href={`/accounts/${a.id}`}>{a.name}</Link>
                   </td>
                   <td>
-                    <Money value={a.balance} currency={a.currency} />
-                    {a.currency !== base && (
-                      <div className="text-xs text-[var(--muted)]">
-                        ≈ {fmt(toBase(a.balance, a.currency, rates, base) ?? 0, base)}
-                      </div>
-                    )}
+                    {(() => {
+                      const p = platformTotals.get(a.id);
+                      // For a connected account, `balance` is perps equity only —
+                      // show what's really on the platform (equity + spot).
+                      const shown = p ? p.total : a.balance;
+                      return (
+                        <>
+                          <Money value={shown} currency={a.currency} />
+                          {p && p.unrealizedPnl !== 0 && (
+                            <span
+                              className={`text-sm ${
+                                p.unrealizedPnl > 0 ? "text-[var(--green)]" : "text-[var(--red)]"
+                              }`}
+                            >
+                              {" "}
+                              ({p.unrealizedPnl > 0 ? "+" : "−"}
+                              {fmt(Math.abs(p.unrealizedPnl), a.currency)})
+                            </span>
+                          )}
+                          {a.currency !== base && (
+                            <div className="text-xs text-[var(--muted)]">
+                              ≈ {fmt(toBase(shown, a.currency, rates, base) ?? 0, base)}
+                            </div>
+                          )}
+                          {p && p.spot > 0 && (
+                            <div className="text-[10px] text-[var(--muted)]">
+                              {fmt(p.equity, a.currency)} perps + {fmt(p.spot, a.currency)} spot
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </td>
                   <td>
                     <Money value={a.free} currency={a.currency} />
