@@ -2,6 +2,7 @@ import { listCategories } from "@/actions/transactions";
 import { listAccountsWithState } from "@/actions/accounts";
 import ExportButton from "@/components/ExportButton";
 import CsvImportForm from "@/components/CsvImportForm";
+import ThemePicker from "@/components/ThemePicker";
 
 export default async function SettingsPage() {
   const [categories, accounts] = await Promise.all([listCategories(), listAccountsWithState()]);
@@ -11,6 +12,11 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-lg font-semibold">Settings</h1>
+
+      <div className="card p-4">
+        <div className="text-sm font-medium mb-3">Appearance</div>
+        <ThemePicker />
+      </div>
 
       <div className="card p-4">
         <div className="text-sm font-medium mb-3">Import CSV</div>
