@@ -1,11 +1,19 @@
 "use server";
 
 import { db } from "@/db/client";
-import { holdings, holdingSnapshots, auditLog, accounts } from "@/db/schema";
+import { holdings, holdingSnapshots, auditLog, accounts, playlists } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { marketValue, costBasis, unrealizedPnL, unrealizedPnLPercent, portfolioTotals } from "@/lib/portfolio";
+import {
+  marketValue,
+  costBasis,
+  unrealizedPnL,
+  unrealizedPnLPercent,
+  portfolioTotals,
+  reinforcePosition,
+  reducePosition,
+} from "@/lib/portfolio";
 import {
   breakdownBy,
   stableVsFloating,
@@ -13,7 +21,11 @@ import {
   topMovers,
   concentrationWarnings,
   horizonRiskMismatches,
+  performanceBy,
+  sortPerformance,
   type AnalysisHolding,
+  type GroupByKey,
+  type SortKey,
 } from "@/lib/portfolio/analysis";
 
 /** "" from an unselected <select> becomes NULL instead of an empty string in the DB. */
@@ -32,8 +44,12 @@ function numericValue(formData: FormData, field: string): string | null {
 
 export async function listHoldingsWithPnL() {
   const rows = await db.select().from(holdings);
-  const allAccounts = await db.select().from(accounts);
+  const [allAccounts, allPlaylists] = await Promise.all([
+    db.select().from(accounts),
+    db.select().from(playlists),
+  ]);
   const accountName = new Map(allAccounts.map((a) => [a.id, a.name]));
+  const playlistName = new Map(allPlaylists.map((p) => [p.id, p.name]));
 
   const parsed = rows.map((h) => ({
     ...h,
@@ -42,6 +58,8 @@ export async function listHoldingsWithPnL() {
     currentPrice: Number(h.currentPrice),
     apr: h.apr === null ? null : Number(h.apr),
     rewardsEarned: h.rewardsEarned === null ? 0 : Number(h.rewardsEarned),
+    realizedPnl: h.realizedPnl === null ? 0 : Number(h.realizedPnl),
+    playlistName: h.playlistId ? playlistName.get(h.playlistId) ?? null : null,
     // Falls back to the old free-text platform for rows created before
     // holdings were linked to accounts.
     accountName: (h.accountId ? accountName.get(h.accountId) : null) ?? h.platform ?? null,
@@ -76,6 +94,8 @@ export async function createHolding(formData: FormData) {
   const currentPrice = String(formData.get("currentPrice") ?? formData.get("avgEntryPrice") ?? "0");
   const currency = String(formData.get("currency") ?? "EUR");
   const assetType = tagValue(formData, "assetType");
+  const direction = tagValue(formData, "direction") ?? "long";
+  const playlistId = tagValue(formData, "playlistId");
   const apr = numericValue(formData, "apr");
   const rewardsEarned = numericValue(formData, "rewardsEarned") ?? "0";
   const riskLevel = tagValue(formData, "riskLevel");
@@ -97,6 +117,8 @@ export async function createHolding(formData: FormData) {
       currentPrice,
       currency,
       assetType,
+      direction,
+      playlistId,
       apr,
       rewardsEarned,
       riskLevel,
@@ -133,6 +155,8 @@ export async function updateHolding(formData: FormData) {
   const avgEntryPrice = String(formData.get("avgEntryPrice") ?? "0");
   const currency = String(formData.get("currency") ?? "EUR");
   const assetType = tagValue(formData, "assetType");
+  const direction = tagValue(formData, "direction") ?? "long";
+  const playlistId = tagValue(formData, "playlistId");
   const apr = numericValue(formData, "apr");
   const rewardsEarned = numericValue(formData, "rewardsEarned") ?? "0";
   const riskLevel = tagValue(formData, "riskLevel");
@@ -153,6 +177,8 @@ export async function updateHolding(formData: FormData) {
       avgEntryPrice,
       currency,
       assetType,
+      direction,
+      playlistId,
       apr,
       rewardsEarned,
       riskLevel,
@@ -298,6 +324,10 @@ export async function getPortfolioAnalysis() {
     liquidity: h.liquidity,
     apr: h.apr,
     rewardsEarned: h.rewardsEarned,
+    direction: h.direction,
+    playlistId: h.playlistId,
+    playlistName: h.playlistName,
+    realizedPnl: h.realizedPnl,
   }));
 
   return {
@@ -313,7 +343,18 @@ export async function getPortfolioAnalysis() {
     movers: topMovers(enriched),
     concentration: concentrationWarnings(enriched),
     mismatches: horizonRiskMismatches(enriched),
+    realizedTotal:
+      Math.round((enriched.reduce((s, h) => s + (h.realizedPnl ?? 0), 0) + Number.EPSILON) * 100) / 100,
   };
+}
+
+/**
+ * Performance grouped by any dimension, sorted by any column — this is what
+ * answers "which playlist / category is doing best?".
+ */
+export async function getGroupedPerformance(groupBy: GroupByKey, sortKey: SortKey, direction: "asc" | "desc") {
+  const { holdings: enriched } = await getPortfolioAnalysis();
+  return sortPerformance(performanceBy(enriched, groupBy), sortKey, direction);
 }
 
 /**
@@ -334,4 +375,110 @@ export async function getPortfolioContribution() {
     }))
   );
   return { portfolioValue: totals.totalValue, floating: split.floating, stable: split.stable };
+}
+
+/**
+ * Buying more of a position. The average entry price becomes the weighted
+ * average of the old and new lots (see reinforcePosition), and a snapshot is
+ * recorded at the new price so the value chart stays continuous.
+ */
+export async function reinforceHolding(formData: FormData) {
+  const id = String(formData.get("id"));
+  const addQuantity = Number(formData.get("quantity") ?? "0");
+  const price = Number(formData.get("price") ?? "0");
+
+  if (addQuantity <= 0) throw new Error("Quantity must be greater than zero");
+
+  const [h] = await db.select().from(holdings).where(eq(holdings.id, id));
+  if (!h) throw new Error("Holding not found");
+
+  const next = reinforcePosition(
+    { quantity: Number(h.quantity), avgEntryPrice: Number(h.avgEntryPrice) },
+    { quantity: addQuantity, price }
+  );
+
+  await db
+    .update(holdings)
+    .set({
+      quantity: String(next.quantity),
+      avgEntryPrice: String(next.avgEntryPrice),
+      currentPrice: String(price),
+      lastPriceUpdate: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(holdings.id, id));
+
+  await db.insert(holdingSnapshots).values({
+    holdingId: id,
+    price: String(price),
+    value: String(next.quantity * price),
+  });
+
+  await db.insert(auditLog).values({
+    entityType: "holding",
+    entityId: id,
+    action: "position_reinforced",
+    details: JSON.stringify({ addQuantity, price, newQuantity: next.quantity, newAvg: next.avgEntryPrice }),
+  });
+
+  revalidatePath("/investments");
+  revalidatePath(`/investments/${id}`);
+  revalidatePath("/investments/analysis");
+}
+
+/**
+ * Selling part (or all) of a position. The average entry price is left alone —
+ * only the quantity drops and the profit on the units sold moves into
+ * realizedPnl, so realised money is never mixed with paper gains.
+ */
+export async function sellHolding(formData: FormData) {
+  const id = String(formData.get("id"));
+  const sellQuantity = Number(formData.get("quantity") ?? "0");
+  const price = Number(formData.get("price") ?? "0");
+
+  if (sellQuantity <= 0) throw new Error("Quantity must be greater than zero");
+
+  const [h] = await db.select().from(holdings).where(eq(holdings.id, id));
+  if (!h) throw new Error("Holding not found");
+
+  const next = reducePosition(
+    { quantity: Number(h.quantity), avgEntryPrice: Number(h.avgEntryPrice), direction: h.direction },
+    { quantity: sellQuantity, price }
+  );
+
+  const newRealized =
+    Math.round((Number(h.realizedPnl ?? 0) + next.realized + Number.EPSILON) * 100) / 100;
+
+  await db
+    .update(holdings)
+    .set({
+      quantity: String(next.quantity),
+      currentPrice: String(price),
+      realizedPnl: String(newRealized),
+      lastPriceUpdate: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(holdings.id, id));
+
+  await db.insert(holdingSnapshots).values({
+    holdingId: id,
+    price: String(price),
+    value: String(next.quantity * price),
+  });
+
+  await db.insert(auditLog).values({
+    entityType: "holding",
+    entityId: id,
+    action: "position_sold",
+    details: JSON.stringify({
+      sellQuantity,
+      price,
+      realized: next.realized,
+      remainingQuantity: next.quantity,
+    }),
+  });
+
+  revalidatePath("/investments");
+  revalidatePath(`/investments/${id}`);
+  revalidatePath("/investments/analysis");
 }

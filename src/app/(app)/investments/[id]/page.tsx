@@ -6,9 +6,13 @@ import {
   deleteHolding,
   listAccountsForHoldings,
   addRewards,
+  reinforceHolding,
+  sellHolding,
 } from "@/actions/investments";
 import HoldingTags from "@/components/HoldingTags";
-import { RISK_LEVELS, EXPECTED_RETURNS, TIME_HORIZONS, LIQUIDITY_LEVELS, ASSET_TYPES, tagLabel } from "@/lib/portfolio/tags";
+import { RISK_LEVELS, EXPECTED_RETURNS, TIME_HORIZONS, LIQUIDITY_LEVELS, tagLabel } from "@/lib/portfolio/tags";
+import HoldingFormFields from "@/components/HoldingFormFields";
+import { listPlaylists } from "@/actions/playlists";
 import { marketValue, costBasis, unrealizedPnL, unrealizedPnLPercent } from "@/lib/portfolio";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
@@ -26,6 +30,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
   };
   const snapshots = await getHoldingSnapshots(id);
   const accountList = await listAccountsForHoldings();
+  const playlistList = await listPlaylists();
   const holdingAccount = accountList.find((a) => a.id === holding.accountId);
   const pnl = unrealizedPnL(h);
   const pnlColor = pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
@@ -40,6 +45,9 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           </div>
           <h1 className="text-lg font-semibold">
             {holding.symbol}
+            {holding.direction === "short" && (
+              <span className="badge ml-2 align-middle text-[var(--red)] border border-[var(--red)]">SHORT</span>
+            )}
             {holding.name && <span className="text-[var(--muted)] font-normal"> — {holding.name}</span>}
           </h1>
           <HoldingTags
@@ -138,6 +146,53 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card p-4">
+          <div className="text-sm font-medium mb-3">Buy more (reinforce)</div>
+          <form action={reinforceHolding} className="space-y-3">
+            <input type="hidden" name="id" value={holding.id} />
+            <div className="flex gap-2">
+              <input name="quantity" type="number" step="0.00000001" placeholder="Quantity bought" className="input" required />
+              <input name="price" type="number" step="0.0001" placeholder="Price paid" className="input" required />
+            </div>
+            <button type="submit" className="btn w-full">
+              Add to position
+            </button>
+            <p className="text-xs text-[var(--muted)]">
+              The average entry price is recalculated as a weighted average of what you already held and this new lot.
+            </p>
+          </form>
+        </div>
+
+        <div className="card p-4">
+          <div className="text-sm font-medium mb-3">Sell (partial or full)</div>
+          <form action={sellHolding} className="space-y-3">
+            <input type="hidden" name="id" value={holding.id} />
+            <div className="flex gap-2">
+              <input
+                name="quantity"
+                type="number"
+                step="0.00000001"
+                placeholder={`Quantity sold (holding ${holding.quantity})`}
+                className="input"
+                required
+              />
+              <input name="price" type="number" step="0.0001" placeholder="Price sold at" className="input" required />
+            </div>
+            <button type="submit" className="btn w-full">
+              Sell
+            </button>
+            <p className="text-xs text-[var(--muted)]">
+              Realized so far:{" "}
+              <span className={Number(holding.realizedPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>
+                <Money value={Number(holding.realizedPnl ?? 0)} currency={holding.currency} />
+              </span>
+              . The average entry price stays put — only the quantity drops.
+            </p>
+          </form>
+        </div>
+      </div>
+
       <div className="card p-4 max-w-lg">
         <div className="text-sm font-medium mb-3">Staking / rewards</div>
         <div className="grid grid-cols-3 gap-4 mb-4">
@@ -196,14 +251,19 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
               </option>
             ))}
           </select>
-          <select name="assetType" className="input" defaultValue={holding.assetType ?? ""}>
-            <option value="">Asset type — unset</option>
-            {ASSET_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+          <select name="playlistId" className="input" defaultValue={holding.playlistId ?? ""}>
+            <option value="">Playlist — none</option>
+            {playlistList.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
               </option>
             ))}
           </select>
+          <HoldingFormFields
+            defaultAssetType={holding.assetType ?? ""}
+            defaultDirection={holding.direction ?? "long"}
+            defaultApr={holding.apr ? String(holding.apr) : ""}
+          />
           <div className="flex gap-2">
             <input name="quantity" type="number" step="0.00000001" defaultValue={holding.quantity} className="input" required />
             <select name="currency" defaultValue={holding.currency} className="input">
@@ -220,14 +280,6 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             required
           />
 
-          <input
-            name="apr"
-            type="number"
-            step="0.0001"
-            defaultValue={holding.apr ?? ""}
-            placeholder="APR % (only for staking / yield positions)"
-            className="input"
-          />
           <input type="hidden" name="rewardsEarned" value={String(holding.rewardsEarned ?? 0)} />
 
           <div className="pt-1 text-xs text-[var(--muted)]">Asset allocation tags</div>

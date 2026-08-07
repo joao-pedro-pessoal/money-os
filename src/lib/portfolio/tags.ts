@@ -36,10 +36,25 @@ export const ASSET_TYPES = [
   { value: "stablecoin", label: "Stablecoin" },
   { value: "staking", label: "Staking / a render" },
   { value: "crypto", label: "Cripto" },
-  { value: "stock_etf", label: "Ações / ETF" },
+  { value: "stock", label: "Ações" },
+  { value: "etf", label: "ETF" },
   { value: "bond", label: "Obrigações" },
   { value: "real_estate", label: "Imobiliário" },
   { value: "other", label: "Outro" },
+] as const;
+
+/** Retired value kept only so older rows still render a readable label. */
+const LEGACY_ASSET_TYPES = [{ value: "stock_etf", label: "Ações / ETF (antigo)" }] as const;
+
+/**
+ * Asset types that can earn a yield. The APR field is only shown for these —
+ * an APR on a plain stock position would be meaningless.
+ */
+export const YIELD_BEARING_ASSET_TYPES: string[] = ["staking", "stablecoin", "cash", "bond"];
+
+export const DIRECTIONS = [
+  { value: "long", label: "Long (sobe = ganho)" },
+  { value: "short", label: "Short (desce = ganho)" },
 ] as const;
 
 /**
@@ -49,7 +64,15 @@ export const ASSET_TYPES = [
 export const STABLE_ASSET_TYPES: string[] = ["cash", "stablecoin"];
 
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...RISK_LEVELS, ...EXPECTED_RETURNS, ...TIME_HORIZONS, ...LIQUIDITY_LEVELS, ...ASSET_TYPES].map((o) => [
+  [
+    ...RISK_LEVELS,
+    ...EXPECTED_RETURNS,
+    ...TIME_HORIZONS,
+    ...LIQUIDITY_LEVELS,
+    ...ASSET_TYPES,
+    ...LEGACY_ASSET_TYPES,
+    ...DIRECTIONS,
+  ].map((o) => [
     o.value,
     o.label,
   ])

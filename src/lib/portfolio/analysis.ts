@@ -12,6 +12,9 @@ import { STABLE_ASSET_TYPES } from "./tags";
 export interface AnalysisHolding extends HoldingLike {
   id: string;
   symbol: string;
+  playlistId?: string | null;
+  playlistName?: string | null;
+  realizedPnl?: number | null;
   accountId?: string | null;
   accountName?: string | null;
   assetType?: string | null;
@@ -154,4 +157,113 @@ export function horizonRiskMismatches(holdings: AnalysisHolding[]): AnalysisHold
   return holdings.filter(
     (h) => h.timeHorizon === "short" && (h.riskLevel === "high" || h.riskLevel === "very_high")
   );
+}
+
+
+/** Every dimension the analysis can be grouped by. */
+export const GROUP_BY_OPTIONS = [
+  { value: "playlist", label: "Playlist" },
+  { value: "account", label: "Conta / carteira" },
+  { value: "assetType", label: "Tipo de ativo" },
+  { value: "riskLevel", label: "Risco" },
+  { value: "expectedReturn", label: "Retorno esperado" },
+  { value: "timeHorizon", label: "Horizonte temporal" },
+  { value: "liquidity", label: "Liquidez" },
+  { value: "direction", label: "Long / Short" },
+  { value: "symbol", label: "Posição" },
+] as const;
+
+export type GroupByKey = (typeof GROUP_BY_OPTIONS)[number]["value"];
+
+export function groupKeyOf(h: AnalysisHolding, key: GroupByKey): string | null | undefined {
+  switch (key) {
+    case "playlist":
+      return h.playlistName;
+    case "account":
+      return h.accountName;
+    case "assetType":
+      return h.assetType;
+    case "riskLevel":
+      return h.riskLevel;
+    case "expectedReturn":
+      return h.expectedReturn;
+    case "timeHorizon":
+      return h.timeHorizon;
+    case "liquidity":
+      return h.liquidity;
+    case "direction":
+      return h.direction ?? "long";
+    case "symbol":
+      return h.symbol;
+  }
+}
+
+export interface GroupPerformance {
+  key: string;
+  value: number;
+  cost: number;
+  pnl: number;
+  pnlPercent: number;
+  realized: number;
+  /** Share of total portfolio value. */
+  percent: number;
+  count: number;
+}
+
+/**
+ * Full performance breakdown for any grouping — this is what answers
+ * "which playlist is doing best?" for whichever dimension is chosen.
+ */
+export function performanceBy(
+  holdings: AnalysisHolding[],
+  key: GroupByKey,
+  unsetLabel = "Sem definição"
+): GroupPerformance[] {
+  const totalValue = holdings.reduce((s, h) => s + marketValue(h), 0);
+  const groups = new Map<string, AnalysisHolding[]>();
+
+  for (const h of holdings) {
+    const k = groupKeyOf(h, key) ?? unsetLabel;
+    const list = groups.get(k) ?? [];
+    list.push(h);
+    groups.set(k, list);
+  }
+
+  return Array.from(groups.entries())
+    .map(([k, list]) => {
+      const value = list.reduce((s, h) => s + marketValue(h), 0);
+      const cost = list.reduce((s, h) => s + costBasis(h), 0);
+      const pnl = list.reduce((s, h) => s + unrealizedPnL(h), 0);
+      const realized = list.reduce((s, h) => s + (h.realizedPnl ?? 0), 0);
+      return {
+        key: k,
+        value: round2(value),
+        cost: round2(cost),
+        pnl: round2(pnl),
+        pnlPercent: cost === 0 ? 0 : round2((pnl / cost) * 100),
+        realized: round2(realized),
+        percent: totalValue === 0 ? 0 : round2((value / totalValue) * 100),
+        count: list.length,
+      };
+    })
+    .sort((a, b) => b.value - a.value);
+}
+
+export type SortKey = "key" | "value" | "cost" | "pnl" | "pnlPercent" | "realized" | "count";
+
+/** Sorts a performance breakdown by any column, descending by default. */
+export function sortPerformance(
+  rows: GroupPerformance[],
+  sortKey: SortKey = "value",
+  direction: "asc" | "desc" = "desc"
+): GroupPerformance[] {
+  const sorted = [...rows].sort((a, b) => {
+    const av = a[sortKey];
+    const bv = b[sortKey];
+    if (typeof av === "string" || typeof bv === "string") {
+      return String(av).localeCompare(String(bv));
+    }
+    return av - bv;
+  });
+  return direction === "desc" ? sorted.reverse() : sorted;
 }

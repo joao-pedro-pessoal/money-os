@@ -174,15 +174,49 @@ export const auditLog = pgTable("audit_log", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-// ---------- Holding (Investment Portfolio — separate from Money OS accounts) ----------
-// This is deliberately NOT linked to `accounts`/`transactions`. Money OS tracks
-// cash you control; a Holding represents money you've put at risk in the
-// market — unrealized value, not guaranteed. Keeping them unlinked avoids any
-// double counting between Net Worth and Portfolio Value.
+// ---------- Investment Portfolio ----------
+// A Holding is money put at risk in the market — unrealized value, not
+// guaranteed. It points at an Account purely as a LOCATION (which broker or
+// wallet holds it). No double counting: an account's `balance` is idle cash
+// only, positions live here and are added on top, so the two never overlap.
+
+// ---------- Playlist (a named group of positions, e.g. "Reforma") ----------
+export const playlists = pgTable("playlists", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  color: text("color"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------- Watchlist (assets being followed, NOT owned) ----------
+// Deliberately a separate table from `holdings`: nothing here has a quantity or
+// a cost basis, so it can never leak into portfolio value or Net Worth.
+export const watchlistItems = pgTable("watchlist_items", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  symbol: text("symbol").notNull(),
+  name: text("name"),
+  assetType: text("asset_type"),
+  currentPrice: numeric("current_price", { precision: 18, scale: 4 }),
+  targetPrice: numeric("target_price", { precision: 18, scale: 4 }),
+  currency: text("currency").notNull().default("EUR"),
+  notes: text("notes"),
+  playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const holdings = pgTable("holdings", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
   symbol: text("symbol").notNull(),
   name: text("name"),
+  // "long" (profit when price rises) or "short" (profit when price falls).
+  direction: text("direction").notNull().default("long"),
+  playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+  // Profit/loss already locked in by partial sales. Kept apart from unrealized
+  // P&L so an estimate is never mixed with money actually taken off the table.
+  realizedPnl: numeric("realized_pnl", { precision: 18, scale: 2 }).default("0"),
   // Which account/wallet physically holds this position. Nullable so older rows
   // (and anything imported before this link existed) stay valid. This is a
   // LOCATION label only: the account's `balance` is idle cash, positions are
@@ -229,6 +263,22 @@ export const holdingsRelations = relations(holdings, ({ one, many }) => ({
   account: one(accounts, {
     fields: [holdings.accountId],
     references: [accounts.id],
+  }),
+  playlist: one(playlists, {
+    fields: [holdings.playlistId],
+    references: [playlists.id],
+  }),
+}));
+
+export const playlistsRelations = relations(playlists, ({ many }) => ({
+  holdings: many(holdings),
+  watchlistItems: many(watchlistItems),
+}));
+
+export const watchlistItemsRelations = relations(watchlistItems, ({ one }) => ({
+  playlist: one(playlists, {
+    fields: [watchlistItems.playlistId],
+    references: [playlists.id],
   }),
 }));
 

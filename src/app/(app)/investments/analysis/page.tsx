@@ -1,12 +1,38 @@
-import { getPortfolioAnalysis } from "@/actions/investments";
+import { getPortfolioAnalysis, getGroupedPerformance } from "@/actions/investments";
 import { Money } from "@/components/PrivacyContext";
 import DonutChart from "@/components/DonutChart";
 import { tagLabel, riskColor } from "@/lib/portfolio/tags";
-import type { Breakdown } from "@/lib/portfolio/analysis";
+import { GROUP_BY_OPTIONS, type Breakdown, type GroupByKey, type SortKey } from "@/lib/portfolio/analysis";
 import Link from "next/link";
 
-export default async function PortfolioAnalysisPage() {
+const SORT_COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
+  { key: "key", label: "Grupo", numeric: false },
+  { key: "count", label: "Posições", numeric: true },
+  { key: "value", label: "Valor", numeric: true },
+  { key: "cost", label: "Custo", numeric: true },
+  { key: "pnl", label: "P&L", numeric: true },
+  { key: "pnlPercent", label: "P&L %", numeric: true },
+  { key: "realized", label: "Realizado", numeric: true },
+];
+
+export default async function PortfolioAnalysisPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ groupBy?: string; sort?: string; dir?: string }>;
+}) {
+  const sp = await searchParams;
+  const groupBy = (GROUP_BY_OPTIONS.find((o) => o.value === sp.groupBy)?.value ?? "playlist") as GroupByKey;
+  const sort = (SORT_COLUMNS.find((c) => c.key === sp.sort)?.key ?? "value") as SortKey;
+  const dir: "asc" | "desc" = sp.dir === "asc" ? "asc" : "desc";
+
   const a = await getPortfolioAnalysis();
+  const grouped = await getGroupedPerformance(groupBy, sort, dir);
+  const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
+  const best = [...grouped].filter((g) => g.cost > 0).sort((x, y) => y.pnlPercent - x.pnlPercent)[0];
+  const translateKeys = groupBy !== "playlist" && groupBy !== "account" && groupBy !== "symbol";
+  const label = (k: string) => (translateKeys ? tagLabel(k) ?? k : k);
+  const qs = (over: Record<string, string>) =>
+    "?" + new URLSearchParams({ groupBy, sort, dir, ...over }).toString();
   const pnlColor = a.totals.totalPnL >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
 
   if (a.holdings.length === 0) {
@@ -35,7 +61,7 @@ export default async function PortfolioAnalysisPage() {
       </div>
 
       {/* ---- Headline numbers ---- */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <Stat label="Portfolio Value" value={a.totals.totalValue} />
         <Stat label="Cost Basis" value={a.totals.totalCost} />
         <Stat label="Unrealized P&L" value={a.totals.totalPnL} className={pnlColor} />
@@ -43,6 +69,11 @@ export default async function PortfolioAnalysisPage() {
           <div className="text-xs text-[var(--muted)] mb-1">Unrealized P&amp;L %</div>
           <div className={`text-xl font-semibold ${pnlColor}`}>{a.totals.totalPnLPercent.toFixed(2)}%</div>
         </div>
+        <Stat
+          label="Realized P&L"
+          value={a.realizedTotal}
+          className={a.realizedTotal >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}
+        />
       </div>
 
       {/* ---- Guaranteed vs market-exposed ---- */}
@@ -125,8 +156,87 @@ export default async function PortfolioAnalysisPage() {
         </div>
       )}
 
+      {/* ---- Grouped performance: sortable by every variable ---- */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+          <div>
+            <div className="text-sm font-medium">Performance por {groupLabel.toLowerCase()}</div>
+            {best && (
+              <div className="text-xs text-[var(--muted)] mt-1">
+                Melhor: <span className="text-[var(--green)]">{label(best.key)}</span> com{" "}
+                {best.pnlPercent.toFixed(1)}%
+              </div>
+            )}
+          </div>
+          <form method="GET" className="flex gap-2 text-xs">
+            <input type="hidden" name="sort" value={sort} />
+            <input type="hidden" name="dir" value={dir} />
+            <select name="groupBy" defaultValue={groupBy} className="input py-1">
+              {GROUP_BY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  Agrupar por: {o.label}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="btn py-1 px-3">
+              Aplicar
+            </button>
+          </form>
+        </div>
+
+        <DonutChart data={grouped.filter((g) => g.value > 0).map((g) => ({ name: label(g.key), value: g.value }))} />
+
+        <div className="overflow-x-auto mt-4">
+          <table className="data-table whitespace-nowrap">
+            <thead>
+              <tr>
+                {SORT_COLUMNS.map((c) => (
+                  <th key={c.key} className={c.numeric ? "text-right" : undefined}>
+                    <Link
+                      href={qs({ sort: c.key, dir: sort === c.key && dir === "desc" ? "asc" : "desc" })}
+                      className="hover:underline"
+                    >
+                      {c.label}
+                      {sort === c.key && (dir === "desc" ? " ↓" : " ↑")}
+                    </Link>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {grouped.map((g) => (
+                <tr key={g.key}>
+                  <td>
+                    <span style={groupBy === "riskLevel" ? { color: riskColor(g.key) } : undefined}>
+                      {label(g.key)}
+                    </span>
+                    <div className="text-xs text-[var(--muted)]">{g.percent.toFixed(1)}% do portefólio</div>
+                  </td>
+                  <td className="text-right">{g.count}</td>
+                  <td className="text-right">
+                    <Money value={g.value} />
+                  </td>
+                  <td className="text-right">
+                    <Money value={g.cost} />
+                  </td>
+                  <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                    <Money value={g.pnl} />
+                  </td>
+                  <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                    {g.pnlPercent.toFixed(1)}%
+                  </td>
+                  <td className={`text-right ${g.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                    <Money value={g.realized} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* ---- Breakdowns ---- */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BreakdownCard title="By account / wallet" rows={a.byAccount} donut />
         <BreakdownCard title="By asset type" rows={a.byAssetType} translate donut />
         <BreakdownCard title="By risk level" rows={a.byRisk} translate colorByRisk />
@@ -134,7 +244,7 @@ export default async function PortfolioAnalysisPage() {
       </div>
 
       {/* ---- Winners & losers ---- */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card p-4">
           <div className="text-sm font-medium mb-3">Biggest gains</div>
           <MoversTable rows={a.movers.winners} positive />
@@ -148,7 +258,8 @@ export default async function PortfolioAnalysisPage() {
       {/* ---- Full position table ---- */}
       <div className="card p-4">
         <div className="text-sm font-medium mb-3">All positions</div>
-        <table className="data-table">
+        <div className="overflow-x-auto">
+        <table className="data-table whitespace-nowrap">
           <thead>
             <tr>
               <th>Symbol</th>
@@ -180,6 +291,7 @@ export default async function PortfolioAnalysisPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -189,7 +301,7 @@ function Stat({ label, value, className = "" }: { label: string; value: number; 
   return (
     <div className="card p-4">
       <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
-      <div className={`text-xl font-semibold ${className}`}>
+      <div className={`text-xl font-semibold truncate ${className}`}>
         <Money value={value} />
       </div>
     </div>

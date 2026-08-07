@@ -36,6 +36,13 @@
       "when": 1786127786397,
       "tag": "0004_light_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786128951187,
+      "tag": "0005_swift_marauders",
+      "breakpoints": true
     }
   ]
 }

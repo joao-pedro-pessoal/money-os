@@ -6,6 +6,8 @@ import {
   topMovers,
   concentrationWarnings,
   horizonRiskMismatches,
+  performanceBy,
+  sortPerformance,
   type AnalysisHolding,
 } from "../analysis";
 
@@ -143,5 +145,69 @@ describe("horizonRiskMismatches", () => {
       h({ id: "ok2", symbol: "OK2", timeHorizon: "short", riskLevel: "low" }),
     ];
     expect(horizonRiskMismatches(holdings).map((x) => x.symbol)).toEqual(["BAD"]);
+  });
+});
+
+describe("performanceBy", () => {
+  const holdings = [
+    h({ id: "1", symbol: "A", playlistName: "Reforma", quantity: 10, avgEntryPrice: 100, currentPrice: 150 }),
+    h({ id: "2", symbol: "B", playlistName: "Reforma", quantity: 10, avgEntryPrice: 100, currentPrice: 110 }),
+    h({ id: "3", symbol: "C", playlistName: "Especulação", quantity: 10, avgEntryPrice: 100, currentPrice: 50 }),
+  ];
+
+  it("aggregates value, cost and P&L per group", () => {
+    const rows = performanceBy(holdings, "playlist");
+    const reforma = rows.find((r) => r.key === "Reforma")!;
+    expect(reforma.value).toBe(2600); // 1500 + 1100
+    expect(reforma.cost).toBe(2000);
+    expect(reforma.pnl).toBe(600);
+    expect(reforma.pnlPercent).toBe(30);
+    expect(reforma.count).toBe(2);
+  });
+
+  it("shows a losing group with negative P&L", () => {
+    const esp = performanceBy(holdings, "playlist").find((r) => r.key === "Especulação")!;
+    expect(esp.pnl).toBe(-500);
+    expect(esp.pnlPercent).toBe(-50);
+  });
+
+  it("labels ungrouped holdings instead of dropping them", () => {
+    const rows = performanceBy([h({ playlistName: null, currentPrice: 100 })], "playlist");
+    expect(rows[0].key).toBe("Sem definição");
+  });
+
+  it("defaults direction to long when unset", () => {
+    const rows = performanceBy([h({ direction: null })], "direction");
+    expect(rows[0].key).toBe("long");
+  });
+
+  it("sums realized P&L per group", () => {
+    const rows = performanceBy(
+      [h({ playlistName: "P", realizedPnl: 120 }), h({ id: "2", playlistName: "P", realizedPnl: 30 })],
+      "playlist"
+    );
+    expect(rows[0].realized).toBe(150);
+  });
+});
+
+describe("sortPerformance", () => {
+  const rows = performanceBy(
+    [
+      h({ id: "1", symbol: "SMALL", quantity: 1, avgEntryPrice: 100, currentPrice: 100 }),
+      h({ id: "2", symbol: "BIG", quantity: 10, avgEntryPrice: 100, currentPrice: 100 }),
+    ],
+    "symbol"
+  );
+
+  it("sorts by value descending by default", () => {
+    expect(sortPerformance(rows).map((r) => r.key)).toEqual(["BIG", "SMALL"]);
+  });
+
+  it("sorts ascending when asked", () => {
+    expect(sortPerformance(rows, "value", "asc").map((r) => r.key)).toEqual(["SMALL", "BIG"]);
+  });
+
+  it("sorts alphabetically on a text column", () => {
+    expect(sortPerformance(rows, "key", "asc").map((r) => r.key)).toEqual(["BIG", "SMALL"]);
   });
 });
