@@ -5,6 +5,7 @@ import {
   syncConnectionAction,
   getSyncLogs,
 } from "@/actions/connections";
+import { NEW_ACCOUNT } from "@/lib/connectors/constants";
 import { listAccountsForHoldings } from "@/actions/investments";
 import { freshnessLabel, freshnessColor } from "@/lib/connectors/freshness";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
@@ -127,13 +128,17 @@ export default async function ConnectionsPage() {
           <select name="platform" className="input" defaultValue="hyperliquid">
             <option value="hyperliquid">Hyperliquid</option>
           </select>
-          <select name="accountId" className="input" required defaultValue="">
-            <option value="">Account this feeds…</option>
-            {accountList.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.institution} — {a.name}
-              </option>
-            ))}
+          <select name="accountId" className="input" required defaultValue={NEW_ACCOUNT}>
+            <option value={NEW_ACCOUNT}>➕ Create a new account for this platform</option>
+            {accountList.length > 0 && (
+              <optgroup label="Or feed an existing account">
+                {accountList.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.institution} — {a.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
           <input
             name="externalId"
@@ -147,7 +152,8 @@ export default async function ConnectionsPage() {
           </button>
           <p className="text-xs text-[var(--muted)]">
             Hyperliquid&apos;s read-only endpoint needs only your public wallet address — no API key, no
-            password, nothing secret. Syncing overwrites the account balance with the exchange&apos;s equity.
+            password, nothing secret. Syncing overwrites the account balance with the exchange&apos;s equity,
+            so a newly created account starts at 0 until the first sync.
           </p>
         </form>
       </div>

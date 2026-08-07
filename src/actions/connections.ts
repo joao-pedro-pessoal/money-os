@@ -15,6 +15,7 @@ import { revalidatePath } from "next/cache";
 import { createHyperliquidConnector } from "@/lib/connectors/hyperliquid";
 import { freshnessOf } from "@/lib/connectors/freshness";
 import type { Connector } from "@/lib/connectors/types";
+import { NEW_ACCOUNT, PLATFORM_LABELS } from "@/lib/connectors/constants";
 
 /** Registry of available connectors. Bybit/IBKR slot in here unchanged. */
 function connectorFor(platform: string): Connector {
@@ -87,7 +88,7 @@ export async function getSyncLogs(connectionId: string, limit = 10) {
 }
 
 export async function createConnection(formData: FormData) {
-  const accountId = String(formData.get("accountId") ?? "").trim();
+  let accountId = String(formData.get("accountId") ?? "").trim();
   const platform = String(formData.get("platform") ?? "hyperliquid").trim();
   const externalId = String(formData.get("externalId") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim() || null;
@@ -97,6 +98,24 @@ export async function createConnection(formData: FormData) {
   const connector = connectorFor(platform);
   const check = connector.validateIdentifier(externalId);
   if (!check.ok) throw new Error(check.reason);
+
+  // A platform you're connecting for the first time usually has no Account
+  // yet, so offer to create it here rather than forcing a detour to /accounts.
+  // Balance starts at 0 and is overwritten by the first sync with real equity.
+  if (accountId === NEW_ACCOUNT) {
+    const institution = PLATFORM_LABELS[platform] ?? platform;
+    const [created] = await db
+      .insert(accounts)
+      .values({
+        institution,
+        name: label ?? institution,
+        accountType: "exchange",
+        currency: "USD", // Hyperliquid settles in USDC
+        balance: "0",
+      })
+      .returning();
+    accountId = created.id;
+  }
 
   const [c] = await db
     .insert(accountConnections)
@@ -111,6 +130,7 @@ export async function createConnection(formData: FormData) {
   });
 
   revalidatePath("/connections");
+  revalidatePath("/accounts");
 }
 
 export async function deleteConnection(formData: FormData) {
