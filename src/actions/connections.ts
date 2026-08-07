@@ -252,11 +252,13 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
     const connector = connectorFor(conn.platform);
     const state = await connector.getAccountState(conn.externalId);
 
-    // 1. Account total = perps equity + spot pool.
-    //    They are separate pools on Hyperliquid: equity already contains the
-    //    unrealized P&L of open positions (so positions are never added), but
-    //    spot balances sit outside it and must be added.
-    const total = Math.round((state.equity + state.spotValue + Number.EPSILON) * 100) / 100;
+    // 1. Account balance = perps equity ONLY.
+    //    Equity already contains the unrealized P&L of open positions, so
+    //    positions are never added to it. Spot balances are a separate pool
+    //    and are counted in Portfolio Value instead (see
+    //    getPortfolioContribution) — deliberately NOT here, or the same money
+    //    would land in Net Worth twice.
+    const total = Math.round((state.equity + Number.EPSILON) * 100) / 100;
 
     await db
       .update(accounts)

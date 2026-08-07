@@ -63,7 +63,7 @@ export default async function PositionsPage() {
             <div className="text-xl font-semibold truncate">
               <Money value={totalSpot} currency="USD" />
             </div>
-            <div className="text-[10px] text-[var(--muted)] mt-1">separate pool, added on top</div>
+            <div className="text-[10px] text-[var(--muted)] mt-1">counted in Investments, not here</div>
           </div>
           <div className="card p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Free / withdrawable</div>
@@ -132,8 +132,9 @@ export default async function PositionsPage() {
         </div>
         <div className="text-xs text-[var(--muted)] mt-1">
           The exchange reports account equity, which already contains the unrealized P&amp;L below, so position
-          values are never added on top — that would count the same money twice. Spot balances are a separate
-          pool, so those <em>are</em> added. The account balance is <strong>perps equity + spot</strong>.
+          values are never added on top — that would count the same money twice. The account balance is
+          <strong> perps equity only</strong>; spot balances are a separate pool and are counted in{" "}
+          <strong>Investments</strong> instead, so every euro lands in Net Worth exactly once.
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import {
 } from "@/actions/investments";
 import { listPlaylists } from "@/actions/playlists";
 import { listBalances } from "@/actions/connections";
+import { getPortfolioContribution } from "@/actions/investments";
 import { Money } from "@/components/PrivacyContext";
 import DonutChart from "@/components/DonutChart";
 import NetWorthChart from "@/components/NetWorthChart";
@@ -27,10 +28,11 @@ export default async function InvestmentsPage({
     listPlaylists(),
     listBalances(),
   ]);
+  const contribution = await getPortfolioContribution();
 
-  // Synced balances are shown here for completeness but are NOT part of
-  // Portfolio Value: they already sit inside the connected account's balance,
-  // so adding them again would count the same money twice.
+  // Synced balances DO count toward Portfolio Value: the connected account's
+  // balance holds only perps equity, so this is where that money is counted —
+  // exactly once.
   const syncedTotal = syncedBalances.reduce((s, b) => s + (b.usdValue ?? 0), 0);
 
   const filtered = holdings.filter(
@@ -68,7 +70,7 @@ export default async function InvestmentsPage({
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Stat label="Portfolio Value" value={totals.totalValue} />
+        <Stat label="Portfolio Value" value={contribution.portfolioValue} />
         <Stat label="Cost Basis" value={totals.totalCost} />
         <Stat label="Unrealized P&L" value={totals.totalPnL} className={pnlColor} />
         <div className="card p-4">
@@ -194,12 +196,12 @@ export default async function InvestmentsPage({
           <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
             <div className="text-sm font-medium">Synced balances</div>
             <div className="text-xs text-[var(--muted)]">
-              not counted in Portfolio Value — already in the account balance
+              counted in Portfolio Value — the account balance holds only perps equity
             </div>
           </div>
           <div className="text-xs text-[var(--muted)] mb-3">
             Pulled automatically from your connections. Total{" "}
-            <Money value={syncedTotal} currency="USD" />.
+            <Money value={syncedTotal} currency="USD" />, included in the Portfolio Value above.
           </div>
           <div className="overflow-x-auto">
             <table className="data-table whitespace-nowrap">

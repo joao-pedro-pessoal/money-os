@@ -31,7 +31,13 @@ export function usePrivacy() {
   return useContext(Ctx);
 }
 
-/** Renders the amount, or a masked placeholder when Privacy Mode is on. */
+/**
+ * Renders the amount, or a masked placeholder when Privacy Mode is on.
+ *
+ * `currency` is the currency of THIS amount. Totals are converted to the base
+ * currency before rendering, so callers pass the base there; per-account
+ * figures pass the account's own currency.
+ */
 export function Money({ value, currency = "EUR" }: { value: number; currency?: string }) {
   const { hidden } = usePrivacy();
   if (hidden) return <span>••••••</span>;

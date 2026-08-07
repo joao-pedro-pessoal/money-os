@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { holdings, holdingSnapshots, auditLog, accounts, playlists } from "@/db/schema";
+import { holdings, holdingSnapshots, auditLog, accounts, playlists, platformBalances } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -408,12 +408,18 @@ export async function getGroupedPerformance(groupBy: GroupByKey, sortKey: SortKe
 }
 
 /**
- * Total market value of all positions, plus the market-exposed portion.
- * Used to show Net Worth as cash + portfolio, with the floating part in
- * parentheses so it's always clear how much of it isn't guaranteed.
+ * Total market value of everything in the portfolio, plus the market-exposed
+ * portion. Used to show Net Worth as cash + portfolio, with the floating part
+ * in parentheses so it's always clear how much of it isn't guaranteed.
+ *
+ * Includes synced spot balances (USDC and friends). Those are NOT in the
+ * connected account's balance — sync writes only perps equity there — so
+ * counting them here adds them exactly once.
  */
 export async function getPortfolioContribution() {
   const { holdings: rows, totals } = await listHoldingsWithPnL();
+  const synced = await syncedBalanceContribution();
+
   const split = stableVsFloating(
     rows.map((h) => ({
       id: h.id,
@@ -424,7 +430,36 @@ export async function getPortfolioContribution() {
       assetType: h.assetType,
     }))
   );
-  return { portfolioValue: totals.totalValue, floating: split.floating, stable: split.stable };
+
+  return {
+    portfolioValue: round2(totals.totalValue + synced.total),
+    floating: round2(split.floating + synced.floating),
+    stable: round2(split.stable + synced.stable),
+  };
+}
+
+/**
+ * Synced spot balances valued for the portfolio. Stablecoins count as stable
+ * (capital-guaranteed); anything else is market-exposed. Unpriced tokens are
+ * left out rather than counted as zero.
+ */
+export async function syncedBalanceContribution() {
+  const rows = await db.select().from(platformBalances);
+
+  let stable = 0;
+  let floating = 0;
+  for (const b of rows) {
+    const value = b.usdValue === null ? null : Number(b.usdValue);
+    if (value === null) continue;
+    if (isStablecoin(b.coin)) stable += value;
+    else floating += value;
+  }
+
+  return { stable: round2(stable), floating: round2(floating), total: round2(stable + floating) };
+}
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
 /**

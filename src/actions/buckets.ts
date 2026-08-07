@@ -44,10 +44,14 @@ export async function createBucket(formData: FormData) {
   const description = String(formData.get("description") ?? "");
   const color = String(formData.get("color") ?? "#6366f1");
   const targetAmount = formData.get("targetAmount") ? String(formData.get("targetAmount")) : null;
+  const targetPercent = percentValue(formData.get("targetPercent"));
 
   if (!name) throw new Error("Bucket name is required");
 
-  const [bucket] = await db.insert(buckets).values({ name, description, color, targetAmount }).returning();
+  const [bucket] = await db
+    .insert(buckets)
+    .values({ name, description, color, targetAmount, targetPercent })
+    .returning();
 
   await db.insert(auditLog).values({
     entityType: "bucket",
@@ -66,10 +70,14 @@ export async function updateBucket(formData: FormData) {
   const description = String(formData.get("description") ?? "");
   const color = String(formData.get("color") ?? "#6366f1");
   const targetAmount = formData.get("targetAmount") ? String(formData.get("targetAmount")) : null;
+  const targetPercent = percentValue(formData.get("targetPercent"));
 
   if (!name) throw new Error("Bucket name is required");
 
-  await db.update(buckets).set({ name, description, color, targetAmount }).where(eq(buckets.id, id));
+  await db
+    .update(buckets)
+    .set({ name, description, color, targetAmount, targetPercent })
+    .where(eq(buckets.id, id));
 
   await db.insert(auditLog).values({
     entityType: "bucket",
@@ -171,4 +179,16 @@ export async function setAllocation(formData: FormData) {
   revalidatePath("/money-map");
   revalidatePath("/accounts");
   revalidatePath(`/accounts/${accountId}`);
+}
+
+
+/** Percentages are 0-100; anything outside that is rejected, blank means no plan. */
+function percentValue(raw: FormDataEntryValue | null): string | null {
+  const v = String(raw ?? "").trim();
+  if (v === "") return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    throw new Error("Target percentage must be between 0 and 100");
+  }
+  return String(n);
 }

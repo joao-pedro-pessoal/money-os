@@ -6,10 +6,25 @@
  * in EUR; balances in other currencies are converted at the stored rate.
  */
 
-export const BASE_CURRENCY = "EUR";
+/** Fallback when no preference is stored yet. */
+export const DEFAULT_BASE_CURRENCY = "EUR";
+
+/** Currencies the app can use as its base. */
+export const SUPPORTED_CURRENCIES = [
+  { code: "EUR", label: "Euro (€)" },
+  { code: "USD", label: "US Dollar ($)" },
+  { code: "GBP", label: "British Pound (£)" },
+  { code: "CHF", label: "Swiss Franc" },
+  { code: "BRL", label: "Brazilian Real (R$)" },
+] as const;
 
 export interface RateMap {
-  /** Units of the currency per 1 EUR. EUR itself is always 1. */
+  /**
+   * Units of the currency per 1 unit of the map's own reference currency.
+   * The reference is whatever the rates were fetched against (EUR from the
+   * provider); `base` in the conversion helpers is the currency the user
+   * wants totals in, which may be different.
+   */
   [currency: string]: number;
 }
 
@@ -20,19 +35,37 @@ export interface RateMap {
  * divides. An unknown currency returns null rather than silently passing the
  * number through unconverted — a wrong total is worse than a missing one.
  */
-export function toBase(amount: number, currency: string, rates: RateMap): number | null {
-  if (currency === BASE_CURRENCY) return round2(amount);
-  const rate = rates[currency];
-  if (!rate || rate <= 0) return null;
-  return round2(amount / rate);
+export function toBase(
+  amount: number,
+  currency: string,
+  rates: RateMap,
+  base: string = DEFAULT_BASE_CURRENCY
+): number | null {
+  if (currency === base) return round2(amount);
+
+  const from = rates[currency];
+  const to = rates[base];
+  if (!from || from <= 0 || !to || to <= 0) return null;
+
+  // Rates share a reference currency, so crossing them converts between any
+  // two: amount / rate[from] gives the reference, x rate[base] gives the base.
+  return round2((amount / from) * to);
 }
 
 /** Converts out of the base currency into `currency`. */
-export function fromBase(amount: number, currency: string, rates: RateMap): number | null {
-  if (currency === BASE_CURRENCY) return round2(amount);
-  const rate = rates[currency];
-  if (!rate || rate <= 0) return null;
-  return round2(amount * rate);
+export function fromBase(
+  amount: number,
+  currency: string,
+  rates: RateMap,
+  base: string = DEFAULT_BASE_CURRENCY
+): number | null {
+  if (currency === base) return round2(amount);
+
+  const to = rates[currency];
+  const from = rates[base];
+  if (!to || to <= 0 || !from || from <= 0) return null;
+
+  return round2((amount / from) * to);
 }
 
 /**
@@ -42,13 +75,14 @@ export function fromBase(amount: number, currency: string, rates: RateMap): numb
  */
 export function sumInBase(
   items: { amount: number; currency: string }[],
-  rates: RateMap
+  rates: RateMap,
+  base: string = DEFAULT_BASE_CURRENCY
 ): { total: number; unconverted: { amount: number; currency: string }[] } {
   let total = 0;
   const unconverted: { amount: number; currency: string }[] = [];
 
   for (const item of items) {
-    const converted = toBase(item.amount, item.currency, rates);
+    const converted = toBase(item.amount, item.currency, rates, base);
     if (converted === null) unconverted.push(item);
     else total += converted;
   }
@@ -65,7 +99,8 @@ interface FrankfurterResponse {
 
 export function parseRates(raw: unknown): RateMap {
   const data = (raw ?? {}) as FrankfurterResponse;
-  const rates: RateMap = { [BASE_CURRENCY]: 1 };
+  // The provider quotes against EUR, so EUR is the map's reference at 1.
+  const rates: RateMap = { [DEFAULT_BASE_CURRENCY]: 1 };
 
   for (const [currency, value] of Object.entries(data.rates ?? {})) {
     const n = Number(value);
@@ -83,7 +118,7 @@ const defaultHttpGet: HttpGet = async (url) => {
   return res.json();
 };
 
-export const FX_URL = `https://api.frankfurter.app/latest?from=${BASE_CURRENCY}`;
+export const FX_URL = `https://api.frankfurter.app/latest?from=${DEFAULT_BASE_CURRENCY}`;
 
 /** Fetches current rates quoted per 1 EUR. */
 export async function fetchRates(httpGet: HttpGet = defaultHttpGet): Promise<RateMap> {

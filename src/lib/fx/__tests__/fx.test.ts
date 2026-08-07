@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { toBase, fromBase, sumInBase, parseRates, fetchRates, FX_URL, BASE_CURRENCY } from "../index";
+import { toBase, fromBase, sumInBase, parseRates, fetchRates, FX_URL, DEFAULT_BASE_CURRENCY } from "../index";
 
 // Rates are quoted per 1 EUR, so 1 EUR = 1.10 USD.
 const RATES = { EUR: 1, USD: 1.1, GBP: 0.85 };
@@ -67,7 +67,7 @@ describe("sumInBase", () => {
 describe("parseRates", () => {
   it("parses the API response and always includes the base at 1", () => {
     const rates = parseRates({ base: "EUR", date: "2026-08-07", rates: { USD: 1.09, GBP: 0.84 } });
-    expect(rates[BASE_CURRENCY]).toBe(1);
+    expect(rates[DEFAULT_BASE_CURRENCY]).toBe(1);
     expect(rates.USD).toBe(1.09);
   });
 
@@ -94,5 +94,45 @@ describe("fetchRates", () => {
 
   it("propagates a failure so the caller can fall back to the stored rate", async () => {
     await expect(fetchRates(vi.fn().mockRejectedValue(new Error("offline")))).rejects.toThrow("offline");
+  });
+});
+
+describe("non-EUR base currency", () => {
+  // Rates are quoted against EUR: 1 EUR = 1.10 USD = 0.85 GBP.
+  it("converts EUR into a USD base", () => {
+    // 100 EUR -> 110 USD
+    expect(toBase(100, "EUR", RATES, "USD")).toBe(110);
+  });
+
+  it("leaves the chosen base untouched", () => {
+    expect(toBase(110, "USD", RATES, "USD")).toBe(110);
+  });
+
+  it("crosses two non-base currencies", () => {
+    // 85 GBP -> 100 EUR -> 110 USD
+    expect(toBase(85, "GBP", RATES, "USD")).toBe(110);
+  });
+
+  it("sums mixed currencies into a USD base", () => {
+    const { total, unconverted } = sumInBase(
+      [
+        { amount: 100, currency: "EUR" }, // 110 USD
+        { amount: 50, currency: "USD" },
+        { amount: 85, currency: "GBP" }, // 110 USD
+      ],
+      RATES,
+      "USD"
+    );
+    expect(total).toBe(270);
+    expect(unconverted).toEqual([]);
+  });
+
+  it("returns null when the chosen base itself has no rate", () => {
+    expect(toBase(100, "EUR", { EUR: 1 }, "JPY")).toBeNull();
+  });
+
+  it("round-trips through a non-EUR base", () => {
+    const inUsd = toBase(85, "GBP", RATES, "USD")!;
+    expect(fromBase(inUsd, "GBP", RATES, "USD")).toBe(85);
   });
 });

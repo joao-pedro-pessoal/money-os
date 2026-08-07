@@ -113,6 +113,8 @@ export const buckets = pgTable("buckets", {
   color: text("color"),
   priority: numeric("priority", { precision: 4, scale: 0 }).notNull().default("0"),
   targetAmount: numeric("target_amount", { precision: 18, scale: 2 }),
+  // Share of available cash this bucket should hold, 0-100. Null = no plan.
+  targetPercent: numeric("target_percent", { precision: 5, scale: 2 }),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -474,3 +476,12 @@ export const positionMeta = pgTable(
   },
   (t) => [primaryKey({ columns: [t.connectionId, t.coin] })]
 );
+
+// ---------- AppSettings ----------
+// Single-row key/value store for app-wide preferences (base currency, …).
+// Kept as rows rather than columns so adding a preference needs no migration.
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});

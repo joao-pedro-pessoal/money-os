@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { exchangeRates } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { fetchRates, BASE_CURRENCY, type RateMap } from "@/lib/fx";
+import { fetchRates, DEFAULT_BASE_CURRENCY, type RateMap } from "@/lib/fx";
 
 /**
  * Current rates from the DB, always including the base at 1.
@@ -14,7 +14,7 @@ import { fetchRates, BASE_CURRENCY, type RateMap } from "@/lib/fx";
  */
 export async function getRates(): Promise<RateMap> {
   const rows = await db.select().from(exchangeRates);
-  const rates: RateMap = { [BASE_CURRENCY]: 1 };
+  const rates: RateMap = { [DEFAULT_BASE_CURRENCY]: 1 };
   for (const r of rows) rates[r.quote] = Number(r.rate);
   return rates;
 }
@@ -34,7 +34,7 @@ export async function refreshRates() {
     const manual = new Set(existing.filter((r) => r.manual).map((r) => r.quote));
 
     for (const [quote, rate] of Object.entries(fetched)) {
-      if (quote === BASE_CURRENCY || manual.has(quote)) continue;
+      if (quote === DEFAULT_BASE_CURRENCY || manual.has(quote)) continue;
 
       const row = existing.find((r) => r.quote === quote);
       if (row) {
@@ -44,7 +44,7 @@ export async function refreshRates() {
           .where(eq(exchangeRates.quote, quote));
       } else {
         await db.insert(exchangeRates).values({
-          base: BASE_CURRENCY,
+          base: DEFAULT_BASE_CURRENCY,
           quote,
           rate: String(rate),
           source: "frankfurter",
@@ -82,7 +82,7 @@ export async function setManualRate(formData: FormData) {
   } else {
     await db
       .insert(exchangeRates)
-      .values({ base: BASE_CURRENCY, quote, rate: String(rate), manual: true, source: "manual" });
+      .values({ base: DEFAULT_BASE_CURRENCY, quote, rate: String(rate), manual: true, source: "manual" });
   }
 
   revalidatePath("/settings");

@@ -162,7 +162,9 @@ so it can never become an open trigger for outbound requests.
 
 ### Currency conversion
 
-Base currency is EUR. A Hyperliquid account is in USD, so balances are
+Base currency is set in **Settings** (EUR, USD, GBP, CHF or BRL; EUR by
+default). Every total in the app is converted to it; individual accounts keep
+their own currency. A Hyperliquid account is in USD, so balances are
 converted before any total is shown. Rates come from the free Frankfurter API
 (no key) and refresh with every sync; you can pin a rate by hand in
 **Settings**, and a pinned rate is never overwritten by an automatic refresh.
@@ -177,9 +179,23 @@ synced and when typed into **Add position**. For a stablecoin the form collapses
 to symbol, account and amount: pricing is 1:1, risk is low and liquidity high,
 so those aren't worth asking for.
 
-Synced balances appear on the Investments page under **Synced balances**, and
-are deliberately *excluded* from Portfolio Value — they already sit inside the
-connected account's balance, so counting them again would double count.
+Synced balances appear on the Investments page under **Synced balances** and
+**are** part of Portfolio Value. The connected account's balance holds only
+perps equity, so this is the one place that money is counted. Net Worth is
+unchanged either way — the money just sits in a different column.
+
+### Bucket plans
+
+A bucket can carry a target **percentage** of your available money ("25%
+emergency, 30% travel"). The Buckets page then shows what each bucket should
+hold, what it actually holds and the drift, with an **Apply plan** button.
+
+Percentages are used as declared, not normalised: if they add up to 80%, the
+other 20% is meant to stay free and is left alone. Over 100% is flagged rather
+than silently scaled down. Applying only rewrites which money is *earmarked*
+for what — no real money moves, because the app cannot move money.
+
+A bucket that reaches its target amount gets a green "Goal reached" badge.
 
 ### Tagging synced trades
 

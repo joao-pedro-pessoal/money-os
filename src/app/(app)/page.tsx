@@ -2,6 +2,7 @@ import { listAccountsWithState } from "@/actions/accounts";
 import { listTransactions } from "@/actions/transactions";
 import { getPortfolioContribution } from "@/actions/investments";
 import { getRates } from "@/actions/fx";
+import { getBaseCurrency } from "@/actions/settings";
 import { sumInBase } from "@/lib/fx";
 import { netWorth } from "@/lib/accounting";
 import { Money } from "@/components/PrivacyContext";
@@ -12,13 +13,15 @@ export default async function DashboardPage() {
   const recentTx = await listTransactions(8);
   const portfolio = await getPortfolioContribution();
   const rates = await getRates();
+  const base = await getBaseCurrency();
 
   // Balances can be in different currencies (e.g. a USD exchange account), so
   // they are converted to EUR before being summed. Anything with no known rate
   // is reported rather than added at 1:1.
   const { total: cash, unconverted } = sumInBase(
     accounts.map((a) => ({ amount: a.balance, currency: a.currency })),
-    rates
+    rates,
+    base
   );
 
   // Positions are tracked separately in /investments and added on top of cash;
@@ -26,11 +29,13 @@ export default async function DashboardPage() {
   const nw = Math.round((cash + portfolio.portfolioValue + Number.EPSILON) * 100) / 100;
   const totalFree = sumInBase(
     accounts.map((a) => ({ amount: a.free, currency: a.currency })),
-    rates
+    rates,
+    base
   ).total;
   const totalAllocated = sumInBase(
     accounts.map((a) => ({ amount: a.allocated, currency: a.currency })),
-    rates
+    rates,
+    base
   ).total;
 
   const now = new Date();
@@ -46,10 +51,10 @@ export default async function DashboardPage() {
       <h1 className="text-lg font-semibold">Dashboard</h1>
 
       <div className="grid grid-cols-4 gap-4">
-        <StatCard label="Net Worth" value={nw} floating={portfolio.floating} />
-        <StatCard label="Free Cash" value={totalFree} />
-        <StatCard label="Allocated Cash" value={totalAllocated} />
-        <StatCard label="Net Cash Flow (month)" value={income - expenses} />
+        <StatCard label="Net Worth" value={nw} floating={portfolio.floating} currency={base} />
+        <StatCard label="Free Cash" value={totalFree} currency={base} />
+        <StatCard label="Allocated Cash" value={totalAllocated} currency={base} />
+        <StatCard label="Net Cash Flow (month)" value={income - expenses} currency={base} />
       </div>
 
       {unconverted.length > 0 && (
@@ -143,16 +148,26 @@ export default async function DashboardPage() {
  * `floating` is the market-exposed slice of the value — shown in parentheses so
  * the headline number never hides how much of it isn't guaranteed.
  */
-function StatCard({ label, value, floating }: { label: string; value: number; floating?: number }) {
+function StatCard({
+  label,
+  value,
+  floating,
+  currency = "EUR",
+}: {
+  label: string;
+  value: number;
+  floating?: number;
+  currency?: string;
+}) {
   return (
     <div className="card p-4">
       <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
       <div className="text-xl font-semibold">
-        <Money value={value} />
+        <Money value={value} currency={currency} />
         {floating !== undefined && floating > 0 && (
           <span className="text-sm font-normal text-[var(--amber)]">
             {" "}
-            (<Money value={floating} />)
+            (<Money value={floating} currency={currency} />)
           </span>
         )}
       </div>

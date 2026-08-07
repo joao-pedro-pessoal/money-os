@@ -1,6 +1,7 @@
 import { listCategories, createCategory, deleteCategory } from "@/actions/transactions";
 import { listRates, refreshRatesAction, setManualRate, unpinRate } from "@/actions/fx";
-import { BASE_CURRENCY } from "@/lib/fx";
+import { SUPPORTED_CURRENCIES } from "@/lib/fx";
+import { getBaseCurrency, setBaseCurrency } from "@/actions/settings";
 import { listAccountsWithState } from "@/actions/accounts";
 import ExportButton from "@/components/ExportButton";
 import CsvImportForm from "@/components/CsvImportForm";
@@ -8,10 +9,11 @@ import ThemePicker from "@/components/ThemePicker";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 
 export default async function SettingsPage() {
-  const [categories, accounts, rates] = await Promise.all([
+  const [categories, accounts, rates, baseCurrency] = await Promise.all([
     listCategories(),
     listAccountsWithState(),
     listRates(),
+    getBaseCurrency(),
   ]);
   const income = categories.filter((c) => c.kind === "income");
   const expense = categories.filter((c) => c.kind === "expense");
@@ -20,12 +22,32 @@ export default async function SettingsPage() {
     <div className="space-y-8">
       <h1 className="text-lg font-semibold">Settings</h1>
 
+      <div className="card p-4 max-w-md">
+        <div className="text-sm font-medium mb-3">Base currency</div>
+        <form action={setBaseCurrency} className="flex gap-2">
+          <select name="baseCurrency" className="input" defaultValue={baseCurrency}>
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="btn whitespace-nowrap">
+            Save
+          </button>
+        </form>
+        <p className="text-xs text-[var(--muted)] mt-2">
+          Every total in the app is converted to this currency. Individual accounts keep their own currency —
+          only the summed figures change.
+        </p>
+      </div>
+
       <div className="card p-4">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
           <div>
             <div className="text-sm font-medium">Exchange rates</div>
             <div className="text-xs text-[var(--muted)] mt-1">
-              Base currency is {BASE_CURRENCY}. Rates are per 1 {BASE_CURRENCY} and refresh automatically;
+              Base currency is {baseCurrency}. Rates are per 1 {baseCurrency} and refresh automatically;
               a rate you set by hand is kept and never overwritten.
             </div>
           </div>
@@ -46,7 +68,7 @@ export default async function SettingsPage() {
               <thead>
                 <tr>
                   <th>Currency</th>
-                  <th className="text-right">Per 1 {BASE_CURRENCY}</th>
+                  <th className="text-right">Per 1 {baseCurrency}</th>
                   <th>Source</th>
                   <th>Updated</th>
                   <th></th>
@@ -90,7 +112,7 @@ export default async function SettingsPage() {
             name="rate"
             type="number"
             step="0.0001"
-            placeholder={`Units per 1 ${BASE_CURRENCY}`}
+            placeholder={`Units per 1 ${baseCurrency}`}
             className="input"
             required
           />
