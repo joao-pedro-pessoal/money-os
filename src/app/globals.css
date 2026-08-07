@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root,
-[data-theme="capital-gold"] {
+[data-accent="gold"][data-mode="dark"] {
   --background: #141210;
   --surface: #1c1912;
   --surface-2: #201c14;
@@ -16,7 +16,22 @@
   --font-heading: Georgia, "Times New Roman", serif;
 }
 
-[data-theme="emerald-ledger"] {
+[data-accent="gold"][data-mode="light"] {
+  --background: #faf6ee;
+  --surface: #ffffff;
+  --surface-2: #f2ead9;
+  --border: #e6ddc8;
+  --foreground: #2b2416;
+  --muted: #8a8067;
+  --accent: #c9862a;
+  --accent-contrast: #ffffff;
+  --green: #15803d;
+  --red: #b91c1c;
+  --amber: #92400e;
+  --font-heading: Georgia, "Times New Roman", serif;
+}
+
+[data-accent="emerald"][data-mode="dark"] {
   --background: #0e1613;
   --surface: #121e19;
   --surface-2: #16241d;
@@ -31,7 +46,22 @@
   --font-heading: Georgia, "Times New Roman", serif;
 }
 
-[data-theme="slate-indigo"] {
+[data-accent="emerald"][data-mode="light"] {
+  --background: #f3faf6;
+  --surface: #ffffff;
+  --surface-2: #e3f3ea;
+  --border: #cfe6d9;
+  --foreground: #0f2620;
+  --muted: #5f7a6e;
+  --accent: #0f6e56;
+  --accent-contrast: #ffffff;
+  --green: #15803d;
+  --red: #b91c1c;
+  --amber: #92400e;
+  --font-heading: Georgia, "Times New Roman", serif;
+}
+
+[data-accent="indigo"][data-mode="dark"] {
   --background: #0b0d12;
   --surface: #12151b;
   --surface-2: #171b22;
@@ -46,19 +76,19 @@
   --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-[data-theme="warm-ivory"] {
-  --background: #faf6ee;
+[data-accent="indigo"][data-mode="light"] {
+  --background: #f7f7fb;
   --surface: #ffffff;
-  --surface-2: #f2ead9;
-  --border: #e6ddc8;
-  --foreground: #2b2416;
-  --muted: #8a8067;
-  --accent: #c9862a;
+  --surface-2: #ececf7;
+  --border: #e1e3ec;
+  --foreground: #14151a;
+  --muted: #6b6f7d;
+  --accent: #4f46e5;
   --accent-contrast: #ffffff;
   --green: #15803d;
   --red: #b91c1c;
   --amber: #92400e;
-  --font-heading: Georgia, "Times New Roman", serif;
+  --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 @theme inline {

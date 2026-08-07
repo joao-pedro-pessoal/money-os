@@ -218,3 +218,23 @@ export async function deleteTransaction(formData: FormData) {
 export async function listCategories() {
   return db.select().from(categories);
 }
+
+export async function createCategory(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const kind = String(formData.get("kind") ?? "expense");
+
+  if (!name) throw new Error("Category name is required");
+  if (kind !== "income" && kind !== "expense") throw new Error("Invalid category kind");
+
+  await db.insert(categories).values({ name, kind }).onConflictDoNothing();
+
+  revalidatePath("/settings");
+  revalidatePath("/transactions");
+}
+
+export async function deleteCategory(formData: FormData) {
+  const id = String(formData.get("id"));
+  await db.delete(categories).where(eq(categories.id, id));
+  revalidatePath("/settings");
+  revalidatePath("/transactions");
+}

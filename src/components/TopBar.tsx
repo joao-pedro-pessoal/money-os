@@ -32,7 +32,7 @@ function SunMoonIcon({ light }: { light: boolean }) {
 
 export default function TopBar() {
   const { hidden, toggle } = usePrivacy();
-  const { isLight, toggleLightDark } = useTheme();
+  const { mode, toggleMode } = useTheme();
 
   return (
     <div className="flex justify-end gap-2 px-8 pt-6">
@@ -45,12 +45,12 @@ export default function TopBar() {
         <EyeIcon open={!hidden} />
       </button>
       <button
-        onClick={toggleLightDark}
+        onClick={toggleMode}
         className="icon-btn"
-        aria-label={isLight ? "Switch to dark" : "Switch to light"}
-        title={isLight ? "Switch to dark" : "Switch to light"}
+        aria-label={mode === "light" ? "Switch to dark" : "Switch to light"}
+        title={mode === "light" ? "Switch to dark" : "Switch to light"}
       >
-        <SunMoonIcon light={isLight} />
+        <SunMoonIcon light={mode === "light"} />
       </button>
     </div>
   );

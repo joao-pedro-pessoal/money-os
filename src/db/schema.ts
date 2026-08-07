@@ -80,8 +80,8 @@ export const transactions = pgTable("transactions", {
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
   type: transactionTypeEnum("type").notNull(),
-  categoryId: text("category_id").references(() => categories.id),
-  subcategoryId: text("subcategory_id").references(() => subcategories.id),
+  categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
+  subcategoryId: text("subcategory_id").references(() => subcategories.id, { onDelete: "set null" }),
   merchant: text("merchant"),
   description: text("description"),
   notes: text("notes"),
