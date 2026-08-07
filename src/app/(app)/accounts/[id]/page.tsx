@@ -106,7 +106,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             </select>
             <input name="amount" type="number" step="0.01" placeholder="Amount (0 removes it)" className="input" required />
             <button type="submit" className="btn w-full">
-              Set allocation
+              Set exact total
             </button>
           </form>
         </div>

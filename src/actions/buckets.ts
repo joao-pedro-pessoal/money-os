@@ -96,6 +96,47 @@ export async function deleteBucket(formData: FormData) {
   revalidatePath("/");
 }
 
+/**
+ * Adds `amount` on top of whatever is already allocated for this account+bucket
+ * pair (used by the quick "Add money to a bucket" form on the Buckets list page,
+ * where the current allocation isn't shown inline — additive is the intuitive
+ * behavior there). setAllocation() above remains the "set exact total" version,
+ * used on the account/bucket detail pages where the current amount is visible.
+ */
+export async function addToAllocation(formData: FormData) {
+  const accountId = String(formData.get("accountId"));
+  const bucketId = String(formData.get("bucketId"));
+  const delta = Number(formData.get("amount") ?? "0");
+
+  const [existing] = await db
+    .select()
+    .from(bucketAllocations)
+    .where(and(eq(bucketAllocations.accountId, accountId), eq(bucketAllocations.bucketId, bucketId)));
+
+  const newTotal = Math.round(((existing ? Number(existing.amount) : 0) + delta + Number.EPSILON) * 100) / 100;
+
+  if (newTotal <= 0 && existing) {
+    await db.delete(bucketAllocations).where(eq(bucketAllocations.id, existing.id));
+  } else if (existing) {
+    await db.update(bucketAllocations).set({ amount: String(newTotal), updatedAt: new Date() }).where(eq(bucketAllocations.id, existing.id));
+  } else if (newTotal > 0) {
+    await db.insert(bucketAllocations).values({ accountId, bucketId, amount: String(newTotal) });
+  }
+
+  await db.insert(auditLog).values({
+    entityType: "bucket_allocation",
+    entityId: bucketId,
+    action: "allocation_added",
+    details: JSON.stringify({ accountId, bucketId, delta, newTotal }),
+  });
+
+  revalidatePath("/buckets");
+  revalidatePath(`/buckets/${bucketId}`);
+  revalidatePath("/money-map");
+  revalidatePath("/accounts");
+  revalidatePath(`/accounts/${accountId}`);
+}
+
 /** Upsert an allocation of `amount` from `accountId` into `bucketId`. Amount 0 removes it. */
 export async function setAllocation(formData: FormData) {
   const accountId = String(formData.get("accountId"));

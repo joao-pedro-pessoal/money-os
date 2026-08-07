@@ -1,13 +1,49 @@
-import { listBucketsWithTotals, createBucket } from "@/actions/buckets";
+import { listBucketsWithTotals, createBucket, addToAllocation } from "@/actions/buckets";
+import { listAccountsWithState } from "@/actions/accounts";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
 
 export default async function BucketsPage() {
-  const buckets = await listBucketsWithTotals();
+  const [buckets, accounts] = await Promise.all([listBucketsWithTotals(), listAccountsWithState()]);
 
   return (
     <div className="space-y-8">
       <h1 className="text-lg font-semibold">Buckets</h1>
+
+      <div className="card p-4 max-w-lg">
+        <div className="text-sm font-medium mb-1">Add money to a bucket</div>
+        <p className="text-xs text-[var(--muted)] mb-3">
+          Move some of an account's free cash into a bucket. This doesn't move real money — it just marks it as
+          reserved for that purpose.
+        </p>
+        {buckets.length === 0 || accounts.length === 0 ? (
+          <p className="text-xs text-[var(--muted)]">
+            {accounts.length === 0 ? "Create an account first." : "Create a bucket below first."}
+          </p>
+        ) : (
+          <form action={addToAllocation} className="space-y-3">
+            <select name="accountId" className="input" required>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} — free: {a.free.toFixed(2)} {a.currency}
+                </option>
+              ))}
+            </select>
+            <select name="bucketId" className="input" required>
+              {buckets.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+            <input name="amount" type="number" step="0.01" placeholder="Amount" className="input" required />
+            <button type="submit" className="btn w-full">
+              Add to bucket
+            </button>
+
+          </form>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         {buckets.map((b) => {
@@ -34,6 +70,9 @@ export default async function BucketsPage() {
                     <Money value={a.amount} />
                   </div>
                 ))}
+                {b.allocations.length === 0 && (
+                  <div className="text-xs text-[var(--muted)]">No money allocated yet.</div>
+                )}
               </div>
             </div>
           );
