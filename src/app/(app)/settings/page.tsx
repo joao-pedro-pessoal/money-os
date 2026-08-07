@@ -3,10 +3,16 @@ import { listRates, refreshRatesAction, setManualRate, unpinRate } from "@/actio
 import { SUPPORTED_CURRENCIES } from "@/lib/fx";
 import { getBaseCurrency, setBaseCurrency } from "@/actions/settings";
 import { listAccountsWithState } from "@/actions/accounts";
-import ExportButton from "@/components/ExportButton";
+import BackupPanel from "@/components/BackupPanel";
+import { restoreBackup } from "@/actions/export";
 import CsvImportForm from "@/components/CsvImportForm";
 import ThemePicker from "@/components/ThemePicker";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+
+async function restoreBackupAction(formData: FormData) {
+  "use server";
+  await restoreBackup(formData);
+}
 
 export default async function SettingsPage() {
   const [categories, accounts, rates, baseCurrency] = await Promise.all([
@@ -137,7 +143,7 @@ export default async function SettingsPage() {
         <p className="text-xs text-[var(--muted)] mb-3">
           You should never be locked into this app to access your own data.
         </p>
-        <ExportButton />
+        <BackupPanel restoreAction={restoreBackupAction} />
       </div>
 
       <div className="grid grid-cols-2 gap-6">

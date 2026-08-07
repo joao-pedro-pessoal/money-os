@@ -1,35 +1,24 @@
 import { listAccountsWithState } from "@/actions/accounts";
 import { listTransactions } from "@/actions/transactions";
-import { getPortfolioContribution } from "@/actions/investments";
+import { getNetWorth } from "@/actions/networth";
 import { getAccountPlatformTotals } from "@/actions/connections";
 import { getRates } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
 import { sumInBase, toBase } from "@/lib/fx";
-import { netWorth } from "@/lib/accounting";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
 
 export default async function DashboardPage() {
   const accounts = await listAccountsWithState();
   const recentTx = await listTransactions(8);
-  const portfolio = await getPortfolioContribution();
+  // Every money total on this page comes from one place — see
+  // src/lib/accounting/networth.ts for why.
+  const nw = await getNetWorth();
   const rates = await getRates();
-  const base = await getBaseCurrency();
+  const base = nw.baseCurrency;
   const platformTotals = await getAccountPlatformTotals();
 
-  // Balances can be in different currencies (e.g. a USD exchange account), so
-  // they are converted to EUR before being summed. Anything with no known rate
-  // is reported rather than added at 1:1.
-  const { total: cash, unconverted: cashUnconverted } = sumInBase(
-    accounts.map((a) => ({ amount: a.balance, currency: a.currency })),
-    rates,
-    base
-  );
-  const unconverted = [...cashUnconverted, ...portfolio.unconverted];
-
-  // Positions are tracked separately in /investments and added on top of cash;
-  // the two never overlap.
-  const nw = Math.round((cash + portfolio.portfolioValue + Number.EPSILON) * 100) / 100;
+  const unconverted = nw.unconverted;
   const totalFree = sumInBase(
     accounts.map((a) => ({ amount: a.free, currency: a.currency })),
     rates,
@@ -56,21 +45,12 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           label="Net Worth"
-          value={nw}
-          floating={portfolio.floating}
+          value={nw.total}
+          floating={nw.floating}
           currency={base}
-          note={
-            portfolio.portfolioValue > 0
-              ? `cash ${fmt(cash, base)} + investments ${fmt(portfolio.portfolioValue, base)}`
-              : undefined
-          }
+          note={nw.portfolio > 0 ? `cash ${fmt(nw.cash, base)} + investments ${fmt(nw.portfolio, base)}` : undefined}
         />
-        <StatCard
-          label="Investments"
-          value={portfolio.portfolioValue}
-          floating={portfolio.floating}
-          currency={base}
-        />
+        <StatCard label="Investments" value={nw.portfolio} floating={nw.floating} currency={base} />
         <StatCard label="Free Cash" value={totalFree} currency={base} />
         <StatCard label="Allocated Cash" value={totalAllocated} currency={base} />
         <StatCard label="Net Cash Flow (month)" value={income - expenses} currency={base} />

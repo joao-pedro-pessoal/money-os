@@ -1,13 +1,15 @@
 import { listAccountsWithState } from "@/actions/accounts";
 import { listBucketsWithTotals } from "@/actions/buckets";
-import { netWorth } from "@/lib/accounting";
+import { getNetWorth } from "@/actions/networth";
 import { Money } from "@/components/PrivacyContext";
 
 export default async function MoneyMapPage() {
   const accounts = await listAccountsWithState();
   const buckets = await listBucketsWithTotals();
 
-  const total = netWorth(accounts.map((a) => ({ id: a.id, balance: a.balance })));
+  // Single source of truth for the headline figure (src/actions/networth.ts).
+  const nw = await getNetWorth();
+  const total = nw.total;
   const totalFree = accounts.reduce((s, a) => s + a.free, 0);
 
   return (
@@ -15,7 +17,14 @@ export default async function MoneyMapPage() {
       <div>
         <h1 className="text-lg font-semibold">Money Map</h1>
         <div className="text-2xl font-semibold mt-2">
-          <Money value={total} /> <span className="text-sm text-[var(--muted)] font-normal">total</span>
+          <Money value={total} currency={nw.baseCurrency} />{" "}
+          <span className="text-sm text-[var(--muted)] font-normal">total</span>
+          {nw.portfolio > 0 && (
+            <div className="text-xs text-[var(--muted)] font-normal mt-1">
+              cash <Money value={nw.cash} currency={nw.baseCurrency} /> + investments{" "}
+              <Money value={nw.portfolio} currency={nw.baseCurrency} />
+            </div>
+          )}
         </div>
       </div>
 

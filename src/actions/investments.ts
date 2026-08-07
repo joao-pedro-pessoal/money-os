@@ -517,15 +517,18 @@ export async function getPortfolioContribution() {
 
   // Synced spot balances are valued in USD by the connector.
   const balances = await db.select().from(platformBalances);
+  const beforeSynced = stable + floating;
   for (const b of balances) {
     if (b.usdValue === null) continue;
     add(Number(b.usdValue), "USD", isStablecoin(b.coin));
   }
+  const syncedValue = round2(stable + floating - beforeSynced);
 
   return {
     portfolioValue: round2(stable + floating),
     floating: round2(floating),
     stable: round2(stable),
+    syncedValue,
     baseCurrency: base,
     unconverted,
   };
