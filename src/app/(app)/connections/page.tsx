@@ -4,7 +4,9 @@ import {
   deleteConnection,
   syncConnectionAction,
   getSyncLogs,
+  autoSyncAction,
 } from "@/actions/connections";
+import AutoSync from "@/components/AutoSync";
 import { NEW_ACCOUNT } from "@/lib/connectors/constants";
 import { listAccountsForHoldings } from "@/actions/investments";
 import { freshnessLabel, freshnessColor } from "@/lib/connectors/freshness";
@@ -28,6 +30,20 @@ export default async function ConnectionsPage() {
             Read-only links to external platforms. The app can read balances and positions — it can never place
             an order or move funds.
           </p>
+          {connections.length > 0 && (
+            <div className="mt-1">
+              <AutoSync
+                syncAction={autoSyncAction}
+                lastSyncAt={
+                  connections
+                    .map((c) => c.lastSyncAt)
+                    .filter((d): d is Date => d !== null)
+                    .sort((a, b) => b.getTime() - a.getTime())[0]
+                    ?.toISOString() ?? null
+                }
+              />
+            </div>
+          )}
         </div>
         <Link href="/positions" className="btn whitespace-nowrap">
           Open positions
@@ -66,6 +82,18 @@ export default async function ConnectionsPage() {
                   </div>
                   {c.lastSyncError && (
                     <div className="text-xs text-[var(--red)] mt-1 max-w-xl">{c.lastSyncError}</div>
+                  )}
+                  {c.lastSyncStatus === "ok" && (
+                    <div className="text-xs text-[var(--muted)] mt-2">
+                      perps equity <Money value={Number(c.lastEquity ?? 0)} currency="USD" /> + spot{" "}
+                      <Money value={Number(c.lastSpotValue ?? 0)} currency="USD" /> ={" "}
+                      <span className="text-[var(--foreground)]">
+                        <Money
+                          value={Number(c.lastEquity ?? 0) + Number(c.lastSpotValue ?? 0)}
+                          currency="USD"
+                        />
+                      </span>
+                    </div>
                   )}
                 </div>
 

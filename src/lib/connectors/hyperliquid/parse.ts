@@ -8,7 +8,7 @@
  * Shape reference: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals
  */
 
-import type { NormalizedAccountState, NormalizedPosition } from "../types";
+import type { NormalizedAccountState, NormalizedBalance, NormalizedPosition } from "../types";
 
 /** Parses Hyperliquid's stringified numbers. Returns null when unusable. */
 export function num(value: unknown): number | null {
@@ -104,10 +104,105 @@ export function parseClearinghouseState(raw: unknown): NormalizedAccountState {
     totalNotionalPosition: num(data.marginSummary.totalNtlPos),
     asOf: typeof data.time === "number" ? new Date(data.time) : null,
     positions,
+    // Filled in by the connector, which fetches the spot endpoints separately.
+    balances: [],
+    spotValue: 0,
   };
 }
 
 /** Hyperliquid identifies accounts by a 42-char hex address. */
 export function isValidAddress(address: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(address.trim());
+}
+
+// ---------------- Spot balances ----------------
+
+interface RawSpotBalance {
+  coin?: string;
+  token?: number;
+  hold?: string;
+  total?: string;
+  entryNtl?: string;
+}
+
+interface RawSpotState {
+  balances?: RawSpotBalance[];
+}
+
+/** Stablecoins are valued 1:1 rather than looked up in a market. */
+const STABLE_COINS = new Set(["USDC", "USDT", "USD", "DAI"]);
+
+/**
+ * Builds a coin -> USD price map from `spotMetaAndAssetCtxs`.
+ *
+ * The response is [meta, contexts] where contexts[i] lines up with
+ * meta.universe[i]. A universe entry names its two token indices, so a pair
+ * quoted in USDC gives us the base token's USD price directly.
+ */
+export function buildSpotPriceMap(raw: unknown): Record<string, number> {
+  const prices: Record<string, number> = {};
+  if (!Array.isArray(raw) || raw.length < 2) return prices;
+
+  const meta = raw[0] as {
+    tokens?: { name?: string; index?: number }[];
+    universe?: { tokens?: number[]; index?: number }[];
+  };
+  const ctxs = raw[1] as { markPx?: string; midPx?: string }[];
+
+  if (!meta?.tokens || !meta?.universe || !Array.isArray(ctxs)) return prices;
+
+  const nameByIndex = new Map<number, string>();
+  for (const t of meta.tokens) {
+    if (typeof t?.index === "number" && t?.name) nameByIndex.set(t.index, t.name);
+  }
+
+  meta.universe.forEach((pair, i) => {
+    const ctx = ctxs[i];
+    if (!pair?.tokens || pair.tokens.length < 2 || !ctx) return;
+
+    const base = nameByIndex.get(pair.tokens[0]);
+    const quote = nameByIndex.get(pair.tokens[1]);
+    if (!base || !quote || !STABLE_COINS.has(quote)) return;
+
+    const px = num(ctx.markPx) ?? num(ctx.midPx);
+    if (px !== null) prices[base] = px;
+  });
+
+  return prices;
+}
+
+/**
+ * Values spot balances in USD. A token with no known price keeps a null value
+ * rather than being counted as zero — silently dropping it would understate
+ * the total, which is worse than showing it as unpriced.
+ */
+export function parseSpotBalances(
+  raw: unknown,
+  prices: Record<string, number> = {}
+): { balances: NormalizedBalance[]; spotValue: number } {
+  const data = (raw ?? {}) as RawSpotState;
+  const balances: NormalizedBalance[] = [];
+
+  for (const b of data.balances ?? []) {
+    if (!b?.coin) continue;
+    const total = num(b.total) ?? 0;
+    if (total === 0) continue;
+
+    const price = STABLE_COINS.has(b.coin) ? 1 : (prices[b.coin] ?? null);
+
+    balances.push({
+      coin: b.coin,
+      total,
+      hold: num(b.hold) ?? 0,
+      price,
+      usdValue: price === null ? null : round2(total * price),
+    });
+  }
+
+  const spotValue = round2(balances.reduce((s, b) => s + (b.usdValue ?? 0), 0));
+  return { balances, spotValue };
+}
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 }

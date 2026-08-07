@@ -7,6 +7,7 @@ import {
   accountSnapshots,
   positions,
   positionSnapshots,
+  platformBalances,
   syncLogs,
   auditLog,
 } from "@/db/schema";
@@ -76,6 +77,26 @@ function parsePositionRow(r: typeof positions.$inferSelect) {
     marginUsed: r.marginUsed === null ? null : Number(r.marginUsed),
     cumFunding: r.cumFunding === null ? null : Number(r.cumFunding),
   };
+}
+
+export async function listBalances() {
+  const [rows, conns, allAccounts] = await Promise.all([
+    db.select().from(platformBalances),
+    db.select().from(accountConnections),
+    db.select().from(accounts),
+  ]);
+  const accountName = new Map(allAccounts.map((a) => [a.id, a.name]));
+  const accountOf = new Map(conns.map((c) => [c.id, c.accountId]));
+
+  return rows.map((b) => ({
+    ...b,
+    total: Number(b.total),
+    hold: b.hold === null ? 0 : Number(b.hold),
+    price: b.price === null ? null : Number(b.price),
+    usdValue: b.usdValue === null ? null : Number(b.usdValue),
+    available: Number(b.total) - (b.hold === null ? 0 : Number(b.hold)),
+    accountName: accountName.get(accountOf.get(b.connectionId) ?? "") ?? "—",
+  }));
 }
 
 export async function getSyncLogs(connectionId: string, limit = 10) {
@@ -179,11 +200,16 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
     const connector = connectorFor(conn.platform);
     const state = await connector.getAccountState(conn.externalId);
 
-    // 1. Equity becomes the account balance (source of truth is the exchange).
+    // 1. Account total = perps equity + spot pool.
+    //    They are separate pools on Hyperliquid: equity already contains the
+    //    unrealized P&L of open positions (so positions are never added), but
+    //    spot balances sit outside it and must be added.
+    const total = Math.round((state.equity + state.spotValue + Number.EPSILON) * 100) / 100;
+
     await db
       .update(accounts)
       .set({
-        balance: String(state.equity),
+        balance: String(total),
         lastManualUpdate: new Date(),
         updatedAt: new Date(),
       })
@@ -191,10 +217,26 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
 
     await db.insert(accountSnapshots).values({
       accountId: conn.accountId,
-      balance: String(state.equity),
+      balance: String(total),
     });
 
-    // 2. Replace the position set. Closed positions simply stop being returned
+    // 2. Spot balances, fully replaced (a spent token stops being returned).
+    await db.delete(platformBalances).where(eq(platformBalances.connectionId, conn.id));
+    if (state.balances.length > 0) {
+      await db.insert(platformBalances).values(
+        state.balances.map((b) => ({
+          connectionId: conn.id,
+          coin: b.coin,
+          total: String(b.total),
+          hold: String(b.hold),
+          price: b.price === null ? null : String(b.price),
+          usdValue: b.usdValue === null ? null : String(b.usdValue),
+          updatedAt: new Date(),
+        }))
+      );
+    }
+
+    // 3. Replace the position set. Closed positions simply stop being returned
     //    by the API, so a full replace is what makes them disappear here too.
     await db.delete(positions).where(eq(positions.connectionId, conn.id));
 
@@ -237,6 +279,10 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
         lastSyncAt: new Date(),
         lastSyncStatus: "ok",
         lastSyncError: null,
+        lastEquity: String(state.equity),
+        lastSpotValue: String(state.spotValue),
+        lastWithdrawable: state.withdrawable === null ? null : String(state.withdrawable),
+        lastMarginUsed: state.totalMarginUsed === null ? null : String(state.totalMarginUsed),
         updatedAt: new Date(),
       })
       .where(eq(accountConnections.id, conn.id));
@@ -247,11 +293,17 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
       finishedAt: new Date(),
       status: "ok",
       positionsFound: String(state.positions.length),
-      equity: String(state.equity),
+      equity: String(total),
       trigger,
     });
 
-    return { ok: true as const, equity: state.equity, positions: state.positions.length };
+    return {
+      ok: true as const,
+      equity: state.equity,
+      spotValue: state.spotValue,
+      total,
+      positions: state.positions.length,
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
 
@@ -271,6 +323,14 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
 
     return { ok: false as const, error: message };
   }
+}
+
+/** Fire-and-forget sync of every connection, for the AutoSync client component. */
+export async function autoSyncAction() {
+  await syncAllConnections("scheduled");
+  revalidatePath("/connections");
+  revalidatePath("/positions");
+  revalidatePath("/");
 }
 
 /** Syncs every active connection. Used by the schedulable route. */

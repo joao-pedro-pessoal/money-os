@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { parseClearinghouseState, parsePosition, isValidAddress, num } from "../parse";
+import {
+  parseClearinghouseState,
+  parsePosition,
+  parseSpotBalances,
+  buildSpotPriceMap,
+  isValidAddress,
+  num,
+} from "../parse";
 
 /**
  * Fixture copied from the official Hyperliquid docs response for
@@ -149,5 +156,73 @@ describe("isValidAddress", () => {
     expect(isValidAddress("0x123")).toBe(false);
     expect(isValidAddress("b65822a30bbaaa68942d6f4c43d78704faeabbbb")).toBe(false);
     expect(isValidAddress("")).toBe(false);
+  });
+});
+
+const SPOT_STATE = {
+  balances: [
+    { coin: "USDC", token: 0, hold: "0.0", total: "14.625485", entryNtl: "0.0" },
+    { coin: "PURR", token: 1, hold: "500", total: "2000", entryNtl: "1234.56" },
+    { coin: "GHOST", token: 9, hold: "0", total: "10", entryNtl: "0" },
+    { coin: "ZERO", token: 8, hold: "0", total: "0", entryNtl: "0" },
+  ],
+};
+
+const SPOT_META_CTXS = [
+  {
+    tokens: [
+      { name: "USDC", index: 0 },
+      { name: "PURR", index: 1 },
+      { name: "GHOST", index: 9 },
+    ],
+    universe: [{ name: "PURR/USDC", tokens: [1, 0], index: 0 }],
+  },
+  [{ markPx: "0.14", midPx: "0.209265", prevDayPx: "0.20432" }],
+];
+
+describe("buildSpotPriceMap", () => {
+  it("maps a base token to its USD price via the USDC pair", () => {
+    expect(buildSpotPriceMap(SPOT_META_CTXS)).toEqual({ PURR: 0.14 });
+  });
+
+  it("returns an empty map for a malformed response instead of throwing", () => {
+    expect(buildSpotPriceMap(null)).toEqual({});
+    expect(buildSpotPriceMap([{}])).toEqual({});
+  });
+});
+
+describe("parseSpotBalances", () => {
+  const { balances, spotValue } = parseSpotBalances(SPOT_STATE, buildSpotPriceMap(SPOT_META_CTXS));
+
+  it("values stablecoins 1:1 without needing a market", () => {
+    const usdc = balances.find((b) => b.coin === "USDC")!;
+    expect(usdc.price).toBe(1);
+    expect(usdc.usdValue).toBe(14.63);
+  });
+
+  it("values other tokens at their market price", () => {
+    const purr = balances.find((b) => b.coin === "PURR")!;
+    expect(purr.price).toBe(0.14);
+    expect(purr.usdValue).toBe(280); // 2000 * 0.14
+    expect(purr.hold).toBe(500);
+  });
+
+  it("keeps an unpriced token visible with a null value rather than counting it as zero", () => {
+    const ghost = balances.find((b) => b.coin === "GHOST")!;
+    expect(ghost.price).toBeNull();
+    expect(ghost.usdValue).toBeNull();
+    expect(ghost.total).toBe(10);
+  });
+
+  it("drops zero balances", () => {
+    expect(balances.find((b) => b.coin === "ZERO")).toBeUndefined();
+  });
+
+  it("sums only what it can price", () => {
+    expect(spotValue).toBe(294.63); // 14.63 + 280, GHOST excluded
+  });
+
+  it("handles an empty spot account", () => {
+    expect(parseSpotBalances({ balances: [] })).toEqual({ balances: [], spotValue: 0 });
   });
 });

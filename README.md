@@ -119,11 +119,23 @@ Add a connection in **Connections**: pick the account it feeds and paste your
 **public wallet address** (`0x…`, 42 characters). Hyperliquid's `info` endpoint
 is public, so there is no API key, no signature and nothing secret to store.
 
-**Accounting rule — read this before trusting the numbers.** The exchange
-reports `accountValue` (equity), which *already includes* the unrealized P&L of
-every open position. Sync writes that equity to the account's balance, and the
-positions on **/positions** are shown for detail only — they are never added on
-top. Adding them would count the same money twice (`PRODUCT_VISION.md` §9).
+**Accounting rule — read this before trusting the numbers.**
+
+`account balance = perps equity + spot balances`
+
+- **Perps equity** (`accountValue`) *already includes* the unrealized P&L of
+  every open position, so positions on **/positions** are shown for detail only
+  and are never added on top — that would count the same money twice
+  (`PRODUCT_VISION.md` §9).
+- **Spot balances** (USDC and other tokens) are a *separate* pool on
+  Hyperliquid, so they *are* added. Stablecoins are valued 1:1; other tokens use
+  the mark price of their USDC pair. A token with no USDC market is listed as
+  "unpriced" and left out of the total rather than counted as zero.
+
+The Connections page shows the split (`perps equity + spot = total`) so you can
+check it against what the exchange itself displays. If you use a **unified
+account**, Hyperliquid treats spot as the source of truth for everything and
+this sum would double count — tell me and it's a one-line change.
 
 Note this is the *opposite* rule to the manual Investments module, where an
 account balance is idle cash and positions add on top. Both are correct; they
@@ -133,8 +145,12 @@ Balances are stored as `numeric(18,2)`, so equity is rounded to cent precision.
 
 ### Automatic syncing
 
-The "Sync now" button always works. For unattended syncing, set `SYNC_SECRET`
-in `.env` and have your scheduler POST to the endpoint:
+While the app is open, **Connections** and **Open positions** sync themselves:
+once on load if the data is older than 5 minutes, then every 5 minutes. The
+"Sync now" button is still there for an immediate refresh.
+
+A browser can't sync while the app is closed. For that, set `SYNC_SECRET` in
+`.env` and have a scheduler POST to the endpoint:
 
 ```
 curl -X POST http://localhost:3000/api/sync -H "x-sync-secret: YOUR_SECRET"

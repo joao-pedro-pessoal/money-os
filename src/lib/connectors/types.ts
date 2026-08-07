@@ -26,6 +26,19 @@ export interface NormalizedPosition {
   cumFunding: number | null;
 }
 
+/** A token balance held outside the derivatives margin account (spot). */
+export interface NormalizedBalance {
+  coin: string;
+  /** Total units held. */
+  total: number;
+  /** Units locked in resting orders. */
+  hold: number;
+  /** Price in USD used to value this balance (1 for stablecoins). */
+  price: number | null;
+  /** total x price, when a price is known. */
+  usdValue: number | null;
+}
+
 /**
  * Account-level state, normalized.
  *
@@ -41,6 +54,14 @@ export interface NormalizedAccountState {
   /** Platform timestamp of the reading, if provided. */
   asOf: Date | null;
   positions: NormalizedPosition[];
+  /**
+   * Spot balances. On Hyperliquid these are a SEPARATE pool from the perps
+   * margin account, so they are added to `equity` to get the real total —
+   * they are not already inside it.
+   */
+  balances: NormalizedBalance[];
+  /** Sum of `usdValue` across balances. */
+  spotValue: number;
 }
 
 /** Minimal HTTP surface, injected so connectors are testable without network. */

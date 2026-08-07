@@ -336,6 +336,12 @@ export const accountConnections = pgTable("account_connections", {
   lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
   lastSyncStatus: text("last_sync_status"), // "ok" | "error"
   lastSyncError: text("last_sync_error"),
+  // Breakdown from the last successful sync, so the UI can show where the
+  // account total comes from instead of just a single opaque number.
+  lastEquity: numeric("last_equity", { precision: 20, scale: 4 }),
+  lastSpotValue: numeric("last_spot_value", { precision: 20, scale: 4 }),
+  lastWithdrawable: numeric("last_withdrawable", { precision: 20, scale: 4 }),
+  lastMarginUsed: numeric("last_margin_used", { precision: 20, scale: 4 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -413,3 +419,19 @@ export const positionsRelations = relations(positions, ({ one }) => ({
     references: [accountConnections.id],
   }),
 }));
+
+// ---------- PlatformBalance (spot / non-margin holdings on a connection) ----------
+// Separate pool from the perps margin account, so these ARE added to equity to
+// get the account total — unlike `positions`, whose value is already inside it.
+export const platformBalances = pgTable("platform_balances", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  connectionId: text("connection_id")
+    .notNull()
+    .references(() => accountConnections.id, { onDelete: "cascade" }),
+  coin: text("coin").notNull(),
+  total: numeric("total", { precision: 30, scale: 10 }).notNull(),
+  hold: numeric("hold", { precision: 30, scale: 10 }),
+  price: numeric("price", { precision: 20, scale: 8 }),
+  usdValue: numeric("usd_value", { precision: 20, scale: 4 }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
