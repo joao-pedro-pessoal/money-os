@@ -30,8 +30,29 @@ export const LIQUIDITY_LEVELS = [
   { value: "low", label: "Low liquidity" },
 ] as const;
 
+
+export const ASSET_TYPES = [
+  { value: "cash", label: "Cash parado" },
+  { value: "stablecoin", label: "Stablecoin" },
+  { value: "staking", label: "Staking / a render" },
+  { value: "crypto", label: "Cripto" },
+  { value: "stock_etf", label: "Ações / ETF" },
+  { value: "bond", label: "Obrigações" },
+  { value: "real_estate", label: "Imobiliário" },
+  { value: "other", label: "Outro" },
+] as const;
+
+/**
+ * Asset types whose value is (near) capital-guaranteed. Used to split Net Worth
+ * into a guaranteed part and a market-exposed ("floating") part.
+ */
+export const STABLE_ASSET_TYPES: string[] = ["cash", "stablecoin"];
+
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...RISK_LEVELS, ...EXPECTED_RETURNS, ...TIME_HORIZONS, ...LIQUIDITY_LEVELS].map((o) => [o.value, o.label])
+  [...RISK_LEVELS, ...EXPECTED_RETURNS, ...TIME_HORIZONS, ...LIQUIDITY_LEVELS, ...ASSET_TYPES].map((o) => [
+    o.value,
+    o.label,
+  ])
 );
 
 export function tagLabel(value: string | null | undefined): string | null {

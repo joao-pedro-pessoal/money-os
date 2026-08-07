@@ -1,5 +1,6 @@
 import { listAccountsWithState } from "@/actions/accounts";
 import { listTransactions } from "@/actions/transactions";
+import { getPortfolioContribution } from "@/actions/investments";
 import { netWorth } from "@/lib/accounting";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
@@ -7,8 +8,12 @@ import Link from "next/link";
 export default async function DashboardPage() {
   const accounts = await listAccountsWithState();
   const recentTx = await listTransactions(8);
+  const portfolio = await getPortfolioContribution();
 
-  const nw = netWorth(accounts.map((a) => ({ id: a.id, balance: a.balance })));
+  // Account balances are cash only; positions are tracked separately in
+  // /investments and added on top, so the two never overlap.
+  const cash = netWorth(accounts.map((a) => ({ id: a.id, balance: a.balance })));
+  const nw = Math.round((cash + portfolio.portfolioValue + Number.EPSILON) * 100) / 100;
   const totalFree = accounts.reduce((s, a) => s + a.free, 0);
   const totalAllocated = accounts.reduce((s, a) => s + a.allocated, 0);
 
@@ -25,7 +30,7 @@ export default async function DashboardPage() {
       <h1 className="text-lg font-semibold">Dashboard</h1>
 
       <div className="grid grid-cols-4 gap-4">
-        <StatCard label="Net Worth" value={nw} />
+        <StatCard label="Net Worth" value={nw} floating={portfolio.floating} />
         <StatCard label="Free Cash" value={totalFree} />
         <StatCard label="Allocated Cash" value={totalAllocated} />
         <StatCard label="Net Cash Flow (month)" value={income - expenses} />
@@ -104,13 +109,26 @@ export default async function DashboardPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+/**
+ * `floating` is the market-exposed slice of the value — shown in parentheses so
+ * the headline number never hides how much of it isn't guaranteed.
+ */
+function StatCard({ label, value, floating }: { label: string; value: number; floating?: number }) {
   return (
     <div className="card p-4">
       <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
       <div className="text-xl font-semibold">
         <Money value={value} />
+        {floating !== undefined && floating > 0 && (
+          <span className="text-sm font-normal text-[var(--amber)]">
+            {" "}
+            (<Money value={floating} />)
+          </span>
+        )}
       </div>
+      {floating !== undefined && floating > 0 && (
+        <div className="text-[10px] text-[var(--muted)] mt-1">in parentheses: not guaranteed</div>
+      )}
     </div>
   );
 }

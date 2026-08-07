@@ -1,6 +1,14 @@
-import { getHolding, getHoldingSnapshots, updateHolding, updateHoldingPrice, deleteHolding } from "@/actions/investments";
+import {
+  getHolding,
+  getHoldingSnapshots,
+  updateHolding,
+  updateHoldingPrice,
+  deleteHolding,
+  listAccountsForHoldings,
+  addRewards,
+} from "@/actions/investments";
 import HoldingTags from "@/components/HoldingTags";
-import { RISK_LEVELS, EXPECTED_RETURNS, TIME_HORIZONS, LIQUIDITY_LEVELS } from "@/lib/portfolio/tags";
+import { RISK_LEVELS, EXPECTED_RETURNS, TIME_HORIZONS, LIQUIDITY_LEVELS, ASSET_TYPES, tagLabel } from "@/lib/portfolio/tags";
 import { marketValue, costBasis, unrealizedPnL, unrealizedPnLPercent } from "@/lib/portfolio";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
@@ -17,6 +25,8 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
     currentPrice: Number(holding.currentPrice),
   };
   const snapshots = await getHoldingSnapshots(id);
+  const accountList = await listAccountsForHoldings();
+  const holdingAccount = accountList.find((a) => a.id === holding.accountId);
   const pnl = unrealizedPnL(h);
   const pnlColor = pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
 
@@ -24,7 +34,10 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs text-[var(--muted)]">{holding.platform}</div>
+          <div className="text-xs text-[var(--muted)]">
+            {holdingAccount?.name ?? holding.platform ?? "No account linked"}
+            {holding.assetType && <span> · {tagLabel(holding.assetType)}</span>}
+          </div>
           <h1 className="text-lg font-semibold">
             {holding.symbol}
             {holding.name && <span className="text-[var(--muted)] font-normal"> — {holding.name}</span>}
@@ -126,12 +139,71 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="card p-4 max-w-lg">
+        <div className="text-sm font-medium mb-3">Staking / rewards</div>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div>
+            <div className="text-xs text-[var(--muted)] mb-1">APR</div>
+            <div className="text-sm">{holding.apr ? `${Number(holding.apr).toFixed(2)}%` : "—"}</div>
+          </div>
+          <div>
+            <div className="text-xs text-[var(--muted)] mb-1">Projected / year</div>
+            <div className="text-sm">
+              {holding.apr ? (
+                <Money value={(marketValue(h) * Number(holding.apr)) / 100} currency={holding.currency} />
+              ) : (
+                "—"
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-[var(--muted)] mb-1">Rewards received</div>
+            <div className="text-sm text-[var(--green)]">
+              <Money value={Number(holding.rewardsEarned ?? 0)} currency={holding.currency} />
+            </div>
+          </div>
+        </div>
+        <form action={addRewards} className="flex gap-2">
+          <input type="hidden" name="id" value={holding.id} />
+          <input
+            name="amount"
+            type="number"
+            step="0.01"
+            placeholder="Rewards received now"
+            className="input"
+            required
+          />
+          <button type="submit" className="btn whitespace-nowrap">
+            Add
+          </button>
+        </form>
+        <p className="text-xs text-[var(--muted)] mt-2">
+          &quot;Projected / year&quot; is an estimate from the APR. &quot;Rewards received&quot; is what actually
+          landed — the two are kept apart on purpose.
+        </p>
+      </div>
+
+      <div className="card p-4 max-w-lg">
         <div className="text-sm font-medium mb-3">Edit position</div>
         <form action={updateHolding} className="space-y-3">
           <input type="hidden" name="id" value={holding.id} />
           <input name="symbol" defaultValue={holding.symbol} className="input" required />
           <input name="name" defaultValue={holding.name ?? ""} placeholder="Name" className="input" />
-          <input name="platform" defaultValue={holding.platform} className="input" required />
+          <select name="accountId" defaultValue={holding.accountId ?? ""} className="input" required>
+            <option value="">Account holding this position…</option>
+            {accountList.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.institution} — {a.name}
+              </option>
+            ))}
+          </select>
+          <select name="assetType" className="input" defaultValue={holding.assetType ?? ""}>
+            <option value="">Asset type — unset</option>
+            {ASSET_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
           <div className="flex gap-2">
             <input name="quantity" type="number" step="0.00000001" defaultValue={holding.quantity} className="input" required />
             <select name="currency" defaultValue={holding.currency} className="input">
@@ -147,6 +219,16 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             className="input"
             required
           />
+
+          <input
+            name="apr"
+            type="number"
+            step="0.0001"
+            defaultValue={holding.apr ?? ""}
+            placeholder="APR % (only for staking / yield positions)"
+            className="input"
+          />
+          <input type="hidden" name="rewardsEarned" value={String(holding.rewardsEarned ?? 0)} />
 
           <div className="pt-1 text-xs text-[var(--muted)]">Asset allocation tags</div>
           <div className="grid grid-cols-2 gap-2">

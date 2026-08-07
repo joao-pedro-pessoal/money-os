@@ -183,7 +183,18 @@ export const holdings = pgTable("holdings", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
   symbol: text("symbol").notNull(),
   name: text("name"),
-  platform: text("platform").notNull(),
+  // Which account/wallet physically holds this position. Nullable so older rows
+  // (and anything imported before this link existed) stay valid. This is a
+  // LOCATION label only: the account's `balance` is idle cash, positions are
+  // tracked here and added on top — the two never overlap, so no double counting.
+  accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
+  platform: text("platform"),
+  // cash | stablecoin | staking | crypto | stock_etf | bond | real_estate | other
+  assetType: text("asset_type"),
+  // Annual percentage rate for staked / yield-bearing positions (e.g. 5.25 = 5.25%).
+  apr: numeric("apr", { precision: 8, scale: 4 }),
+  // Rewards actually received so far on this position, in the position's currency.
+  rewardsEarned: numeric("rewards_earned", { precision: 18, scale: 2 }).default("0"),
   quantity: numeric("quantity", { precision: 20, scale: 8 }).notNull(),
   avgEntryPrice: numeric("avg_entry_price", { precision: 18, scale: 4 }).notNull(),
   currentPrice: numeric("current_price", { precision: 18, scale: 4 }).notNull(),
@@ -213,8 +224,12 @@ export const holdingSnapshots = pgTable("holding_snapshots", {
   value: numeric("value", { precision: 18, scale: 2 }).notNull(),
 });
 
-export const holdingsRelations = relations(holdings, ({ many }) => ({
+export const holdingsRelations = relations(holdings, ({ one, many }) => ({
   snapshots: many(holdingSnapshots),
+  account: one(accounts, {
+    fields: [holdings.accountId],
+    references: [accounts.id],
+  }),
 }));
 
 // ---------- Relations ----------
