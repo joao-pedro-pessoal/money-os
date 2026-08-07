@@ -435,6 +435,10 @@ export const platformBalances = pgTable("platform_balances", {
   hold: numeric("hold", { precision: 30, scale: 10 }),
   price: numeric("price", { precision: 20, scale: 8 }),
   usdValue: numeric("usd_value", { precision: 20, scale: 4 }),
+  // False when this balance is already inside the account's equity (Bybit
+  // unified). Only rows marked true are added to Portfolio Value — otherwise
+  // the same money would land in Net Worth twice.
+  countsInPortfolio: boolean("counts_in_portfolio").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

@@ -7,7 +7,8 @@ import {
   autoSyncAction,
 } from "@/actions/connections";
 import AutoSync from "@/components/AutoSync";
-import { NEW_ACCOUNT } from "@/lib/connectors/constants";
+import { NEW_ACCOUNT, PLATFORM_SETUP } from "@/lib/connectors/constants";
+import ConnectionForm from "@/components/ConnectionForm";
 import { listAccountsForHoldings } from "@/actions/investments";
 import { freshnessLabel, freshnessColor } from "@/lib/connectors/freshness";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
@@ -71,9 +72,12 @@ export default async function ConnectionsPage() {
                   </div>
                   <div className="text-xs text-[var(--muted)] mt-1">
                     feeds <span className="text-[var(--foreground)]">{c.accountName}</span> ·{" "}
-                    <span className="font-mono">
-                      {c.externalId.slice(0, 6)}…{c.externalId.slice(-4)}
-                    </span>
+                    <span className="font-mono">{c.externalIdMasked}</span>
+                    {c.hasSecret && (
+                      <span className="ml-2 badge border border-[var(--border)] text-[var(--muted)]">
+                        secret encrypted
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-[var(--muted)] mt-1">
                     {c.lastSyncAt
@@ -152,38 +156,12 @@ export default async function ConnectionsPage() {
 
       <div className="card p-4 max-w-lg">
         <div className="text-sm font-medium mb-3">Add connection</div>
-        <form action={createConnection} className="space-y-3">
-          <select name="platform" className="input" defaultValue="hyperliquid">
-            <option value="hyperliquid">Hyperliquid</option>
-          </select>
-          <select name="accountId" className="input" required defaultValue={NEW_ACCOUNT}>
-            <option value={NEW_ACCOUNT}>➕ Create a new account for this platform</option>
-            {accountList.length > 0 && (
-              <optgroup label="Or feed an existing account">
-                {accountList.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.institution} — {a.name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-          <input
-            name="externalId"
-            placeholder="Wallet address (0x… , 42 characters)"
-            className="input font-mono"
-            required
-          />
-          <input name="label" placeholder="Label (optional)" className="input" />
-          <button type="submit" className="btn w-full">
-            Add connection
-          </button>
-          <p className="text-xs text-[var(--muted)]">
-            Hyperliquid&apos;s read-only endpoint needs only your public wallet address — no API key, no
-            password, nothing secret. Syncing overwrites the account balance with the exchange&apos;s equity,
-            so a newly created account starts at 0 until the first sync.
-          </p>
-        </form>
+        <ConnectionForm
+          action={createConnection}
+          accounts={accountList}
+          newAccountValue={NEW_ACCOUNT}
+          setup={PLATFORM_SETUP}
+        />
       </div>
     </div>
   );

@@ -54,24 +54,39 @@ export interface NormalizedAccountState {
   /** Platform timestamp of the reading, if provided. */
   asOf: Date | null;
   positions: NormalizedPosition[];
-  /**
-   * Spot balances. On Hyperliquid these are a SEPARATE pool from the perps
-   * margin account, so they are added to `equity` to get the real total —
-   * they are not already inside it.
-   */
+  /** Coin balances held on the platform. */
   balances: NormalizedBalance[];
   /** Sum of `usdValue` across balances. */
   spotValue: number;
+  /**
+   * Whether `balances` are money that sits OUTSIDE `equity`.
+   *
+   * This has to be stated by each connector rather than guessed, because the
+   * platforms genuinely differ: Hyperliquid keeps spot in a separate pool from
+   * the perps margin account (true — add them on top), while a Bybit unified
+   * account reports one pot where the coin list is a breakdown of `equity`
+   * itself (false — showing them is fine, adding them counts the same money
+   * twice).
+   */
+  balancesAreSeparatePool: boolean;
 }
 
 /** Minimal HTTP surface, injected so connectors are testable without network. */
 export type HttpPost = (url: string, body: unknown) => Promise<unknown>;
 
+/** Signed GET, for platforms that authenticate with headers rather than a body. */
+export type HttpGetSigned = (url: string, headers: Record<string, string>) => Promise<unknown>;
+
 export interface Connector {
   readonly platform: string;
   /** Cheap validity check on the identifier before saving a connection. */
   validateIdentifier(identifier: string): { ok: true } | { ok: false; reason: string };
-  /** Fetch and normalize the current account state. Read-only. */
+  /**
+   * Fetch and normalize the current account state. Read-only.
+   * `identifier` is the public account id where one exists (a wallet
+   * address); platforms authenticated by key ignore it, having received
+   * their credentials when the connector was created.
+   */
   getAccountState(identifier: string): Promise<NormalizedAccountState>;
 }
 

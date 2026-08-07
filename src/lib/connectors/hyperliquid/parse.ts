@@ -108,6 +108,7 @@ export function parseClearinghouseState(raw: unknown): NormalizedAccountState {
     // Filled in by the connector, which fetches the spot endpoints separately.
     balances: [],
     spotValue: 0,
+    balancesAreSeparatePool: true,
   };
 }
 

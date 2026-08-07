@@ -33,7 +33,9 @@ export default async function InvestmentsPage({
   // Synced balances DO count toward Portfolio Value: the connected account's
   // balance holds only perps equity, so this is where that money is counted —
   // exactly once.
-  const syncedTotal = syncedBalances.reduce((s, b) => s + (b.usdValue ?? 0), 0);
+  const syncedTotal = syncedBalances
+    .filter((b) => b.countsInPortfolio)
+    .reduce((s, b) => s + (b.usdValue ?? 0), 0);
 
   const filtered = holdings.filter(
     (h) => (!risk || h.riskLevel === risk) && (!time || h.timeHorizon === time)
@@ -231,6 +233,9 @@ export default async function InvestmentsPage({
                     <td className="text-right">{b.total}</td>
                     <td className="text-right">
                       {b.usdValue === null ? "—" : <Money value={b.usdValue} currency="USD" />}
+                      {!b.countsInPortfolio && (
+                        <div className="text-[10px] text-[var(--muted)]">already in account equity</div>
+                      )}
                     </td>
                   </tr>
                 ))}

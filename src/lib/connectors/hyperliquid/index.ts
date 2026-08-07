@@ -41,7 +41,8 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
       const state = parseClearinghouseState(perpsRaw);
       const { balances, spotValue } = parseSpotBalances(spotRaw, buildSpotPriceMap(spotMetaRaw));
 
-      return { ...state, balances, spotValue };
+      // Hyperliquid spot is a pool of its own, outside the perps equity.
+      return { ...state, balances, spotValue, balancesAreSeparatePool: true };
     },
   };
 }

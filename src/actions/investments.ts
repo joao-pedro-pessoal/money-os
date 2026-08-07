@@ -406,7 +406,7 @@ export async function getPortfolioAnalysis(includeSynced = true) {
     const nameOf = new Map(allAccounts.map((a) => [a.id, a.name]));
 
     for (const b of balances) {
-      if (b.usdValue === null) continue;
+      if (b.usdValue === null || !b.countsInPortfolio) continue;
       const value = Number(b.usdValue);
       const stable = isStablecoin(b.coin);
       enriched.push({
@@ -515,11 +515,13 @@ export async function getPortfolioContribution() {
     add(marketValue(h), h.currency, isStable);
   }
 
-  // Synced spot balances are valued in USD by the connector.
+  // Synced spot balances are valued in USD by the connector. Only those that
+  // are a pool of their own count here — a Bybit unified account's coin list is
+  // a breakdown of its equity, which is already counted as cash.
   const balances = await db.select().from(platformBalances);
   const beforeSynced = stable + floating;
   for (const b of balances) {
-    if (b.usdValue === null) continue;
+    if (b.usdValue === null || !b.countsInPortfolio) continue;
     add(Number(b.usdValue), "USD", isStablecoin(b.coin));
   }
   const syncedValue = round2(stable + floating - beforeSynced);

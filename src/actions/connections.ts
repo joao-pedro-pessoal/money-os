@@ -16,19 +16,44 @@ import {
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { createHyperliquidConnector } from "@/lib/connectors/hyperliquid";
+import { createBybitConnector } from "@/lib/connectors/bybit";
+import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
 import { freshnessOf } from "@/lib/connectors/freshness";
 import { refreshRates } from "./fx";
 import type { Connector } from "@/lib/connectors/types";
 import { NEW_ACCOUNT, PLATFORM_LABELS } from "@/lib/connectors/constants";
 
-/** Registry of available connectors. Bybit/IBKR slot in here unchanged. */
-function connectorFor(platform: string): Connector {
+/**
+ * Registry of available connectors. Adding a platform is a case here plus its
+ * own folder in src/lib/connectors — the sync engine is untouched.
+ *
+ * `secret` is the already-decrypted credential, passed only to platforms that
+ * need one.
+ */
+function connectorFor(platform: string, externalId: string, secret: string | null): Connector {
   switch (platform) {
     case "hyperliquid":
+      // Public read endpoint — no credential exists to leak.
       return createHyperliquidConnector();
+    case "bybit":
+      if (!secret) throw new Error("This Bybit connection has no stored API secret");
+      return createBybitConnector({ apiKey: externalId, apiSecret: secret });
     default:
       throw new Error(`No connector for platform "${platform}"`);
   }
+}
+
+/** Platforms whose credentials must be encrypted before being stored. */
+const NEEDS_SECRET = new Set(["bybit"]);
+
+function masterKey(): string {
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) {
+    throw new Error(
+      "ENCRYPTION_KEY is not set. It's required to store API secrets — add a long random string to .env."
+    );
+  }
+  return key;
 }
 
 export async function listConnections() {
@@ -38,11 +63,17 @@ export async function listConnections() {
   ]);
   const accountName = new Map(allAccounts.map((a) => [a.id, a.name]));
 
-  return conns.map((c) => ({
-    ...c,
-    accountName: accountName.get(c.accountId) ?? "(unknown account)",
-    freshness: freshnessOf({ lastSyncAt: c.lastSyncAt, lastSyncStatus: c.lastSyncStatus }),
-  }));
+  return conns.map((c) => {
+    // The encrypted secret must never reach a page prop; only a masked hint.
+    const { encryptedSecret, ...safe } = c;
+    return {
+      ...safe,
+      hasSecret: encryptedSecret !== null,
+      externalIdMasked: maskSecret(c.externalId),
+      accountName: accountName.get(c.accountId) ?? "(unknown account)",
+      freshness: freshnessOf({ lastSyncAt: c.lastSyncAt, lastSyncStatus: c.lastSyncStatus }),
+    };
+  });
 }
 
 export async function listPositionsForConnection(connectionId: string) {
@@ -168,9 +199,17 @@ export async function createConnection(formData: FormData) {
 
   if (!accountId) throw new Error("Pick the account this connection feeds");
 
-  const connector = connectorFor(platform);
+  const apiSecret = String(formData.get("apiSecret") ?? "").trim();
+  if (NEEDS_SECRET.has(platform) && !apiSecret) {
+    throw new Error("This platform needs an API secret as well as a key");
+  }
+
+  const connector = connectorFor(platform, externalId, apiSecret || null);
   const check = connector.validateIdentifier(externalId);
   if (!check.ok) throw new Error(check.reason);
+
+  // Encrypted before it goes anywhere near the database.
+  const encryptedSecret = apiSecret ? encryptSecret(apiSecret, masterKey()) : null;
 
   // A platform you're connecting for the first time usually has no Account
   // yet, so offer to create it here rather than forcing a detour to /accounts.
@@ -192,7 +231,7 @@ export async function createConnection(formData: FormData) {
 
   const [c] = await db
     .insert(accountConnections)
-    .values({ accountId, platform, externalId, label })
+    .values({ accountId, platform, externalId, label, encryptedSecret })
     .returning();
 
   await db.insert(auditLog).values({
@@ -221,6 +260,10 @@ export async function deleteConnection(formData: FormData) {
 
 export async function syncConnectionAction(formData: FormData) {
   const id = String(formData.get("id"));
+  // A synced account is often in another currency, and a balance with no
+  // exchange rate is excluded from every total. Refreshing first means the
+  // first manual sync of a new connection lands in Net Worth straight away.
+  await refreshRates();
   await syncConnection(id, "manual");
   revalidatePath("/connections");
   revalidatePath("/positions");
@@ -249,7 +292,8 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
   const startedAt = new Date();
 
   try {
-    const connector = connectorFor(conn.platform);
+    const secret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret, masterKey()) : null;
+    const connector = connectorFor(conn.platform, conn.externalId, secret);
     const state = await connector.getAccountState(conn.externalId);
 
     // 1. Account balance = perps equity ONLY.
@@ -285,6 +329,7 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
           hold: String(b.hold),
           price: b.price === null ? null : String(b.price),
           usdValue: b.usdValue === null ? null : String(b.usdValue),
+          countsInPortfolio: state.balancesAreSeparatePool,
           updatedAt: new Date(),
         }))
       );
