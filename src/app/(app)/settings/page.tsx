@@ -6,6 +6,7 @@ import { listAccountsWithState } from "@/actions/accounts";
 import BackupPanel from "@/components/BackupPanel";
 import { restoreBackup } from "@/actions/export";
 import CsvImportForm from "@/components/CsvImportForm";
+import { listImports, undoImport } from "@/actions/imports";
 import ThemePicker from "@/components/ThemePicker";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 
@@ -21,6 +22,7 @@ export default async function SettingsPage() {
     listRates(),
     getBaseCurrency(),
   ]);
+  const importHistory = await listImports();
   const income = categories.filter((c) => c.kind === "income");
   const expense = categories.filter((c) => c.kind === "expense");
 
@@ -136,6 +138,44 @@ export default async function SettingsPage() {
       <div className="card p-4">
         <div className="text-sm font-medium mb-3">Import CSV</div>
         <CsvImportForm accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} />
+
+        {importHistory.length > 0 && (
+          <div className="mt-6 border-t border-[var(--border)] pt-4">
+            <div className="text-sm font-medium mb-2">Past imports</div>
+            <div className="overflow-x-auto">
+              <table className="data-table whitespace-nowrap text-xs">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>File</th>
+                    <th>Account</th>
+                    <th className="text-right">Rows</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importHistory.map((i) => (
+                    <tr key={i.id}>
+                      <td>{new Date(i.createdAt).toLocaleString("pt-PT")}</td>
+                      <td className="max-w-[14rem] truncate">{i.fileName}</td>
+                      <td>{i.accountName}</td>
+                      <td className="text-right">{i.rowsImported}</td>
+                      <td className="text-right">
+                        <form action={undoImport}>
+                          <input type="hidden" name="importId" value={i.id} />
+                          <ConfirmSubmitButton
+                            label="Undo"
+                            confirmMessage={`Remove the ${i.rowsImported} transactions imported from "${i.fileName}"?`}
+                          />
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="card p-4">
