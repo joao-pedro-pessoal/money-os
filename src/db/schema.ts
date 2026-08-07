@@ -435,3 +435,42 @@ export const platformBalances = pgTable("platform_balances", {
   usdValue: numeric("usd_value", { precision: 20, scale: 4 }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// ---------- ExchangeRate ----------
+// One row per quote currency, rate expressed per 1 unit of the base (EUR).
+// Refreshed automatically; `manual` marks a rate the user pinned by hand so a
+// later automatic refresh doesn't silently overwrite their choice.
+export const exchangeRates = pgTable("exchange_rates", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  base: text("base").notNull().default("EUR"),
+  quote: text("quote").notNull().unique(),
+  rate: numeric("rate", { precision: 20, scale: 10 }).notNull(),
+  manual: boolean("manual").notNull().default(false),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  source: text("source"),
+});
+
+// ---------- PositionMeta ----------
+// Manual tags on an automatically-synced position.
+//
+// Sync fully replaces the `positions` rows, so tags cannot live there or every
+// refresh would wipe them. Keyed by connection + coin, which is stable across
+// syncs, honouring PRODUCT_VISION §10: automatic sync never deletes manual
+// metadata attached to a position.
+export const positionMeta = pgTable(
+  "position_meta",
+  {
+    connectionId: text("connection_id")
+      .notNull()
+      .references(() => accountConnections.id, { onDelete: "cascade" }),
+    coin: text("coin").notNull(),
+    riskLevel: text("risk_level"),
+    expectedReturn: text("expected_return"),
+    timeHorizon: text("time_horizon"),
+    liquidity: text("liquidity"),
+    playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.connectionId, t.coin] })]
+);

@@ -9,6 +9,7 @@
  */
 
 import type { NormalizedAccountState, NormalizedBalance, NormalizedPosition } from "../types";
+import { STABLECOIN_SYMBOLS } from "@/lib/portfolio/tags";
 
 /** Parses Hyperliquid's stringified numbers. Returns null when unusable. */
 export function num(value: unknown): number | null {
@@ -129,8 +130,12 @@ interface RawSpotState {
   balances?: RawSpotBalance[];
 }
 
-/** Stablecoins are valued 1:1 rather than looked up in a market. */
-const STABLE_COINS = new Set(["USDC", "USDT", "USD", "DAI"]);
+/**
+ * Stablecoins are valued 1:1 rather than looked up in a market.
+ * Shared with the portfolio tags so a coin is classified the same way whether
+ * it arrives from a sync or is typed in by hand.
+ */
+const STABLE_COINS = new Set(STABLECOIN_SYMBOLS);
 
 /**
  * Builds a coin -> USD price map from `spotMetaAndAssetCtxs`.

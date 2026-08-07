@@ -160,6 +160,34 @@ On Windows, Task Scheduler can run that command on a timer. The endpoint is
 disabled (503) while `SYNC_SECRET` is unset, and returns 401 on a wrong secret,
 so it can never become an open trigger for outbound requests.
 
+### Currency conversion
+
+Base currency is EUR. A Hyperliquid account is in USD, so balances are
+converted before any total is shown. Rates come from the free Frankfurter API
+(no key) and refresh with every sync; you can pin a rate by hand in
+**Settings**, and a pinned rate is never overwritten by an automatic refresh.
+
+A balance in a currency with no known rate is **left out of the total** and
+flagged on the Dashboard, rather than being added as if it were euros.
+
+### Stablecoins
+
+USDC, USDT, EURC, DAI and friends are recognised automatically, both when
+synced and when typed into **Add position**. For a stablecoin the form collapses
+to symbol, account and amount: pricing is 1:1, risk is low and liquidity high,
+so those aren't worth asking for.
+
+Synced balances appear on the Investments page under **Synced balances**, and
+are deliberately *excluded* from Portfolio Value — they already sit inside the
+connected account's balance, so counting them again would double count.
+
+### Tagging synced trades
+
+Positions pulled from a platform can carry the same tags as manual ones (risk,
+horizon, expected return, liquidity, playlist, notes). Sync fully replaces the
+position rows, so the tags live in their own `position_meta` table keyed by
+connection + coin — a refresh never wipes them (`PRODUCT_VISION.md` §10).
+
 ### What was NOT built (deliberate deviation from TECH_STACK.md §4)
 
 `TECH_STACK.md` called for a separate worker service with BullMQ + Redis at

@@ -1,4 +1,6 @@
 import { listCategories, createCategory, deleteCategory } from "@/actions/transactions";
+import { listRates, refreshRatesAction, setManualRate, unpinRate } from "@/actions/fx";
+import { BASE_CURRENCY } from "@/lib/fx";
 import { listAccountsWithState } from "@/actions/accounts";
 import ExportButton from "@/components/ExportButton";
 import CsvImportForm from "@/components/CsvImportForm";
@@ -6,13 +8,97 @@ import ThemePicker from "@/components/ThemePicker";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 
 export default async function SettingsPage() {
-  const [categories, accounts] = await Promise.all([listCategories(), listAccountsWithState()]);
+  const [categories, accounts, rates] = await Promise.all([
+    listCategories(),
+    listAccountsWithState(),
+    listRates(),
+  ]);
   const income = categories.filter((c) => c.kind === "income");
   const expense = categories.filter((c) => c.kind === "expense");
 
   return (
     <div className="space-y-8">
       <h1 className="text-lg font-semibold">Settings</h1>
+
+      <div className="card p-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <div>
+            <div className="text-sm font-medium">Exchange rates</div>
+            <div className="text-xs text-[var(--muted)] mt-1">
+              Base currency is {BASE_CURRENCY}. Rates are per 1 {BASE_CURRENCY} and refresh automatically;
+              a rate you set by hand is kept and never overwritten.
+            </div>
+          </div>
+          <form action={refreshRatesAction}>
+            <button type="submit" className="btn whitespace-nowrap">
+              Refresh rates
+            </button>
+          </form>
+        </div>
+
+        {rates.length === 0 ? (
+          <div className="text-sm text-[var(--muted)] py-4 text-center">
+            No rates yet — hit &quot;Refresh rates&quot;, or set one by hand below.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="data-table whitespace-nowrap">
+              <thead>
+                <tr>
+                  <th>Currency</th>
+                  <th className="text-right">Per 1 {BASE_CURRENCY}</th>
+                  <th>Source</th>
+                  <th>Updated</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rates.map((r) => (
+                  <tr key={r.id}>
+                    <td className="font-medium">{r.quote}</td>
+                    <td className="text-right">{Number(r.rate)}</td>
+                    <td>
+                      {r.manual ? (
+                        <span className="badge border border-[var(--accent)] text-[var(--accent)]">manual</span>
+                      ) : (
+                        <span className="text-[var(--muted)]">{r.source ?? "auto"}</span>
+                      )}
+                    </td>
+                    <td className="text-xs text-[var(--muted)]">
+                      {new Date(r.fetchedAt).toLocaleString("pt-PT")}
+                    </td>
+                    <td className="text-right">
+                      {r.manual && (
+                        <form action={unpinRate}>
+                          <input type="hidden" name="quote" value={r.quote} />
+                          <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
+                            Use automatic
+                          </button>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <form action={setManualRate} className="flex gap-2 mt-4 max-w-md">
+          <input name="quote" placeholder="Currency (e.g. USD)" className="input" required />
+          <input
+            name="rate"
+            type="number"
+            step="0.0001"
+            placeholder={`Units per 1 ${BASE_CURRENCY}`}
+            className="input"
+            required
+          />
+          <button type="submit" className="btn whitespace-nowrap">
+            Pin rate
+          </button>
+        </form>
+      </div>
 
       <div className="card p-4">
         <div className="text-sm font-medium mb-3">Appearance</div>

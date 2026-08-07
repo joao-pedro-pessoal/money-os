@@ -1,6 +1,8 @@
 import { listAccountsWithState } from "@/actions/accounts";
 import { listTransactions } from "@/actions/transactions";
 import { getPortfolioContribution } from "@/actions/investments";
+import { getRates } from "@/actions/fx";
+import { sumInBase } from "@/lib/fx";
 import { netWorth } from "@/lib/accounting";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
@@ -9,13 +11,27 @@ export default async function DashboardPage() {
   const accounts = await listAccountsWithState();
   const recentTx = await listTransactions(8);
   const portfolio = await getPortfolioContribution();
+  const rates = await getRates();
 
-  // Account balances are cash only; positions are tracked separately in
-  // /investments and added on top, so the two never overlap.
-  const cash = netWorth(accounts.map((a) => ({ id: a.id, balance: a.balance })));
+  // Balances can be in different currencies (e.g. a USD exchange account), so
+  // they are converted to EUR before being summed. Anything with no known rate
+  // is reported rather than added at 1:1.
+  const { total: cash, unconverted } = sumInBase(
+    accounts.map((a) => ({ amount: a.balance, currency: a.currency })),
+    rates
+  );
+
+  // Positions are tracked separately in /investments and added on top of cash;
+  // the two never overlap.
   const nw = Math.round((cash + portfolio.portfolioValue + Number.EPSILON) * 100) / 100;
-  const totalFree = accounts.reduce((s, a) => s + a.free, 0);
-  const totalAllocated = accounts.reduce((s, a) => s + a.allocated, 0);
+  const totalFree = sumInBase(
+    accounts.map((a) => ({ amount: a.free, currency: a.currency })),
+    rates
+  ).total;
+  const totalAllocated = sumInBase(
+    accounts.map((a) => ({ amount: a.allocated, currency: a.currency })),
+    rates
+  ).total;
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -35,6 +51,20 @@ export default async function DashboardPage() {
         <StatCard label="Allocated Cash" value={totalAllocated} />
         <StatCard label="Net Cash Flow (month)" value={income - expenses} />
       </div>
+
+      {unconverted.length > 0 && (
+        <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
+          <div className="text-sm">Some balances could not be converted to EUR</div>
+          <div className="text-xs text-[var(--muted)] mt-1">
+            No exchange rate for {Array.from(new Set(unconverted.map((u) => u.currency))).join(", ")}. Those
+            amounts are left out of the totals above rather than counted as if they were euros. Add a rate in{" "}
+            <Link href="/settings" className="text-[var(--accent)]">
+              Settings
+            </Link>
+            .
+          </div>
+        </div>
+      )}
 
       {warnings.length > 0 && (
         <div className="card p-4 space-y-2">

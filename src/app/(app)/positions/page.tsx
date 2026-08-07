@@ -1,13 +1,22 @@
-import { listAllPositions, listBalances, listConnections, autoSyncAction } from "@/actions/connections";
+import {
+  listAllPositions,
+  listBalances,
+  listConnections,
+  autoSyncAction,
+  setPositionTags,
+} from "@/actions/connections";
+import { listPlaylists } from "@/actions/playlists";
+import PositionTagsForm from "@/components/PositionTagsForm";
 import AutoSync from "@/components/AutoSync";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
 
 export default async function PositionsPage() {
-  const [positions, balances, connections] = await Promise.all([
+  const [positions, balances, connections, playlistList] = await Promise.all([
     listAllPositions(),
     listBalances(),
     listConnections(),
+    listPlaylists(),
   ]);
 
   const lastSyncAt = connections
@@ -165,6 +174,7 @@ export default async function PositionsPage() {
                 <thead>
                   <tr>
                     <th>Coin</th>
+                    <th>Tags</th>
                     <th>Side</th>
                     <th>Account</th>
                     <th className="text-right">Size</th>
@@ -180,6 +190,20 @@ export default async function PositionsPage() {
                   {positions.map((p) => (
                     <tr key={p.id}>
                       <td className="font-medium">{p.coin}</td>
+                      <td className="whitespace-normal">
+                        <PositionTagsForm
+                          action={setPositionTags}
+                          connectionId={p.connectionId}
+                          coin={p.coin}
+                          riskLevel={p.riskLevel}
+                          expectedReturn={p.expectedReturn}
+                          timeHorizon={p.timeHorizon}
+                          liquidity={p.liquidity}
+                          playlistId={p.playlistId}
+                          notes={p.notes}
+                          playlists={playlistList}
+                        />
+                      </td>
                       <td>
                         <span
                           className="badge"

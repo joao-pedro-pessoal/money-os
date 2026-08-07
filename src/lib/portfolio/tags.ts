@@ -47,6 +47,20 @@ export const ASSET_TYPES = [
 const LEGACY_ASSET_TYPES = [{ value: "stock_etf", label: "Ações / ETF (antigo)" }] as const;
 
 /**
+ * Coins treated as stablecoins wherever one is recognised automatically —
+ * synced balances, and the Add position form. Capital is (near) guaranteed and
+ * the price is 1:1, so no entry price or risk level is worth asking for.
+ */
+export const STABLECOIN_SYMBOLS = [
+  "USDC", "USDT", "EURC", "EURS", "DAI", "USDE", "USDS", "TUSD", "FDUSD", "PYUSD", "USD", "EUR",
+];
+
+export function isStablecoin(symbol: string | null | undefined): boolean {
+  if (!symbol) return false;
+  return STABLECOIN_SYMBOLS.includes(symbol.trim().toUpperCase());
+}
+
+/**
  * Asset types that can earn a yield. The APR field is only shown for these —
  * an APR on a plain stock position would be meaningless.
  */

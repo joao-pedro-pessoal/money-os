@@ -8,6 +8,8 @@ import {
   positions,
   positionSnapshots,
   platformBalances,
+  positionMeta,
+  playlists,
   syncLogs,
   auditLog,
 } from "@/db/schema";
@@ -15,6 +17,7 @@ import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { createHyperliquidConnector } from "@/lib/connectors/hyperliquid";
 import { freshnessOf } from "@/lib/connectors/freshness";
+import { refreshRates } from "./fx";
 import type { Connector } from "@/lib/connectors/types";
 import { NEW_ACCOUNT, PLATFORM_LABELS } from "@/lib/connectors/constants";
 
@@ -48,19 +51,68 @@ export async function listPositionsForConnection(connectionId: string) {
 }
 
 export async function listAllPositions() {
-  const [rows, conns, allAccounts] = await Promise.all([
+  const [rows, conns, allAccounts, meta, allPlaylists] = await Promise.all([
     db.select().from(positions),
     db.select().from(accountConnections),
     db.select().from(accounts),
+    db.select().from(positionMeta),
+    db.select().from(playlists),
   ]);
   const accountName = new Map(allAccounts.map((a) => [a.id, a.name]));
   const platformOf = new Map(conns.map((c) => [c.id, c.platform]));
+  const playlistName = new Map(allPlaylists.map((p) => [p.id, p.name]));
+  // Tags live in their own table keyed by connection + coin so a sync, which
+  // fully replaces `positions`, never wipes them.
+  const metaFor = new Map(meta.map((m) => [`${m.connectionId}:${m.coin}`, m]));
 
-  return rows.map((r) => ({
-    ...parsePositionRow(r),
-    accountName: accountName.get(r.accountId) ?? "—",
-    platform: platformOf.get(r.connectionId) ?? "—",
-  }));
+  return rows.map((r) => {
+    const m = metaFor.get(`${r.connectionId}:${r.coin}`);
+    return {
+      ...parsePositionRow(r),
+      accountName: accountName.get(r.accountId) ?? "—",
+      platform: platformOf.get(r.connectionId) ?? "—",
+      riskLevel: m?.riskLevel ?? null,
+      expectedReturn: m?.expectedReturn ?? null,
+      timeHorizon: m?.timeHorizon ?? null,
+      liquidity: m?.liquidity ?? null,
+      playlistId: m?.playlistId ?? null,
+      playlistName: m?.playlistId ? playlistName.get(m.playlistId) ?? null : null,
+      notes: m?.notes ?? null,
+    };
+  });
+}
+
+/**
+ * Saves manual tags on an automatically-synced position.
+ * Upserted on (connectionId, coin) so it survives every future sync.
+ */
+export async function setPositionTags(formData: FormData) {
+  const connectionId = String(formData.get("connectionId"));
+  const coin = String(formData.get("coin"));
+  const value = (field: string) => {
+    const v = String(formData.get(field) ?? "").trim();
+    return v === "" ? null : v;
+  };
+
+  const values = {
+    riskLevel: value("riskLevel"),
+    expectedReturn: value("expectedReturn"),
+    timeHorizon: value("timeHorizon"),
+    liquidity: value("liquidity"),
+    playlistId: value("playlistId"),
+    notes: value("notes"),
+    updatedAt: new Date(),
+  };
+
+  await db
+    .insert(positionMeta)
+    .values({ connectionId, coin, ...values })
+    .onConflictDoUpdate({
+      target: [positionMeta.connectionId, positionMeta.coin],
+      set: values,
+    });
+
+  revalidatePath("/positions");
 }
 
 function parsePositionRow(r: typeof positions.$inferSelect) {
@@ -327,6 +379,8 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
 
 /** Fire-and-forget sync of every connection, for the AutoSync client component. */
 export async function autoSyncAction() {
+  // Refresh FX first so converted totals use today's rate, not yesterday's.
+  await refreshRates();
   await syncAllConnections("scheduled");
   revalidatePath("/connections");
   revalidatePath("/positions");

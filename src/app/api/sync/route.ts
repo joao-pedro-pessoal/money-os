@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { syncAllConnections } from "@/actions/connections";
+import { refreshRates } from "@/actions/fx";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +30,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const fx = await refreshRates();
   const results = await syncAllConnections("scheduled");
   const failed = results.filter((r) => !r.ok);
 
   return NextResponse.json(
-    { synced: results.length, failed: failed.length, results },
+    { synced: results.length, failed: failed.length, fxUpdated: fx.ok, results },
     { status: failed.length > 0 ? 207 : 200 }
   );
 }

@@ -14,6 +14,7 @@ import {
   reinforcePosition,
   reducePosition,
 } from "@/lib/portfolio";
+import { isStablecoin } from "@/lib/portfolio/tags";
 import {
   breakdownBy,
   stableVsFloating,
@@ -40,6 +41,35 @@ function numericValue(formData: FormData, field: string): string | null {
   if (v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? String(n) : null;
+}
+
+
+/**
+ * Fills in what a stablecoin implies, so typing "USDC" is enough: it is priced
+ * 1:1, capital-stable and instantly available. Only applied where the user
+ * left the field blank — an explicit choice always wins.
+ */
+function applyStablecoinDefaults(input: {
+  symbol: string;
+  assetType: string | null;
+  riskLevel: string | null;
+  liquidity: string | null;
+  expectedReturn: string | null;
+  avgEntryPrice: string;
+  currentPrice?: string;
+}) {
+  const stable = input.assetType === "stablecoin" || (input.assetType === null && isStablecoin(input.symbol));
+  if (!stable) return input;
+
+  return {
+    ...input,
+    assetType: "stablecoin",
+    riskLevel: input.riskLevel ?? "low",
+    liquidity: input.liquidity ?? "high",
+    expectedReturn: input.expectedReturn ?? "conservative",
+    avgEntryPrice: Number(input.avgEntryPrice) > 0 ? input.avgEntryPrice : "1",
+    currentPrice: input.currentPrice && Number(input.currentPrice) > 0 ? input.currentPrice : "1",
+  };
 }
 
 export async function listHoldingsWithPnL() {
@@ -106,6 +136,16 @@ export async function createHolding(formData: FormData) {
   if (!symbol) throw new Error("Symbol is required");
   if (!accountId) throw new Error("Pick the account that holds this position");
 
+  const d = applyStablecoinDefaults({
+    symbol,
+    assetType,
+    riskLevel,
+    liquidity,
+    expectedReturn,
+    avgEntryPrice,
+    currentPrice,
+  });
+
   const [h] = await db
     .insert(holdings)
     .values({
@@ -113,26 +153,27 @@ export async function createHolding(formData: FormData) {
       name,
       accountId,
       quantity,
-      avgEntryPrice,
-      currentPrice,
+      avgEntryPrice: d.avgEntryPrice,
+      currentPrice: d.currentPrice ?? currentPrice,
       currency,
-      assetType,
+      assetType: d.assetType,
       direction,
       playlistId,
       apr,
       rewardsEarned,
-      riskLevel,
-      expectedReturn,
+      riskLevel: d.riskLevel,
+      expectedReturn: d.expectedReturn,
       timeHorizon,
-      liquidity,
+      liquidity: d.liquidity,
       lastPriceUpdate: new Date(),
     })
     .returning();
 
+  const openingPrice = d.currentPrice ?? currentPrice;
   await db.insert(holdingSnapshots).values({
     holdingId: h.id,
-    price: currentPrice,
-    value: String(Number(quantity) * Number(currentPrice)),
+    price: openingPrice,
+    value: String(Number(quantity) * Number(openingPrice)),
   });
 
   await db.insert(auditLog).values({
@@ -167,6 +208,15 @@ export async function updateHolding(formData: FormData) {
   if (!symbol) throw new Error("Symbol is required");
   if (!accountId) throw new Error("Pick the account that holds this position");
 
+  const d = applyStablecoinDefaults({
+    symbol,
+    assetType,
+    riskLevel,
+    liquidity,
+    expectedReturn,
+    avgEntryPrice,
+  });
+
   await db
     .update(holdings)
     .set({
@@ -174,17 +224,17 @@ export async function updateHolding(formData: FormData) {
       name,
       accountId,
       quantity,
-      avgEntryPrice,
+      avgEntryPrice: d.avgEntryPrice,
       currency,
-      assetType,
+      assetType: d.assetType,
       direction,
       playlistId,
       apr,
       rewardsEarned,
-      riskLevel,
-      expectedReturn,
+      riskLevel: d.riskLevel,
+      expectedReturn: d.expectedReturn,
       timeHorizon,
-      liquidity,
+      liquidity: d.liquidity,
       updatedAt: new Date(),
     })
     .where(eq(holdings.id, id));
