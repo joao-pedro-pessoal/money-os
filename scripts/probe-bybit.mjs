@@ -64,6 +64,18 @@ function redact(value, key = "") {
   return value;
 }
 
+// Your public IP, which is what Bybit compares against a key's bound list.
+// Printed first because an IP mismatch is the usual reason this fails.
+let publicIp = "(could not determine)";
+try {
+  const r = await fetch("https://api.ipify.org?format=json");
+  publicIp = (await r.json()).ip;
+} catch {
+  // Offline or blocked — not fatal, the calls below still tell us what matters.
+}
+console.log(`Your public IP right now: ${publicIp}`);
+console.log("If the key has an IP allowlist, that address has to be on it.\n");
+
 const [wallet, linearUsdt, inverse] = await Promise.all([
   call("/v5/account/wallet-balance", { accountType: "UNIFIED" }),
   call("/v5/position/list", { category: "linear", settleCoin: "USDT", limit: "200" }),
@@ -71,6 +83,14 @@ const [wallet, linearUsdt, inverse] = await Promise.all([
 ]);
 
 console.log(`=== host: ${BASE} ===`);
+if (wallet?.retCode === 10010) {
+  console.log(
+    "\n>>> Error 10010: the key's IP restriction rejected this machine.\n" +
+      `>>> Add ${publicIp} to the key's allowed IPs, or use a key with no IP binding.\n` +
+      ">>> A key created through 'Connect to Third-Party Applications' is bound to\n" +
+      ">>> that application's servers and can never work from here.\n"
+  );
+}
 console.log("=== wallet-balance ===");
 console.log(JSON.stringify(redact(wallet), null, 2));
 console.log("\n=== positions (linear/USDT) ===");

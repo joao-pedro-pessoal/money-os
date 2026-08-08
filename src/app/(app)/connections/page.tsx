@@ -170,7 +170,14 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                           <td>{new Date(l.startedAt).toLocaleString("pt-PT")}</td>
                           <td className={l.status === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}>
                             {l.status}
-                            {l.message && <div className="text-xs text-[var(--muted)]">{l.message}</div>}
+                            {l.message && (
+                              <div
+                                className="text-xs text-[var(--muted)] max-w-[28rem] truncate"
+                                title={l.message}
+                              >
+                                {l.message}
+                              </div>
+                            )}
                           </td>
                           <td>{l.trigger}</td>
                           <td className="text-right">{l.positionsFound ?? "—"}</td>
