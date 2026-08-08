@@ -331,6 +331,9 @@ export const accountConnections = pgTable("account_connections", {
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
   platform: text("platform").notNull(), // "hyperliquid" | "bybit" | ...
+  // Which regional entity of the platform, where one exists (Bybit split into
+  // global and EEA under MiCA). Null means the platform's default.
+  region: text("region"),
   externalId: text("external_id").notNull(), // public wallet address / account id
   label: text("label"),
   encryptedSecret: text("encrypted_secret"),

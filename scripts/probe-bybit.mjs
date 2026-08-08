@@ -3,7 +3,11 @@
  * a placeholder. Run it, paste the output, and the parser can be checked
  * against reality rather than against the documentation.
  *
- *   node scripts/probe-bybit.mjs YOUR_API_KEY YOUR_API_SECRET
+ *   node scripts/probe-bybit.mjs YOUR_API_KEY YOUR_API_SECRET [eu|global]
+ *
+ * Region defaults to eu (api.bybit.eu). Bybit split under MiCA and a key from
+ * one entity is rejected by the other, so if you get an auth error try the
+ * other one.
  *
  * Read-only: it calls only the wallet-balance and position-list endpoints.
  * Nothing is written anywhere, and your key and secret never leave your machine
@@ -12,14 +16,14 @@
 
 import { createHmac } from "crypto";
 
-const [apiKey, apiSecret] = process.argv.slice(2);
+const [apiKey, apiSecret, region = "eu"] = process.argv.slice(2);
 
 if (!apiKey || !apiSecret) {
-  console.error("Usage: node scripts/probe-bybit.mjs YOUR_API_KEY YOUR_API_SECRET");
+  console.error("Usage: node scripts/probe-bybit.mjs YOUR_API_KEY YOUR_API_SECRET [eu|global]");
   process.exit(1);
 }
 
-const BASE = "https://api.bybit.com";
+const BASE = region === "global" ? "https://api.bybit.com" : "https://api.bybit.eu";
 const RECV = 5000;
 
 async function call(path, params) {
@@ -66,6 +70,7 @@ const [wallet, linearUsdt, inverse] = await Promise.all([
   call("/v5/position/list", { category: "inverse", limit: "200" }),
 ]);
 
+console.log(`=== host: ${BASE} ===`);
 console.log("=== wallet-balance ===");
 console.log(JSON.stringify(redact(wallet), null, 2));
 console.log("\n=== positions (linear/USDT) ===");

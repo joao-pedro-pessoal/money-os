@@ -160,6 +160,19 @@ On Windows, Task Scheduler can run that command on a timer. The endpoint is
 disabled (503) while `SYNC_SECRET` is unset, and returns 401 on a wrong secret,
 so it can never become an open trigger for outbound requests.
 
+### Bybit: which one?
+
+MiCA split Bybit into two entities on separate hosts — **bybit.eu** for the EEA
+and **bybit.com** globally. Same V5 API, same docs, but an API key issued by one
+is rejected by the other, so you pick the region when adding the connection. It
+defaults to EU. If the first sync fails with an authentication error, that's the
+first thing to check.
+
+You also need `ENCRYPTION_KEY` in `.env` before adding any Bybit connection —
+the API secret is encrypted with it. Whoever has that key can decrypt the stored
+secrets; whoever loses it loses them. Create the Bybit key with **read-only**
+permissions.
+
 ### Currency conversion
 
 Base currency is set in **Settings** (EUR, USD, GBP, CHF or BRL; EUR by

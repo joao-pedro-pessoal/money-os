@@ -33,3 +33,25 @@ export const PLATFORM_SETUP: Record<
     help: "Create the key in Bybit with READ-ONLY permissions only. The secret is encrypted before it is stored and is never shown again. Requires ENCRYPTION_KEY in your .env.",
   },
 };
+
+
+/**
+ * Bybit split into two entities under MiCA: a global platform and an EEA one,
+ * on separate hosts. Same V5 API and the same docs — only the host differs —
+ * but a key issued by one is rejected by the other, so the region has to be
+ * part of the connection rather than guessed.
+ *
+ * Deliberately an allowlist rather than a free-text URL: the app must never be
+ * talked into signing a request to an arbitrary host with the user's API key.
+ */
+export const BYBIT_REGIONS = [
+  { value: "eu", label: "Bybit.eu (Europe / MiCA)", baseUrl: "https://api.bybit.eu" },
+  { value: "global", label: "Bybit.com (Global)", baseUrl: "https://api.bybit.com" },
+] as const;
+
+export type BybitRegion = (typeof BYBIT_REGIONS)[number]["value"];
+
+/** Falls back to EU, which is where an EEA user is now required to be. */
+export function bybitBaseUrl(region: string | null | undefined): string {
+  return BYBIT_REGIONS.find((r) => r.value === region)?.baseUrl ?? BYBIT_REGIONS[0].baseUrl;
+}

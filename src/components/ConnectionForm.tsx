@@ -15,6 +15,7 @@ export default function ConnectionForm({
   accounts,
   newAccountValue,
   setup,
+  bybitRegions,
 }: {
   action: (formData: FormData) => Promise<void>;
   accounts: { id: string; name: string; institution: string }[];
@@ -23,6 +24,7 @@ export default function ConnectionForm({
     string,
     { identifierLabel: string; identifierHint: string; needsSecret: boolean; help: string }
   >;
+  bybitRegions: readonly { value: string; label: string }[];
 }) {
   const [platform, setPlatform] = useState("hyperliquid");
   const config = setup[platform];
@@ -41,6 +43,22 @@ export default function ConnectionForm({
           </option>
         ))}
       </select>
+
+      {platform === "bybit" && (
+        <>
+          <select name="region" className="input" defaultValue={bybitRegions[0]?.value}>
+            {bybitRegions.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-[var(--muted)] -mt-1">
+            Bybit split in two under MiCA. If you signed up from the EU you&apos;re on bybit.eu — a key from
+            one is rejected by the other.
+          </p>
+        </>
+      )}
 
       <select name="accountId" className="input" required defaultValue={newAccountValue}>
         <option value={newAccountValue}>➕ Create a new account for this platform</option>

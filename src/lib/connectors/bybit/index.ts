@@ -12,7 +12,9 @@
 import type { Connector, HttpGetSigned, NormalizedAccountState } from "../types";
 import { buildQuery, signRequest, parseWalletBalance, parsePositions, isValidApiKey } from "./parse";
 
-export const BYBIT_BASE_URL = "https://api.bybit.com";
+/** Default host. A connection may target the EEA entity instead — see
+ * BYBIT_REGIONS in ../constants. */
+export const BYBIT_BASE_URL = "https://api.bybit.eu";
 const RECV_WINDOW = 5000;
 
 export interface BybitCredentials {
@@ -29,7 +31,8 @@ const LINEAR_SETTLE_COINS = ["USDT", "USDC"];
 
 export function createBybitConnector(
   credentials: BybitCredentials,
-  httpGet: HttpGetSigned = defaultSignedGet
+  httpGet: HttpGetSigned = defaultSignedGet,
+  baseUrl: string = BYBIT_BASE_URL
 ): Connector {
   async function call(path: string, params: Record<string, string | undefined>): Promise<unknown> {
     const query = buildQuery(params);
@@ -42,7 +45,7 @@ export function createBybitConnector(
       credentials.apiSecret
     );
 
-    return httpGet(`${BYBIT_BASE_URL}${path}${query ? `?${query}` : ""}`, {
+    return httpGet(`${baseUrl}${path}${query ? `?${query}` : ""}`, {
       "X-BAPI-API-KEY": credentials.apiKey,
       "X-BAPI-TIMESTAMP": String(timestamp),
       "X-BAPI-RECV-WINDOW": String(RECV_WINDOW),

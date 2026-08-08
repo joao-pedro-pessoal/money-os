@@ -21,7 +21,7 @@ import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
 import { freshnessOf } from "@/lib/connectors/freshness";
 import { refreshRates } from "./fx";
 import type { Connector } from "@/lib/connectors/types";
-import { NEW_ACCOUNT, PLATFORM_LABELS } from "@/lib/connectors/constants";
+import { NEW_ACCOUNT, PLATFORM_LABELS, bybitBaseUrl, BYBIT_REGIONS } from "@/lib/connectors/constants";
 
 /**
  * Registry of available connectors. Adding a platform is a case here plus its
@@ -30,14 +30,24 @@ import { NEW_ACCOUNT, PLATFORM_LABELS } from "@/lib/connectors/constants";
  * `secret` is the already-decrypted credential, passed only to platforms that
  * need one.
  */
-function connectorFor(platform: string, externalId: string, secret: string | null): Connector {
+function connectorFor(
+  platform: string,
+  externalId: string,
+  secret: string | null,
+  region: string | null = null
+): Connector {
   switch (platform) {
     case "hyperliquid":
       // Public read endpoint — no credential exists to leak.
       return createHyperliquidConnector();
     case "bybit":
       if (!secret) throw new Error("This Bybit connection has no stored API secret");
-      return createBybitConnector({ apiKey: externalId, apiSecret: secret });
+      // A key issued by bybit.eu is rejected by bybit.com and vice versa.
+      return createBybitConnector(
+        { apiKey: externalId, apiSecret: secret },
+        undefined,
+        bybitBaseUrl(region)
+      );
     default:
       throw new Error(`No connector for platform "${platform}"`);
   }
@@ -200,11 +210,17 @@ export async function createConnection(formData: FormData) {
   if (!accountId) throw new Error("Pick the account this connection feeds");
 
   const apiSecret = String(formData.get("apiSecret") ?? "").trim();
+  const rawRegion = String(formData.get("region") ?? "").trim();
+  // Only a known region is ever stored, so no arbitrary host can be reached.
+  const region =
+    platform === "bybit"
+      ? (BYBIT_REGIONS.find((r) => r.value === rawRegion)?.value ?? BYBIT_REGIONS[0].value)
+      : null;
   if (NEEDS_SECRET.has(platform) && !apiSecret) {
     throw new Error("This platform needs an API secret as well as a key");
   }
 
-  const connector = connectorFor(platform, externalId, apiSecret || null);
+  const connector = connectorFor(platform, externalId, apiSecret || null, region);
   const check = connector.validateIdentifier(externalId);
   if (!check.ok) throw new Error(check.reason);
 
@@ -231,7 +247,7 @@ export async function createConnection(formData: FormData) {
 
   const [c] = await db
     .insert(accountConnections)
-    .values({ accountId, platform, externalId, label, encryptedSecret })
+    .values({ accountId, platform, region, externalId, label, encryptedSecret })
     .returning();
 
   await db.insert(auditLog).values({
@@ -293,7 +309,7 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
 
   try {
     const secret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret, masterKey()) : null;
-    const connector = connectorFor(conn.platform, conn.externalId, secret);
+    const connector = connectorFor(conn.platform, conn.externalId, secret, conn.region);
     const state = await connector.getAccountState(conn.externalId);
 
     // 1. Account balance = perps equity ONLY.

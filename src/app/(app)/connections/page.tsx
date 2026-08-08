@@ -7,7 +7,7 @@ import {
   autoSyncAction,
 } from "@/actions/connections";
 import AutoSync from "@/components/AutoSync";
-import { NEW_ACCOUNT, PLATFORM_SETUP } from "@/lib/connectors/constants";
+import { NEW_ACCOUNT, PLATFORM_SETUP, BYBIT_REGIONS } from "@/lib/connectors/constants";
 import ConnectionForm from "@/components/ConnectionForm";
 import { listAccountsForHoldings } from "@/actions/investments";
 import { freshnessLabel, freshnessColor } from "@/lib/connectors/freshness";
@@ -63,6 +63,11 @@ export default async function ConnectionsPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium capitalize">{c.platform}</span>
+                    {c.region && (
+                      <span className="text-xs text-[var(--muted)]">
+                        {c.region === "eu" ? "bybit.eu" : "bybit.com"}
+                      </span>
+                    )}
                     <span
                       className="badge"
                       style={{ border: `1px solid ${freshnessColor(c.freshness)}`, color: freshnessColor(c.freshness) }}
@@ -161,6 +166,7 @@ export default async function ConnectionsPage() {
           accounts={accountList}
           newAccountValue={NEW_ACCOUNT}
           setup={PLATFORM_SETUP}
+          bybitRegions={BYBIT_REGIONS}
         />
       </div>
     </div>

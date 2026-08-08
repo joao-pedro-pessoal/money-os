@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { createHyperliquidConnector, HYPERLIQUID_INFO_URL } from "../hyperliquid";
 import { freshnessOf, freshnessLabel } from "../freshness";
+import { bybitBaseUrl } from "../constants";
 
 const FIXTURE = {
   assetPositions: [
@@ -93,5 +94,18 @@ describe("freshnessOf", () => {
   it("reports NEVER when it has not synced", () => {
     expect(freshnessOf({ lastSyncAt: null, lastSyncStatus: null }, now)).toBe("NEVER");
     expect(freshnessLabel("NEVER")).toBe("Never synced");
+  });
+});
+
+describe("bybitBaseUrl", () => {
+  it("maps the two regions to their hosts", () => {
+    expect(bybitBaseUrl("eu")).toBe("https://api.bybit.eu");
+    expect(bybitBaseUrl("global")).toBe("https://api.bybit.com");
+  });
+
+  it("falls back to the EEA host for anything unrecognised", () => {
+    // An EEA user is required to be on bybit.eu, so that is the safer default.
+    expect(bybitBaseUrl(null)).toBe("https://api.bybit.eu");
+    expect(bybitBaseUrl("nonsense")).toBe("https://api.bybit.eu");
   });
 });

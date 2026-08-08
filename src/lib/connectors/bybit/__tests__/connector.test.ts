@@ -116,3 +116,40 @@ describe("BybitConnector", () => {
     await expect(connector.getAccountState("")).rejects.toThrow("socket hang up");
   });
 });
+
+describe("Bybit regions", () => {
+  it("defaults to the EEA host", async () => {
+    const httpGet = vi.fn(async (url: string, _h: Record<string, string>) => route(url));
+    const connector = createBybitConnector({ apiKey: "K1234567890", apiSecret: "S" }, httpGet);
+    await connector.getAccountState("");
+    expect(httpGet.mock.calls[0][0]).toContain("https://api.bybit.eu");
+  });
+
+  it("uses the global host when told to", async () => {
+    const httpGet = vi.fn(async (url: string, _h: Record<string, string>) => route(url));
+    const connector = createBybitConnector(
+      { apiKey: "K1234567890", apiSecret: "S" },
+      httpGet,
+      "https://api.bybit.com"
+    );
+    await connector.getAccountState("");
+    for (const [url] of httpGet.mock.calls) {
+      expect(url).toContain("https://api.bybit.com");
+    }
+  });
+
+  it("signs identically regardless of host — only the query is signed", async () => {
+    // The base URL is not part of the signature, so a key works on whichever
+    // host issued it without any change to the signing recipe.
+    const calls: Record<string, string>[] = [];
+    const capture = vi.fn(async (url: string, headers: Record<string, string>) => {
+      calls.push(headers);
+      return route(url);
+    });
+
+    const eu = createBybitConnector({ apiKey: "K1234567890", apiSecret: "S" }, capture, "https://api.bybit.eu");
+    await eu.getAccountState("");
+    const euSign = signRequest(Number(calls[0]["X-BAPI-TIMESTAMP"]), "K1234567890", 5000, "accountType=UNIFIED", "S");
+    expect(calls[0]["X-BAPI-SIGN"]).toBe(euSign);
+  });
+});
