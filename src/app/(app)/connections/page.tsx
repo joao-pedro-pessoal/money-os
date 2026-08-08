@@ -5,6 +5,7 @@ import {
   syncConnectionAction,
   getSyncLogs,
   autoSyncAction,
+  canStoreSecrets,
 } from "@/actions/connections";
 import AutoSync from "@/components/AutoSync";
 import { NEW_ACCOUNT, PLATFORM_SETUP, BYBIT_REGIONS } from "@/lib/connectors/constants";
@@ -16,7 +17,11 @@ import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
 
 export default async function ConnectionsPage() {
-  const [connections, accountList] = await Promise.all([listConnections(), listAccountsForHoldings()]);
+  const [connections, accountList, secretsAvailable] = await Promise.all([
+    listConnections(),
+    listAccountsForHoldings(),
+    canStoreSecrets(),
+  ]);
   const logsByConnection = await Promise.all(
     connections.map(async (c) => ({ id: c.id, logs: await getSyncLogs(c.id, 5) }))
   );
@@ -50,6 +55,30 @@ export default async function ConnectionsPage() {
           Open positions
         </Link>
       </div>
+
+      {!secretsAvailable && (
+        <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
+          <div className="text-sm">Bybit is unavailable until you set an encryption key</div>
+          <div className="text-xs text-[var(--muted)] mt-2 space-y-2">
+            <p>
+              Bybit needs an API secret, and secrets are never stored unencrypted. Add this line to{" "}
+              <span className="font-mono text-[var(--foreground)]">.env</span> in the project folder:
+            </p>
+            <pre className="font-mono text-[10px] bg-[var(--surface-2)] p-2 rounded overflow-x-auto">
+ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
+            </pre>
+            <p>
+              Then stop the app and run{" "}
+              <span className="font-mono text-[var(--foreground)]">npm run dev</span> again — the file is only
+              read at startup, so editing it while the app runs changes nothing.
+            </p>
+            <p>
+              Keep that key somewhere safe. Whoever has it can decrypt your stored API secrets, and losing it
+              means losing them. Hyperliquid needs no key — its read endpoint is public.
+            </p>
+          </div>
+        </div>
+      )}
 
       {connections.length === 0 ? (
         <div className="card p-8 text-center text-sm text-[var(--muted)]">
@@ -167,6 +196,7 @@ export default async function ConnectionsPage() {
           newAccountValue={NEW_ACCOUNT}
           setup={PLATFORM_SETUP}
           bybitRegions={BYBIT_REGIONS}
+          secretsAvailable={secretsAvailable}
         />
       </div>
     </div>

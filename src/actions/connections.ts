@@ -56,6 +56,16 @@ function connectorFor(
 /** Platforms whose credentials must be encrypted before being stored. */
 const NEEDS_SECRET = new Set(["bybit"]);
 
+/**
+ * Whether secret storage is usable at all.
+ *
+ * Checked by the page so a missing key is explained up front, rather than
+ * crashing on submit after the user has typed their credentials in.
+ */
+export async function canStoreSecrets(): Promise<boolean> {
+  return Boolean(process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.length >= 16);
+}
+
 function masterKey(): string {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {

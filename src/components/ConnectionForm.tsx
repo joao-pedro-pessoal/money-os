@@ -16,6 +16,7 @@ export default function ConnectionForm({
   newAccountValue,
   setup,
   bybitRegions,
+  secretsAvailable,
 }: {
   action: (formData: FormData) => Promise<void>;
   accounts: { id: string; name: string; institution: string }[];
@@ -25,9 +26,13 @@ export default function ConnectionForm({
     { identifierLabel: string; identifierHint: string; needsSecret: boolean; help: string }
   >;
   bybitRegions: readonly { value: string; label: string }[];
+  /** False when ENCRYPTION_KEY is missing, so secrets cannot be stored. */
+  secretsAvailable: boolean;
 }) {
   const [platform, setPlatform] = useState("hyperliquid");
   const config = setup[platform];
+  // A platform needing a secret cannot be set up without the encryption key.
+  const blocked = config.needsSecret && !secretsAvailable;
 
   return (
     <form action={action} className="space-y-3">
@@ -94,7 +99,32 @@ export default function ConnectionForm({
 
       <input name="label" placeholder="Label (optional)" className="input" />
 
-      <button type="submit" className="btn w-full">
+      {blocked && (
+        <div
+          className="card p-3 text-xs space-y-2"
+          style={{ borderLeft: "2px solid var(--amber)" }}
+        >
+          <div className="text-[var(--foreground)]">
+            {config.identifierLabel === "API key" ? "Bybit" : "This platform"} stores an API secret, which
+            needs an encryption key. Add this line to your <span className="font-mono">.env</span>:
+          </div>
+          <pre className="font-mono text-[10px] bg-[var(--surface-2)] p-2 rounded overflow-x-auto">
+ENCRYPTION_KEY=&quot;{"paste-a-long-random-string-here-at-least-16-chars"}&quot;
+          </pre>
+          <div className="text-[var(--muted)]">
+            Then <span className="text-[var(--foreground)]">restart the app</span> — the file is only read at
+            startup, so a change while it&apos;s running has no effect. Keep the key safe: whoever has it can
+            decrypt your stored secrets, and losing it loses them.
+          </div>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        className="btn w-full"
+        disabled={blocked}
+        style={blocked ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+      >
         Add connection
       </button>
 
