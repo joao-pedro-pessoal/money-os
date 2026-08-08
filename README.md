@@ -160,6 +160,20 @@ On Windows, Task Scheduler can run that command on a timer. The endpoint is
 disabled (503) while `SYNC_SECRET` is unset, and returns 401 on a wrong secret,
 so it can never become an open trigger for outbound requests.
 
+### Bybit on bybit.eu: a wall worth knowing about
+
+Under MiCA, EEA users are on **bybit.eu**, and that site may only offer API keys
+through "Connect to Third-Party Applications" — you pick an approved app from a
+list. A key made that way is **locked to that application's server IPs**, so it
+cannot work from software running on your own machine, whichever app you pick.
+The symptom is Bybit error 10010, "Unmatched IP", even though the key and
+signature are perfectly valid.
+
+If your account offers a self-generated key with no IP binding (or one bound to
+your own public IP), that works. If it doesn't, Bybit EU cannot be synced by
+self-hosted software at all, and the honest answer is to track it as a manual
+account — update the balance yourself, like Trade Republic or a bank.
+
 ### Bybit: which one?
 
 MiCA split Bybit into two entities on separate hosts — **bybit.eu** for the EEA

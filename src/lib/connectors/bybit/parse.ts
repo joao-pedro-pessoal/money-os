@@ -55,6 +55,49 @@ interface BybitEnvelope<T> {
 }
 
 /**
+ * Turns a Bybit error code into something actionable.
+ *
+ * Bybit's own messages are accurate but assume you know its API key model —
+ * "Unmatched IP" doesn't tell you that the fix is in the key's settings, not in
+ * this app. Only codes whose meaning is certain get a translation; anything
+ * else keeps Bybit's wording rather than inventing an explanation.
+ */
+export function explainError(code: number, message: string): string {
+  switch (code) {
+    case 10010:
+      return (
+        "Bybit rejected the request because of the API key's IP restriction. The " +
+        "key and signature were fine — nothing is wrong on this side. " +
+        "If the key was made through \u201cConnect to Third-Party Applications\u201d, it is " +
+        "locked to that application's servers and can never work from your own " +
+        "computer, whichever application you picked. You need a self-generated " +
+        "key with no IP binding, or one bound to your own public IP. On bybit.eu " +
+        "that option may not be offered at all — if so, this account has to be " +
+        "tracked manually, which the app supports. Note too that a home IP " +
+        "usually changes over time, which quietly breaks a bound key."
+      );
+    case 10003:
+      return (
+        "Bybit doesn't recognise this API key. Check it was copied in full, and " +
+        "that it belongs to the same site you picked — a bybit.eu key is rejected " +
+        "by bybit.com and vice versa."
+      );
+    case 10004:
+      return (
+        "Bybit rejected the signature, which usually means the API secret is " +
+        "wrong or incomplete. Re-enter it, or create a new key."
+      );
+    case 10005:
+      return (
+        "This API key doesn't have permission to read the account. It needs at " +
+        "least read access to wallet and positions."
+      );
+    default:
+      return `Bybit error ${code}: ${message}`;
+  }
+}
+
+/**
  * Bybit answers HTTP 200 even for failures, putting the real outcome in
  * retCode. Ignoring that would turn "invalid API key" into an empty portfolio
  * and silently wipe the account balance to zero.
@@ -66,7 +109,7 @@ export function unwrap<T>(raw: unknown): T {
     throw new Error("Unexpected Bybit response: no retCode");
   }
   if (envelope.retCode !== 0) {
-    throw new Error(`Bybit error ${envelope.retCode}: ${envelope.retMsg ?? "unknown"}`);
+    throw new Error(explainError(envelope.retCode, envelope.retMsg ?? "unknown"));
   }
   if (envelope.result === undefined) {
     throw new Error("Bybit returned no result");

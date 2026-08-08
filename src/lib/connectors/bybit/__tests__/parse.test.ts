@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createHmac } from "crypto";
 import {
-  num, signRequest, buildQuery, unwrap,
+  num, signRequest, buildQuery, unwrap, explainError,
   parseWalletBalance, parsePosition, parsePositions, isValidApiKey,
 } from "../parse";
 
@@ -109,7 +109,7 @@ describe("unwrap", () => {
 
   it("throws on a Bybit error rather than treating it as empty data", () => {
     // Bybit answers HTTP 200 for failures; missing this would zero the balance.
-    expect(() => unwrap({ retCode: 10003, retMsg: "API key is invalid" })).toThrow(/10003.*invalid/);
+    expect(() => unwrap({ retCode: 10003, retMsg: "API key is invalid" })).toThrow(/doesn't recognise/);
   });
 
   it("throws when the envelope isn't a Bybit response at all", () => {
@@ -150,7 +150,9 @@ describe("parseWalletBalance", () => {
   });
 
   it("surfaces an API error instead of returning an empty wallet", () => {
-    expect(() => parseWalletBalance({ retCode: 10003, retMsg: "API key is invalid" })).toThrow(/invalid/);
+    expect(() => parseWalletBalance({ retCode: 10003, retMsg: "API key is invalid" })).toThrow(
+      /doesn't recognise/
+    );
   });
 
   it("throws when there is no account, rather than reporting zero equity", () => {
@@ -216,7 +218,7 @@ describe("parsePositions", () => {
   });
 
   it("propagates an API error", () => {
-    expect(() => parsePositions({ retCode: 10004, retMsg: "error sign" })).toThrow(/10004/);
+    expect(() => parsePositions({ retCode: 10004, retMsg: "error sign" })).toThrow(/signature/);
   });
 });
 
@@ -229,5 +231,40 @@ describe("isValidApiKey", () => {
     expect(isValidApiKey("short")).toBe(false);
     expect(isValidApiKey("has spaces in it")).toBe(false);
     expect(isValidApiKey("")).toBe(false);
+  });
+});
+
+
+describe("explainError", () => {
+  it("explains an IP restriction as a key setting, not an app problem", () => {
+    const msg = explainError(10010, "Unmatched IP, please check your API key's bound IP addresses.");
+    expect(msg).toMatch(/IP restriction/);
+    // The signature was accepted, so it must not read like a credentials fault.
+    expect(msg).toMatch(/key and signature were fine/);
+  });
+
+  it("warns that a home IP changes, which quietly breaks a bound key", () => {
+    expect(explainError(10010, "")).toMatch(/changes over time/);
+  });
+
+  it("names the third-party flow as unfixable, since it binds to their servers", () => {
+    // On bybit.eu this is the usual cause, and no choice of application helps.
+    const msg = explainError(10010, "");
+    expect(msg).toMatch(/Third-Party Applications/);
+    expect(msg).toMatch(/never work from your own/);
+    expect(msg).toMatch(/tracked manually/);
+  });
+
+  it("points an unrecognised key at the bybit.eu / bybit.com split", () => {
+    expect(explainError(10003, "invalid")).toMatch(/bybit\.eu key is rejected/);
+  });
+
+  it("blames the secret, not the key, for a signature failure", () => {
+    expect(explainError(10004, "error sign")).toMatch(/API secret/);
+  });
+
+  it("keeps Bybit's own wording for codes it cannot explain", () => {
+    // Better an accurate quote than an invented explanation.
+    expect(explainError(99999, "something new")).toBe("Bybit error 99999: something new");
   });
 });

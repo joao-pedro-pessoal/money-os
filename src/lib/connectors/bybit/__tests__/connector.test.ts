@@ -100,7 +100,7 @@ describe("BybitConnector", () => {
 
   it("surfaces an authentication failure instead of reporting an empty account", async () => {
     const { connector } = connectorWith(() => ({ retCode: 10003, retMsg: "API key is invalid" }));
-    await expect(connector.getAccountState("")).rejects.toThrow(/invalid/);
+    await expect(connector.getAccountState("")).rejects.toThrow(/doesn't recognise/);
   });
 
   it("rejects a malformed API key before making any request", () => {
