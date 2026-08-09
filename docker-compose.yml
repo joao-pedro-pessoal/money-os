@@ -8,21 +8,59 @@ services:
       POSTGRES_DB: moneyos
     volumes:
       - db_data:/var/lib/postgresql/data
+    # Bound to localhost only: the database is never reachable from outside
+    # the host, even if the firewall is misconfigured.
     ports:
       - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moneyos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   app:
     build: .
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://moneyos:${POSTGRES_PASSWORD:-changeme}@db:5432/moneyos
-      APP_PASSWORD: ${APP_PASSWORD}
-      APP_SECRET: ${APP_SECRET}
-      COOKIE_SECURE: "false"
+      APP_PASSWORD: ${APP_PASSWORD:?set APP_PASSWORD in .env}
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env}
+      # Required to store API secrets (Bybit). Losing it loses the secrets.
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      # Enables POST /api/sync so the scheduler below can run.
+      SYNC_SECRET: ${SYNC_SECRET:-}
+      # Set to "true" only when a TLS-terminating proxy sits in front.
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
-      - "3000:3000"
+      # Also localhost-only: put a reverse proxy or Tailscale in front rather
+      # than exposing the app directly to the internet.
+      - "127.0.0.1:3000:3000"
+
+  # Syncs connected platforms while nobody has the app open — the one thing a
+  # browser cannot do. Skipped entirely when SYNC_SECRET is unset.
+  scheduler:
+    image: alpine:3.20
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      SYNC_SECRET: ${SYNC_SECRET:-}
+      SYNC_INTERVAL_SECONDS: ${SYNC_INTERVAL_SECONDS:-900}
+    command: >
+      sh -c '
+        apk add --no-cache curl >/dev/null 2>&1;
+        if [ -z "$$SYNC_SECRET" ]; then
+          echo "SYNC_SECRET not set — scheduled sync disabled."; sleep infinity;
+        fi;
+        while true; do
+          sleep "$$SYNC_INTERVAL_SECONDS";
+          curl -s -o /dev/null -w "sync: %{http_code}\n" \
+            -X POST http://app:3000/api/sync -H "x-sync-secret: $$SYNC_SECRET";
+        done
+      '
 
 volumes:
   db_data:

@@ -160,6 +160,10 @@ On Windows, Task Scheduler can run that command on a timer. The endpoint is
 disabled (503) while `SYNC_SECRET` is unset, and returns 401 on a wrong secret,
 so it can never become an open trigger for outbound requests.
 
+> Running this on a server instead of your laptop is covered in
+> **[DEPLOY.md](DEPLOY.md)** — it also explains the fixed-IP question that
+> decides whether Bybit can work at all.
+
 ### Bybit on bybit.eu: a wall worth knowing about
 
 Under MiCA, EEA users are on **bybit.eu**, and that site may only offer API keys
