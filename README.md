@@ -173,10 +173,18 @@ cannot work from software running on your own machine, whichever app you pick.
 The symptom is Bybit error 10010, "Unmatched IP", even though the key and
 signature are perfectly valid.
 
-If your account offers a self-generated key with no IP binding (or one bound to
-your own public IP), that works. If it doesn't, Bybit EU cannot be synced by
-self-hosted software at all, and the honest answer is to track it as a manual
-account — update the balance yourself, like Trade Republic or a bank.
+The IP field exists in Bybit's UI, but for keys made through that flow it is
+managed by the application and isn't editable, so there is nothing to point at
+your own machine. A server doesn't help either: a fixed IP is useless if you
+can't register it anywhere.
+
+If your account offers a self-generated key, that works. If it doesn't — which
+is the common case on bybit.eu — the platform cannot be synced by self-hosted
+software at all. The Connections page then offers **"Give up on syncing — track
+this account manually instead"**, which drops the connection and keeps the
+account, its balance and its history. You update the balance yourself, as with
+Trade Republic or a bank, and every figure still reaches Net Worth, buckets and
+statistics.
 
 ### Bybit: which one?
 

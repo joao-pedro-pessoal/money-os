@@ -6,6 +6,7 @@ import {
   getSyncLogs,
   autoSyncAction,
   canStoreSecrets,
+  convertToManual,
 } from "@/actions/connections";
 import AutoSync from "@/components/AutoSync";
 import { NEW_ACCOUNT, PLATFORM_SETUP, BYBIT_REGIONS } from "@/lib/connectors/constants";
@@ -120,6 +121,19 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                   </div>
                   {c.lastSyncError && (
                     <div className="text-xs text-[var(--red)] mt-1 max-w-xl">{c.lastSyncError}</div>
+                  )}
+                  {c.freshness === "ERROR" && (
+                    <form action={convertToManual} className="mt-2">
+                      <input type="hidden" name="id" value={c.id} />
+                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
+                        Give up on syncing — track this account manually instead
+                      </button>
+                      <div className="text-[10px] text-[var(--muted)] mt-1 max-w-xl">
+                        Removes the connection and keeps the account, its balance and its history. You update
+                        the balance yourself, and everything still counts toward Net Worth, buckets and
+                        statistics — only the automatic refresh goes away.
+                      </div>
+                    </form>
                   )}
                   {c.lastSyncStatus === "ok" && (
                     <div className="text-xs text-[var(--muted)] mt-2">

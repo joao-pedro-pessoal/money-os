@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createHyperliquidConnector } from "@/lib/connectors/hyperliquid";
 import { createBybitConnector } from "@/lib/connectors/bybit";
 import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
@@ -282,6 +283,37 @@ export async function deleteConnection(formData: FormData) {
   await db.delete(accountConnections).where(eq(accountConnections.id, id));
   revalidatePath("/connections");
   revalidatePath("/positions");
+}
+
+/**
+ * Gives up on syncing a platform and keeps it as a manual account.
+ *
+ * Some platforms simply cannot be read by self-hosted software — bybit.eu only
+ * issues API keys bound to its approved applications' servers, so no key of
+ * yours works from your own machine or your own server. Rather than leaving a
+ * permanent error on the page, this drops the connection and leaves the account
+ * intact, to be updated by hand like a bank.
+ */
+export async function convertToManual(formData: FormData) {
+  const id = String(formData.get("id"));
+
+  const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, id));
+  if (!conn) throw new Error("Connection not found");
+
+  await db.insert(auditLog).values({
+    entityType: "connection",
+    entityId: id,
+    action: "converted_to_manual",
+    details: JSON.stringify({ platform: conn.platform, lastError: conn.lastSyncError }),
+  });
+
+  // Positions, balances and logs cascade; the account and its balance stay.
+  await db.delete(accountConnections).where(eq(accountConnections.id, id));
+
+  revalidatePath("/connections");
+  revalidatePath("/positions");
+  revalidatePath("/accounts");
+  redirect(`/accounts/${conn.accountId}`);
 }
 
 export async function syncConnectionAction(formData: FormData) {
