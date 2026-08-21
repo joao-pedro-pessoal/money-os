@@ -7,3 +7,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+The project's own rules live in `CLAUDE.md` in this directory. Read it before
+changing anything: it documents the migration workflow, the double-counting
+constraint, and which parts of the codebase must stay free of database access.
+They apply to every agent working here, not only to Claude.

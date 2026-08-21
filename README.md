@@ -99,6 +99,24 @@ scripts/migrate.ts, seed.ts  DB setup scripts, also used by the Docker image
 drizzle/                    Generated SQL migrations (commit these)
 ```
 
+### Never hand-write a migration
+
+Change `src/db/schema.ts`, then run:
+
+```bash
+npx drizzle-kit generate     # writes the .sql, the snapshot AND the journal entry
+npx drizzle-kit migrate      # applies it
+```
+
+Writing the `.sql` by hand looks like it works and doesn't. `drizzle-kit migrate`
+applies what's listed in `drizzle/meta/_journal.json`, so a file with no journal
+entry is skipped **silently** — the app then fails at runtime with
+`relation "…" does not exist`, far away from the actual mistake. The snapshot in
+`drizzle/meta/` matters too: the next `generate` diffs against it, so a missing
+one makes drizzle re-create tables that already exist.
+
+This cost one broken dashboard already.
+
 ## What to do next (in spec order — see MVP_SPEC.md §10 "Definition of done")
 
 1. Click through the app once yourself with your real accounts/buckets and
@@ -164,6 +182,54 @@ so it can never become an open trigger for outbound requests.
 > **[DEPLOY.md](DEPLOY.md)** — it also explains the fixed-IP question that
 > decides whether Bybit can work at all.
 
+## V3 — Interactive Brokers (read-only)
+
+IBKR works unlike the exchanges: **the app never contacts IB**. You run IBKR's
+*Client Portal Gateway* on your own machine, log into it in a browser, and the
+app reads through it. There is no API key, so nothing secret is stored for this
+platform — and none of the IP restrictions that block Bybit apply.
+
+Requires an **IBKR Pro** account (the API does not work with Lite).
+
+### Setup
+
+1. Download the Client Portal Gateway from IBKR and unzip it.
+2. Start it: `bin\run.bat root\conf.yaml` on Windows.
+3. Open <https://localhost:5000> in a browser and log in. The certificate
+   warning is expected — the gateway is self-signed.
+4. Check it from the project folder:
+
+   ```bash
+   node scripts/probe-ibkr.mjs
+   ```
+
+   It prints whether the session is alive and the shape of the responses, with
+   every amount redacted. Nothing is written.
+
+5. In **Connections**, pick Interactive Brokers and enter your account id
+   (`U1234567`, or `DU…` for paper).
+
+### Two things that will bite
+
+**The session expires** and has to be renewed in the browser. That is how IBKR
+works, not a fault — the app says so plainly when it happens, and the account
+balance is left untouched rather than zeroed.
+
+**IBKR allows one session per username** across all its platforms. If Trader
+Workstation or the mobile app is logged in, syncing fails with a "competing
+session" message. Close the other one.
+
+### Accounting
+
+`netliquidationvalue` from the ledger already includes the market value and
+unrealised P&L of open positions, so positions are shown for detail and never
+added on top — the same rule as Hyperliquid and Bybit. The per-currency cash
+rows are a breakdown of that equity, not extra money.
+
+`IBKR_GATEWAY_URL` overrides where the gateway is. TLS verification is skipped
+only for loopback addresses, since the gateway's certificate is self-signed;
+never for a remote host.
+
 ### Bybit on bybit.eu: a wall worth knowing about
 
 Under MiCA, EEA users are on **bybit.eu**, and that site may only offer API keys
@@ -186,6 +252,9 @@ account, its balance and its history. You update the balance yourself, as with
 Trade Republic or a bank, and every figure still reaches Net Worth, buckets and
 statistics.
 
+**bybit.eu is not offered in the app**, for the reason above. Only bybit.com
+appears. The connector itself is fine — the entity is what refuses.
+
 ### Bybit: which one?
 
 MiCA split Bybit into two entities on separate hosts — **bybit.eu** for the EEA
@@ -198,6 +267,33 @@ You also need `ENCRYPTION_KEY` in `.env` before adding any Bybit connection —
 the API secret is encrypted with it. Whoever has that key can decrypt the stored
 secrets; whoever loses it loses them. Create the Bybit key with **read-only**
 permissions.
+
+## Getting a bank statement in, whatever format it's in
+
+Every bank writes a different CSV, Open Banking needs a licence, and the free
+aggregator tier hobby projects relied on (Nordigen) closed to new signups. So
+the app doesn't chase formats. **Settings → Import CSV** shows an instruction to
+copy into any AI along with your statement — the bank's own CSV, text pulled out
+of a PDF, a table copied off a screen — which returns a file the importer reads
+with no mapping at all.
+
+The instruction is strict about the three things that quietly corrupt an import:
+a thousands separator (turning 1.234,56 into 1.23), a markdown fence around the
+answer (breaking the header row), and an unsigned amount (losing the direction
+of the money). It also forbids inventing, merging or "correcting" rows — a
+fabricated transaction in a ledger is worse than a missing one.
+
+If your categories exist already, they're listed in the instruction so they get
+reused, and matching ones are applied on import. **A file can never create a
+category**: an AI writing "Groceries" where you have "Food" would quietly grow a
+second set. A category is also only applied if it belongs to the right side of
+the ledger — "Salary" on an expense is dropped however confidently it was
+suggested.
+
+This does mean handing your statement to whichever AI you use. The app sends
+nothing anywhere — you do the copying — but it's still your bank data going to a
+third party, so it's worth deciding deliberately, and stripping account numbers
+first costs nothing.
 
 ### Currency conversion
 

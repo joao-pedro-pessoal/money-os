@@ -10,6 +10,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "library:covers": "tsx scripts/import-covers.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:dedupe-categories": "tsx scripts/dedupe-categories.ts"
