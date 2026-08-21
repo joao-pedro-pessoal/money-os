@@ -245,6 +245,8 @@ export function parsePosition(raw: RawPosition): NormalizedPosition | null {
     liquidationPrice: num(raw.liqPrice), // "" -> null, meaning none applies
     marginUsed: num(raw.positionIM),
     cumFunding: null, // Bybit reports funding separately, not on the position
+    // Bybit lists crypto derivatives and nothing else.
+    assetClass: "CRYPTO",
   };
 }
 

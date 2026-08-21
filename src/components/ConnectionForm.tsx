@@ -17,40 +17,87 @@ export default function ConnectionForm({
   setup,
   bybitRegions,
   secretsAvailable,
+  labels,
 }: {
   action: (formData: FormData) => Promise<void>;
   accounts: { id: string; name: string; institution: string }[];
   newAccountValue: string;
   setup: Record<
     string,
-    { identifierLabel: string; identifierHint: string; needsSecret: boolean; help: string }
+    {
+      identifierLabel: string;
+      identifierHint: string;
+      needsSecret: boolean;
+      help: string;
+      steps: string[];
+      warning?: string;
+    }
   >;
   bybitRegions: readonly { value: string; label: string }[];
   /** False when ENCRYPTION_KEY is missing, so secrets cannot be stored. */
   secretsAvailable: boolean;
+  /** Display name per platform, so adding one doesn't mean editing this file. */
+  labels: Record<string, string>;
 }) {
+  // Kept above the early declarations so hooks always run in the same order.
   const [platform, setPlatform] = useState("hyperliquid");
+  const [hovered, setHovered] = useState<string | null>(null);
   const config = setup[platform];
+  // Pointing at a platform previews its steps without committing to it.
+  const shown = hovered ?? platform;
+  const shownConfig = setup[shown] ?? config;
   // A platform needing a secret cannot be set up without the encryption key.
   const blocked = config.needsSecret && !secretsAvailable;
 
   return (
     <form action={action} className="space-y-3">
-      <select
-        name="platform"
-        className="input"
-        value={platform}
-        onChange={(e) => setPlatform(e.target.value)}
-      >
+      {/* Buttons rather than a dropdown, so the setup steps can be read by
+          pointing at a platform — most of the work with these connectors
+          happens outside the app, and finding that out after filling in the
+          form is the wrong order. */}
+      <input type="hidden" name="platform" value={platform} />
+      <div className="flex gap-2 flex-wrap">
         {Object.keys(setup).map((p) => (
-          <option key={p} value={p}>
-            {p === "hyperliquid" ? "Hyperliquid" : "Bybit"}
-          </option>
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPlatform(p)}
+            onMouseEnter={() => setHovered(p)}
+            onMouseLeave={() => setHovered(null)}
+            onFocus={() => setHovered(p)}
+            onBlur={() => setHovered(null)}
+            className="btn py-1 px-3 text-sm"
+            style={
+              platform === p
+                ? undefined
+                : { background: "transparent", color: "var(--muted)", border: "1px solid var(--border)" }
+            }
+          >
+            {labels[p] ?? p}
+          </button>
         ))}
-      </select>
+      </div>
 
+      {/* Shows whichever platform is being pointed at, falling back to the
+          selected one so the panel never goes blank. */}
+      <div className="card p-3 text-xs space-y-2" style={{ background: "var(--surface-2)" }}>
+        <div className="font-medium text-[var(--foreground)]">
+          {labels[shown] ?? shown} — what you need to do
+        </div>
+        <ol className="space-y-1 list-decimal list-inside text-[var(--muted)]">
+          {shownConfig.steps.map((s, i) => (
+            <li key={i}>{s}</li>
+          ))}
+        </ol>
+        {shownConfig.warning && (
+          <div className="text-[var(--amber)] pt-1">{shownConfig.warning}</div>
+        )}
+      </div>
+
+      {/* Only one Bybit entity can authenticate, so the choice is sent
+          silently rather than offered as a decision that isn't one. */}
       {platform === "bybit" && (
-        <>
+        bybitRegions.length > 1 ? (
           <select name="region" className="input" defaultValue={bybitRegions[0]?.value}>
             {bybitRegions.map((r) => (
               <option key={r.value} value={r.value}>
@@ -58,11 +105,9 @@ export default function ConnectionForm({
               </option>
             ))}
           </select>
-          <p className="text-xs text-[var(--muted)] -mt-1">
-            Bybit split in two under MiCA. If you signed up from the EU you&apos;re on bybit.eu — a key from
-            one is rejected by the other.
-          </p>
-        </>
+        ) : (
+          <input type="hidden" name="region" value={bybitRegions[0]?.value ?? ""} />
+        )
       )}
 
       <select name="accountId" className="input" required defaultValue={newAccountValue}>
@@ -78,11 +123,18 @@ export default function ConnectionForm({
         )}
       </select>
 
+      {/* IBKR's gateway knows its own account id, so the field is optional
+          there — and left blank it avoids the easy mistake of typing the
+          gateway login username instead. */}
       <input
         name="externalId"
-        placeholder={`${config.identifierLabel} (${config.identifierHint})`}
+        placeholder={
+          platform === "ibkr"
+            ? "Account id — leave empty to detect it automatically"
+            : `${config.identifierLabel} (${config.identifierHint})`
+        }
         className="input font-mono"
-        required
+        required={platform !== "ibkr"}
         autoComplete="off"
       />
 

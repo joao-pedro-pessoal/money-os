@@ -118,11 +118,11 @@ describe("BybitConnector", () => {
 });
 
 describe("Bybit regions", () => {
-  it("defaults to the EEA host", async () => {
+  it("defaults to the global host, the only one that can authenticate", async () => {
     const httpGet = vi.fn(async (url: string, _h: Record<string, string>) => route(url));
     const connector = createBybitConnector({ apiKey: "K1234567890", apiSecret: "S" }, httpGet);
     await connector.getAccountState("");
-    expect(httpGet.mock.calls[0][0]).toContain("https://api.bybit.eu");
+    expect(httpGet.mock.calls[0][0]).toContain("https://api.bybit.com");
   });
 
   it("uses the global host when told to", async () => {
@@ -147,9 +147,19 @@ describe("Bybit regions", () => {
       return route(url);
     });
 
-    const eu = createBybitConnector({ apiKey: "K1234567890", apiSecret: "S" }, capture, "https://api.bybit.eu");
-    await eu.getAccountState("");
-    const euSign = signRequest(Number(calls[0]["X-BAPI-TIMESTAMP"]), "K1234567890", 5000, "accountType=UNIFIED", "S");
-    expect(calls[0]["X-BAPI-SIGN"]).toBe(euSign);
+    const other = createBybitConnector(
+      { apiKey: "K1234567890", apiSecret: "S" },
+      capture,
+      "https://api-testnet.bybit.com"
+    );
+    await other.getAccountState("");
+    const expected = signRequest(
+      Number(calls[0]["X-BAPI-TIMESTAMP"]),
+      "K1234567890",
+      5000,
+      "accountType=UNIFIED",
+      "S"
+    );
+    expect(calls[0]["X-BAPI-SIGN"]).toBe(expected);
   });
 });

@@ -98,14 +98,15 @@ describe("freshnessOf", () => {
 });
 
 describe("bybitBaseUrl", () => {
-  it("maps the two regions to their hosts", () => {
-    expect(bybitBaseUrl("eu")).toBe("https://api.bybit.eu");
+  it("maps the global region to its host", () => {
     expect(bybitBaseUrl("global")).toBe("https://api.bybit.com");
   });
 
-  it("falls back to the EEA host for anything unrecognised", () => {
-    // An EEA user is required to be on bybit.eu, so that is the safer default.
-    expect(bybitBaseUrl(null)).toBe("https://api.bybit.eu");
-    expect(bybitBaseUrl("nonsense")).toBe("https://api.bybit.eu");
+  it("never resolves to bybit.eu, which cannot authenticate a self-hosted app", () => {
+    // Its keys are bound to a third-party application's servers, so offering
+    // the host at all would only produce confident-looking failures.
+    expect(bybitBaseUrl("eu")).toBe("https://api.bybit.com");
+    expect(bybitBaseUrl(null)).toBe("https://api.bybit.com");
+    expect(bybitBaseUrl("nonsense")).toBe("https://api.bybit.com");
   });
 });

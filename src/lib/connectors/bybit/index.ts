@@ -12,9 +12,11 @@
 import type { Connector, HttpGetSigned, NormalizedAccountState } from "../types";
 import { buildQuery, signRequest, parseWalletBalance, parsePositions, isValidApiKey } from "./parse";
 
-/** Default host. A connection may target the EEA entity instead — see
- * BYBIT_REGIONS in ../constants. */
-export const BYBIT_BASE_URL = "https://api.bybit.eu";
+/**
+ * Default host. Only the global entity is supported — see BYBIT_EU_UNSUPPORTED
+ * in ../constants for why bybit.eu cannot be connected at all.
+ */
+export const BYBIT_BASE_URL = "https://api.bybit.com";
 const RECV_WINDOW = 5000;
 
 export interface BybitCredentials {
@@ -81,6 +83,8 @@ export function createBybitConnector(
       return {
         // Equity already contains the unrealised P&L of these positions, so
         // they are reported but never added on top (PRODUCT_VISION §9).
+        // Bybit values a unified account in USD.
+        currency: "USD",
         equity: wallet.totalEquity,
         withdrawable: wallet.availableBalance,
         totalMarginUsed: wallet.totalInitialMargin,

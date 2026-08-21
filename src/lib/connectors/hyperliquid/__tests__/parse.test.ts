@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
+import type { NormalizedAccountState } from "../../types";
 import {
   parseClearinghouseState,
   parsePosition,
   parseSpotBalances,
   buildSpotPriceMap,
+  parseDexNames,
+  mergeMarketStates,
   isValidAddress,
   num,
 } from "../parse";
@@ -144,6 +147,88 @@ describe("parsePosition", () => {
     const p = parsePosition({ position: { ...base.position, entryPx: null, liquidationPx: null } })!;
     expect(p.entryPrice).toBeNull();
     expect(p.liquidationPrice).toBeNull();
+  });
+});
+
+describe("parseDexNames", () => {
+  it("reads the builder-deployed market names, skipping the null native entry", () => {
+    // The real perpDexs response starts with null, meaning the native market.
+    const raw = [null, { name: "xyz", fullName: "XYZ" }, { name: "flx", fullName: "Felix" }];
+    expect(parseDexNames(raw)).toEqual(["xyz", "flx"]);
+  });
+
+  it("survives a malformed response instead of breaking the sync", () => {
+    expect(parseDexNames(null)).toEqual([]);
+    expect(parseDexNames({})).toEqual([]);
+    expect(parseDexNames([{ noName: true }])).toEqual([]);
+  });
+});
+
+describe("mergeMarketStates", () => {
+  const market = (equity: number, coins: string[] = []): NormalizedAccountState => ({
+    currency: "USD",
+    equity,
+    withdrawable: 0,
+    totalMarginUsed: 0,
+    totalNotionalPosition: 0,
+    asOf: null,
+    balances: [],
+    spotValue: 0,
+    balancesAreSeparatePool: true,
+    positions: coins.map((coin) => ({
+      coin,
+      side: "short" as const,
+      size: 1,
+      entryPrice: 1,
+      markPrice: 1,
+      positionValue: 1,
+      unrealizedPnl: 0,
+      returnOnEquity: null,
+      leverage: null,
+      leverageType: null,
+      liquidationPrice: null,
+      marginUsed: null,
+      cumFunding: null,
+      assetClass: "PERP",
+    })),
+  });
+
+  it("reproduces the real account: nothing native, everything on one HIP-3 market", () => {
+    // Native reported 0 with no positions while xyz held 21.97 and both trades,
+    // which is exactly why the app showed "no open positions".
+    const merged = mergeMarketStates([
+      market(0),
+      market(21.97, ["xyz:GOLD", "xyz:SILVER"]),
+    ]);
+    expect(merged.equity).toBe(21.97);
+    expect(merged.positions.map((p) => p.coin)).toEqual(["xyz:GOLD", "xyz:SILVER"]);
+  });
+
+  it("adds equity across markets, since each holds its own collateral", () => {
+    expect(mergeMarketStates([market(10), market(5), market(2.5)]).equity).toBe(17.5);
+  });
+
+  it("gathers positions from every market", () => {
+    const merged = mergeMarketStates([market(1, ["BTC"]), market(1, ["xyz:GOLD"])]);
+    expect(merged.positions).toHaveLength(2);
+  });
+
+  it("handles a single market", () => {
+    expect(mergeMarketStates([market(100, ["BTC"])]).equity).toBe(100);
+  });
+
+  it("handles no markets at all", () => {
+    const merged = mergeMarketStates([]);
+    expect(merged.equity).toBe(0);
+    expect(merged.positions).toEqual([]);
+    expect(merged.withdrawable).toBeNull();
+  });
+
+  it("keeps a null apart from a zero when summing optional figures", () => {
+    // All-null must stay null: "not reported" and "reported as zero" differ.
+    const withNulls = { ...market(1), withdrawable: null, totalMarginUsed: null };
+    expect(mergeMarketStates([withNulls]).withdrawable).toBeNull();
+    expect(mergeMarketStates([withNulls, market(1)]).withdrawable).toBe(0);
   });
 });
 
