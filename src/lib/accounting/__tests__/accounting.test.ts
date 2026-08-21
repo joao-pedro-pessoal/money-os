@@ -1,4 +1,38 @@
 import { describe, it, expect } from "vitest";
+import { eligibleCash as eligibleCashSplit, freeCash as freeCashSplit } from "../index";
+
+describe("spendable cash in an account that is partly invested", () => {
+  it("leaves the invested part out of what you could spend", () => {
+    // Trade Republic: one balance of 451.41 holding 450.83 of ETFs. Without
+    // this, the dashboard offers you your portfolio as free cash.
+    expect(eligibleCashSplit({ id: "tr", balance: 451.41, investedValue: 450.83 })).toBe(0.58);
+    expect(freeCashSplit({ id: "tr", balance: 451.41, investedValue: 450.83 }, [])).toBe(0.58);
+  });
+
+  it("changes nothing for an account with no invested half", () => {
+    expect(eligibleCashSplit({ id: "a", balance: 500 })).toBe(500);
+    expect(eligibleCashSplit({ id: "a", balance: 500, investedValue: null })).toBe(500);
+    expect(eligibleCashSplit({ id: "a", balance: 500, investedValue: 0 })).toBe(500);
+  });
+
+  it("still subtracts bucket allocations from what's left", () => {
+    // Both deductions apply. Money invested isn't spendable, and money promised
+    // to a bucket isn't either.
+    expect(
+      freeCashSplit({ id: "tr", balance: 1000, investedValue: 600 }, [
+        { accountId: "tr", amount: 150 },
+      ])
+    ).toBe(250);
+  });
+
+  it("refuses to go below zero on a contradictory figure", () => {
+    // An invested figure larger than the account would otherwise produce
+    // negative free cash, which surfaces elsewhere as a false overallocation.
+    expect(eligibleCashSplit({ id: "tr", balance: 100, investedValue: 400 })).toBe(0);
+    expect(eligibleCashSplit({ id: "tr", balance: 100, investedValue: -50 })).toBe(100);
+  });
+});
+
 import {
   eligibleCash,
   allocatedCash,

@@ -9,6 +9,17 @@
 export interface AccountLike {
   id: string;
   balance: number;
+  /**
+   * For an account whose balance is partly invested, the invested part.
+   *
+   * Trade Republic's balance is one number covering the card money and the
+   * ETFs. Without this, "free cash" is the whole account — the ETFs included —
+   * and the dashboard tells you that you can spend your portfolio.
+   *
+   * Absent for every other kind of account, which is why it's optional: a
+   * balance that is all cash has nothing to subtract.
+   */
+  investedValue?: number | null;
 }
 
 export interface BucketAllocationLike {
@@ -18,9 +29,20 @@ export interface BucketAllocationLike {
 
 export type ReconciliationState = "RECONCILED" | "STALE" | "OVERALLOCATED";
 
-/** Eligible cash for a single account is simply its current balance in V1. */
+/**
+ * The part of an account you could actually spend.
+ *
+ * The balance, minus whatever of it is invested. For almost every account
+ * nothing is invested and this is the balance, unchanged.
+ *
+ * Never negative and never above the balance: an invested figure larger than
+ * the account it sits in is a contradiction, and the arithmetic should not
+ * propagate it into a negative "free" that would then be reported as an
+ * overallocation somewhere else entirely.
+ */
 export function eligibleCash(account: AccountLike): number {
-  return account.balance;
+  const invested = Math.min(Math.max(account.investedValue ?? 0, 0), account.balance);
+  return round2(account.balance - invested);
 }
 
 /** Sum of all bucket allocations pointing at this account. */
