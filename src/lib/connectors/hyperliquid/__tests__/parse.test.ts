@@ -262,7 +262,10 @@ const SPOT_META_CTXS = [
     ],
     universe: [{ name: "PURR/USDC", tokens: [1, 0], index: 0 }],
   },
-  [{ markPx: "0.14", midPx: "0.209265", prevDayPx: "0.20432" }],
+  // `coin` is how a context says which pair it belongs to. The live response
+  // lists more contexts than universe entries and in a different order, so this
+  // field — not the array position — is what ties the two together.
+  [{ coin: "PURR/USDC", markPx: "0.14", midPx: "0.209265", prevDayPx: "0.20432" }],
 ];
 
 describe("buildSpotPriceMap", () => {

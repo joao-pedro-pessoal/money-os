@@ -201,9 +201,28 @@ const DOLLAR_COINS = new Set(USD_PEGGED_SYMBOLS);
 /**
  * Builds a coin -> USD price map from `spotMetaAndAssetCtxs`.
  *
- * The response is [meta, contexts] where contexts[i] lines up with
- * meta.universe[i]. A universe entry names its two token indices, so a pair
- * quoted in USDC gives us the base token's USD price directly.
+ * The response is [meta, contexts]. A universe entry names its two token
+ * indices, so a pair quoted in a dollar stablecoin gives the base token's USD
+ * price directly.
+ *
+ * **The contexts are not positionally aligned with the universe, and reading
+ * them that way is what made HYPE wrong twice.** The two arrays are not even
+ * the same length — 326 universe entries against 717 contexts on a live
+ * response. Each context carries the pair it belongs to in `coin`, and each
+ * universe entry carries the same identifier in `name` ("@107", or "PURR/USDC"
+ * for the one canonical pair). That shared identifier is the only honest join.
+ *
+ * What positional reading did: universe position 105 is the pair @107, whose
+ * real mark price is 76.51. `ctxs[105]` is the context for @105 — a different
+ * token entirely, trading at 0.092721. So a HYPE balance was valued at roughly
+ * one eight-hundredth of its worth, with every other spot token misread by the
+ * same drifting offset. The earlier "HYPE reads 0,00" bug was the same defect
+ * landing on a pair that happened to be dormant; rejecting zeros treated the
+ * symptom, and the symptom moved.
+ *
+ * Do not add a positional fallback for contexts that carry no `coin`. Being
+ * unable to find the price leaves the token unpriced, which the app displays
+ * as unpriced; guessing by position is how it displayed a wrong number instead.
  */
 export function buildSpotPriceMap(raw: unknown): Record<string, number> {
   const prices: Record<string, number> = {};
@@ -211,9 +230,9 @@ export function buildSpotPriceMap(raw: unknown): Record<string, number> {
 
   const meta = raw[0] as {
     tokens?: { name?: string; index?: number }[];
-    universe?: { tokens?: number[]; index?: number }[];
+    universe?: { tokens?: number[]; index?: number; name?: string }[];
   };
-  const ctxs = raw[1] as { markPx?: string; midPx?: string }[];
+  const ctxs = raw[1] as { markPx?: string; midPx?: string; coin?: string }[];
 
   if (!meta?.tokens || !meta?.universe || !Array.isArray(ctxs)) return prices;
 
@@ -222,33 +241,34 @@ export function buildSpotPriceMap(raw: unknown): Record<string, number> {
     if (typeof t?.index === "number" && t?.name) nameByIndex.set(t.index, t.name);
   }
 
-  meta.universe.forEach((pair, i) => {
-    const ctx = ctxs[i];
-    if (!pair?.tokens || pair.tokens.length < 2 || !ctx) return;
+  const contextByPair = new Map<string, { markPx?: string; midPx?: string }>();
+  for (const ctx of ctxs) {
+    if (ctx?.coin) contextByPair.set(ctx.coin, ctx);
+  }
+
+  for (const pair of meta.universe) {
+    if (!pair?.tokens || pair.tokens.length < 2 || !pair.name) continue;
+
+    const ctx = contextByPair.get(pair.name);
+    if (!ctx) continue;
 
     const base = nameByIndex.get(pair.tokens[0]);
     const quote = nameByIndex.get(pair.tokens[1]);
-    if (!base || !quote || !DOLLAR_COINS.has(quote)) return;
+    if (!base || !quote || !DOLLAR_COINS.has(quote)) continue;
 
     const px = num(ctx.markPx) ?? num(ctx.midPx);
 
     /**
-     * A mark price of zero is a pair that has never traded, not a token that
-     * is worthless.
-     *
-     * This mattered more than it looks. Several pairs can name the same base
-     * token, and the loop wrote each one in turn — so a dormant pair listed
-     * after a live one overwrote a real price with zero, and the balance was
-     * displayed as being worth nothing. Rejecting non-positive prices here
-     * stops that at the source; refusing to overwrite a price already found
-     * stops it even when the zero is listed first and something else is
-     * wrong with the later entry.
+     * A mark price of zero is a pair that has never traded, not a token that is
+     * worthless. Several pairs can legitimately name the same base token —
+     * HYPE quotes against USDC, USDT0, USDH and USDE — so the first live price
+     * wins and a dormant pair can never overwrite it.
      */
-    if (px === null || px <= 0) return;
-    if (prices[base] !== undefined) return;
+    if (px === null || px <= 0) continue;
+    if (prices[base] !== undefined) continue;
 
     prices[base] = px;
-  });
+  }
 
   return prices;
 }

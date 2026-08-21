@@ -75,30 +75,87 @@ describe("reading allMids", () => {
 
   it("refuses a dead pair's zero and keeps the live one", () => {
     /**
-     * The shape that produced "0,00 US$" against a real HYPE balance.
-     *
-     * Two pairs name the same base token. The loop wrote each in turn, so
-     * whichever came last decided the price — and a pair that has never traded
-     * reports a mark of zero.
+     * Two pairs name the same base token — HYPE quotes against several dollar
+     * stablecoins — and a pair that has never traded reports a mark of zero.
+     * The live price must win regardless of which is listed first.
      */
     const meta = {
       tokens: [
         { name: "HYPE", index: 0 },
         { name: "USDC", index: 1 },
+        { name: "USDE", index: 2 },
       ],
       universe: [
-        { tokens: [0, 1], index: 0 },
-        { tokens: [0, 1], index: 1 },
+        { tokens: [0, 1], index: 10, name: "@10" },
+        { tokens: [0, 2], index: 11, name: "@11" },
       ],
     };
 
-    expect(buildSpotPriceMap([meta, [{ markPx: "44.5" }, { markPx: "0.0" }]])).toEqual({
-      HYPE: 44.5,
-    });
+    expect(
+      buildSpotPriceMap([meta, [{ coin: "@10", markPx: "44.5" }, { coin: "@11", markPx: "0.0" }]])
+    ).toEqual({ HYPE: 44.5 });
 
     // And the same the other way round, where the dead pair is listed first.
-    expect(buildSpotPriceMap([meta, [{ markPx: "0.0" }, { markPx: "44.5" }]])).toEqual({
-      HYPE: 44.5,
+    expect(
+      buildSpotPriceMap([meta, [{ coin: "@10", markPx: "0.0" }, { coin: "@11", markPx: "44.5" }]])
+    ).toEqual({ HYPE: 44.5 });
+  });
+
+  /**
+   * The defect that made HYPE wrong twice, in the shape the live API returns.
+   *
+   * `universe` and the contexts are different lengths and different orders, so
+   * contexts[i] is not the context for universe[i]. Reading them positionally
+   * valued a HYPE balance at 0.092721 — the price of an unrelated token — when
+   * the pair's own context said 76.51.
+   */
+  it("matches a pair to its own context, not to the one in the same position", () => {
+    const meta = {
+      tokens: [
+        { name: "HYPE", index: 150 },
+        { name: "USDC", index: 0 },
+        { name: "OTHER", index: 9 },
+      ],
+      universe: [
+        // Position 0 in the universe, but the pair is @107.
+        { tokens: [150, 0], index: 107, name: "@107" },
+      ],
+    };
+
+    // Position 0 in the contexts belongs to a different pair entirely.
+    const ctxs = [
+      { coin: "@105", markPx: "0.092721" },
+      { coin: "@106", markPx: "3.0" },
+      { coin: "@107", markPx: "76.509" },
+    ];
+
+    expect(buildSpotPriceMap([meta, ctxs])).toEqual({ HYPE: 76.509 });
+  });
+
+  it("leaves a token unpriced rather than guessing when no context names its pair", () => {
+    // Better unpriced than priced from whatever sat at the same index.
+    const meta = {
+      tokens: [
+        { name: "HYPE", index: 150 },
+        { name: "USDC", index: 0 },
+      ],
+      universe: [{ tokens: [150, 0], index: 107, name: "@107" }],
+    };
+
+    expect(buildSpotPriceMap([meta, [{ markPx: "0.092721" }]])).toEqual({});
+  });
+
+  it("handles the one canonical pair, which is named rather than numbered", () => {
+    const meta = {
+      tokens: [
+        { name: "PURR", index: 1 },
+        { name: "USDC", index: 0 },
+      ],
+      universe: [{ tokens: [1, 0], index: 0, name: "PURR/USDC" }],
+    };
+
+    expect(buildSpotPriceMap([meta, [{ coin: "PURR/USDC", markPx: "0.096142" }]])).toEqual({
+      PURR: 0.096142,
     });
   });
 

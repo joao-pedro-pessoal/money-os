@@ -91,8 +91,11 @@ costume every time:
 - Positions adopted from a statement carry their purchase price in the
   current-price field, so the P&L read `+0,00 €` for twelve rows — a portfolio
   claiming to be exactly flat, which nobody's portfolio has ever been.
-- A HYPE balance showed `0,00 US$` because a dormant trading pair reported a
-  mark price of zero and the parser wrote it down.
+- A HYPE balance showed `0,00 US$`, and the diagnosis written here for weeks —
+  "a dormant pair reported a mark price of zero and the parser wrote it down" —
+  was wrong. See the Hyperliquid section below: the parser was reading another
+  pair's price entirely. Rejecting zeros made the symptom move rather than go
+  away, and the balance came back as `0,09 US$` against a token worth 76.
 - Unpriced coins were left out of the "Spot balances" card, which then displayed
   a smaller number with no indication that it was short.
 - `toBase` returns null when it has no rate; treating that as zero deletes the
@@ -292,6 +295,37 @@ this codebase were found by property tests over a range of inputs after every
 hand-written example had passed — a comparator returning `NaN`, a period
 boundary that excluded today. When a test fails, check whether the test is wrong
 before changing the code; roughly half the time it is.
+
+## Hyperliquid: the contexts are not in the universe's order
+
+`spotMetaAndAssetCtxs` returns `[meta, contexts]`, and it is natural to assume
+`contexts[i]` describes `meta.universe[i]`. It does not. On a live response the
+arrays are not even the same length — 326 universe entries against 717 contexts.
+
+Each context names its own pair in `coin` ("@107"), and each universe entry
+carries the same identifier in `name`. **That shared identifier is the only
+correct join**, and `buildSpotPriceMap` uses it.
+
+Positional reading cost two sessions across three weeks. Universe position 105
+is the pair `@107`, whose mark price is 76.51; `ctxs[105]` belongs to `@105`,
+trading at 0.0927. So a HYPE balance was valued at about one eight-hundredth of
+its worth, and every other spot token was misread by the same drifting offset —
+invisible because each individual number looked like a plausible price for
+*something*.
+
+The first attempt at this read the zero that the offset happened to land on and
+concluded that dormant pairs were the problem. Rejecting zeros is right on its
+own terms and it is still in the code, but it fixed nothing here: the offset
+simply landed on a non-zero price next time, which is worse, because `0,00`
+looks broken and `0,09` looks like an answer.
+
+Two rules fall out of it:
+
+- **Never pair two arrays by position when both carry an identifier.** Length
+  agreeing today is not evidence; these two never agreed.
+- **Do not add a positional fallback** for a context with no `coin`. Failing to
+  find the price leaves the token unpriced and the screen says unpriced. That is
+  the honest outcome, and the whole bug was preferring a number to an absence.
 
 ## Trade Republic
 
