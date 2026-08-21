@@ -1,18 +1,24 @@
 "use server";
 
 import { db } from "@/db/client";
+import { buildPortfolioSeries, trimLeadingZeros } from "@/lib/portfolio/series";
 import {
   holdings,
   holdingSnapshots,
+  positionSnapshots,
+  positions,
+  brokerEvents,
   auditLog,
   accounts,
   playlists,
   platformBalances,
   accountConnections,
+  positionMeta,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { meaningOf, holdingCountsOnTop } from "@/lib/accounting/balanceScope";
 import {
   marketValue,
   costBasis,
@@ -22,7 +28,7 @@ import {
   reinforcePosition,
   reducePosition,
 } from "@/lib/portfolio";
-import { isStablecoin } from "@/lib/portfolio/tags";
+import { isCapitalStable, isStableAsset } from "@/lib/portfolio/tags";
 import { STABLE_ASSET_TYPES } from "@/lib/portfolio/tags";
 import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
@@ -70,7 +76,10 @@ function applyStablecoinDefaults(input: {
   avgEntryPrice: string;
   currentPrice?: string;
 }) {
-  const stable = input.assetType === "stablecoin" || (input.assetType === null && isStablecoin(input.symbol));
+  const stable =
+    input.assetType === "stablecoin" ||
+    input.assetType === "cash" ||
+    (input.assetType === null && isCapitalStable(input.symbol));
   if (!stable) return input;
 
   return {
@@ -198,6 +207,47 @@ export async function createHolding(formData: FormData) {
   revalidatePath("/investments");
 }
 
+/**
+ * Tags only, from a list rather than a detail page.
+ *
+ * The mirror of `setPositionTags` for a manual holding. A synced position could
+ * be tagged inline on the Positions page while a manual one — including every
+ * position rebuilt from a statement — could only be edited by opening it, which
+ * is a page load per tag on a list of twelve.
+ *
+ * Only the tag fields are written. Quantity, price and cost are untouched:
+ * those are facts about the position, and a form about labels has no business
+ * near them.
+ */
+export async function setHoldingTags(formData: FormData) {
+  const id = String(formData.get("id"));
+  if (!id) throw new Error("Which position?");
+
+  await db
+    .update(holdings)
+    .set({
+      riskLevel: tagValue(formData, "riskLevel"),
+      expectedReturn: tagValue(formData, "expectedReturn"),
+      timeHorizon: tagValue(formData, "timeHorizon"),
+      liquidity: tagValue(formData, "liquidity"),
+      assetType: tagValue(formData, "assetType"),
+      playlistId: tagValue(formData, "playlistId"),
+      // The form hides the rate field for types with no income model, so an
+      // absent field clears the stored rate. That is deliberate: retagging a
+      // staking position as plain crypto should not leave a rate behind that
+      // `yearlyYield` and `stakingSummary` would keep projecting income from.
+      // A rate that no longer applies is worse than none, because it still adds
+      // up. Don't "fix" this by preserving the old value when the field is gone.
+      apr: numericValue(formData, "apr"),
+      updatedAt: new Date(),
+    })
+    .where(eq(holdings.id, id));
+
+  revalidatePath("/positions");
+  revalidatePath("/investments");
+  revalidatePath("/investments/analysis");
+}
+
 /** Edit static details (symbol, name, platform, quantity, avg entry) without touching current price. */
 export async function updateHolding(formData: FormData) {
   const id = String(formData.get("id"));
@@ -211,7 +261,6 @@ export async function updateHolding(formData: FormData) {
   const direction = tagValue(formData, "direction") ?? "long";
   const playlistId = tagValue(formData, "playlistId");
   const apr = numericValue(formData, "apr");
-  const rewardsEarned = numericValue(formData, "rewardsEarned") ?? "0";
   const riskLevel = tagValue(formData, "riskLevel");
   const expectedReturn = tagValue(formData, "expectedReturn");
   const timeHorizon = tagValue(formData, "timeHorizon");
@@ -242,7 +291,18 @@ export async function updateHolding(formData: FormData) {
       direction,
       playlistId,
       apr,
-      rewardsEarned,
+      /**
+       * Only when the form sent it.
+       *
+       * Rewards accumulate — recorded as they arrive, never recomputed.
+       * Defaulting a missing field to "0" meant any form that didn't carry it
+       * would erase months of staking income on save, with no error and no way
+       * to get the figure back. The edit page does carry it in a hidden input,
+       * so this never fired; it was a trap set for the second form.
+       */
+      ...(formData.has("rewardsEarned")
+        ? { rewardsEarned: numericValue(formData, "rewardsEarned") ?? "0" }
+        : {}),
       riskLevel: d.riskLevel,
       expectedReturn: d.expectedReturn,
       timeHorizon,
@@ -297,38 +357,133 @@ export async function deleteHolding(formData: FormData) {
  * Portfolio value over time, same carry-forward approach as
  * getNetWorthOverTime in analytics.ts, but scoped to holdings.
  */
-export async function getPortfolioValueOverTime() {
-  const allHoldings = await db.select().from(holdings);
-  const allSnapshots = await db.select().from(holdingSnapshots);
+/**
+ * Portfolio value over time, from every source that has a history.
+ *
+ * This used to read `holdingSnapshots` alone, so an account with nothing typed
+ * in by hand produced an empty array and the chart said "not enough history"
+ * while the portfolio held real money. Open trades are snapshotted on every
+ * sync, and those count too.
+ *
+ * Each series is carried forward independently before being summed: they're
+ * written at different moments, and a day that only touched one of them must
+ * not zero the others.
+ */
+export async function getPortfolioValueOverTime(onlyWhatAddsOnTop = false) {
+  const [allHoldings, holdingSnaps, positionSnaps, rates, base] = await Promise.all([
+    db.select().from(holdings),
+    db.select().from(holdingSnapshots),
+    db.select().from(positionSnapshots),
+    getRates(),
+    getBaseCurrency(),
+  ]);
 
-  if (allHoldings.length === 0) return [];
+  /**
+   * `onlyWhatAddsOnTop` is for Net Worth, and it is not a display preference.
+   *
+   * This series answers "what is my portfolio worth", and for that every
+   * holding and every open position belongs in it. Net Worth asks a different
+   * question — "what do I have in total" — and there a position inside a
+   * broker's balance has already been counted by that balance.
+   *
+   * `computeNetWorth` has enforced that for the current figure since the fourth
+   * time this bug appeared. The historical series never did: it added the
+   * positions on top of balances that contained them, so the line ran at
+   * roughly three times the truth and the percentage change was nonsense.
+   */
+  const meaningByAccount = onlyWhatAddsOnTop
+    ? new Map(
+        (await db.select().from(accounts)).map((a) => [a.id, meaningOf(a.balanceMeaning)])
+      )
+    : new Map<string, ReturnType<typeof meaningOf>>();
 
-  const byHolding = new Map<string, { date: string; value: number }[]>();
+  // What each platform's figures are denominated in. Assuming USD scaled every
+  // euro-denominated account by the EUR/USD rate.
+  const conns = await db.select().from(accountConnections);
+  const currencyOfConnection = new Map(conns.map((c) => [c.id, c.reportingCurrency ?? "USD"]));
+
+  const day = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
+
+  // Manual holdings, in their own currency.
+  const manual = new Map<string, { date: string; value: number }[]>();
   for (const h of allHoldings) {
-    byHolding.set(
+    // A holding inside an account whose balance already reports it is detail,
+    // not an addition. Same rule the live figure uses, same function.
+    if (onlyWhatAddsOnTop && !holdingCountsOnTop(h.accountId, meaningByAccount)) continue;
+    manual.set(
       h.id,
-      allSnapshots
+      holdingSnaps
         .filter((s) => s.holdingId === h.id)
-        .map((s) => ({ date: new Date(s.timestamp).toISOString().slice(0, 10), value: Number(s.value) }))
+        .map((s) => ({
+          date: day(s.timestamp),
+          value: toBase(Number(s.value), h.currency, rates, base) ?? 0,
+        }))
         .sort((a, b) => a.date.localeCompare(b.date))
     );
   }
 
-  const allDates = Array.from(
-    new Set(allSnapshots.map((s) => new Date(s.timestamp).toISOString().slice(0, 10)))
-  ).sort();
+  // Open trades, reported in USD by every connector we have.
+  const synced = new Map<string, { date: string; value: number }[]>();
+  for (const s of positionSnaps) {
+    /**
+     * Every connector in this app reports an account total that already
+     * contains its open positions — that is what `balancesAreSeparatePool:
+     * false` means, and it is why `computeNetWorth` excludes
+     * `openPositionValue` from the total rather than adding it.
+     *
+     * So for a Net Worth series there is nothing here to add. Skipping the lot
+     * is not a shortcut: adding any of it would be counting the same euro
+     * twice, exactly as the live figure refuses to.
+     */
+    if (onlyWhatAddsOnTop) break;
+    const key = `${s.connectionId}:${s.coin}`;
+    if (!synced.has(key)) synced.set(key, []);
+    synced.get(key)!.push({
+      date: day(s.timestamp),
+      // The platform's own currency; assuming USD mis-scaled every euro account.
+      value:
+        toBase(
+          s.positionValue === null ? 0 : Number(s.positionValue),
+          currencyOfConnection.get(s.connectionId) ?? "USD",
+          rates,
+          base
+        ) ?? 0,
+    });
+  }
+  for (const list of synced.values()) list.sort((a, b) => a.date.localeCompare(b.date));
+
+  const allDates = [
+    ...new Set([
+      ...holdingSnaps.map((s) => day(s.timestamp)),
+      // Excluded alongside the positions themselves: a date carrying only a
+      // position snapshot would otherwise appear as a point worth nothing.
+      ...(onlyWhatAddsOnTop ? [] : positionSnaps.map((s) => day(s.timestamp))),
+    ]),
+  ].sort();
 
   if (allDates.length === 0) return [];
 
-  return allDates.map((date) => {
-    let total = 0;
-    for (const h of allHoldings) {
-      const points = byHolding.get(h.id) ?? [];
-      const known = points.filter((p) => p.date <= date);
-      total += known.length > 0 ? known[known.length - 1].value : 0;
-    }
-    return { date, portfolioValue: Math.round(total * 100) / 100 };
+  /**
+   * Assembling the total is not a matter of adding up last-known values.
+   *
+   * A closed position keeps its final snapshot forever, and carried forward
+   * with no stopping rule it went on contributing to every later date — the
+   * line climbed while the portfolio stood still. buildPortfolioSeries drops a
+   * position once a sync of its own connection happened without it.
+   */
+  const series = buildPortfolioSeries({
+    dates: allDates,
+    manual: [...manual.values()],
+    synced: [...synced.entries()].map(([key, points]) => ({
+      key,
+      connectionId: key.split(":")[0],
+      points,
+    })),
   });
+
+  // The days before anything was held are true but not worth drawing; they
+  // squash every later movement into the right-hand edge.
+  return trimLeadingZeros(series);
 }
 
 /** Accounts available to hold positions (active only) — used by the forms. */
@@ -408,7 +563,7 @@ export async function getPortfolioAnalysis(includeSynced = true) {
     for (const b of balances) {
       if (b.usdValue === null || !b.countsInPortfolio) continue;
       const value = Number(b.usdValue);
-      const stable = isStablecoin(b.coin);
+      const stable = isCapitalStable(b.coin);
       enriched.push({
         id: `synced:${b.id}`,
         symbol: b.coin,
@@ -490,6 +645,67 @@ export async function getGroupedPerformance(
  * connected account's balance — sync writes only perps equity there — so
  * counting them here adds them exactly once.
  */
+/**
+ * Money the app knows is invested, but not what it is invested in.
+ *
+ * An account can declare that part of its balance is investments — that is how
+ * Trade Republic is modelled, since it publishes no API. Net Worth counts that
+ * money correctly. The Investments page cannot show it, because that page lists
+ * *instruments*, and a declared number is not an instrument.
+ *
+ * The gap is real and worth naming. Left unsaid it reads as a bug: the
+ * dashboard says €704 invested and the investments table adds up to €254, with
+ * nothing on screen to explain the difference.
+ */
+export async function getUnitemisedInvestments() {
+  const [accountRows, holdingRows, positionRows, base, rates] = await Promise.all([
+    db.select().from(accounts).where(eq(accounts.active, true)),
+    db.select().from(holdings),
+    // Live positions, not snapshots: snapshots carry a connection but no
+    // account, and the question here is which account has instruments now.
+    db.select().from(positions),
+    getBaseCurrency(),
+    getRates(),
+  ]);
+
+  // An imported statement counts as knowing what it's invested in — that is
+  // the whole point of importing one.
+  const statementAccounts = await db
+    .selectDistinct({ accountId: brokerEvents.accountId })
+    .from(brokerEvents);
+
+  const hasInstruments = new Set([
+    ...holdingRows.map((h) => h.accountId).filter((id): id is string => id !== null),
+    ...positionRows.map((p) => p.accountId),
+    ...statementAccounts.map((s) => s.accountId),
+  ]);
+
+  const items = accountRows
+    .filter((a) => meaningOf(a.balanceMeaning) === "bank_and_broker")
+    .map((a) => {
+      const declared = Math.min(Number(a.investedValue ?? 0), Number(a.balance));
+      return {
+        id: a.id,
+        name: a.name,
+        institution: a.institution,
+        currency: a.currency,
+        amount: declared,
+        inBase: toBase(declared, a.currency, rates, base) ?? declared,
+        /** Some instruments are already recorded, so this is a partial gap. */
+        itemised: hasInstruments.has(a.id),
+      };
+    })
+    // Once the instruments are known, there is nothing left to explain here —
+    // the positions appear in the table like any others.
+    .filter((a) => a.amount > 0 && !a.itemised);
+
+  return {
+    items,
+    total: Math.round(items.reduce((s, a) => s + a.inBase, 0) * 100) / 100,
+    baseCurrency: base,
+  };
+}
+
 export async function getPortfolioContribution() {
   const { holdings: rows } = await listHoldingsWithPnL();
   const [rates, base] = await Promise.all([getRates(), getBaseCurrency()]);
@@ -509,7 +725,18 @@ export async function getPortfolioContribution() {
     else floating += converted;
   };
 
+  /**
+   * A holding only counts on top of the balances if its account says its
+   * balance is idle cash. An account whose balance is the broker's total
+   * already contains these positions — adding them again is the sixth variant
+   * of the double-count bug, and the only one that could be triggered purely
+   * by typing a number into a form.
+   */
+  const accountRows = await db.select().from(accounts);
+  const meaningByAccount = new Map(accountRows.map((a) => [a.id, meaningOf(a.balanceMeaning)]));
+
   for (const h of rows) {
+    if (!holdingCountsOnTop(h.accountId, meaningByAccount)) continue;
     // Cash and stablecoins are capital-stable; everything else can move.
     const isStable = h.assetType !== null && STABLE_ASSET_TYPES.includes(h.assetType);
     add(marketValue(h), h.currency, isStable);
@@ -519,10 +746,23 @@ export async function getPortfolioContribution() {
   // are a pool of their own count here — a Bybit unified account's coin list is
   // a breakdown of its equity, which is already counted as cash.
   const balances = await db.select().from(platformBalances);
+  const syncedConns = await db.select().from(accountConnections);
+  const currencyOfConnection = new Map(
+    syncedConns.map((c) => [c.id, c.reportingCurrency ?? "USD"])
+  );
+  // Tags set on the Positions page, so a coin the symbol list doesn't know can
+  // still be classified correctly by the person who owns it.
+  const metaRows = await db.select().from(positionMeta);
+  const assetTypeOf = new Map(metaRows.map((m) => [`${m.connectionId}:${m.coin}`, m.assetType]));
+
   const beforeSynced = stable + floating;
   for (const b of balances) {
     if (b.usdValue === null || !b.countsInPortfolio) continue;
-    add(Number(b.usdValue), "USD", isStablecoin(b.coin));
+    add(
+      Number(b.usdValue),
+      currencyOfConnection.get(b.connectionId) ?? "USD",
+      isStableAsset(b.coin, assetTypeOf.get(`${b.connectionId}:${b.coin}`))
+    );
   }
   const syncedValue = round2(stable + floating - beforeSynced);
 

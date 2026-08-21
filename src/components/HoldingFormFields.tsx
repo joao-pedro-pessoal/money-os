@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   ASSET_TYPES,
-  YIELD_BEARING_ASSET_TYPES,
+  annualYieldLabel,
   DIRECTIONS,
   RISK_LEVELS,
   TIME_HORIZONS,
@@ -16,9 +16,11 @@ import {
  *
  * A stablecoin is 1:1 and capital-stable, so asking for an entry price, a
  * direction, a risk level or a playlist is noise — those are filled in
- * automatically via hidden inputs. APR only appears for types that can
- * actually earn a yield. This is why this slice of the form is a client
- * component while the rest of the page stays server-rendered.
+ * automatically via hidden inputs. The annual-rate field appears only for types
+ * that have an income model, and is named after the one they have: a dividend
+ * yield on an ETF, a coupon on a bond, an APR on staking. This is why this
+ * slice of the form is a client component while the rest of the page stays
+ * server-rendered — the label has to follow the type as you change it.
  */
 export default function HoldingFormFields({
   defaultAssetType = "",
@@ -45,7 +47,7 @@ export default function HoldingFormFields({
 }) {
   const [assetType, setAssetType] = useState(defaultAssetType);
   const isStable = assetType === "stablecoin" || assetType === "cash";
-  const showApr = YIELD_BEARING_ASSET_TYPES.includes(assetType);
+  const yieldLabel = annualYieldLabel(assetType);
 
   return (
     <>
@@ -160,15 +162,18 @@ export default function HoldingFormFields({
         </>
       )}
 
-      {showApr && (
-        <input
-          name="apr"
-          type="number"
-          step="0.0001"
-          defaultValue={defaultApr}
-          placeholder="APR % (rendimento anual)"
-          className="input"
-        />
+      {yieldLabel && (
+        <label className="block text-xs">
+          <span className="text-[var(--muted)]">{yieldLabel} %</span>
+          <input
+            name="apr"
+            type="number"
+            step="0.0001"
+            defaultValue={defaultApr}
+            placeholder="e.g. 4.5 for 4.5% a year"
+            className="input mt-1"
+          />
+        </label>
       )}
     </>
   );

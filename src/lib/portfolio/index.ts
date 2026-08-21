@@ -61,6 +61,33 @@ export function portfolioTotals(holdings: HoldingLike[]) {
  * Buying more of the same position: the new average entry price is the
  * weighted average of what you already held and what you just added.
  */
+/**
+ * Has anyone ever put a price on this, or is it still sitting at cost?
+ *
+ * The difference the interface has to make: a position opened from a statement
+ * has its purchase price in the price field because that is the only figure
+ * that exists. Reporting "+0.00" for it is a measurement — it says the market
+ * hasn't moved — when the truth is that nothing has been measured at all.
+ *
+ * Two ways to know, because one of them arrived later than the data:
+ *
+ *  - `lastPriceUpdate` is null, which is what a position adopted from a
+ *    statement now records.
+ *  - The current price is exactly the average cost and nothing has been chosen
+ *    to price it from. Coincidence is possible and harmless: the row shows a
+ *    dash until a price is set, rather than a zero that looks measured.
+ */
+export function isUnpriced(h: {
+  avgEntryPrice: number;
+  currentPrice: number;
+  quoteSymbol?: string | null;
+  lastPriceUpdate?: Date | null;
+}): boolean {
+  if (h.lastPriceUpdate === null || h.lastPriceUpdate === undefined) return true;
+  if (h.quoteSymbol) return false;
+  return Math.abs(h.currentPrice - h.avgEntryPrice) < 1e-9;
+}
+
 export function reinforcePosition(
   current: { quantity: number; avgEntryPrice: number },
   added: { quantity: number; price: number }

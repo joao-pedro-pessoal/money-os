@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { RISK_LEVELS, TIME_HORIZONS, EXPECTED_RETURNS, LIQUIDITY_LEVELS, tagLabel } from "@/lib/portfolio/tags";
+import {
+  RISK_LEVELS,
+  TIME_HORIZONS,
+  EXPECTED_RETURNS,
+  LIQUIDITY_LEVELS,
+  ASSET_TYPES,
+  annualYieldLabel,
+  tagLabel,
+} from "@/lib/portfolio/tags";
 import HoldingTags from "./HoldingTags";
 
 /**
@@ -17,6 +25,9 @@ export default function PositionTagsForm({
   expectedReturn,
   timeHorizon,
   liquidity,
+  assetType,
+  assetTypeAuto,
+  apr,
   playlistId,
   notes,
   playlists,
@@ -28,11 +39,18 @@ export default function PositionTagsForm({
   expectedReturn: string | null;
   timeHorizon: string | null;
   liquidity: string | null;
+  assetType: string | null;
+  /** True while the type came from the platform rather than from you. */
+  assetTypeAuto: boolean;
+  apr: number | null;
   playlistId: string | null;
   notes: string | null;
   playlists: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
+  // Controlled so the rate field can be named after the type as you change it.
+  const [type, setType] = useState(assetType ?? "");
+  const yieldLabel = annualYieldLabel(type);
   const hasTags = Boolean(riskLevel || expectedReturn || timeHorizon || liquidity || playlistId);
 
   if (!open) {
@@ -46,6 +64,22 @@ export default function PositionTagsForm({
             liquidity={liquidity}
           />
         ) : null}
+        {/* Filled in from what the platform calls the instrument. The badge
+            says so, because a value you didn't type should never look like one
+            you did. */}
+        {assetType && (
+          <div className="text-xs mt-1">
+            <span className="text-[var(--foreground)]">{tagLabel(assetType) ?? assetType}</span>
+            {assetTypeAuto && (
+              <span
+                className="text-[10px] text-[var(--muted)] ml-1"
+                title="Read from the platform. Change it and it stays changed."
+              >
+                auto
+              </span>
+            )}
+          </div>
+        )}
         {playlistId && (
           <div className="text-xs text-[var(--muted)] mt-1">
             {playlists.find((p) => p.id === playlistId)?.name}
@@ -66,6 +100,39 @@ export default function PositionTagsForm({
     <form action={action} className="space-y-2 min-w-[15rem]">
       <input type="hidden" name="connectionId" value={connectionId} />
       <input type="hidden" name="coin" value={coin} />
+
+      <select
+        name="assetType"
+        className="input py-1 text-xs"
+        value={type}
+        onChange={(e) => setType(e.target.value)}
+      >
+        <option value="">Asset type — unset</option>
+        {ASSET_TYPES.map((a) => (
+          <option key={a.value} value={a.value}>
+            {a.label}
+          </option>
+        ))}
+      </select>
+
+      {/* Cash and stablecoins have no P&L — their price doesn't move — so a
+          rate is the only return they have, and only you know it. The field is
+          named after the type's income model, and absent for types that have
+          none. */}
+      {yieldLabel && (
+        <label className="text-xs block">
+          <span className="text-[var(--muted)]">{yieldLabel}, if it earns one</span>
+          <input
+            name="apr"
+            type="number"
+            step="0.001"
+            min="0"
+            defaultValue={apr ?? ""}
+            placeholder="e.g. 4.5 for 4.5% a year"
+            className="input py-1 text-xs mt-1"
+          />
+        </label>
+      )}
 
       <select name="riskLevel" className="input py-1 text-xs" defaultValue={riskLevel ?? ""}>
         <option value="">Risk — unset</option>

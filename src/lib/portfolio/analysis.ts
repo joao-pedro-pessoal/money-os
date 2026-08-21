@@ -163,14 +163,14 @@ export function horizonRiskMismatches(holdings: AnalysisHolding[]): AnalysisHold
 /** Every dimension the analysis can be grouped by. */
 export const GROUP_BY_OPTIONS = [
   { value: "playlist", label: "Playlist" },
-  { value: "account", label: "Conta / carteira" },
-  { value: "assetType", label: "Tipo de ativo" },
-  { value: "riskLevel", label: "Risco" },
-  { value: "expectedReturn", label: "Retorno esperado" },
-  { value: "timeHorizon", label: "Horizonte temporal" },
-  { value: "liquidity", label: "Liquidez" },
+  { value: "account", label: "Account / wallet" },
+  { value: "assetType", label: "Asset type" },
+  { value: "riskLevel", label: "Risk" },
+  { value: "expectedReturn", label: "Expected return" },
+  { value: "timeHorizon", label: "Time horizon" },
+  { value: "liquidity", label: "Liquidity" },
   { value: "direction", label: "Long / Short" },
-  { value: "symbol", label: "Posição" },
+  { value: "symbol", label: "Position" },
 ] as const;
 
 export type GroupByKey = (typeof GROUP_BY_OPTIONS)[number]["value"];
@@ -217,7 +217,7 @@ export interface GroupPerformance {
 export function performanceBy(
   holdings: AnalysisHolding[],
   key: GroupByKey,
-  unsetLabel = "Sem definição"
+  unsetLabel = "Unset"
 ): GroupPerformance[] {
   const totalValue = holdings.reduce((s, h) => s + marketValue(h), 0);
   const groups = new Map<string, AnalysisHolding[]>();
@@ -249,7 +249,18 @@ export function performanceBy(
     .sort((a, b) => b.value - a.value);
 }
 
-export type SortKey = "key" | "value" | "cost" | "pnl" | "pnlPercent" | "realized" | "count";
+/** Every column the breakdown can be ordered by, in the order they're shown. */
+export const SORT_COLUMNS = [
+  { key: "key", label: "Group", numeric: false },
+  { key: "count", label: "Positions", numeric: true },
+  { key: "value", label: "Value", numeric: true },
+  { key: "cost", label: "Cost", numeric: true },
+  { key: "pnl", label: "P&L", numeric: true },
+  { key: "pnlPercent", label: "P&L %", numeric: true },
+  { key: "realized", label: "Realised", numeric: true },
+] as const;
+
+export type SortKey = (typeof SORT_COLUMNS)[number]["key"];
 
 /** Sorts a performance breakdown by any column, descending by default. */
 export function sortPerformance(

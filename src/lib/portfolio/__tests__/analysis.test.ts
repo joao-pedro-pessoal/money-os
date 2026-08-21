@@ -173,7 +173,7 @@ describe("performanceBy", () => {
 
   it("labels ungrouped holdings instead of dropping them", () => {
     const rows = performanceBy([h({ playlistName: null, currentPrice: 100 })], "playlist");
-    expect(rows[0].key).toBe("Sem definição");
+    expect(rows[0].key).toBe("Unset");
   });
 
   it("defaults direction to long when unset", () => {
