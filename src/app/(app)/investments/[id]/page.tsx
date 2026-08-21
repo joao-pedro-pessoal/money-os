@@ -10,6 +10,7 @@ import {
   sellHolding,
 } from "@/actions/investments";
 import HoldingTags from "@/components/HoldingTags";
+import HoldingPurposes from "@/components/HoldingPurposes";
 import { RISK_LEVELS, EXPECTED_RETURNS, TIME_HORIZONS, LIQUIDITY_LEVELS, tagLabel } from "@/lib/portfolio/tags";
 import HoldingFormFields from "@/components/HoldingFormFields";
 import { listPlaylists } from "@/actions/playlists";
@@ -90,6 +91,8 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           <div className={`text-xl font-semibold ${pnlColor}`}>{unrealizedPnLPercent(h).toFixed(2)}%</div>
         </div>
       </div>
+
+      <HoldingPurposes holdingId={holding.id} />
 
       <div className="grid grid-cols-2 gap-6">
         <div className="card p-4">

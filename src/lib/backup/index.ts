@@ -17,6 +17,20 @@ export const BACKUP_TABLES = [
   "accounts",
   "buckets",
   "bucketAllocations",
+  // After categories and accounts: both reference them.
+  "budgets",
+  // After both budgets and categories: it links the two.
+  "budgetCategories",
+  "subscriptions",
+  "savedViews",
+  // The library: taxonomy before the resources that reference it, and the
+  // join tables last. Restore inserts in this order.
+  "resourceCategories",
+  "resourceSubtags",
+  "learningResources",
+  "learningResourceMeta",
+  "learningResourceCategories",
+  "learningResourceSubtags",
   "imports",
   "transactions",
   "transactionTags",
@@ -26,11 +40,18 @@ export const BACKUP_TABLES = [
   "playlists",
   "holdings",
   "holdingSnapshots",
+  // Must follow both holdings and buckets: it has a foreign key to each, and
+  // restore inserts in this order.
+  "holdingAllocations",
   "watchlistItems",
   "accountConnections",
   "positions",
   "positionSnapshots",
   "positionMeta",
+  // History rather than state: unlike balances and positions, a payment made
+  // in 2024 is still true, so losing this on a restore loses it for good.
+  "dividendPayments",
+  "brokerEvents",
   "platformBalances",
   "syncLogs",
   "auditLog",

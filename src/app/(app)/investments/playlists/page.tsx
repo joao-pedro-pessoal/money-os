@@ -91,7 +91,7 @@ export default async function PlaylistsPage() {
           <input name="name" placeholder="Name (e.g. Reforma)" className="input" required />
           <input name="description" placeholder="Description (optional)" className="input" />
           <div className="flex gap-2 items-center">
-            <input name="color" type="color" defaultValue="#c9a86a" className="input h-10 w-16 p-1" />
+            <input name="color" type="color" defaultValue="#c9a86a" className="input input-narrow h-10 w-16 p-1" />
             <span className="text-xs text-[var(--muted)]">Colour used in charts and lists</span>
           </div>
           <button type="submit" className="btn w-full">

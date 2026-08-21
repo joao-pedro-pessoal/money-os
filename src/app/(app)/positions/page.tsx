@@ -6,17 +6,45 @@ import {
   setPositionTags,
 } from "@/actions/connections";
 import { listPlaylists } from "@/actions/playlists";
+import { listHoldingsWithPnL, setHoldingTags } from "@/actions/investments";
+import HoldingTagsForm from "@/components/HoldingTagsForm";
+import QuoteSymbolField from "@/components/QuoteSymbolField";
+import RefreshPrices from "@/components/RefreshPrices";
 import PositionTagsForm from "@/components/PositionTagsForm";
 import AutoSync from "@/components/AutoSync";
 import { Money } from "@/components/PrivacyContext";
+import PageTabs from "@/components/PageTabs";
+import { INVESTMENT_TABS } from "@/lib/navigation";
 import Link from "next/link";
+import { getRates } from "@/actions/fx";
+import { getBaseCurrency } from "@/actions/settings";
+import { toBase } from "@/lib/fx";
+import { displaySymbol } from "@/lib/quotes/symbolSource";
+
+/** A form action may not return a value. */
+async function saveHoldingTags(formData: FormData) {
+  "use server";
+  await setHoldingTags(formData);
+}
 
 export default async function PositionsPage() {
-  const [positions, balances, connections, playlistList] = await Promise.all([
+  const [positions, balances, connections, playlistList, manual, rates, base] = await Promise.all([
     listAllPositions(),
     listBalances(),
     listConnections(),
     listPlaylists(),
+    /**
+     * Positions you keep yourself, including every one rebuilt from a
+     * statement.
+     *
+     * This page was only ever about connectors, so a broker with no API — the
+     * exact case a statement exists for — had nothing here at all. They are
+     * held positions like any other and belong on the page called "Open
+     * positions & balances".
+     */
+    listHoldingsWithPnL(),
+    getRates(),
+    getBaseCurrency(),
   ]);
 
   const lastSyncAt = connections
@@ -24,16 +52,55 @@ export default async function PositionsPage() {
     .filter((d): d is Date => d !== null)
     .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
-  const totalEquity = connections.reduce((s, c) => s + Number(c.lastEquity ?? 0), 0);
-  const totalSpot = connections.reduce((s, c) => s + Number(c.lastSpotValue ?? 0), 0);
-  const totalFree = connections.reduce((s, c) => s + Number(c.lastWithdrawable ?? 0), 0);
-  const totalMargin = connections.reduce((s, c) => s + Number(c.lastMarginUsed ?? 0), 0);
+  /**
+   * These four totals used to add every platform's figures together and label
+   * the result "USD".
+   *
+   * Trading 212 reports euros and Hyperliquid reports dollars, so the sum was
+   * euros added to dollars — a number in no currency at all, displayed with a
+   * dollar sign. Everything is converted to the base currency first, and the
+   * cards say which currency that is.
+   */
+  function sumInBaseCurrency<T extends { currency: string }>(
+    rows: T[],
+    pick: (row: T) => number
+  ): number {
+    const total = rows.reduce(
+      (s, r) => s + (toBase(pick(r), r.currency, rates, base) ?? 0),
+      0
+    );
+    return Math.round((total + Number.EPSILON) * 100) / 100;
+  }
 
-  const totalUnrealized = positions.reduce((s, p) => s + (p.unrealizedPnl ?? 0), 0);
-  const totalNotional = positions.reduce((s, p) => s + (p.positionValue ?? 0), 0);
+  const connectionTotals = connections.map((c) => ({
+    currency: c.reportingCurrency ?? "USD",
+    equity: Number(c.lastEquity ?? 0),
+    spot: Number(c.lastSpotValue ?? 0),
+    free: Number(c.lastWithdrawable ?? 0),
+    margin: Number(c.lastMarginUsed ?? 0),
+  }));
+
+  const totalEquity = sumInBaseCurrency(connectionTotals, (c) => c.equity);
+  const totalSpot = sumInBaseCurrency(connectionTotals, (c) => c.spot);
+  const totalFree = sumInBaseCurrency(connectionTotals, (c) => c.free);
+  const totalMargin = sumInBaseCurrency(connectionTotals, (c) => c.margin);
+
+  /**
+   * Coins the platform holds and nothing could price.
+   *
+   * Their value is missing from every total above, and a total that is quietly
+   * short is worse than one that admits it — HYPE sat unpriced inside "Spot
+   * balances" for as long as this page existed, and the card went on looking
+   * like a complete answer.
+   */
+  const unpricedCoins = balances.filter((b) => b.price === null).map((b) => b.coin);
+
+  const totalUnrealized = sumInBaseCurrency(positions, (p) => p.unrealizedPnl ?? 0);
+  const totalNotional = sumInBaseCurrency(positions, (p) => p.positionValue ?? 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      <PageTabs tabs={INVESTMENT_TABS} />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold">Open positions &amp; balances</h1>
@@ -54,27 +121,31 @@ export default async function PositionsPage() {
           <div className="card p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Perps equity</div>
             <div className="text-xl font-semibold truncate">
-              <Money value={totalEquity} currency="USD" />
+              <Money value={totalEquity} currency={base} />
             </div>
             <div className="text-[10px] text-[var(--muted)] mt-1">includes open position P&amp;L</div>
           </div>
           <div className="card p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Spot balances</div>
             <div className="text-xl font-semibold truncate">
-              <Money value={totalSpot} currency="USD" />
+              <Money value={totalSpot} currency={base} />
             </div>
-            <div className="text-[10px] text-[var(--muted)] mt-1">counted in Investments, not here</div>
+            <div className="text-[10px] text-[var(--muted)] mt-1">
+              {unpricedCoins.length === 0
+                ? "counted in Investments, not here"
+                : `${unpricedCoins.join(", ")} not priced, so not in this figure`}
+            </div>
           </div>
           <div className="card p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Free / withdrawable</div>
             <div className="text-xl font-semibold truncate text-[var(--green)]">
-              <Money value={totalFree} currency="USD" />
+              <Money value={totalFree} currency={base} />
             </div>
           </div>
           <div className="card p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Margin in use</div>
             <div className="text-xl font-semibold truncate text-[var(--amber)]">
-              <Money value={totalMargin} currency="USD" />
+              <Money value={totalMargin} currency={base} />
             </div>
           </div>
         </div>
@@ -111,17 +182,136 @@ export default async function PositionsPage() {
                       {b.price === null ? (
                         <span className="text-[var(--muted)]">unpriced</span>
                       ) : (
-                        <Money value={b.price} currency="USD" />
+                        <Money value={b.price} currency={b.currency} />
                       )}
                     </td>
                     <td className="text-right">
-                      {b.usdValue === null ? "—" : <Money value={b.usdValue} currency="USD" />}
+                      {b.usdValue === null ? "—" : <Money value={b.usdValue} currency={b.currency} />}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Positions you keep yourself — typed in, or rebuilt from a statement.
+          They were absent from this page entirely, which meant a broker with no
+          API had nothing here at all and no way to tag anything. */}
+      {manual.holdings.length > 0 && (
+        <div className="card p-4">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
+            <div className="text-sm font-medium">Your own positions</div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[var(--muted)]">
+                tag them here — no need to open each one
+              </span>
+              <RefreshPrices />
+            </div>
+          </div>
+          <p className="text-xs text-[var(--muted)] mb-3">
+            Kept by you rather than by a platform. Anything rebuilt from an imported statement starts
+            here, at the price you actually paid.
+          </p>
+
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Tags</th>
+                  <th>Price from</th>
+                  <th>Account</th>
+                  <th className="text-right">Quantity</th>
+                  <th className="text-right">Avg cost</th>
+                  <th className="text-right">Price now</th>
+                  <th className="text-right">Value</th>
+                  <th className="text-right">Unrealized</th>
+                </tr>
+              </thead>
+              <tbody>
+                {manual.holdings.map((h) => (
+                  <tr key={h.id}>
+                    <td className="font-medium">
+                      <Link href={`/investments/${h.id}`} className="hover:underline">
+                        {h.symbol}
+                      </Link>
+                      {/* The ISIN, when a statement supplied one. */}
+                      {h.name && h.name !== h.symbol && (
+                        <div className="text-[10px] text-[var(--muted)]">{h.name}</div>
+                      )}
+                    </td>
+                    <td>
+                      <HoldingTagsForm
+                        action={saveHoldingTags}
+                        id={h.id}
+                        riskLevel={h.riskLevel}
+                        expectedReturn={h.expectedReturn}
+                        timeHorizon={h.timeHorizon}
+                        liquidity={h.liquidity}
+                        assetType={h.assetType}
+                        apr={h.apr}
+                        playlistId={h.playlistId}
+                        playlists={playlistList}
+                      />
+                    </td>
+                    <td>
+                      <QuoteSymbolField
+                        id={h.id}
+                        symbol={h.quoteSymbol}
+                        currency={h.currency}
+                        ticker={h.symbol}
+                      />
+                    </td>
+                    <td className="text-xs">{h.accountName ?? "—"}</td>
+                    <td className="text-right tabular-nums">{h.quantity}</td>
+                    <td className="text-right tabular-nums">
+                      <Money value={h.avgEntryPrice} currency={h.currency} />
+                    </td>
+                    <td className="text-right tabular-nums">
+                      <Money value={h.currentPrice} currency={h.currency} />
+                      {/* Where this number came from. A wrong listing produces
+                          a real price for the wrong instrument, and the only
+                          way to spot it is to see the price beside the source
+                          and compare it with your broker's screen. */}
+                      {displaySymbol(h.quoteSymbol) && (
+                        <div className="text-[10px] text-[var(--muted)]">
+                          {displaySymbol(h.quoteSymbol)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="text-right tabular-nums">
+                      <Money value={h.marketValue} currency={h.currency} />
+                    </td>
+                    <td
+                      className="text-right tabular-nums"
+                      style={{
+                        color:
+                          h.unrealizedPnL === 0
+                            ? undefined
+                            : h.unrealizedPnL > 0
+                              ? "var(--green)"
+                              : "var(--red)",
+                      }}
+                    >
+                      {h.unrealizedPnL === 0 ? (
+                        <span className="text-[var(--muted)]">—</span>
+                      ) : (
+                        <Money value={h.unrealizedPnL} currency={h.currency} />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">
+            A dash under Unrealized means the price still equals what you paid — nothing has been
+            measured yet, rather than nothing having happened. Open a position to set its current
+            price.
+          </p>
         </div>
       )}
 
@@ -133,7 +323,8 @@ export default async function PositionsPage() {
         <div className="text-xs text-[var(--muted)] mt-1">
           The exchange reports account equity, which already contains the unrealized P&amp;L below, so position
           values are never added on top — that would count the same money twice. The account balance is
-          <strong> perps equity only</strong>; spot balances are a separate pool and are counted in{" "}
+          <strong> the account&apos;s own value only</strong>; coin balances that sit outside it are a
+          separate pool and are counted in{" "}
           <strong>Investments</strong> instead, so every euro lands in Net Worth exactly once.
         </div>
       </div>
@@ -200,6 +391,9 @@ export default async function PositionsPage() {
                           expectedReturn={p.expectedReturn}
                           timeHorizon={p.timeHorizon}
                           liquidity={p.liquidity}
+                          assetType={p.assetType}
+                          assetTypeAuto={p.assetTypeAuto}
+                          apr={p.apr}
                           playlistId={p.playlistId}
                           notes={p.notes}
                           playlists={playlistList}

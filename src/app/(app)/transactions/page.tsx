@@ -15,7 +15,14 @@ export default async function TransactionsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-lg font-semibold">Cash Flow</h1>
+      {/* Importing is an action on this page's data, not a place of its own —
+          it used to sit in the sidebar between two destinations. */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="text-lg font-semibold">Cash Flow</h1>
+        <Link href="/import" className="btn whitespace-nowrap">
+          Import statement
+        </Link>
+      </div>
 
       <div className="grid grid-cols-2 gap-6">
         <div className="card p-4">

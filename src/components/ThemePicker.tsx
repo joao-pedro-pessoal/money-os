@@ -16,12 +16,29 @@ export default function ThemePicker() {
               onClick={() => setAccent(a.id)}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm border"
               style={{
-                borderColor: accent === a.id ? a.swatch : "var(--border)",
+                // The mono swatch is white, which would vanish as a border on
+                // the light theme; the accent variable is always readable.
+                borderColor:
+                  accent === a.id ? (a.id === "mono" ? "var(--accent)" : a.swatch) : "var(--border)",
                 borderWidth: accent === a.id ? 2 : 1,
                 background: "var(--surface-2)",
               }}
             >
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: a.swatch }} />
+              {/* A white dot is invisible on a light surface, so the mono
+                  swatch gets a half-and-half circle — which also says what the
+                  theme actually is better than either colour alone. */}
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 999,
+                  background:
+                    a.id === "mono"
+                      ? "linear-gradient(90deg, #ffffff 50%, #0a0a0a 50%)"
+                      : a.swatch,
+                  border: a.id === "mono" ? "1px solid var(--border-strong, #888)" : undefined,
+                }}
+              />
               {a.label}
             </button>
           ))}

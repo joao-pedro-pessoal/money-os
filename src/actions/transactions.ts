@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { transactions, transfers, accounts, categories, subcategories, interestPayments } from "@/db/schema";
+import { transactions, transfers, accounts, categories, interestPayments } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -95,8 +95,16 @@ export async function createTransfer(formData: FormData) {
 /** Interest counts as income, and updates the account balance (MVP_SPEC.md §3/§6). */
 export async function createInterestPayment(formData: FormData) {
   const accountId = String(formData.get("accountId"));
-  const amount = Math.abs(Number(formData.get("amount")));
+  // The typed amount wins; the computed one is the fallback when the field was
+  // left blank, so the common case is "accept what the rate says".
+  const typed = String(formData.get("amount") ?? "").trim();
+  const computed = String(formData.get("computedAmount") ?? "").trim();
+  const amount = Math.abs(Number(typed !== "" ? typed : computed));
   const date = new Date(String(formData.get("date")));
+
+  if (!Number.isFinite(amount) || amount === 0) {
+    throw new Error("Enter an amount, or set a rate on the account so it can be worked out.");
+  }
 
   await db.insert(interestPayments).values({ accountId, amount: String(amount), date });
 
@@ -226,10 +234,32 @@ export async function createCategory(formData: FormData) {
   if (!name) throw new Error("Category name is required");
   if (kind !== "income" && kind !== "expense") throw new Error("Invalid category kind");
 
-  await db.insert(categories).values({ name, kind }).onConflictDoNothing();
+  const fixed = formData.get("fixed") === "on";
+
+  await db.insert(categories).values({ name, kind, fixed }).onConflictDoNothing();
 
   revalidatePath("/settings");
+  revalidatePath("/settings/categories");
   revalidatePath("/transactions");
+  revalidatePath("/");
+}
+
+/**
+ * Marks a category as money that moves whether you act or not.
+ *
+ * Rent and salary are fixed; groceries and freelance are not. Kept on the
+ * category so it's decided once instead of on every transaction — the cost is
+ * that a genuinely mixed category lands entirely on one side, and the fix for
+ * that is to split it in two.
+ */
+export async function setCategoryFixed(formData: FormData) {
+  const id = String(formData.get("id"));
+  const fixed = String(formData.get("fixed")) === "true";
+
+  await db.update(categories).set({ fixed }).where(eq(categories.id, id));
+
+  revalidatePath("/settings/categories");
+  revalidatePath("/");
 }
 
 export async function deleteCategory(formData: FormData) {

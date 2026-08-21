@@ -17,7 +17,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
       <div className="card p-4">
         <form action={updateTransaction} className="space-y-3">
           <input type="hidden" name="id" value={tx.id} />
-          <div className="text-xs text-[var(--muted)]">Type: {tx.type} (can't be changed here)</div>
+          <div className="text-xs text-[var(--muted)]">Type: {tx.type} (can&apos;t be changed here)</div>
           <select name="categoryId" defaultValue={tx.categoryId ?? ""} className="input">
             <option value="">No category</option>
             {relevantCategories.map((c) => (

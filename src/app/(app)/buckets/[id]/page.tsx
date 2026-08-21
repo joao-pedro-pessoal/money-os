@@ -41,13 +41,11 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
             <textarea name="description" defaultValue={bucket.description ?? ""} className="input" rows={2} />
             <input name="targetAmount" type="number" step="0.01" defaultValue={bucket.targetAmount ?? ""} placeholder="Target amount" className="input" />
             <input
-              name="targetPercent"
+              name="priority"
               type="number"
-              step="0.01"
               min="0"
-              max="100"
-              defaultValue={bucket.targetPercent ?? ""}
-              placeholder="Plan % of available money"
+              defaultValue={bucket.priority}
+              placeholder="Rank — lower is more important"
               className="input"
             />
             <input name="color" type="color" defaultValue={bucket.color ?? "#6366f1"} className="input h-10" />

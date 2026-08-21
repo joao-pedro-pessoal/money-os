@@ -5,49 +5,78 @@ import {
   listAccountsForHoldings,
 } from "@/actions/investments";
 import { listPlaylists } from "@/actions/playlists";
-import { listBalances } from "@/actions/connections";
+import { getPortfolioItems } from "@/actions/dashboard";
+import PortfolioTable from "@/components/PortfolioTable";
+import { portfolioSummary } from "@/lib/portfolio/positionView";
 import { getPortfolioContribution } from "@/actions/investments";
 import { Money } from "@/components/PrivacyContext";
-import DonutChart from "@/components/DonutChart";
-import NetWorthChart from "@/components/NetWorthChart";
-import HoldingTags from "@/components/HoldingTags";
+import TimeSeriesCard from "@/components/TimeSeriesCard";
+import Section from "@/components/Section";
 import HoldingFormFields from "@/components/HoldingFormFields";
-import { RISK_LEVELS, TIME_HORIZONS, tagLabel, isStablecoin } from "@/lib/portfolio/tags";
 import Link from "next/link";
+import StatementHistory from "@/components/StatementHistory";
+import { getRealisedTotal } from "@/actions/dividends";
+import PortfolioAudit from "@/components/PortfolioAudit";
+import UnitemisedInvestments from "@/components/UnitemisedInvestments";
+import { getUnitemisedInvestments } from "@/actions/investments";
+import AdoptStatementPositions from "@/components/AdoptStatementPositions";
+import {
+  getImportedStatements,
+  adoptStatementPositions,
+  listKnownIsins,
+} from "@/actions/brokerImport";
+import QuoteProbe from "@/components/QuoteProbe";
+import AutoPrice from "@/components/AutoPrice";
+import PricingCrossCheck from "@/components/PricingCrossCheck";
 
-export default async function InvestmentsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ risk?: string; time?: string }>;
-}) {
-  const { risk, time } = await searchParams;
-  const [{ holdings, totals }, valueSeries, accountList, playlistList, syncedBalances] = await Promise.all([
+/** A form action may not return a value; the counts go to the audit log. */
+async function adoptAction(formData: FormData) {
+  "use server";
+  await adoptStatementPositions(formData);
+}
+
+export default async function InvestmentsPage() {
+  const [
+    { holdings },
+    valueSeries,
+    accountList,
+    playlistList,
+  ] = await Promise.all([
     listHoldingsWithPnL(),
     getPortfolioValueOverTime(),
     listAccountsForHoldings(),
     listPlaylists(),
-    listBalances(),
   ]);
   const contribution = await getPortfolioContribution();
+  // Manual holdings, open trades and coin balances in one shape, so one table
+  // can group them and one chart can measure what that table is showing.
+  const portfolioItems = await getPortfolioItems();
 
-  // Synced balances DO count toward Portfolio Value: the connected account's
-  // balance holds only perps equity, so this is where that money is counted —
-  // exactly once.
-  const syncedTotal = syncedBalances
-    .filter((b) => b.countsInPortfolio)
-    .reduce((s, b) => s + (b.usdValue ?? 0), 0);
 
-  const filtered = holdings.filter(
-    (h) => (!risk || h.riskLevel === risk) && (!time || h.timeHorizon === time)
-  );
 
-  const allocation = filtered
-    .filter((h) => h.marketValue > 0)
-    .map((h) => ({ name: h.symbol, value: h.marketValue }));
+  const unitemised = await getUnitemisedInvestments();
+  const importedStatements = await getImportedStatements();
+  const knownIsins = await listKnownIsins();
+  const realised = await getRealisedTotal();
+  const summary = portfolioSummary(portfolioItems.items);
 
-  const pnlColor = totals.totalPnL >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
+  // Says what the figure is made of, so it can't be read as sales alone.
+  const realisedNote = [
+    realised.tradesUnknown ? null : `${realised.trades!.toFixed(2)} sales`,
+    realised.dividends === 0 ? null : `${realised.dividends.toFixed(2)} dividends`,
+    realised.interest === 0 ? null : `${realised.interest.toFixed(2)} interest`,
+  ]
+    .filter(Boolean)
+    .join(" + ") || "nothing realised yet";
+  const base = portfolioItems.baseCurrency;
+  const pnlColor =
+    summary.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
   const realizedTotal =
-    Math.round((holdings.reduce((s, h) => s + (h.realizedPnl ?? 0), 0) + Number.EPSILON) * 100) / 100;
+    Math.round(
+      (holdings.reduce((s, h) => s + (h.realizedPnl ?? 0), 0) +
+        Number.EPSILON) *
+        100,
+    ) / 100;
 
   return (
     <div className="space-y-8">
@@ -55,7 +84,8 @@ export default async function InvestmentsPage({
         <div>
           <h1 className="text-lg font-semibold">Investments</h1>
           <p className="text-xs text-[var(--muted)] mt-1">
-            Manually tracked positions. Account balances hold your idle cash; these add on top.
+            Everything you hold, synced and manual, in one place. Account
+            balances hold your idle cash; positions add on top.
           </p>
         </div>
         <div className="flex gap-2">
@@ -71,216 +101,169 @@ export default async function InvestmentsPage({
         </div>
       </div>
 
+      {/* Computed from the same items the table shows. These used to come from
+          manual holdings alone, so with everything synced they read zero while
+          the table below reported a real loss. Two numbers for one question is
+          worse than either being wrong. */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Stat label="Portfolio Value" value={contribution.portfolioValue} currency={contribution.baseCurrency} />
-        <Stat label="Cost Basis" value={totals.totalCost} />
-        <Stat label="Unrealized P&L" value={totals.totalPnL} className={pnlColor} />
-        <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">Unrealized P&amp;L %</div>
-          <div className={`text-xl font-semibold ${pnlColor}`}>{totals.totalPnLPercent.toFixed(2)}%</div>
-        </div>
+        {/* One definition for all five cards: everything the table below shows.
+            Portfolio Value used to come from getPortfolioContribution, which
+            deliberately excludes positions already inside an account balance —
+            so it read 84 next to a Market-exposed of 177, and the two could
+            never be reconciled by anyone looking at them. What the contribution
+            figure answers is a different question, and it now says so. */}
+        <Stat
+          label="Portfolio Value"
+          value={summary.floating + summary.stable}
+          currency={base}
+          note={
+            contribution.portfolioValue !== summary.floating + summary.stable
+              ? `${contribution.portfolioValue.toFixed(2)} of this is new to Net Worth`
+              : "counted once in Net Worth"
+          }
+        />
+        <Stat
+          label="Unrealized P&L"
+          value={summary.pnl}
+          currency={base}
+          className={pnlColor}
+          note={`${summary.pnlPercent.toFixed(2)}% of what can move`}
+        />
+        <Stat
+          label="Market-exposed"
+          value={summary.floating}
+          currency={base}
+          note={`cost ${summary.cost.toFixed(2)}`}
+        />
+        <Stat
+          label="Cash & stablecoins"
+          value={summary.stable}
+          currency={base}
+          note={
+            summary.projectedYield > 0
+              ? `earning ${summary.projectedYield.toFixed(2)}/yr`
+              : summary.unratedStable > 0
+                ? "no interest rate set"
+                : undefined
+          }
+        />
         <Stat
           label="Realized P&L"
-          value={realizedTotal}
-          className={realizedTotal >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}
+          value={realised.total + realizedTotal}
+          currency={base}
+          className={
+            realised.total + realizedTotal >= 0
+              ? "text-[var(--green)]"
+              : "text-[var(--red)]"
+          }
+          // Everything that has actually been paid: sales closed, dividends
+          // received and interest credited. Interest and dividends belong here
+          // — they arrived and stayed, and nothing about them is on paper.
+          note={realisedNote}
         />
       </div>
 
+      <TimeSeriesCard
+        title="Portfolio value over time"
+        series={valueSeries.map((p) => ({ date: p.date, value: p.portfolioValue }))}
+        currency={contribution.baseCurrency}
+        note="Built from snapshots, so it starts the day tracking did. An imported statement reaches further back but records prices paid, not what things were worth since."
+      />
+
+      {/* What the statement can account for, which is further back than any
+          snapshot but a different measure — see the component. */}
+      <StatementHistory />
+
+      {/* The five cards above, reconciled per platform. */}
+      <PortfolioAudit items={portfolioItems.items} currency={base} />
+
+
+      {/* One table for everything you hold, grouped and filtered however you
+          want to look at it — and the chart measures whatever it is showing,
+          so the two cannot drift apart. Open trades are listed but NOT counted
+          in Portfolio Value: their value is already inside the account equity. */}
       <div className="card p-4">
-        <div className="text-sm font-medium mb-3">Portfolio value over time</div>
-        <NetWorthChart data={valueSeries.map((p) => ({ date: p.date, netWorth: p.portfolioValue }))} />
+        <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
+          <div className="text-sm font-medium">What you hold</div>
+          <div className="text-xs text-[var(--muted)]">
+            open trades are shown but not added to Portfolio Value
+          </div>
+        </div>
+        <div className="text-xs text-[var(--muted)] mb-3">
+          Tag positions on the{" "}
+          <Link href="/positions" className="text-[var(--accent)]">
+            Positions page
+          </Link>{" "}
+          and they group here.
+        </div>
+        <PortfolioTable
+          items={portfolioItems.items}
+          currency={portfolioItems.baseCurrency}
+        />
       </div>
 
-      {/* Full-width table: long numbers used to get clipped when it shared a row
-          with the donut, so the chart now sits on its own line below. */}
-      <div className="card p-4">
-        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-          <div className="text-sm font-medium">Holdings</div>
-          <form className="flex gap-2 text-xs" method="GET">
-            <select name="risk" defaultValue={risk ?? ""} className="input py-1">
-              <option value="">All risk levels</option>
-              {RISK_LEVELS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
+      {/* Placed directly under the table, because the question it answers is
+          "why doesn't this add up to the dashboard?" — which you ask while
+          looking at the table, not somewhere else on the page. */}
+      <UnitemisedInvestments
+        items={unitemised.items}
+        total={unitemised.total}
+        currency={unitemised.baseCurrency}
+      />
+
+      {/* Right under the table, because that is where you notice the rows are
+          read-only and want to do something about it. */}
+      <AdoptStatementPositions accounts={importedStatements} action={adoptAction} />
+
+      {/* Only worth showing once there are ISINs to ask about. */}
+      {/* The automatic route first; the gateway probe stays as the manual
+          fallback for anything Stooq doesn't carry. */}
+      {knownIsins.length > 0 && <AutoPrice />}
+      {/* Immediately under the button that sets the prices, because that is
+          when a disagreement is worth knowing about. */}
+      <PricingCrossCheck />
+      {knownIsins.length > 0 && <QuoteProbe suggestions={knownIsins} />}
+
+      <Section title="Add a position by hand" summary="for anything not synced">
+        <form action={createHolding} className="space-y-3 max-w-2xl">
+          <input
+            name="symbol"
+            placeholder="Symbol (e.g. VWCE, AAPL, USDC)"
+            className="input"
+            required
+          />
+          <input name="name" placeholder="Name (optional)" className="input" />
+          <select name="accountId" className="input" required defaultValue="">
+            <option value="">Account holding this position…</option>
+            {accountList.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.institution} — {a.name}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex gap-2">
+            <input
+              name="quantity"
+              type="number"
+              step="0.00000001"
+              placeholder="Quantity"
+              className="input"
+              required
+            />
+            <select name="currency" className="input">
+              <option value="EUR">EUR</option>
+              <option value="USD">USD</option>
             </select>
-            <select name="time" defaultValue={time ?? ""} className="input py-1">
-              <option value="">All time horizons</option>
-              {TIME_HORIZONS.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="btn py-1 px-3">
-              Filter
-            </button>
-          </form>
-        </div>
-
-        {filtered.length === 0 ? (
-          <div className="text-sm text-[var(--muted)] py-8 text-center">
-            {holdings.length === 0 ? "No holdings yet. Add your first position below." : "No holdings match this filter."}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table whitespace-nowrap">
-              <thead>
-                <tr>
-                  <th>Symbol</th>
-                  <th>Account</th>
-                  <th>Playlist</th>
-                  <th className="text-right">Qty</th>
-                  <th className="text-right">Avg Entry</th>
-                  <th className="text-right">Current</th>
-                  <th className="text-right">Value</th>
-                  <th className="text-right">P&amp;L</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((h) => (
-                  <tr key={h.id}>
-                    <td>
-                      <Link href={`/investments/${h.id}`} className="hover:underline font-medium">
-                        {h.symbol}
-                      </Link>
-                      {h.direction === "short" && (
-                        <span className="badge ml-1 text-[var(--red)] border border-[var(--red)]">SHORT</span>
-                      )}
-                      {h.name && <div className="text-xs text-[var(--muted)]">{h.name}</div>}
-                      <HoldingTags
-                        riskLevel={h.riskLevel}
-                        expectedReturn={h.expectedReturn}
-                        timeHorizon={h.timeHorizon}
-                        liquidity={h.liquidity}
-                      />
-                    </td>
-                    <td>
-                      {h.accountName ?? <span className="text-[var(--muted)]">—</span>}
-                      {h.assetType && (
-                        <div className="text-xs text-[var(--muted)]">{tagLabel(h.assetType)}</div>
-                      )}
-                    </td>
-                    <td>{h.playlistName ?? <span className="text-[var(--muted)]">—</span>}</td>
-                    <td className="text-right">{h.quantity}</td>
-                    <td className="text-right">
-                      <Money value={h.avgEntryPrice} currency={h.currency} />
-                    </td>
-                    <td className="text-right">
-                      <Money value={h.currentPrice} currency={h.currency} />
-                    </td>
-                    <td className="text-right">
-                      <Money value={h.marketValue} currency={h.currency} />
-                    </td>
-                    <td
-                      className={`text-right ${h.unrealizedPnL >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
-                    >
-                      <Money value={h.unrealizedPnL} currency={h.currency} />
-                      <div className="text-xs">{h.unrealizedPnLPercent.toFixed(1)}%</div>
-                    </td>
-                    <td className="text-right">
-                      <Link href={`/investments/${h.id}`} className="text-xs text-[var(--accent)] hover:underline">
-                        Edit
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
-      {syncedBalances.length > 0 && (
-        <div className="card p-4">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
-            <div className="text-sm font-medium">Synced balances</div>
-            <div className="text-xs text-[var(--muted)]">
-              counted in Portfolio Value — the account balance holds only perps equity
-            </div>
-          </div>
-          <div className="text-xs text-[var(--muted)] mb-3">
-            Pulled automatically from your connections. Total{" "}
-            <Money value={syncedTotal} currency="USD" />, included in the Portfolio Value above.
-          </div>
-          <div className="overflow-x-auto">
-            <table className="data-table whitespace-nowrap">
-              <thead>
-                <tr>
-                  <th>Coin</th>
-                  <th>Account</th>
-                  <th>Type</th>
-                  <th className="text-right">Quantity</th>
-                  <th className="text-right">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {syncedBalances.map((b) => (
-                  <tr key={b.id}>
-                    <td className="font-medium">{b.coin}</td>
-                    <td>{b.accountName}</td>
-                    <td>
-                      {isStablecoin(b.coin) ? (
-                        <span className="badge border border-[var(--green)] text-[var(--green)]">
-                          Stablecoin
-                        </span>
-                      ) : (
-                        <span className="text-[var(--muted)]">Cripto</span>
-                      )}
-                    </td>
-                    <td className="text-right">{b.total}</td>
-                    <td className="text-right">
-                      {b.usdValue === null ? "—" : <Money value={b.usdValue} currency="USD" />}
-                      {!b.countsInPortfolio && (
-                        <div className="text-[10px] text-[var(--muted)]">already in account equity</div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+          <HoldingFormFields playlistOptions={playlistList} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Allocation</div>
-          <DonutChart data={allocation} />
-        </div>
-
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Add position</div>
-          <form action={createHolding} className="space-y-3">
-            <input name="symbol" placeholder="Symbol (e.g. VWCE, AAPL, USDC)" className="input" required />
-            <input name="name" placeholder="Name (optional)" className="input" />
-            <select name="accountId" className="input" required defaultValue="">
-              <option value="">Account holding this position…</option>
-              {accountList.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.institution} — {a.name}
-                </option>
-              ))}
-            </select>
-
-            <div className="flex gap-2">
-              <input name="quantity" type="number" step="0.00000001" placeholder="Quantity" className="input" required />
-              <select name="currency" className="input">
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-              </select>
-            </div>
-
-            <HoldingFormFields playlistOptions={playlistList} />
-
-            <button type="submit" className="btn w-full">
-              Add position
-            </button>
-          </form>
-        </div>
-      </div>
+          <button type="submit" className="btn w-full">
+            Add position
+          </button>
+        </form>
+      </Section>
     </div>
   );
 }
@@ -290,11 +273,13 @@ function Stat({
   value,
   className = "",
   currency = "EUR",
+  note,
 }: {
   label: string;
   value: number;
   className?: string;
   currency?: string;
+  note?: string;
 }) {
   return (
     <div className="card p-4">
@@ -302,6 +287,7 @@ function Stat({
       <div className={`text-xl font-semibold truncate ${className}`}>
         <Money value={value} currency={currency} />
       </div>
+      {note && <div className="text-[10px] text-[var(--muted)] mt-1 truncate">{note}</div>}
     </div>
   );
 }

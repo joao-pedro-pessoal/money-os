@@ -9,7 +9,9 @@ import {
   convertToManual,
 } from "@/actions/connections";
 import AutoSync from "@/components/AutoSync";
-import { NEW_ACCOUNT, PLATFORM_SETUP, BYBIT_REGIONS } from "@/lib/connectors/constants";
+import PageTabs from "@/components/PageTabs";
+import { INVESTMENT_TABS } from "@/lib/navigation";
+import { NEW_ACCOUNT, PLATFORM_SETUP, BYBIT_REGIONS, PLATFORM_LABELS } from "@/lib/connectors/constants";
 import ConnectionForm from "@/components/ConnectionForm";
 import { listAccountsForHoldings } from "@/actions/investments";
 import { freshnessLabel, freshnessColor } from "@/lib/connectors/freshness";
@@ -29,7 +31,8 @@ export default async function ConnectionsPage() {
   const logsFor = new Map(logsByConnection.map((l) => [l.id, l.logs]));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      <PageTabs tabs={INVESTMENT_TABS} />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold">Connections</h1>
@@ -137,12 +140,25 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                   )}
                   {c.lastSyncStatus === "ok" && (
                     <div className="text-xs text-[var(--muted)] mt-2">
-                      perps equity <Money value={Number(c.lastEquity ?? 0)} currency="USD" /> + spot{" "}
-                      <Money value={Number(c.lastSpotValue ?? 0)} currency="USD" /> ={" "}
+                      {/* Each connection's own currency, not an assumption.
+                          Trading 212 reports euros, and a euro figure with a
+                          dollar sign is wrong by the exchange rate while
+                          looking entirely normal. */}
+                      account value{" "}
+                      <Money
+                        value={Number(c.lastEquity ?? 0)}
+                        currency={c.reportingCurrency ?? "USD"}
+                      />{" "}
+                      + coins{" "}
+                      <Money
+                        value={Number(c.lastSpotValue ?? 0)}
+                        currency={c.reportingCurrency ?? "USD"}
+                      />{" "}
+                      ={" "}
                       <span className="text-[var(--foreground)]">
                         <Money
                           value={Number(c.lastEquity ?? 0) + Number(c.lastSpotValue ?? 0)}
-                          currency="USD"
+                          currency={c.reportingCurrency ?? "USD"}
                         />
                       </span>
                     </div>
@@ -218,6 +234,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
           setup={PLATFORM_SETUP}
           bybitRegions={BYBIT_REGIONS}
           secretsAvailable={secretsAvailable}
+          labels={PLATFORM_LABELS}
         />
       </div>
     </div>

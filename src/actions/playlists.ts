@@ -5,13 +5,29 @@ import { playlists, holdings, watchlistItems, auditLog } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { marketValue, costBasis, unrealizedPnL } from "@/lib/portfolio";
+import { toBase } from "@/lib/fx";
+import { getRates } from "./fx";
+import { getBaseCurrency } from "./settings";
 
 /** Playlists with the totals of the positions assigned to each one. */
 export async function listPlaylistsWithTotals() {
-  const [lists, allHoldings] = await Promise.all([
+  const [lists, allHoldings, rates, base] = await Promise.all([
     db.select().from(playlists),
     db.select().from(holdings),
+    getRates(),
+    getBaseCurrency(),
   ]);
+
+  /**
+   * Everything converted before it is added.
+   *
+   * A playlist can hold a euro ETF next to a dollar stock, and summing their
+   * market values raw produced a total in no currency at all — then displayed
+   * with the base currency's symbol. A holding with no available rate
+   * contributes nothing rather than contributing a wrong number.
+   */
+  const inBase = (amount: number, currency: string): number =>
+    toBase(amount, currency, rates, base) ?? 0;
 
   return lists
     .map((p) => {
@@ -23,12 +39,13 @@ export async function listPlaylistsWithTotals() {
           currentPrice: Number(h.currentPrice),
           direction: h.direction,
           realizedPnl: Number(h.realizedPnl ?? 0),
+          currency: h.currency,
         }));
 
-      const value = round2(mine.reduce((s, h) => s + marketValue(h), 0));
-      const cost = round2(mine.reduce((s, h) => s + costBasis(h), 0));
-      const pnl = round2(mine.reduce((s, h) => s + unrealizedPnL(h), 0));
-      const realized = round2(mine.reduce((s, h) => s + h.realizedPnl, 0));
+      const value = round2(mine.reduce((s, h) => s + inBase(marketValue(h), h.currency), 0));
+      const cost = round2(mine.reduce((s, h) => s + inBase(costBasis(h), h.currency), 0));
+      const pnl = round2(mine.reduce((s, h) => s + inBase(unrealizedPnL(h), h.currency), 0));
+      const realized = round2(mine.reduce((s, h) => s + inBase(h.realizedPnl, h.currency), 0));
 
       return {
         ...p,
@@ -38,6 +55,8 @@ export async function listPlaylistsWithTotals() {
         pnl,
         pnlPercent: cost === 0 ? 0 : round2((pnl / cost) * 100),
         realized,
+        /** Every figure above is in this currency. */
+        currency: base,
       };
     })
     .sort((a, b) => b.value - a.value);

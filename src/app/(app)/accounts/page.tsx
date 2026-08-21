@@ -1,6 +1,22 @@
-import { listAccountsWithState, createAccount, listArchivedAccounts, unarchiveAccount } from "@/actions/accounts";
-import { getAccountPlatformTotals } from "@/actions/connections";
+import {
+  listAccountsWithState,
+  createAccount,
+  listArchivedAccounts,
+  unarchiveAccount,
+  listRemovableAccounts,
+  removeEmptyAccounts,
+} from "@/actions/accounts";
+import {
+  getAccountPlatformTotals,
+  listConnections,
+} from "@/actions/connections";
+import ConnectablePlatforms from "@/components/ConnectablePlatforms";
+import { platformOptions } from "@/lib/connectors/catalogue";
 import { Money } from "@/components/PrivacyContext";
+import TidyEmptyAccounts from "@/components/TidyEmptyAccounts";
+import PageTabs from "@/components/PageTabs";
+import { ACCOUNTS_TABS } from "@/lib/navigation";
+import BalanceMeaningField from "@/components/BalanceMeaningField";
 import Link from "next/link";
 
 const STATE_COLOR: Record<string, string> = {
@@ -10,15 +26,36 @@ const STATE_COLOR: Record<string, string> = {
 };
 
 export default async function AccountsPage() {
-  const [accounts, archived, platformTotals] = await Promise.all([
-    listAccountsWithState(),
-    listArchivedAccounts(),
-    getAccountPlatformTotals(),
-  ]);
+  const [accounts, archived, platformTotals, removable, connections] =
+    await Promise.all([
+      listAccountsWithState(),
+      listArchivedAccounts(),
+      getAccountPlatformTotals(),
+      listRemovableAccounts(),
+      listConnections(),
+    ]);
+
+  // What could be connected instead of typed in, and what already is.
+  const options = platformOptions(
+    connections.map((c) => ({
+      platform: c.platform,
+      accountName: c.accountName,
+    })),
+  );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <h1 className="text-lg font-semibold">Accounts</h1>
+      <PageTabs tabs={ACCOUNTS_TABS} />
+
+      <TidyEmptyAccounts
+        removable={removable.map((a) => ({
+          id: a.id,
+          name: a.name,
+          institution: a.institution,
+        }))}
+        action={removeEmptyAccounts}
+      />
 
       <div className="card p-4">
         <table className="data-table">
@@ -51,7 +88,9 @@ export default async function AccountsPage() {
                         {p && p.unrealizedPnl !== 0 && (
                           <span
                             className={
-                              p.unrealizedPnl > 0 ? "text-[var(--green)]" : "text-[var(--red)]"
+                              p.unrealizedPnl > 0
+                                ? "text-[var(--green)]"
+                                : "text-[var(--red)]"
                             }
                           >
                             {" "}
@@ -61,7 +100,8 @@ export default async function AccountsPage() {
                         )}
                         {p && p.spot > 0 && (
                           <div className="text-[10px] text-[var(--muted)]">
-                            {p.equity.toFixed(2)} perps + {p.spot.toFixed(2)} spot
+                            {p.equity.toFixed(2)} in positions + {p.spot.toFixed(2)}{" "}
+                            spot
                           </div>
                         )}
                       </>
@@ -81,34 +121,59 @@ export default async function AccountsPage() {
         </table>
       </div>
 
-      <div className="card p-4 max-w-md">
-        <div className="text-sm font-medium mb-3">Add account</div>
-        <form action={createAccount} className="space-y-3">
-          <input name="institution" placeholder="Institution (e.g. Trade Republic)" className="input" required />
-          <input name="name" placeholder="Name (e.g. TR Cash)" className="input" required />
-          <select name="accountType" className="input">
-            <option value="bank">Bank</option>
-            <option value="broker">Broker</option>
-            <option value="exchange">Exchange</option>
-            <option value="cash">Cash</option>
-            <option value="other">Other</option>
-          </select>
-          <div className="flex gap-2">
-            <select name="currency" className="input">
-              <option value="EUR">EUR</option>
-              <option value="USD">USD</option>
+      <ConnectablePlatforms options={options}>
+        <div className="card p-4 max-w-md">
+          <div className="text-sm font-medium mb-3">Add account by hand</div>
+          <form action={createAccount} className="space-y-3">
+            <input
+              name="institution"
+              placeholder="Institution (e.g. Trade Republic)"
+              className="input"
+              required
+            />
+            <input
+              name="name"
+              placeholder="Name (e.g. TR Cash)"
+              className="input"
+              required
+            />
+            <select name="accountType" className="input">
+              <option value="bank">Bank</option>
+              <option value="broker">Broker</option>
+              <option value="exchange">Exchange</option>
+              <option value="cash">Cash</option>
+              <option value="other">Other</option>
             </select>
-            <input name="balance" type="number" step="0.01" placeholder="Starting balance" className="input" />
-          </div>
-          <button type="submit" className="btn w-full">
-            Add
-          </button>
-        </form>
-      </div>
+            <div className="flex gap-2">
+              <select name="currency" className="input">
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+              </select>
+              <input
+                name="balance"
+                type="number"
+                step="0.01"
+                placeholder="Starting balance"
+                className="input"
+              />
+            </div>
+
+            {/* Without this, typing a broker's total into the balance and also
+              recording the positions counts the same money twice. */}
+            <BalanceMeaningField />
+
+            <button type="submit" className="btn w-full">
+              Add
+            </button>
+          </form>
+        </div>
+      </ConnectablePlatforms>
 
       {archived.length > 0 && (
         <div className="card p-4">
-          <div className="text-sm font-medium mb-3 text-[var(--muted)]">Archived accounts</div>
+          <div className="text-sm font-medium mb-3 text-[var(--muted)]">
+            Archived accounts
+          </div>
           <table className="data-table">
             <thead>
               <tr>
@@ -129,7 +194,10 @@ export default async function AccountsPage() {
                   <td>
                     <form action={unarchiveAccount}>
                       <input type="hidden" name="id" value={a.id} />
-                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
+                      <button
+                        type="submit"
+                        className="text-xs text-[var(--accent)] hover:underline"
+                      >
                         Unarchive
                       </button>
                     </form>

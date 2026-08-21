@@ -2,18 +2,21 @@ import { getPortfolioAnalysis, getGroupedPerformance } from "@/actions/investmen
 import { Money } from "@/components/PrivacyContext";
 import DonutChart from "@/components/DonutChart";
 import { tagLabel, riskColor } from "@/lib/portfolio/tags";
-import { GROUP_BY_OPTIONS, type Breakdown, type GroupByKey, type SortKey } from "@/lib/portfolio/analysis";
+import {
+  GROUP_BY_OPTIONS,
+  SORT_COLUMNS,
+  type Breakdown,
+  type GroupByKey,
+  type SortKey,
+} from "@/lib/portfolio/analysis";
+import { listAnalysisViews, saveAnalysisView, deleteSavedView } from "@/actions/savedViews";
+import { suggestName } from "@/lib/portfolio/savedViews";
+import SavedViews from "@/components/SavedViews";
+import GainAttribution from "@/components/GainAttribution";
+import ContributionBreakdown from "@/components/ContributionBreakdown";
+import StatementBreakdown from "@/components/StatementBreakdown";
+import { getStatementBreakdown } from "@/actions/brokerImport";
 import Link from "next/link";
-
-const SORT_COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
-  { key: "key", label: "Grupo", numeric: false },
-  { key: "count", label: "Posições", numeric: true },
-  { key: "value", label: "Valor", numeric: true },
-  { key: "cost", label: "Custo", numeric: true },
-  { key: "pnl", label: "P&L", numeric: true },
-  { key: "pnlPercent", label: "P&L %", numeric: true },
-  { key: "realized", label: "Realizado", numeric: true },
-];
 
 export default async function PortfolioAnalysisPage({
   searchParams,
@@ -27,6 +30,7 @@ export default async function PortfolioAnalysisPage({
   // Spot/stablecoins count by default; "off" narrows the view to at-risk positions.
   const includeSynced = sp.synced !== "off";
 
+  const statement = await getStatementBreakdown();
   const a = await getPortfolioAnalysis(includeSynced);
   const grouped = await getGroupedPerformance(groupBy, sort, dir, includeSynced);
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
@@ -38,6 +42,26 @@ export default async function PortfolioAnalysisPage({
     new URLSearchParams({ groupBy, sort, dir, synced: includeSynced ? "on" : "off", ...over }).toString();
   const pnlColor = a.totals.totalPnL >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
 
+  const currentConfig = { groupBy, sort, dir, synced: includeSynced ? "on" : "off" };
+  const savedViewList = await listAnalysisViews();
+  // Same builder as the chips use, so "already saved" compares like with like.
+  const currentQuery = new URLSearchParams(currentConfig).toString();
+  const suggested = suggestName(currentConfig, {
+    groupBy: Object.fromEntries(GROUP_BY_OPTIONS.map((o) => [o.value, o.label])),
+    sort: Object.fromEntries(SORT_COLUMNS.map((c) => [c.key, c.label])),
+  });
+
+  /**
+   * The empty state used to hide the whole page.
+   *
+   * `a.holdings` is what the risk analysis can group and rank — and it is empty
+   * for someone whose money is entirely synced or entirely rebuilt from a
+   * statement. Everything below it, including the statement breakdown and the
+   * gain attribution, needs none of that and was being hidden along with it.
+   *
+   * So the empty state stays for the part that is genuinely empty, and the rest
+   * of the page renders regardless.
+   */
   if (a.holdings.length === 0) {
     return (
       <div className="space-y-6">
@@ -65,6 +89,18 @@ export default async function PortfolioAnalysisPage({
             </>
           )}
         </div>
+
+        {/* Independent of the risk analysis above: these read the imported
+            statement and the account history, not the tagged positions. */}
+        <GainAttribution currency="EUR" />
+        <ContributionBreakdown currency="EUR" />
+
+        {statement && (
+          <div>
+            <div className="text-sm font-medium mb-3">From your imported statement</div>
+            <StatementBreakdown data={statement} />
+          </div>
+        )}
       </div>
     );
   }
@@ -94,6 +130,20 @@ export default async function PortfolioAnalysisPage({
           </Link>
         </div>
       </div>
+
+      {/* Where the movement came from, before the headline numbers that mix
+          the sources together. */}
+      <GainAttribution currency="EUR" />
+      <ContributionBreakdown currency="EUR" />
+
+      {/* Everything below is read straight out of the imported statement, so it
+          only appears once one has been imported. */}
+      {statement && (
+        <div>
+          <div className="text-sm font-medium mb-3">From your imported statement</div>
+          <StatementBreakdown data={statement} />
+        </div>
+      )}
 
       {/* ---- Headline numbers ---- */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -193,12 +243,25 @@ export default async function PortfolioAnalysisPage({
 
       {/* ---- Grouped performance: sortable by every variable ---- */}
       <div className="card p-4">
+        {/* Nine groupings crossed with seven sort columns is a lot to rebuild by
+            hand each visit; these are the two or three you actually use. */}
+        <div className="mb-3 pb-3 border-b border-[var(--border)]">
+          <SavedViews
+            views={savedViewList}
+            currentQuery={currentQuery}
+            suggestedName={suggested}
+            currentConfig={currentConfig}
+            saveAction={saveAnalysisView}
+            deleteAction={deleteSavedView}
+          />
+        </div>
+
         <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
           <div>
-            <div className="text-sm font-medium">Performance por {groupLabel.toLowerCase()}</div>
+            <div className="text-sm font-medium">Performance by {groupLabel.toLowerCase()}</div>
             {best && (
               <div className="text-xs text-[var(--muted)] mt-1">
-                Melhor: <span className="text-[var(--green)]">{label(best.key)}</span> com{" "}
+                Best: <span className="text-[var(--green)]">{label(best.key)}</span> at{" "}
                 {best.pnlPercent.toFixed(1)}%
               </div>
             )}
@@ -209,12 +272,12 @@ export default async function PortfolioAnalysisPage({
             <select name="groupBy" defaultValue={groupBy} className="input py-1">
               {GROUP_BY_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
-                  Agrupar por: {o.label}
+                  Group by: {o.label}
                 </option>
               ))}
             </select>
             <button type="submit" className="btn py-1 px-3">
-              Aplicar
+              Apply
             </button>
           </form>
         </div>

@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { transactions, imports, accounts, auditLog } from "@/db/schema";
+import { transactions, imports, accounts, auditLog, categories } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { dedupKey } from "@/lib/csv";
@@ -11,6 +11,8 @@ export interface ImportRow {
   amount: number;
   description: string;
   merchant?: string;
+  /** Category NAME, matched against existing ones. Never creates a new one. */
+  category?: string;
 }
 
 /** Keys of what's already in the account, so the preview can flag duplicates. */
@@ -27,12 +29,20 @@ export async function getExistingKeys(accountId: string): Promise<string[]> {
  * adding the net would double count it. It's offered for the case where the
  * balance hasn't been updated since those movements happened.
  */
+export interface ImportIntegrity {
+  fileHash: string;
+  rowsInFile: number;
+  debitTotal: number;
+  creditTotal: number;
+}
+
 export async function commitImport(
   accountId: string,
   fileName: string,
   rows: ImportRow[],
   columnMapping: string,
-  adjustBalance = false
+  adjustBalance = false,
+  integrity?: ImportIntegrity
 ) {
   const [importRow] = await db
     .insert(imports)
@@ -43,23 +53,44 @@ export async function commitImport(
       rowsImported: "0",
       rowsDuplicated: "0",
       rowsIgnored: "0",
+      // Kept so a later "did this file import cleanly?" can be answered from
+      // the record rather than from memory.
+      fileHash: integrity?.fileHash ?? null,
+      rowsInFile: integrity ? String(integrity.rowsInFile) : null,
+      debitTotal: integrity ? String(integrity.debitTotal) : null,
+      creditTotal: integrity ? String(integrity.creditTotal) : null,
     })
     .returning();
 
+  // Existing categories only. A CSV must never create one: an AI writing
+  // "Groceries" where the app has "Food" would quietly grow a second set, and
+  // this project has already had to clean up 48 duplicated categories once.
+  const existingCategories = await db.select().from(categories);
+  const categoryByName = new Map(existingCategories.map((c) => [c.name.trim().toLowerCase(), c]));
+
   let created = 0;
   let net = 0;
+  let categorised = 0;
 
   for (const row of rows) {
     const date = new Date(row.date);
     if (Number.isNaN(date.getTime()) || !Number.isFinite(row.amount) || row.amount === 0) continue;
 
+    const type = row.amount >= 0 ? "income" : "expense";
+    const match = row.category ? categoryByName.get(row.category.trim().toLowerCase()) : undefined;
+    // A category only applies if it belongs to the right side of the ledger —
+    // "Salary" on an expense would be wrong however confidently it was suggested.
+    const categoryId = match && match.kind === type ? match.id : null;
+    if (categoryId) categorised++;
+
     await db.insert(transactions).values({
       accountId,
-      type: row.amount >= 0 ? "income" : "expense",
+      type,
       amount: String(row.amount),
       date,
       description: row.description ?? "",
       merchant: row.merchant ?? null,
+      categoryId,
       source: "csv",
       importId: importRow.id,
     });
@@ -83,14 +114,14 @@ export async function commitImport(
     entityType: "import",
     entityId: importRow.id,
     action: "csv_imported",
-    details: JSON.stringify({ fileName, created, net, adjustBalance }),
+    details: JSON.stringify({ fileName, created, net, adjustBalance, categorised }),
   });
 
   revalidatePath("/transactions");
   revalidatePath("/accounts");
   revalidatePath("/");
 
-  return { importId: importRow.id, created, net };
+  return { importId: importRow.id, created, net, categorised };
 }
 
 export async function listImports() {
@@ -105,6 +136,9 @@ export async function listImports() {
       ...i,
       accountName: i.accountId ? (accountName.get(i.accountId) ?? "—") : "—",
       rowsImported: Number(i.rowsImported),
+      rowsInFile: i.rowsInFile === null ? null : Number(i.rowsInFile),
+      debitTotal: i.debitTotal === null ? null : Number(i.debitTotal),
+      creditTotal: i.creditTotal === null ? null : Number(i.creditTotal),
     }))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
