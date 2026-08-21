@@ -49,6 +49,7 @@ export async function getStatistics() {
     recent.length > 0 ? round2(recent.reduce((s, f) => s + f.net, 0) / recent.length) : 0;
 
   const convert = (amount: number, currency: string) => toBase(amount, currency, rates, base) ?? 0;
+  const currencyOfAccount = new Map(allAccounts.map((a) => [a.id, a.currency]));
 
   const byAccount = allAccounts
     .map((a) => ({ name: a.name, value: convert(Number(a.balance), a.currency) }))
@@ -59,15 +60,24 @@ export async function getStatistics() {
       name: h.symbol,
       value: convert(Number(h.quantity) * Number(h.currentPrice), h.currency),
     })),
-    ...syncedBalances.map((b) => ({ name: b.coin, value: convert(b.usdValue ?? 0, "USD") })),
+    // The platform's own currency, which travels with the balance now. Reading
+    // a Trading 212 euro balance as dollars understated it by about 15 %.
+    ...syncedBalances.map((b) => ({ name: b.coin, value: convert(b.usdValue ?? 0, b.currency) })),
   ].filter((p) => p.value > 0);
 
   const bucketProgress = allBuckets
     .filter((b) => b.targetAmount !== null && Number(b.targetAmount) > 0)
     .map((b) => {
+      /**
+       * Allocations live on accounts, and accounts have currencies.
+       *
+       * Summing them raw compared a mixed-currency figure against a target in
+       * one currency, so a bucket fed from a dollar account reported the wrong
+       * progress — and the "months to goal" built on it inherited the error.
+       */
       const current = allocations
         .filter((a) => a.bucketId === b.id)
-        .reduce((s, a) => s + Number(a.amount), 0);
+        .reduce((s, a) => s + convert(Number(a.amount), currencyOfAccount.get(a.accountId) ?? base), 0);
       const target = Number(b.targetAmount);
       return {
         id: b.id,

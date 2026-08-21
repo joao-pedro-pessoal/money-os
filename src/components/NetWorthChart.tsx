@@ -3,7 +3,13 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { usePrivacy } from "./PrivacyContext";
 
-export default function NetWorthChart({ data }: { data: { date: string; netWorth: number }[] }) {
+export default function NetWorthChart({
+  data,
+  currency = "EUR",
+}: {
+  data: { date: string; netWorth: number }[];
+  currency?: string;
+}) {
   const { hidden } = usePrivacy();
 
   if (data.length < 2) {
@@ -48,10 +54,27 @@ export default function NetWorthChart({ data }: { data: { date: string; netWorth
                 fontSize: 12,
                 color: "var(--foreground)",
               }}
-              formatter={(value) => new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(Number(value))}
+              formatter={(value) =>
+                new Intl.NumberFormat("pt-PT", { style: "currency", currency }).format(Number(value))
+              }
             />
           )}
-          <Area type="monotone" dataKey="netWorth" stroke="var(--accent)" strokeWidth={2} fill="url(#nw-gradient)" />
+          {/*
+            Straight segments with a dot on every measurement, not a smooth
+            curve. Net worth is only known on the days it was recorded, and a
+            spline draws a confident arc through days that were never measured
+            — it invented a peak of ~70 out of two points at 10 and one at 69.
+            The dots make it obvious how much of this line is real.
+          */}
+          <Area
+            type="linear"
+            dataKey="netWorth"
+            stroke="var(--accent)"
+            strokeWidth={2}
+            fill="url(#nw-gradient)"
+            dot={{ r: 2.5, fill: "var(--accent)", strokeWidth: 0 }}
+            activeDot={{ r: 4 }}
+          />
         </AreaChart>
       </ResponsiveContainer>
     </div>

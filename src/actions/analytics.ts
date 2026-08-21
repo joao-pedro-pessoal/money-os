@@ -4,84 +4,106 @@ import { db } from "@/db/client";
 import { accounts, accountSnapshots } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getPortfolioValueOverTime } from "./investments";
+import { getRates } from "./fx";
+import { getBaseCurrency } from "./settings";
+import { toBase } from "@/lib/fx";
+import { seriesFromSnapshots, type SnapshotRow } from "@/lib/fx/historical";
+import { mergeNetWorthSeries } from "@/lib/accounting/composition";
 
 /**
- * Net worth over time, derived from AccountSnapshot history (MVP_SPEC.md §3/§9).
- * Snapshots are sparse and per-account (taken on creation + every manual balance
- * update), so we build a step function: for every distinct date that has at
- * least one snapshot anywhere, sum each account's most recent known balance
- * at or before that date (carry-forward).
+ * Net worth over time, from the frozen conversions on each snapshot.
+ *
+ * This function used to sum `balance` straight from the rows, which meant a
+ * dollar account's balance was added to a euro account's as if they were the
+ * same currency. Now every snapshot carries the value it had in the base
+ * currency at the moment it was taken, and the series simply adds those up.
+ *
+ * Snapshots are sparse — they exist only on days a balance changed — so each
+ * account's last known value is carried forward.
  */
 export async function getNetWorthOverTime() {
-  const allAccounts = await db.select().from(accounts).where(eq(accounts.active, true));
-  const allSnapshots = await db.select().from(accountSnapshots);
+  const [allAccounts, allSnapshots, rates, base] = await Promise.all([
+    db.select().from(accounts).where(eq(accounts.active, true)),
+    db.select().from(accountSnapshots),
+    getRates(),
+    getBaseCurrency(),
+  ]);
 
   if (allAccounts.length === 0) return [];
 
-  const byAccount = new Map<string, { date: string; balance: number }[]>();
-  for (const acc of allAccounts) {
-    byAccount.set(
-      acc.id,
-      allSnapshots
-        .filter((s) => s.accountId === acc.id)
-        .map((s) => ({ date: new Date(s.timestamp).toISOString().slice(0, 10), balance: Number(s.balance) }))
-        .sort((a, b) => a.date.localeCompare(b.date))
-    );
-  }
+  const active = new Set(allAccounts.map((a) => a.id));
+  const currencyOf = new Map(allAccounts.map((a) => [a.id, a.currency]));
 
-  const allDates = Array.from(
-    new Set(allSnapshots.map((s) => new Date(s.timestamp).toISOString().slice(0, 10)))
-  ).sort();
+  const rows: SnapshotRow[] = allSnapshots
+    .filter((s) => active.has(s.accountId))
+    .map((s) => ({
+      accountId: s.accountId,
+      timestamp: new Date(s.timestamp),
+      balance: Number(s.balance),
+      // Older rows predate the currency column; the account's own currency is
+      // the best available answer for them.
+      currency: s.currency ?? currencyOf.get(s.accountId) ?? null,
+      valueInBase: s.valueInBase,
+      rate: s.rate,
+      baseCurrency: s.baseCurrency ?? base,
+      backfilled: s.backfilled || s.valueInBase === null,
+    }));
 
-  if (allDates.length === 0) return [];
+  const series = seriesFromSnapshots(rows, (currency) => toBase(1, currency, rates, base));
 
-  return allDates.map((date) => {
-    let total = 0;
-    for (const acc of allAccounts) {
-      const points = byAccount.get(acc.id) ?? [];
-      const known = points.filter((p) => p.date <= date);
-      total += known.length > 0 ? known[known.length - 1].balance : 0;
-    }
-    return { date, netWorth: Math.round(total * 100) / 100 };
-  });
-}
-
-export async function getMoneyByLocation() {
-  const allAccounts = await db.select().from(accounts).where(eq(accounts.active, true));
-  return allAccounts.map((a) => ({ name: a.name, value: Number(a.balance) })).filter((a) => a.value > 0);
+  return series.map((p) => ({ date: p.date, netWorth: p.value, approximate: p.approximate }));
 }
 
 /**
- * Net worth over time including investment positions.
+ * Where the money sits, in one currency.
  *
- * Account balances are cash only, and holdings are tracked separately, so the
- * two series can simply be added — there is no overlap to double count. Both
- * are carry-forward step functions, so we union the dates and carry each side
- * forward independently before summing.
+ * This used to return raw balances, so a euro account and a dollar account were
+ * added together as if they were the same money — the chart's total came out at
+ * 705 against a net worth of 694, and nothing on the page could explain the
+ * difference because the difference was an exchange rate.
+ */
+export async function getMoneyByLocation() {
+  const [allAccounts, rates, base] = await Promise.all([
+    db.select().from(accounts).where(eq(accounts.active, true)),
+    getRates(),
+    getBaseCurrency(),
+  ]);
+
+  return allAccounts
+    .map((a) => ({
+      name: a.name,
+      // Dropped rather than counted raw when there is no rate: a wrong slice
+      // is harder to notice than a missing one.
+      value: toBase(Number(a.balance), a.currency, rates, base) ?? 0,
+    }))
+    .filter((a) => a.value > 0);
+}
+
+/**
+ * Net worth over time, including the investments that aren't already in a
+ * balance.
+ *
+ * The previous version of this comment claimed "account balances are cash only,
+ * so the two series can simply be added — there is no overlap to double count."
+ * That stopped being true the day an account could declare that its balance
+ * already contains its positions, and nothing here noticed. A Trading 212
+ * balance holding €145 of ETFs was added to a portfolio series containing the
+ * same €145, so the line ran at nearly three times the truth and reported
+ * +21 570 %.
+ *
+ * The live figure has been protected against this since the fourth time it
+ * happened, by `computeNetWorth`. The fix is to make the history obey the same
+ * rule: only what genuinely sits outside the balances gets added on top.
  */
 export async function getTotalNetWorthOverTime() {
   const [cashSeries, portfolioSeries] = await Promise.all([
     getNetWorthOverTime(),
-    getPortfolioValueOverTime(),
+    // true: only holdings that add on top of a balance, never positions that
+    // are already inside one.
+    getPortfolioValueOverTime(true),
   ]);
 
-  const allDates = Array.from(
-    new Set([...cashSeries.map((p) => p.date), ...portfolioSeries.map((p) => p.date)])
-  ).sort();
-
-  const lastAtOrBefore = <T extends { date: string }>(series: T[], date: string): T | undefined => {
-    const known = series.filter((p) => p.date <= date);
-    return known.length > 0 ? known[known.length - 1] : undefined;
-  };
-
-  return allDates.map((date) => {
-    const cash = lastAtOrBefore(cashSeries, date)?.netWorth ?? 0;
-    const portfolio = lastAtOrBefore(portfolioSeries, date)?.portfolioValue ?? 0;
-    return {
-      date,
-      netWorth: Math.round((cash + portfolio + Number.EPSILON) * 100) / 100,
-      cash: Math.round((cash + Number.EPSILON) * 100) / 100,
-      portfolio: Math.round((portfolio + Number.EPSILON) * 100) / 100,
-    };
-  });
+  // The merge itself is pure and tested in src/lib/accounting/composition.ts,
+  // where the rule about what may be added on top is written down.
+  return mergeNetWorthSeries(cashSeries, portfolioSeries);
 }

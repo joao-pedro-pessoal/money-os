@@ -1,24 +1,19 @@
 import { getStatistics } from "@/actions/stats";
 import { Money } from "@/components/PrivacyContext";
-import Link from "next/link";
+import PageTabs from "@/components/PageTabs";
+import { ANALYTICS_TABS } from "@/lib/navigation";
 
 export default async function StatisticsPage() {
   const s = await getStatistics();
   const c = s.baseCurrency;
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-lg font-semibold">Statistics</h1>
-          <p className="text-xs text-[var(--muted)] mt-1">
-            Everything here is measured from your own history, not estimated.
-          </p>
-        </div>
-        <Link href="/analytics" className="btn whitespace-nowrap">
-          Charts
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <h1 className="text-lg font-semibold">Analytics</h1>
+      <PageTabs tabs={ANALYTICS_TABS} />
+      <p className="text-xs text-[var(--muted)]">
+        Everything here is measured from your own history, not estimated.
+      </p>
 
       {/* ---- Returns by period ---- */}
       <div className="card p-4">
