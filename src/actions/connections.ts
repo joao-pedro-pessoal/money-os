@@ -243,7 +243,13 @@ export async function setPositionTags(formData: FormData) {
       set: values,
     });
 
+  // The type set here is read on all three: Positions is where you set it,
+  // Investments is where the table said "set type" and sent you here, and
+  // Analysis groups by it. Revalidating only Positions left the other two
+  // showing the old value, which reads as the save not having worked.
   revalidatePath("/positions");
+  revalidatePath("/investments");
+  revalidatePath("/investments/analysis");
 }
 
 function parsePositionRow(r: typeof positions.$inferSelect) {
@@ -263,13 +269,28 @@ function parsePositionRow(r: typeof positions.$inferSelect) {
 }
 
 export async function listBalances() {
-  const [rows, conns, allAccounts] = await Promise.all([
+  const [rows, conns, allAccounts, meta, allPlaylists] = await Promise.all([
     db.select().from(platformBalances),
     db.select().from(accountConnections),
     db.select().from(accounts),
+    db.select().from(positionMeta),
+    db.select().from(playlists),
   ]);
   const accountName = new Map(allAccounts.map((a) => [a.id, a.name]));
   const accountOf = new Map(conns.map((c) => [c.id, c.accountId]));
+  /**
+   * A spot balance can be tagged exactly like an open position.
+   *
+   * It could not before, and the omission was invisible from here: the tags
+   * table is keyed on (connectionId, coin) and a balance has both, so the
+   * storage was always ready — only the read and the screen were missing. The
+   * effect was that a coin held on spot, HYPE among them, had no way to be
+   * given an asset type at all, while the Investments table told you to go to
+   * the Positions page and set one. That page offered the control for open
+   * trades only, so the instruction was impossible to follow.
+   */
+  const playlistName = new Map(allPlaylists.map((p) => [p.id, p.name]));
+  const metaFor = new Map(meta.map((m) => [`${m.connectionId}:${m.coin}`, m]));
   /**
    * The column is named `usdValue` and the value is not always in dollars.
    *
@@ -293,6 +314,7 @@ export async function listBalances() {
      */
     const platform = currencyOf.get(b.connectionId) ?? "USD";
     const currency = isCurrencyCode(b.coin) ? b.coin.toUpperCase() : platform;
+    const m = metaFor.get(`${b.connectionId}:${b.coin}`);
 
     return {
     ...b,
@@ -304,6 +326,16 @@ export async function listBalances() {
     currency,
     available: Number(b.total) - (b.hold === null ? 0 : Number(b.hold)),
     accountName: accountName.get(accountOf.get(b.connectionId) ?? "") ?? "—",
+    riskLevel: m?.riskLevel ?? null,
+    expectedReturn: m?.expectedReturn ?? null,
+    timeHorizon: m?.timeHorizon ?? null,
+    liquidity: m?.liquidity ?? null,
+    assetType: m?.assetType ?? null,
+    assetTypeAuto: m?.assetTypeAuto ?? false,
+    apr: m?.apr === null || m?.apr === undefined ? null : Number(m.apr),
+    playlistId: m?.playlistId ?? null,
+    playlistName: m?.playlistId ? playlistName.get(m.playlistId) ?? null : null,
+    notes: m?.notes ?? null,
     };
   });
 }

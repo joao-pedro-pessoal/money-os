@@ -159,6 +159,7 @@ export default async function PositionsPage() {
               <thead>
                 <tr>
                   <th>Coin</th>
+                  <th>Tags</th>
                   <th>Account</th>
                   <th className="text-right">Total</th>
                   <th className="text-right">Available</th>
@@ -170,6 +171,27 @@ export default async function PositionsPage() {
                 {balances.map((b) => (
                   <tr key={b.id}>
                     <td className="font-medium">{b.coin}</td>
+                    {/* A coin held on spot is taggable exactly like an open
+                        trade, and until now it wasn't — so a HYPE balance had
+                        no route to an asset type at all, while the Investments
+                        table sent you here to set one. */}
+                    <td className="whitespace-normal">
+                      <PositionTagsForm
+                        action={setPositionTags}
+                        connectionId={b.connectionId}
+                        coin={b.coin}
+                        riskLevel={b.riskLevel}
+                        expectedReturn={b.expectedReturn}
+                        timeHorizon={b.timeHorizon}
+                        liquidity={b.liquidity}
+                        assetType={b.assetType}
+                        assetTypeAuto={b.assetTypeAuto}
+                        apr={b.apr}
+                        playlistId={b.playlistId}
+                        notes={b.notes}
+                        playlists={playlistList}
+                      />
+                    </td>
                     <td>{b.accountName}</td>
                     <td className="text-right">{b.total}</td>
                     <td className="text-right">

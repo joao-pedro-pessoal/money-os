@@ -1,19 +1,31 @@
 "use server";
 
 import { db } from "@/db/client";
-import { playlists, holdings, watchlistItems, auditLog } from "@/db/schema";
+import {
+  playlists,
+  holdings,
+  watchlistItems,
+  auditLog,
+  positions,
+  positionMeta,
+  accountConnections,
+} from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { marketValue, costBasis, unrealizedPnL } from "@/lib/portfolio";
+import { capitalAtRisk } from "@/lib/connectors/margin";
 import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 
 /** Playlists with the totals of the positions assigned to each one. */
 export async function listPlaylistsWithTotals() {
-  const [lists, allHoldings, rates, base] = await Promise.all([
+  const [lists, allHoldings, syncedPositions, meta, conns, rates, base] = await Promise.all([
     db.select().from(playlists),
     db.select().from(holdings),
+    db.select().from(positions),
+    db.select().from(positionMeta),
+    db.select().from(accountConnections),
     getRates(),
     getBaseCurrency(),
   ]);
@@ -29,6 +41,48 @@ export async function listPlaylistsWithTotals() {
   const inBase = (amount: number, currency: string): number =>
     toBase(amount, currency, rates, base) ?? 0;
 
+  /**
+   * A synced position can be put in a playlist, and this page used to ignore it.
+   *
+   * The tag is stored in `positionMeta`, not on the position row, because a
+   * sync replaces `positions` wholesale. Reading only `holdings` meant a
+   * playlist holding Bybit or IBKR trades reported the value and P&L of the
+   * manual rows alone — while the Investments table, which reads both, showed a
+   * different number for the same playlist. Two screens disagreeing about one
+   * name is worse than either being wrong on its own.
+   *
+   * `capitalAtRisk` is the same helper the Investments page uses, so a
+   * leveraged position contributes what it actually ties up rather than its
+   * notional: a 5x short controlling 258 EUR is not 258 EUR of your money, and
+   * adding that to an ETF's market value would make the column meaningless.
+   */
+  const currencyOf = new Map(conns.map((c) => [c.id, c.reportingCurrency ?? "USD"]));
+  const playlistOfPosition = new Map(
+    meta.filter((m) => m.playlistId).map((m) => [`${m.connectionId}:${m.coin}`, m.playlistId!])
+  );
+
+  const syncedByPlaylist = new Map<string, { value: number; pnl: number }[]>();
+  for (const p of syncedPositions) {
+    const playlistId = playlistOfPosition.get(`${p.connectionId}:${p.coin}`);
+    if (!playlistId) continue;
+
+    const risk = capitalAtRisk({
+      positionValue: p.positionValue === null ? null : Number(p.positionValue),
+      marginUsed: p.marginUsed === null ? null : Number(p.marginUsed),
+      leverage: p.leverage === null ? null : Number(p.leverage),
+    });
+
+    const reported = currencyOf.get(p.connectionId) ?? "USD";
+    const value = toBase(risk.atRisk, reported, rates, base);
+    const pnl = toBase(p.unrealizedPnl === null ? 0 : Number(p.unrealizedPnl), reported, rates, base);
+    // No rate means leave it out, never count it as zero.
+    if (value === null || pnl === null) continue;
+
+    const list = syncedByPlaylist.get(playlistId) ?? [];
+    list.push({ value, pnl });
+    syncedByPlaylist.set(playlistId, list);
+  }
+
   return lists
     .map((p) => {
       const mine = allHoldings
@@ -42,14 +96,28 @@ export async function listPlaylistsWithTotals() {
           currency: h.currency,
         }));
 
-      const value = round2(mine.reduce((s, h) => s + inBase(marketValue(h), h.currency), 0));
-      const cost = round2(mine.reduce((s, h) => s + inBase(costBasis(h), h.currency), 0));
-      const pnl = round2(mine.reduce((s, h) => s + inBase(unrealizedPnL(h), h.currency), 0));
+      const synced = syncedByPlaylist.get(p.id) ?? [];
+
+      const value = round2(
+        mine.reduce((s, h) => s + inBase(marketValue(h), h.currency), 0) +
+          synced.reduce((s, x) => s + x.value, 0)
+      );
+      const pnl = round2(
+        mine.reduce((s, h) => s + inBase(unrealizedPnL(h), h.currency), 0) +
+          synced.reduce((s, x) => s + x.pnl, 0)
+      );
+      // What it was worth when it was opened. Derived rather than summed for
+      // the synced side, because a perp has no cost basis of its own — the same
+      // identity the manual side satisfies, where value − pnl is the cost.
+      const cost = round2(
+        mine.reduce((s, h) => s + inBase(costBasis(h), h.currency), 0) +
+          synced.reduce((s, x) => s + (x.value - x.pnl), 0)
+      );
       const realized = round2(mine.reduce((s, h) => s + inBase(h.realizedPnl, h.currency), 0));
 
       return {
         ...p,
-        count: mine.length,
+        count: mine.length + synced.length,
         value,
         cost,
         pnl,
