@@ -18,6 +18,38 @@ export const SUPPORTED_CURRENCIES = [
   { code: "BRL", label: "Brazilian Real (R$)" },
 ] as const;
 
+/**
+ * Currencies that can turn up as a cash balance on a broker.
+ *
+ * Wider than the list above, because that one answers "what can this app
+ * report in" and this one answers "is this row money or is it a token". A
+ * balance labelled EUR at a dollar-reporting broker is euros; a balance
+ * labelled BTC is worth whatever the broker says in its own currency.
+ *
+ * ISO codes only. Stablecoins are deliberately absent: USDC is worth about a
+ * dollar but it is not the currency, and pricing it as one skips the peg
+ * holding — which is the sort of thing that stops being true exactly when it
+ * matters.
+ */
+const FIAT_CODES = new Set([
+  "EUR", "USD", "GBP", "CHF", "BRL", "CAD", "JPY", "AUD", "NZD", "SEK", "NOK",
+  "DKK", "PLN", "CZK", "HUF", "RON", "SGD", "HKD", "MXN", "ZAR", "TRY", "ILS",
+  "KRW", "INR", "CNY", "THB",
+]);
+
+/**
+ * True when a balance's ticker is a currency rather than an asset.
+ *
+ * A token that borrows an ISO code would be read as money here. That is a real
+ * if remote risk, and the safer direction: mislabelling a rare token's currency
+ * is a display fault, while mislabelling every euro balance on a US broker was
+ * arithmetic — those numbers were being added into totals as dollars.
+ */
+export function isCurrencyCode(code: string | null | undefined): boolean {
+  if (typeof code !== "string") return false;
+  return FIAT_CODES.has(code.trim().toUpperCase());
+}
+
 export interface RateMap {
   /**
    * Units of the currency per 1 unit of the map's own reference currency.
