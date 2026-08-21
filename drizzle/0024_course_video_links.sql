@@ -1,0 +1,1 @@
+ALTER TABLE "learning_resource_meta" ADD COLUMN "video_url" text;

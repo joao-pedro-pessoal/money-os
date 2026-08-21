@@ -1,0 +1,1 @@
+ALTER TABLE "categories" ADD COLUMN "fixed" boolean DEFAULT false NOT NULL;

@@ -85,6 +85,146 @@
       "when": 1786201181811,
       "tag": "0011_brief_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786718999218,
+      "tag": "0012_whole_firelord",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786722981576,
+      "tag": "0013_abandoned_war_machine",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786723892865,
+      "tag": "0014_powerful_juggernaut",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1786727667673,
+      "tag": "0015_woozy_big_bertha",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1786728702534,
+      "tag": "0016_custom_budgets",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786728727263,
+      "tag": "0017_drop_old_budget_shape",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786729978687,
+      "tag": "0018_drop_bucket_plan",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786731380322,
+      "tag": "0019_position_asset_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1786798487780,
+      "tag": "0020_position_apr",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1786809817395,
+      "tag": "0021_knowledge_library",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1786811804902,
+      "tag": "0022_bible_editorial_position",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1786812468289,
+      "tag": "0023_library_favourites",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786822867861,
+      "tag": "0024_course_video_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786912960927,
+      "tag": "0025_dividends_and_realized_pnl",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786917100077,
+      "tag": "0026_broker_statement_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1786969676789,
+      "tag": "0027_portfolio_cash_share",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786977719173,
+      "tag": "0028_connector_reporting_currency",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786981431241,
+      "tag": "0029_wandering_dexter_bennett",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1786984080257,
+      "tag": "0030_normal_madame_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1787252203341,
+      "tag": "0031_harsh_namor",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "portfolio_cash_percent" numeric(5, 2);
