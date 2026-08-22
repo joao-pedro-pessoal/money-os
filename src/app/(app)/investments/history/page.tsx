@@ -2,19 +2,22 @@ import { listAccountsWithState } from "@/actions/accounts";
 import {
   listInvestmentActivity,
   undoInvestmentActivityImport,
+  getTradeAnalysis,
 } from "@/actions/investmentActivity";
 import { getBaseCurrency } from "@/actions/settings";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import InvestmentActivityImporter from "@/components/InvestmentActivityImporter";
+import TradeAnalysis from "@/components/TradeAnalysis";
 
 const amountClass = (amount: number) =>
   amount > 0 ? "text-[var(--green)]" : amount < 0 ? "text-[var(--red)]" : "text-[var(--accent)]";
 
 export default async function InvestmentHistoryPage() {
-  const [accounts, data, baseCurrency] = await Promise.all([
+  const [accounts, data, baseCurrency, analysis] = await Promise.all([
     listAccountsWithState(),
     listInvestmentActivity(),
     getBaseCurrency(),
+    getTradeAnalysis(),
   ]);
   const investmentAccounts = accounts.filter((account) =>
     ["broker", "exchange", "investment"].includes(account.accountType.toLowerCase())
@@ -39,6 +42,21 @@ export default async function InvestmentHistoryPage() {
           expenses, taxes and other account events together. Existing files and rows are detected before import.
         </p>
       </div>
+
+      <TradeAnalysis
+        pnl={analysis.pnl}
+        symbols={analysis.symbols}
+        directions={analysis.directions}
+        months={analysis.months}
+        hours={analysis.hours}
+        holding={analysis.holding}
+        averageSize={analysis.averageSize}
+        tradeCount={analysis.tradeCount}
+        closedCount={analysis.closedCount}
+        currency={analysis.baseCurrency}
+        approximate={analysis.approximate}
+        unconvertible={analysis.unconvertible}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="card p-3"><div className="text-[10px] text-[var(--muted)] uppercase tracking-wide">Events</div><div className="text-xl font-semibold mt-1">{data.activity.length}</div></div>

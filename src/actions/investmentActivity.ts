@@ -9,6 +9,21 @@ import {
   investmentActivityFingerprint,
   type InvestmentActivityInput,
 } from "@/lib/investment-activity";
+import {
+  cumulativePnl,
+  bySymbol,
+  byDirection,
+  byMonth,
+  byHour,
+  averageSize,
+  holdingPeriods,
+  holdingSummary,
+  isTrade,
+  type TradeRow,
+} from "@/lib/trading/stats";
+import { toBase } from "@/lib/fx";
+import { getRates } from "./fx";
+import { getBaseCurrency } from "./settings";
 
 export async function getExistingInvestmentFingerprints(accountId: string): Promise<string[]> {
   const rows = await db
@@ -200,4 +215,76 @@ export async function undoInvestmentActivityImport(formData: FormData) {
   revalidatePath("/investments/analysis");
   revalidatePath("/analytics");
   revalidatePath("/");
+}
+
+/**
+ * The trade history, analysed.
+ *
+ * Everything is converted to the base currency **before** any of it is added:
+ * the history holds Hyperliquid fills in dollars next to Trading 212 rows in
+ * euros, and summing those raw produces a number in no currency at all. That
+ * is the bug this codebase has fixed nine times, and a page of charts is the
+ * easiest place in the app to hide the tenth.
+ *
+ * Rates are today's. A June trade converted at an August rate is approximate,
+ * and `approximate` says so rather than letting the charts imply a precision
+ * they do not have — the same treatment the net-worth series gives backfilled
+ * points.
+ */
+export async function getTradeAnalysis() {
+  const [rows, rates, base] = await Promise.all([
+    db
+      .select()
+      .from(investmentActivities)
+      .orderBy(desc(investmentActivities.date)),
+    getRates(),
+    getBaseCurrency(),
+  ]);
+
+  let unconvertible = 0;
+  const converted: TradeRow[] = [];
+
+  for (const row of rows) {
+    const amount = toBase(Number(row.amount), row.currency, rates, base);
+    // No rate means leave it out and say so, never count it as zero.
+    if (amount === null) {
+      unconvertible += 1;
+      continue;
+    }
+    const fees = row.fees === null ? null : toBase(Number(row.fees), row.currency, rates, base);
+    const realized =
+      row.realizedPnl === null ? null : toBase(Number(row.realizedPnl), row.currency, rates, base);
+
+    converted.push({
+      date: new Date(row.date).toISOString(),
+      type: row.type,
+      symbol: row.symbol,
+      quantity: row.quantity === null ? null : Number(row.quantity),
+      amount,
+      fees,
+      realizedPnl: realized,
+      description: row.description,
+    });
+  }
+
+  const periods = holdingPeriods(converted);
+  const trades = converted.filter(isTrade);
+
+  return {
+    baseCurrency: base,
+    /** Rows dropped because nothing could convert them. Never silently zero. */
+    unconvertible,
+    /** True while any row needed a rate that isn't the rate of its own day. */
+    approximate: rows.some((r) => r.currency !== base),
+    tradeCount: trades.length,
+    closedCount: trades.filter((r) => r.realizedPnl !== null).length,
+    pnl: cumulativePnl(converted),
+    symbols: bySymbol(converted),
+    directions: byDirection(converted),
+    months: byMonth(converted),
+    hours: byHour(converted),
+    averageSize: averageSize(converted),
+    holding: holdingSummary(periods),
+    periods: periods.slice(0, 25),
+  };
 }
