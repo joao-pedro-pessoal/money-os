@@ -43,7 +43,9 @@ const COLUMNS = [
   { key: "playlist", label: "Playlist", numeric: false },
   { key: "account", label: "Account", numeric: false },
   { key: "value", label: "At risk", numeric: true },
-  { key: "pnl", label: "P&L", numeric: true },
+  // Profit on paper. Named in full because the app reports realised profit
+  // elsewhere and the two must never be read as the same claim.
+  { key: "pnl", label: "Unrealized P&L", numeric: true },
 ] as const;
 
 type ColumnKey = (typeof COLUMNS)[number]["key"];
@@ -57,7 +59,9 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   playlist: 20,
   account: 16,
   value: 14,
-  pnl: 10,
+  // Wider than the others need to be: the heading is what makes the number
+  // honest, so it must not be the thing that gets truncated away.
+  pnl: 16,
 };
 
 const COLUMNS_STORAGE_KEY = "portfolio-table-columns";

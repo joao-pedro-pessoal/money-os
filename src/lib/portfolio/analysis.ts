@@ -249,15 +249,24 @@ export function performanceBy(
     .sort((a, b) => b.value - a.value);
 }
 
-/** Every column the breakdown can be ordered by, in the order they're shown. */
+/**
+ * Every column the breakdown can be ordered by, in the order they're shown.
+ *
+ * "P&L" used to sit unqualified next to "Realised" in the same table, which
+ * left the reader to infer that the first one meant the other kind. Both are
+ * named now: one is profit on paper that a price move can take back, the other
+ * is money already off the table. The whole codebase keeps them in separate
+ * fields for that reason, and the headings should not blur what the model is
+ * careful about.
+ */
 export const SORT_COLUMNS = [
   { key: "key", label: "Group", numeric: false },
   { key: "count", label: "Positions", numeric: true },
   { key: "value", label: "Value", numeric: true },
   { key: "cost", label: "Cost", numeric: true },
-  { key: "pnl", label: "P&L", numeric: true },
-  { key: "pnlPercent", label: "P&L %", numeric: true },
-  { key: "realized", label: "Realised", numeric: true },
+  { key: "pnl", label: "Unrealized P&L", numeric: true },
+  { key: "pnlPercent", label: "Unrealized %", numeric: true },
+  { key: "realized", label: "Realized", numeric: true },
 ] as const;
 
 export type SortKey = (typeof SORT_COLUMNS)[number]["key"];

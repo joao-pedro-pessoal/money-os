@@ -154,7 +154,10 @@ export default async function BucketsPage() {
                   <th>Goal</th>
                   <th className="text-right">Cash</th>
                   <th className="text-right">Invested</th>
-                  <th className="text-right">P&amp;L</th>
+                  {/* `investedPnl` is the unrealised gain on the invested
+                      share — profit a price move can take back, not money
+                      banked towards the goal. */}
+                  <th className="text-right">Unrealized P&amp;L</th>
                   <th className="text-right">Total</th>
                   <th className="text-right">Progress</th>
                 </tr>

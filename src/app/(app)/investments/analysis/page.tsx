@@ -345,11 +345,17 @@ export default async function PortfolioAnalysisPage({
       {/* ---- Winners & losers ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Biggest gains</div>
+          <div className="text-sm font-medium">Biggest gains</div>
+          <div className="text-[10px] text-[var(--muted)] mb-3">
+            On paper — nothing here has been sold.
+          </div>
           <MoversTable rows={a.movers.winners} positive />
         </div>
         <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Biggest losses</div>
+          <div className="text-sm font-medium">Biggest losses</div>
+          <div className="text-[10px] text-[var(--muted)] mb-3">
+            On paper — a price move can take these back.
+          </div>
           <MoversTable rows={a.movers.losers} />
         </div>
       </div>
@@ -467,7 +473,9 @@ function MoversTable({
         <tr>
           <th>Symbol</th>
           <th>Value</th>
-          <th>P&amp;L</th>
+          {/* On paper. "Biggest gains" already reads like money made; without
+              the qualifier the column beside it reads like money banked. */}
+          <th>Unrealized P&amp;L</th>
         </tr>
       </thead>
       <tbody>
