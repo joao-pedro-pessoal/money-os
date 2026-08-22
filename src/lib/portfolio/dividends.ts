@@ -236,6 +236,18 @@ export function trailingYield(
   return round2((received / currentValue) * 100);
 }
 
+/**
+ * Sums payments that are **already in one currency**.
+ *
+ * It ignores `currency` entirely, which is safe only because the caller has
+ * converted first. It did not used to be: every caller passed raw rows, so a
+ * dollar dividend was added to a euro one and the result rendered with whatever
+ * symbol the page happened to use. The actions convert now, and this is left
+ * pure rather than given rates because `src/lib` does no I/O.
+ *
+ * If you reach for this with mixed-currency rows, that is the bug — convert
+ * them first.
+ */
 export function totalReceived(payments: readonly DividendPayment[]): number {
   return round2(payments.reduce((s, p) => s + p.amount, 0));
 }

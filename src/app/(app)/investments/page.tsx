@@ -10,6 +10,7 @@ import PortfolioTable from "@/components/PortfolioTable";
 import { portfolioSummary } from "@/lib/portfolio/positionView";
 import { getPortfolioContribution } from "@/actions/investments";
 import { Money } from "@/components/PrivacyContext";
+import { fmt } from "@/lib/format";
 import TimeSeriesCard from "@/components/TimeSeriesCard";
 import Section from "@/components/Section";
 import HoldingFormFields from "@/components/HoldingFormFields";
@@ -60,23 +61,33 @@ export default async function InvestmentsPage() {
   const realised = await getRealisedTotal();
   const summary = portfolioSummary(portfolioItems.items);
 
-  // Says what the figure is made of, so it can't be read as sales alone.
-  const realisedNote = [
-    realised.tradesUnknown ? null : `${realised.trades!.toFixed(2)} sales`,
-    realised.dividends === 0 ? null : `${realised.dividends.toFixed(2)} dividends`,
-    realised.interest === 0 ? null : `${realised.interest.toFixed(2)} interest`,
-  ]
-    .filter(Boolean)
-    .join(" + ") || "nothing realised yet";
   const base = portfolioItems.baseCurrency;
   const pnlColor =
     summary.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
+  /** Sales you closed on positions you keep yourself. */
   const realizedTotal =
     Math.round(
       (holdings.reduce((s, h) => s + (h.realizedPnl ?? 0), 0) +
         Number.EPSILON) *
         100,
     ) / 100;
+
+  /**
+   * Says what the figure is made of, so it can't be read as sales alone.
+   *
+   * `realizedTotal` is listed here because the card adds it. It was left out
+   * while it happened to be zero, which meant the note would have stopped
+   * explaining the number above it the moment a manual position was sold —
+   * the one case where you'd most want to know where the money came from.
+   */
+  const realisedNote = [
+    realised.tradesUnknown ? null : `${realised.trades!.toFixed(2)} platform trades`,
+    realizedTotal === 0 ? null : `${realizedTotal.toFixed(2)} manual sales`,
+    realised.dividends === 0 ? null : `${realised.dividends.toFixed(2)} dividends`,
+    realised.interest === 0 ? null : `${realised.interest.toFixed(2)} interest`,
+  ]
+    .filter(Boolean)
+    .join(" + ") || "nothing realised yet";
 
   return (
     <div className="space-y-8">
@@ -127,7 +138,11 @@ export default async function InvestmentsPage() {
           value={summary.pnl}
           currency={base}
           className={pnlColor}
-          note={`${summary.pnlPercent.toFixed(2)}% of what can move`}
+          // On cost, which is what a return is measured against. The note used
+          // to say "of what can move" — naming the market value as the
+          // denominator when the arithmetic uses the cost, so the words and the
+          // number described two different things.
+          note={`${summary.pnlPercent.toFixed(2)}% on ${fmt(summary.cost, base)} invested`}
         />
         <Stat
           label="Market-exposed"
