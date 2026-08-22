@@ -170,6 +170,9 @@ export function parseLedger(raw: unknown): LedgerState {
       hold: 0,
       price: rate,
       usdValue: rate === null ? null : round2(total * rate),
+      // A currency balance has no cost basis: euros did not cost anything to
+      // become euros. It is classified as cash, so no P&L is asked of it.
+      costBasis: null,
     });
   }
 

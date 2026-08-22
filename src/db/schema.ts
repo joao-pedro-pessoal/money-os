@@ -571,6 +571,11 @@ export const platformBalances = pgTable("platform_balances", {
   hold: numeric("hold", { precision: 30, scale: 10 }),
   price: numeric("price", { precision: 20, scale: 8 }),
   usdValue: numeric("usd_value", { precision: 20, scale: 4 }),
+  // What the venue says the holding cost, in the platform's reporting currency.
+  // Null means it doesn't say — never zero, because a zero cost would report
+  // the whole balance as profit, and a missing cost used to report "+0,00 €"
+  // P&L, which claims the holding is exactly flat.
+  costBasis: numeric("cost_basis", { precision: 20, scale: 4 }),
   // False when this balance is already inside the account's equity (Bybit
   // unified). Only rows marked true are added to Portfolio Value — otherwise
   // the same money would land in Net Worth twice.

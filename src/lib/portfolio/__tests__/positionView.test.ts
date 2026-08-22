@@ -5,6 +5,7 @@ import {
   filterOptions,
   allocationOf,
   groupValueOf,
+  portfolioSummary,
   UNTAGGED,
   NO_FILTERS,
   type PositionItem,
@@ -197,5 +198,58 @@ describe("allocationOf", () => {
   it("leaves out worthless slices", () => {
     const a = allocationOf([p({ id: "X", value: 0 })], "assetType");
     expect(a).toEqual([]);
+  });
+});
+
+/**
+ * A holding nobody states a cost for is not a holding that broke even.
+ *
+ * Balances used to arrive with `pnl: 0` hard-coded, so a HYPE balance up about
+ * three euros rendered "+0,00 €" — and the summary quietly folded its whole
+ * value into `cost`, asserting the same thing at the top of the page.
+ */
+describe("portfolioSummary with an unstated cost", () => {
+  const base = {
+    id: "1",
+    symbol: "X",
+    side: null,
+    accountName: "A",
+    platform: "p",
+    assetType: "crypto",
+    playlistName: null,
+    riskLevel: null,
+    timeHorizon: null,
+    notional: 100,
+    leverage: null,
+    source: "balance" as const,
+    insideBalance: false,
+    apr: null,
+  };
+
+  it("keeps an unstated cost out of the P&L instead of counting it flat", () => {
+    const s = portfolioSummary([
+      { ...base, id: "known", value: 110, pnl: 10 },
+      { ...base, id: "unknown", value: 100, pnl: 0, costUnknown: true },
+    ]);
+
+    expect(s.pnl).toBe(10);
+    expect(s.costUnknown).toBe(100);
+    // Only the holding that stated a cost contributes one.
+    expect(s.cost).toBe(100);
+  });
+
+  it("loses nothing: cost plus P&L plus unstated equals what is exposed", () => {
+    const s = portfolioSummary([
+      { ...base, id: "known", value: 110, pnl: 10 },
+      { ...base, id: "unknown", value: 100, pnl: 0, costUnknown: true },
+    ]);
+
+    expect(s.cost + s.pnl + s.costUnknown).toBeCloseTo(s.floating, 2);
+  });
+
+  it("reports no unstated cost when every holding states one", () => {
+    const s = portfolioSummary([{ ...base, value: 110, pnl: 10 }]);
+    expect(s.costUnknown).toBe(0);
+    expect(s.cost).toBe(100);
   });
 });

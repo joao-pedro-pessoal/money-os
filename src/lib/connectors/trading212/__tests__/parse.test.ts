@@ -360,7 +360,9 @@ describe("the connector", () => {
     const { http } = stub(ok);
     const state = await createTrading212Connector(credentials, http).getAccountState("");
     expect(state.balances).toEqual([
-      { coin: "EUR", total: 150.5, hold: 0, price: 1, usdValue: 150.5 },
+      // Free cash: no cost basis, and null rather than 0 so it is never read as
+      // a holding that happens to be exactly break-even.
+      { coin: "EUR", total: 150.5, hold: 0, price: 1, usdValue: 150.5, costBasis: null },
     ]);
   });
 

@@ -322,7 +322,9 @@ export async function listBalances() {
     hold: b.hold === null ? 0 : Number(b.hold),
     price: b.price === null ? null : Number(b.price),
     usdValue: b.usdValue === null ? null : Number(b.usdValue),
-    /** What `usdValue` and `price` are actually denominated in. */
+    /** What the venue says it cost, or null when it doesn't say. Never zero. */
+    costBasis: b.costBasis === null ? null : Number(b.costBasis),
+    /** What `usdValue`, `price` and `costBasis` are actually denominated in. */
     currency,
     available: Number(b.total) - (b.hold === null ? 0 : Number(b.hold)),
     accountName: accountName.get(accountOf.get(b.connectionId) ?? "") ?? "—",
@@ -652,6 +654,7 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
           hold: String(b.hold),
           price: b.price === null ? null : String(b.price),
           usdValue: b.usdValue === null ? null : String(b.usdValue),
+          costBasis: b.costBasis === null ? null : String(b.costBasis),
           countsInPortfolio: state.balancesAreSeparatePool,
           updatedAt: new Date(),
         }))

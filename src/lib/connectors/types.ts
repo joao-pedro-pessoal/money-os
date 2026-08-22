@@ -52,6 +52,15 @@ export interface NormalizedBalance {
   price: number | null;
   /** total x price, when a price is known. */
   usdValue: number | null;
+  /**
+   * What the whole holding cost, when the venue states it.
+   *
+   * Null means the venue does not say, and that must not become zero: a spot
+   * balance with no cost basis was reported as "+0,00 €" P&L, which claims the
+   * holding is exactly flat. Nobody's holding is exactly flat, and the row that
+   * said so was up about 3 €.
+   */
+  costBasis: number | null;
 }
 
 /**

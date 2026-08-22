@@ -557,6 +557,21 @@ export default function PortfolioTable({
                                 </td>
                               );
                             }
+                            if (i.costUnknown) {
+                              /* The venue reports what this is worth and not
+                                 what it cost. "+0,00" would say the holding is
+                                 exactly flat — a measurement — when the entry
+                                 price was never stated at all. */
+                              return (
+                                <td
+                                  key={c.key}
+                                  className="text-right text-[var(--muted)] text-xs"
+                                  title="This platform doesn't report what the holding cost, so there is nothing to compare today's value against."
+                                >
+                                  no cost basis
+                                </td>
+                              );
+                            }
                             if (i.atCost) {
                               /* Sitting at its purchase price because nobody has
                                  priced it. "+0.00" here would be a measurement —

@@ -180,6 +180,8 @@ export function createTrading212Connector(
                   hold: 0,
                   price: 1,
                   usdValue: summary.free,
+                  // Free cash, so there is no cost basis to speak of.
+                  costBasis: null,
                 },
               ],
         spotValue: summary.free ?? 0,

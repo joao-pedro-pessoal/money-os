@@ -47,6 +47,14 @@ export interface PositionItem {
   /** True when `value` is a cost basis rather than a market value. */
   atCost?: boolean;
   /**
+   * True when nothing states what this holding cost, so no P&L can be derived.
+   *
+   * Distinct from `atCost`, which is the opposite problem: there the cost is
+   * known and the market value is not. Both end up unable to produce a P&L, and
+   * both used to render "+0,00 €" — a portfolio claiming to be exactly flat.
+   */
+  costUnknown?: boolean;
+  /**
    * True when this is a breakdown of an account balance rather than money on
    * top of it — IBKR's currency rows, or an open trade whose value already sits
    * inside the equity.
@@ -94,6 +102,15 @@ export interface PortfolioSummary {
   projectedYield: number;
   /** How much of the stable money has no rate recorded. */
   unratedStable: number;
+  /**
+   * Market-exposed value whose cost nobody states, so it contributes no P&L.
+   *
+   * Reported rather than absorbed: `cost` used to swallow it, which quietly
+   * asserted that part of the portfolio was exactly break-even. It satisfies
+   * `cost + pnl + costUnknown === floating`, so nothing has gone missing — it
+   * has just been named.
+   */
+  costUnknown: number;
 }
 
 /**
@@ -112,6 +129,7 @@ export function portfolioSummary(items: PositionItem[]): PortfolioSummary {
   let floating = 0;
   let projectedYield = 0;
   let unratedStable = 0;
+  let costUnknown = 0;
 
   for (const i of items) {
     held += i.value;
@@ -119,7 +137,11 @@ export function portfolioSummary(items: PositionItem[]): PortfolioSummary {
 
     if (hasPnl(i)) {
       floating += i.value;
-      pnl += i.pnl;
+      // A holding nobody states a cost for contributes its value to what is
+      // exposed and nothing to the P&L. Folding it in at zero would report it
+      // as exactly break-even, which is a measurement it never made.
+      if (i.costUnknown) costUnknown += i.value;
+      else pnl += i.pnl;
     } else {
       stable += i.value;
       const y = yearlyYield(i);
@@ -128,8 +150,10 @@ export function portfolioSummary(items: PositionItem[]): PortfolioSummary {
     }
   }
 
-  // Cost is only meaningful for what can move; cash didn't "cost" anything.
-  const cost = floating - pnl;
+  // Cost is only meaningful for what can move and has a stated cost; cash
+  // didn't "cost" anything, and neither did a holding nobody priced the entry
+  // of. Keeps cost + pnl + costUnknown === floating.
+  const cost = floating - pnl - costUnknown;
 
   return {
     held: round2(held),
@@ -141,6 +165,7 @@ export function portfolioSummary(items: PositionItem[]): PortfolioSummary {
     floating: round2(floating),
     projectedYield: round2(projectedYield),
     unratedStable: round2(unratedStable),
+    costUnknown: round2(costUnknown),
   };
 }
 

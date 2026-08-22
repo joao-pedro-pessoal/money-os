@@ -302,7 +302,24 @@ export async function getPortfolioItems() {
       value,
       notional: value,
       leverage: null,
-      pnl: 0,
+      /**
+       * A real P&L where the venue states what the holding cost.
+       *
+       * This was hard-coded to 0, so a HYPE balance up about 3 € rendered
+       * "+0,00 €" — a claim that the holding is exactly flat, which is a
+       * measurement nobody's holding has ever produced. Hyperliquid reports
+       * `entryNtl` and it was being discarded at every step.
+       */
+      pnl: (() => {
+        if (b.costBasis === null) return 0;
+        const cost = toBase(Number(b.costBasis), denominated, rates, base);
+        return cost === null ? 0 : Math.round((value - cost + Number.EPSILON) * 100) / 100;
+      })(),
+      /**
+       * True when nobody said what this cost, so the P&L above is not a
+       * measurement and must not be shown as one. The screen prints a dash.
+       */
+      costUnknown: b.costBasis === null,
       source: "balance",
       insideBalance: !b.countsInPortfolio,
       // A stablecoin or currency balance can be earning; the platform doesn't

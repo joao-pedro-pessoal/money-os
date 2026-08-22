@@ -330,12 +330,25 @@ export function parseSpotBalances(
     const quoted = DOLLAR_COINS.has(b.coin) ? 1 : (prices[b.coin] ?? mids[b.coin] ?? null);
     const price = quoted !== null && quoted > 0 ? quoted : null;
 
+    /**
+     * `entryNtl` is what the venue says this holding cost, and it was being
+     * thrown away — so a HYPE balance up about 3 € reported "+0,00 €", which
+     * claims a holding is exactly flat.
+     *
+     * Zero is not a cost. Hyperliquid writes "0.0" for anything it has no entry
+     * for, USDC included, and treating that as a real cost basis would report
+     * the entire balance as profit.
+     */
+    const entry = num(b.entryNtl);
+    const costBasis = entry !== null && entry > 0 ? round2(entry) : null;
+
     balances.push({
       coin: b.coin,
       total,
       hold: num(b.hold) ?? 0,
       price,
       usdValue: price === null ? null : round2(total * price),
+      costBasis,
     });
   }
 

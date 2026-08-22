@@ -83,6 +83,49 @@ describe("margin and free cash on a unified account", () => {
   });
 });
 
+/**
+ * "+0,00 €" against a holding that is up three euros.
+ *
+ * Hyperliquid states what a spot balance cost in `entryNtl` and it was
+ * discarded at every step — the parser, the schema, the sync and the screen —
+ * so the table reported the holding as exactly flat.
+ */
+describe("what a spot balance cost", () => {
+  it("reads the entry the venue states", () => {
+    const { balances } = parseSpotBalances(
+      { balances: [{ coin: "HYPE", total: "1.12800902", hold: "0.0", entryNtl: "82.62064513" }] },
+      {},
+      { HYPE: 76.461 }
+    );
+
+    expect(balances[0].costBasis).toBeCloseTo(82.62, 2);
+    // Up, not flat: about 86.25 against 82.62.
+    expect(balances[0].usdValue! - balances[0].costBasis!).toBeGreaterThan(3);
+  });
+
+  it("treats an entry of zero as not stated", () => {
+    // Hyperliquid writes "0.0" wherever it has no entry, USDC included, and
+    // reading that as a real cost reports the whole balance as profit.
+    const { balances } = parseSpotBalances(
+      { balances: [{ coin: "USDC", total: "88.217128", hold: "0.0", entryNtl: "0.0" }] },
+      {},
+      {}
+    );
+
+    expect(balances[0].costBasis).toBeNull();
+  });
+
+  it("says nothing when the field is absent altogether", () => {
+    const { balances } = parseSpotBalances(
+      { balances: [{ coin: "HYPE", total: "1.128", hold: "0.0" }] },
+      {},
+      { HYPE: 76.461 }
+    );
+
+    expect(balances[0].costBasis).toBeNull();
+  });
+});
+
 describe("valuing what is held as collateral", () => {
   it("prices the held portion, as a second reading of margin", () => {
     const { heldValue, spotValue } = parseSpotBalances(

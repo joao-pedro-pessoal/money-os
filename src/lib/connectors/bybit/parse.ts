@@ -179,6 +179,10 @@ export function parseWalletBalance(raw: unknown): WalletState {
       hold: num(c.locked) ?? 0,
       price: usdValue !== null && total !== 0 ? round8(usdValue / total) : null,
       usdValue,
+      // Bybit's wallet balance says what a coin is worth, never what it cost.
+      // Null rather than zero, so the screen says "no cost basis" instead of
+      // reporting the holding as exactly break-even.
+      costBasis: null,
     });
   }
 
