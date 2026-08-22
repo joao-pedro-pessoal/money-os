@@ -374,6 +374,58 @@ function round2(n: number): number {
 }
 
 /**
+ * All-time realised P&L on closed trades, from the venue's own fill records.
+ *
+ * `clearinghouseState` describes open positions and says nothing about closed
+ * ones, so a trade you closed left no trace anywhere in the app — the Realized
+ * P&L card read "0.00 sales" against forty closed fills. `userFills` is where
+ * the venue keeps that: one row per fill, with `closedPnl` set on the ones that
+ * closed something.
+ *
+ * **This is the venue's figure, not ours.** The codebase's rule is that
+ * realised trade P&L is taken from whatever the platform reports and never
+ * reconstructed under a cost-basis method of our own, because a number we
+ * derived would quietly disagree with the broker's. Summing a field the venue
+ * itself calls closed P&L stays on the right side of that line.
+ *
+ * **Fees are not subtracted.** Hyperliquid reports them in a separate `fee`
+ * field, and whether `closedPnl` is already net of them is not something this
+ * code can verify from the payload. Guessing either way would misstate the
+ * number, so it reports the field as given and `fees` alongside it — two
+ * measurements, neither pretending to be the other.
+ *
+ * The endpoint returns a bounded window of recent fills, so an account older
+ * than that window would be summing part of its history. `fillCount` is
+ * returned so a caller can tell a real zero from an empty read.
+ */
+export function parseRealizedPnl(
+  raw: unknown
+): { realized: number | null; fees: number; fillCount: number } {
+  if (!Array.isArray(raw)) return { realized: null, fees: 0, fillCount: 0 };
+
+  let realized = 0;
+  let fees = 0;
+  let closedFills = 0;
+
+  for (const fill of raw as { closedPnl?: unknown; fee?: unknown }[]) {
+    const pnl = num(fill?.closedPnl);
+    if (pnl !== null && pnl !== 0) {
+      realized += pnl;
+      closedFills += 1;
+    }
+    const fee = num(fill?.fee);
+    if (fee !== null) fees += fee;
+  }
+
+  // No fills read at all is "the venue didn't say", which must stay null —
+  // reporting it as 0.00 would claim you have closed nothing, and the card
+  // already distinguishes an unknown from a zero.
+  if (raw.length === 0) return { realized: null, fees: 0, fillCount: 0 };
+
+  return { realized: round2(realized), fees: round2(fees), fillCount: closedFills };
+}
+
+/**
  * Is this a unified account?
  *
  * Hyperliquid's docs are explicit: *"Under unified account or portfolio margin,

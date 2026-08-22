@@ -16,6 +16,7 @@ import {
   parsePortfolioValue,
   buildSpotPriceMap,
   parseAllMids,
+  parseRealizedPnl,
   parseDexNames,
   mergeMarketStates,
   isValidAddress,
@@ -44,8 +45,16 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
       }
       // Perps account (equity + open positions) and the spot pool are separate
       // on Hyperliquid, so both are needed for a complete picture.
-      const [nativeRaw, spotRaw, spotMetaRaw, dexesRaw, abstractionRaw, portfolioRaw, midsRaw] =
-        await Promise.all([
+      const [
+        nativeRaw,
+        spotRaw,
+        spotMetaRaw,
+        dexesRaw,
+        abstractionRaw,
+        portfolioRaw,
+        midsRaw,
+        fillsRaw,
+      ] = await Promise.all([
           httpPost(HYPERLIQUID_INFO_URL, { type: "clearinghouseState", user: address }),
           httpPost(HYPERLIQUID_INFO_URL, { type: "spotClearinghouseState", user: address }),
           httpPost(HYPERLIQUID_INFO_URL, { type: "spotMetaAndAssetCtxs" }),
@@ -59,6 +68,10 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
           // Prices every coin the venue trades, which the spot metadata does
           // not. Optional: losing it costs a price, not the sync.
           httpPost(HYPERLIQUID_INFO_URL, { type: "allMids" }).catch(() => null),
+          // Closed trades. `clearinghouseState` only describes what is still
+          // open, so without this a trade you closed left no trace at all.
+          // Optional for the same reason as the others.
+          httpPost(HYPERLIQUID_INFO_URL, { type: "userFills", user: address }).catch(() => null),
         ]);
 
       const native = parseClearinghouseState(nativeRaw);
@@ -93,6 +106,10 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
         buildSpotPriceMap(spotMetaRaw),
         parseAllMids(midsRaw)
       );
+
+      // What closed trades actually made or lost. Null when the venue said
+      // nothing, which the interface reports as unknown rather than as zero.
+      const { realized } = parseRealizedPnl(fillsRaw);
 
       /**
        * Spot used to be a pool of its own. Under a unified account it isn't:
@@ -162,6 +179,7 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
               ? merged.withdrawable
               : Math.max(0, Math.round((portfolioValue - marginUsed + Number.EPSILON) * 100) / 100),
           totalMarginUsed: marginUsed,
+          realizedPnl: realized,
           balances,
           spotValue,
           // False: the balances are the account, not a second pot.
@@ -172,6 +190,7 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
       return {
         ...native,
         ...merged,
+        realizedPnl: realized,
         balances,
         spotValue,
         balancesAreSeparatePool: true,

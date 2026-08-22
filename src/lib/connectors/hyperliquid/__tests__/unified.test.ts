@@ -5,6 +5,7 @@ import {
   isUnifiedAbstraction,
   parsePortfolioValue,
   parseSpotBalances,
+  parseRealizedPnl,
 } from "../parse";
 import { createHyperliquidConnector } from "../index";
 
@@ -240,5 +241,66 @@ describe("the fallback heuristic, for when the endpoint is unreachable", () => {
 
   it("says nothing without a withdrawable figure", () => {
     expect(looksUnified({ equity: 10, withdrawable: null, spotValue: 90 })).toBe(false);
+  });
+});
+
+/**
+ * Closed trades left no trace anywhere in the app.
+ *
+ * `clearinghouseState` describes open positions only, so forty closed fills
+ * showed up as "0.00 sales" on the Realized P&L card. The venue keeps them in
+ * `userFills`, which the connector never asked for.
+ */
+describe("realised P&L from closed fills", () => {
+  it("sums what the venue calls closed P&L", () => {
+    const fills = [
+      { coin: "FIL", closedPnl: "1.973376", fee: "0.007759" },
+      { coin: "FIL", closedPnl: "2.622032", fee: "0.01031" },
+      { coin: "LIT", closedPnl: "-0.121", fee: "0.006288" },
+    ];
+
+    const { realized, fillCount } = parseRealizedPnl(fills);
+    expect(realized).toBeCloseTo(4.47, 2);
+    expect(fillCount).toBe(3);
+  });
+
+  it("keeps fees as their own measurement rather than netting them off", () => {
+    // Whether closedPnl is already net of fees is not knowable from the
+    // payload, so both are reported and neither pretends to be the other.
+    const { realized, fees } = parseRealizedPnl([
+      { closedPnl: "10", fee: "0.5" },
+      { closedPnl: "0", fee: "0.25" },
+    ]);
+
+    expect(realized).toBe(10);
+    expect(fees).toBe(0.75);
+  });
+
+  it("counts only the fills that closed something", () => {
+    // Opening a position produces a fill with closedPnl of zero. Counting it
+    // would report trades that never closed.
+    const { fillCount } = parseRealizedPnl([
+      { closedPnl: "0", fee: "0.1" },
+      { closedPnl: "3", fee: "0.1" },
+    ]);
+
+    expect(fillCount).toBe(1);
+  });
+
+  it("reports nothing read as unknown, never as zero", () => {
+    // "You have realised 0.00" and "nobody told us" must not render alike.
+    expect(parseRealizedPnl([]).realized).toBeNull();
+    expect(parseRealizedPnl(null).realized).toBeNull();
+    expect(parseRealizedPnl("nope").realized).toBeNull();
+  });
+
+  it("survives a fill whose numbers are unreadable", () => {
+    const { realized, fees } = parseRealizedPnl([
+      { closedPnl: "abc", fee: null },
+      { closedPnl: "2.5", fee: "0.1" },
+    ]);
+
+    expect(realized).toBe(2.5);
+    expect(fees).toBe(0.1);
   });
 });
