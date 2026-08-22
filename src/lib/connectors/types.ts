@@ -8,6 +8,31 @@
  * doesn't exist in the type system, so it can't be reached by mistake.
  */
 
+/**
+ * One thing that happened, in the shape the activity table stores.
+ *
+ * Mirrors `InvestmentActivityInput` rather than importing it, so the connector
+ * contract stays free of anything above it — connectors are the bottom layer
+ * and must not depend on the ledger that consumes them.
+ */
+export interface InvestmentActivityRow {
+  /** ISO timestamp. */
+  date: string;
+  type: string;
+  symbol: string;
+  quantity: number | null;
+  price: number | null;
+  /** Net cash movement. Fees sit beside it and are never folded in. */
+  amount: number;
+  fees: number | null;
+  currency: string;
+  description: string;
+  /** The venue's own id, which is what makes a re-sync idempotent. */
+  externalId: string;
+  /** What the venue says this closed, or null when it closed nothing. */
+  realizedPnl: number | null;
+}
+
 /** A position, normalized across platforms. */
 export interface NormalizedPosition {
   coin: string;
@@ -93,6 +118,19 @@ export interface NormalizedAccountState {
    * the interface reports as unknown rather than as zero.
    */
   realizedPnl?: number | null;
+  /**
+   * What actually happened on the account: trades, and anything else the venue
+   * records as an event rather than a state.
+   *
+   * Everything else on this interface describes the present, and is replaced
+   * wholesale on every sync — a position you closed simply stops being
+   * returned, which is why a closed trade used to leave no trace anywhere in
+   * the app. This is the part that accumulates instead of being replaced.
+   *
+   * Optional: a venue that publishes no event history reports nothing here, and
+   * an empty list is not the same claim as "there were no trades".
+   */
+  activity?: InvestmentActivityRow[];
   /** Platform timestamp of the reading, if provided. */
   asOf: Date | null;
   positions: NormalizedPosition[];

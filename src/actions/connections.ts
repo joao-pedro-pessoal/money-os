@@ -14,7 +14,9 @@ import {
   playlists,
   syncLogs,
   auditLog,
+  investmentActivities,
 } from "@/db/schema";
+import { investmentActivityFingerprint } from "@/lib/investment-activity";
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -659,6 +661,56 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
           updatedAt: new Date(),
         }))
       );
+    }
+
+    /**
+     * 2b. Trade history, which accumulates rather than being replaced.
+     *
+     * Everything else in this function is a full replace, because everything
+     * else describes the present. Events are the opposite: a fill from June is
+     * still true in August, and a position you closed stops being returned by
+     * the API — which is exactly why closed trades used to vanish without
+     * trace.
+     *
+     * `onConflictDoNothing` against the (account, fingerprint) unique key is
+     * what makes re-syncing free. The fingerprint prefers the venue's own trade
+     * id, so the same fill read twice is the same row, not two.
+     */
+    if (state.activity && state.activity.length > 0) {
+      await db
+        .insert(investmentActivities)
+        .values(
+          state.activity.map((a) => ({
+            accountId: conn.accountId,
+            // No import behind these; the connector brought them.
+            importId: null,
+            connectionId: conn.id,
+            date: new Date(a.date),
+            type: a.type,
+            symbol: a.symbol,
+            quantity: a.quantity === null ? null : String(a.quantity),
+            price: a.price === null ? null : String(a.price),
+            amount: String(a.amount),
+            fees: a.fees === null ? null : String(a.fees),
+            currency: a.currency,
+            description: a.description,
+            externalId: a.externalId,
+            realizedPnl: a.realizedPnl === null ? null : String(a.realizedPnl),
+            fingerprint: investmentActivityFingerprint({
+              date: a.date,
+              type: a.type as never,
+              symbol: a.symbol,
+              quantity: a.quantity,
+              price: a.price,
+              amount: a.amount,
+              fees: a.fees,
+              currency: a.currency,
+              description: a.description,
+              externalId: a.externalId,
+            }),
+          }))
+        )
+        .onConflictDoNothing();
     }
 
     // 3. Replace the position set. Closed positions simply stop being returned

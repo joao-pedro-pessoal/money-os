@@ -7,6 +7,7 @@
  */
 
 import { defaultHttpPost, type Connector, type HttpPost, type NormalizedAccountState } from "../types";
+import { fillsToActivity } from "./fills";
 import {
   parseClearinghouseState,
   parseSpotBalances,
@@ -110,6 +111,9 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
       // What closed trades actually made or lost. Null when the venue said
       // nothing, which the interface reports as unknown rather than as zero.
       const { realized } = parseRealizedPnl(fillsRaw);
+      // The same fills as individual events, which is what a trade history is.
+      // Hyperliquid quotes everything against USD stablecoins.
+      const activity = fillsToActivity(fillsRaw, "USD");
 
       /**
        * Spot used to be a pool of its own. Under a unified account it isn't:
@@ -180,6 +184,7 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
               : Math.max(0, Math.round((portfolioValue - marginUsed + Number.EPSILON) * 100) / 100),
           totalMarginUsed: marginUsed,
           realizedPnl: realized,
+          activity,
           balances,
           spotValue,
           // False: the balances are the account, not a second pot.
@@ -191,6 +196,7 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
         ...native,
         ...merged,
         realizedPnl: realized,
+        activity,
         balances,
         spotValue,
         balancesAreSeparatePool: true,

@@ -1012,3 +1012,62 @@ export const brokerEvents = pgTable(
   },
   (t) => [unique("broker_events_account_natural_key").on(t.accountId, t.naturalKey)]
 );
+
+/**
+ * Every movement on an investment account: trades, dividends, fees, transfers.
+ *
+ * The one table that answers "what did I actually do", which nothing else here
+ * can. `positions` and `platform_balances` are replaced wholesale on every sync
+ * and describe only the present; `holdings` describes what is held, not how it
+ * got there. A trade you closed used to leave no trace anywhere in the app.
+ *
+ * Two sources feed it and both must be able to:
+ *
+ * - **Imports.** A CSV from a broker with no API, undone as a unit via
+ *   `importId`.
+ * - **Connectors.** Hyperliquid reports every fill, and those arrive with no
+ *   import behind them — which is why `importId` is nullable here and was not
+ *   in the migration that never ran. `connectionId` says which connector
+ *   brought a row so removing the connection takes its history with it.
+ *
+ * Deduplication is the unique constraint on (account, fingerprint), and
+ * `investmentActivityFingerprint` prefers the venue's own id where there is
+ * one. Re-syncing the same fills is therefore a no-op rather than a duplicate.
+ */
+export const investmentActivities = pgTable(
+  "investment_activities",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    // Null for anything a connector brought in: there is no file to undo.
+    importId: text("import_id").references(() => imports.id, { onDelete: "cascade" }),
+    connectionId: text("connection_id").references(() => accountConnections.id, {
+      onDelete: "cascade",
+    }),
+    date: timestamp("date", { withTimezone: true }).notNull(),
+    // BUY | SELL | DIVIDEND | INTEREST | FEE | DEPOSIT | WITHDRAWAL | …
+    // See INVESTMENT_ACTIVITY_TYPES in src/lib/investment-activity.ts.
+    type: text("type").notNull(),
+    symbol: text("symbol"),
+    quantity: numeric("quantity", { precision: 30, scale: 10 }),
+    price: numeric("price", { precision: 20, scale: 8 }),
+    // The authoritative net cash movement. Fees are recorded beside it and are
+    // never subtracted from it a second time.
+    amount: numeric("amount", { precision: 20, scale: 4 }).notNull(),
+    fees: numeric("fees", { precision: 20, scale: 4 }),
+    // What this row's money is in. Never assume the account's currency: a
+    // dollar fill on a euro-reporting account is still dollars.
+    currency: text("currency").notNull().default("EUR"),
+    description: text("description"),
+    // The venue's own id for the movement, where it has one.
+    externalId: text("external_id"),
+    // What the venue says this trade closed, when it says. Null means it did
+    // not say — never zero, which would claim the trade broke even.
+    realizedPnl: numeric("realized_pnl", { precision: 20, scale: 4 }),
+    fingerprint: text("fingerprint").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique("investment_activities_account_fingerprint").on(t.accountId, t.fingerprint)]
+);

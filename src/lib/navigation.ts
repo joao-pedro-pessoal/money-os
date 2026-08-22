@@ -23,6 +23,10 @@ export const ACCOUNTS_TABS = [
 export const INVESTMENT_TABS = [
   { href: "/investments", label: "Holdings" },
   { href: "/investments/analysis", label: "Analysis" },
+  // What you actually did, as opposed to what you currently hold. The page
+  // existed for a week with nothing linking to it, which is the same as not
+  // existing — a page nobody can reach is a page nobody has.
+  { href: "/investments/history", label: "Trade history" },
   { href: "/investments/playlists", label: "Playlists" },
   { href: "/investments/watchlist", label: "Watchlist" },
   { href: "/investments/dividends", label: "Dividends" },
