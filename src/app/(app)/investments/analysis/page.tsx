@@ -70,7 +70,7 @@ export default async function PortfolioAnalysisPage({
           {/* The toggle must stay reachable here, or switching it off with no
               manual positions would leave no way to switch it back on. */}
           <Link href={qs({ synced: includeSynced ? "off" : "on" })} className="btn whitespace-nowrap">
-            {includeSynced ? "Spot & stablecoins: ON" : "Spot & stablecoins: OFF"}
+            {includeSynced ? "Cash & stablecoins: ON" : "Cash & stablecoins: OFF"}
           </Link>
         </div>
         <div className="card p-8 text-center text-sm text-[var(--muted)]">
@@ -111,19 +111,20 @@ export default async function PortfolioAnalysisPage({
         <div>
           <h1 className="text-lg font-semibold">Portfolio analysis</h1>
           <p className="text-xs text-[var(--muted)] mt-1">
-            Exposure, P&amp;L and yield across every position you track.{" "}
+            Exposure, P&amp;L and yield across everything you hold — manual,
+            imported and synced.{" "}
             {includeSynced
-              ? "Synced spot balances and stablecoins are included."
-              : "Showing only positions you're at risk on."}
+              ? "Cash and stablecoins are included."
+              : "Cash and stablecoins are hidden, so this is what you're at risk on."}
           </p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
           <Link
             href={qs({ synced: includeSynced ? "off" : "on" })}
             className="btn whitespace-nowrap"
-            title="Spot balances and stablecoins are portfolio money, but they flatten a risk breakdown."
+            title="Cash and stablecoins can't lose value to the market, so they flatten every risk breakdown they're in. Hiding them leaves what's actually exposed."
           >
-            {includeSynced ? "Spot & stablecoins: ON" : "Spot & stablecoins: OFF"}
+            {includeSynced ? "Cash & stablecoins: ON" : "Cash & stablecoins: OFF"}
           </Link>
           <Link href="/investments" className="btn whitespace-nowrap">
             Back to positions

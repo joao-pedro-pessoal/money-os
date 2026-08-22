@@ -33,6 +33,9 @@ import { STABLE_ASSET_TYPES } from "@/lib/portfolio/tags";
 import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
+// The same list the Investments page renders, so the two cannot disagree about
+// what the portfolio contains.
+import { getPortfolioItems } from "./dashboard";
 import {
   breakdownBy,
   stableVsFloating,
@@ -519,87 +522,66 @@ export async function addRewards(formData: FormData) {
 }
 
 /**
- * Everything the analysis page needs, computed from the pure functions in
- * src/lib/portfolio/analysis.ts. Account names are resolved here so the
- * breakdown by wallet reads properly instead of showing raw ids.
+ * Everything the analysis page needs, over the whole portfolio.
+ *
+ * This used to read the `holdings` table and, optionally, the spot balances
+ * that were flagged `countsInPortfolio`. Two things followed from that, and
+ * together they meant the page analysed 456 € of a 789 € portfolio while
+ * presenting its percentages as the whole picture:
+ *
+ * - The `positions` table was never read at all, so every synced position —
+ *   four holdings at IBKR, six at Trading 212 — was missing. The same defect
+ *   the Playlists page had: one screen reading a subset while another reads
+ *   everything, and neither saying which.
+ * - `countsInPortfolio: false` was treated as "do not show". It means "do not
+ *   *add* this to Net Worth, the account balance already carries it". Every
+ *   balance on this account is flagged that way, so the "Spot & stablecoins"
+ *   toggle added nothing whichever way it was set. Showing and adding are
+ *   different questions.
+ *
+ * It now builds on `getPortfolioItems`, the same source the Investments page
+ * uses, so the two cannot drift apart again.
  */
-export async function getPortfolioAnalysis(includeSynced = true) {
-  const { holdings: rows, totals } = await listHoldingsWithPnL();
+export async function getPortfolioAnalysis(includeStable = true) {
+  const { items } = await getPortfolioItems();
 
-  const enriched: AnalysisHolding[] = rows.map((h) => ({
-    id: h.id,
-    symbol: h.symbol,
-    quantity: h.quantity,
-    avgEntryPrice: h.avgEntryPrice,
-    currentPrice: h.currentPrice,
-    accountId: h.accountId,
-    accountName: h.accountName,
-    assetType: h.assetType,
-    riskLevel: h.riskLevel,
-    expectedReturn: h.expectedReturn,
-    timeHorizon: h.timeHorizon,
-    liquidity: h.liquidity,
-    apr: h.apr,
-    rewardsEarned: h.rewardsEarned,
-    direction: h.direction,
-    playlistId: h.playlistId,
-    playlistName: h.playlistName,
-    realizedPnl: h.realizedPnl,
-  }));
+  /**
+   * A portfolio item carries value, cost and P&L directly; the analysis
+   * functions want a holding with a quantity and two prices. One unit priced at
+   * the value, entered at the value minus the profit, reproduces all three
+   * exactly — `marketValue` gives the value, `costBasis` the cost, and
+   * `unrealizedPnL` the P&L, with nothing invented.
+   *
+   * The old mapping used quantity = value with both prices at 1, which forced
+   * cost to equal value and P&L to zero by construction. That is how a synced
+   * balance came to assert it was exactly break-even.
+   */
+  const enriched: AnalysisHolding[] = items
+    .filter((i) => includeStable || !isStableAsset(i.symbol, i.assetType))
+    .map((i) => ({
+      id: i.id,
+      symbol: i.symbol,
+      quantity: 1,
+      currentPrice: i.value,
+      avgEntryPrice: round2(i.value - i.pnl),
+      accountId: null,
+      accountName: i.accountName,
+      assetType: i.assetType,
+      riskLevel: i.riskLevel,
+      expectedReturn: null,
+      timeHorizon: i.timeHorizon,
+      liquidity: null,
+      apr: i.apr,
+      rewardsEarned: 0,
+      // The sign already lives in `value` and `pnl`; re-applying the side here
+      // would negate a P&L that is already correct.
+      direction: "long",
+      playlistId: null,
+      playlistName: i.playlistName,
+      realizedPnl: 0,
+    }));
 
-  // Synced spot balances (USDC and friends) are real portfolio money, but they
-  // drown out the at-risk positions in a risk breakdown, so including them is
-  // the caller's choice. Modelled as flat 1:1 holdings: no entry price to
-  // speak of, so cost equals value and P&L is zero by construction.
-  if (includeSynced) {
-    const [balances, conns, allAccounts] = await Promise.all([
-      db.select().from(platformBalances),
-      db.select().from(accountConnections),
-      db.select().from(accounts),
-    ]);
-    const accountOf = new Map(conns.map((c) => [c.id, c.accountId]));
-    const nameOf = new Map(allAccounts.map((a) => [a.id, a.name]));
-
-    for (const b of balances) {
-      if (b.usdValue === null || !b.countsInPortfolio) continue;
-      const value = Number(b.usdValue);
-      const stable = isCapitalStable(b.coin);
-      enriched.push({
-        id: `synced:${b.id}`,
-        symbol: b.coin,
-        quantity: value,
-        avgEntryPrice: 1,
-        currentPrice: 1,
-        accountId: accountOf.get(b.connectionId) ?? null,
-        accountName: nameOf.get(accountOf.get(b.connectionId) ?? "") ?? "Synced",
-        assetType: stable ? "stablecoin" : "crypto",
-        riskLevel: stable ? "low" : "very_high",
-        expectedReturn: stable ? "conservative" : null,
-        timeHorizon: null,
-        liquidity: "high",
-        apr: null,
-        rewardsEarned: 0,
-        direction: "long",
-        playlistId: null,
-        playlistName: null,
-        realizedPnl: 0,
-      });
-    }
-  }
-
-  const syncedValue = enriched
-    .filter((h) => h.id.startsWith("synced:"))
-    .reduce((s, h) => s + marketValue(h), 0);
-
-  const adjustedTotals = {
-    totalValue: round2(totals.totalValue + syncedValue),
-    totalCost: round2(totals.totalCost + syncedValue),
-    totalPnL: totals.totalPnL,
-    totalPnLPercent:
-      totals.totalCost + syncedValue === 0
-        ? 0
-        : round2((totals.totalPnL / (totals.totalCost + syncedValue)) * 100),
-  };
+  const adjustedTotals = portfolioTotals(enriched);
 
   return {
     totals: adjustedTotals,
@@ -627,9 +609,9 @@ export async function getGroupedPerformance(
   groupBy: GroupByKey,
   sortKey: SortKey,
   direction: "asc" | "desc",
-  includeSynced = true
+  includeStable = true
 ) {
-  const { holdings: enriched } = await getPortfolioAnalysis(includeSynced);
+  const { holdings: enriched } = await getPortfolioAnalysis(includeStable);
   return sortPerformance(performanceBy(enriched, groupBy), sortKey, direction);
 }
 

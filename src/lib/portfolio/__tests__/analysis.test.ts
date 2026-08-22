@@ -10,6 +10,7 @@ import {
   sortPerformance,
   type AnalysisHolding,
 } from "../analysis";
+import { marketValue, costBasis, unrealizedPnL } from "../index";
 
 function h(over: Partial<AnalysisHolding> = {}): AnalysisHolding {
   return {
@@ -209,5 +210,55 @@ describe("sortPerformance", () => {
 
   it("sorts alphabetically on a text column", () => {
     expect(sortPerformance(rows, "key", "asc").map((r) => r.key)).toEqual(["BIG", "SMALL"]);
+  });
+});
+
+/**
+ * The Analysis page read the `holdings` table and nothing else, so it analysed
+ * 456 € of a 789 € portfolio and presented the percentages as the whole
+ * picture. These assert the mapping that now feeds it: a portfolio item's
+ * value, cost and P&L survive the trip into an AnalysisHolding intact.
+ */
+describe("analysing an item that carries value and P&L rather than prices", () => {
+  /** The mapping getPortfolioAnalysis applies. One unit, priced at the value. */
+  const asHolding = (over: { value: number; pnl: number } & Partial<AnalysisHolding>) => ({
+    id: "x",
+    symbol: "X",
+    quantity: 1,
+    currentPrice: over.value,
+    avgEntryPrice: Math.round((over.value - over.pnl) * 100) / 100,
+    direction: "long",
+    ...over,
+  }) as AnalysisHolding;
+
+  it("keeps value, cost and P&L exactly", () => {
+    const h = asHolding({ value: 146.31, pnl: -0.02 });
+
+    expect(marketValue(h)).toBeCloseTo(146.31, 2);
+    expect(costBasis(h)).toBeCloseTo(146.33, 2);
+    expect(unrealizedPnL(h)).toBeCloseTo(-0.02, 2);
+  });
+
+  it("does not force a synced position to look break-even", () => {
+    // The old mapping used quantity = value with both prices at 1, which made
+    // cost equal value and P&L zero by construction.
+    const h = asHolding({ value: 87.56, pnl: 4.94 });
+
+    expect(unrealizedPnL(h)).toBeCloseTo(4.94, 2);
+    expect(costBasis(h)).toBeCloseTo(82.62, 2);
+  });
+
+  it("totals a mixed portfolio without losing the synced side", () => {
+    const holdings = [
+      asHolding({ id: "tr", value: 456.54, pnl: 31.85 }),
+      asHolding({ id: "t212", value: 146.31, pnl: -0.02 }),
+      asHolding({ id: "ibkr", value: 33.54, pnl: 0.73 }),
+      asHolding({ id: "hype", value: 74.85, pnl: 4.22 }),
+    ];
+
+    const total = holdings.reduce((s, h) => s + marketValue(h), 0);
+    // All four sources present, not just the imported one.
+    expect(total).toBeCloseTo(711.24, 1);
+    expect(total).toBeGreaterThan(456.54);
   });
 });
