@@ -309,7 +309,7 @@ export function parseSpotBalances(
   raw: unknown,
   prices: Record<string, number> = {},
   mids: Record<string, number> = {}
-): { balances: NormalizedBalance[]; spotValue: number } {
+): { balances: NormalizedBalance[]; spotValue: number; heldValue: number } {
   const data = (raw ?? {}) as RawSpotState;
   const balances: NormalizedBalance[] = [];
 
@@ -340,7 +340,20 @@ export function parseSpotBalances(
   }
 
   const spotValue = round2(balances.reduce((s, b) => s + (b.usdValue ?? 0), 0));
-  return { balances, spotValue };
+
+  /**
+   * What the venue is holding back as collateral, valued.
+   *
+   * Under a unified account the money behind an open trade never leaves the
+   * spot balance — it is marked `hold` inside it. That makes this an
+   * independent second measurement of margin in use, from a different endpoint
+   * than the perps summary, which is the only way to catch either one drifting.
+   */
+  const heldValue = round2(
+    balances.reduce((s, b) => (b.price === null ? s : s + b.hold * b.price), 0)
+  );
+
+  return { balances, spotValue, heldValue };
 }
 
 function round2(n: number): number {

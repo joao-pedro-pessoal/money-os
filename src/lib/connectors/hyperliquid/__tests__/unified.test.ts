@@ -1,10 +1,116 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   looksUnified,
   parseAbstraction,
   isUnifiedAbstraction,
   parsePortfolioValue,
+  parseSpotBalances,
 } from "../parse";
+import { createHyperliquidConnector } from "../index";
+
+/**
+ * A unified account reports `withdrawable: 0.0`, and it does not mean nothing
+ * is free.
+ *
+ * Every number below was read from the live endpoints. The perps sub-account
+ * holds no collateral of its own under this mode — it all sits in spot, marked
+ * `hold` — so the venue answers zero to a question about the sub-account. Read
+ * as a measurement of the whole balance it declared the entire pot committed:
+ * 174.65 of margin against one trade tying up 10.71.
+ */
+describe("margin and free cash on a unified account", () => {
+  const ADDRESS = "0xb65822a30bbaaa68942d6f4c43d78704faeabbbb";
+
+  const live = {
+    clearinghouseState: {
+      assetPositions: [
+        {
+          position: {
+            coin: "FIL",
+            szi: "18.0",
+            entryPx: "1.98",
+            positionValue: "39.3577",
+            unrealizedPnl: "3.7975",
+            marginUsed: "10.8893",
+            leverage: { type: "cross", value: 5 },
+          },
+          type: "oneWay",
+        },
+      ],
+      marginSummary: {
+        accountValue: "10.708233",
+        totalMarginUsed: "10.708233",
+        totalNtlPos: "39.3577",
+      },
+      withdrawable: "0.0",
+    },
+    spotClearinghouseState: {
+      balances: [
+        // The collateral never leaves spot: `hold` is exactly the perps margin.
+        { coin: "USDC", total: "88.217128", hold: "10.708233" },
+        { coin: "HYPE", total: "1.12800902", hold: "0.0" },
+      ],
+    },
+    userAbstraction: "unifiedAccount",
+    allMids: { HYPE: "76.461" },
+    portfolio: [["day", { accountValueHistory: [[1, "174.65"]] }]],
+  } as Record<string, unknown>;
+
+  const connector = () =>
+    createHyperliquidConnector(
+      vi.fn().mockImplementation(async (_url: string, body: { type: string }) => {
+        if (body.type === "spotMetaAndAssetCtxs") return [{ tokens: [], universe: [] }, []];
+        if (body.type === "perpDexs") return [];
+        return live[body.type] ?? null;
+      })
+    );
+
+  it("reports the margin the venue reports, not the whole balance", async () => {
+    const state = await connector().getAccountState(ADDRESS);
+    expect(state.totalMarginUsed).toBeCloseTo(10.71, 2);
+  });
+
+  it("does not report zero free when almost everything is free", async () => {
+    const state = await connector().getAccountState(ADDRESS);
+    // 174.65 in the pot, 10.71 held against the open trade.
+    expect(state.withdrawable).toBeCloseTo(163.94, 2);
+  });
+
+  it("keeps free plus committed adding back to the account value", async () => {
+    // The identity that makes a wrong number impossible to hide.
+    const state = await connector().getAccountState(ADDRESS);
+    expect(state.withdrawable! + state.totalMarginUsed!).toBeCloseTo(state.equity, 2);
+  });
+});
+
+describe("valuing what is held as collateral", () => {
+  it("prices the held portion, as a second reading of margin", () => {
+    const { heldValue, spotValue } = parseSpotBalances(
+      {
+        balances: [
+          { coin: "USDC", total: "88.217128", hold: "10.708233" },
+          { coin: "HYPE", total: "1.12800902", hold: "0.0" },
+        ],
+      },
+      {},
+      { HYPE: 76.461 }
+    );
+
+    expect(heldValue).toBeCloseTo(10.71, 2);
+    expect(spotValue).toBeCloseTo(174.47, 1);
+  });
+
+  it("leaves an unpriced coin out of the held total rather than counting it as zero", () => {
+    const { heldValue } = parseSpotBalances(
+      { balances: [{ coin: "WHAT", total: "5", hold: "5" }] },
+      {},
+      {}
+    );
+    // Nothing measured it, so it contributes nothing — and `spotValue` says so
+    // too. Counting it as zero held would understate what is committed.
+    expect(heldValue).toBe(0);
+  });
+});
 
 describe("asking the venue whether the account is unified", () => {
   it("reads the documented answers", () => {

@@ -18,7 +18,7 @@ import type { BrokerEvent } from "@/lib/csv/broker";
 import { and, eq, gte, lt } from "drizzle-orm";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
-import { toBase } from "@/lib/fx";
+import { toBase, isCurrencyCode } from "@/lib/fx";
 import { marketValue, unrealizedPnL, isUnpriced } from "@/lib/portfolio";
 import { STABLE_ASSET_TYPES, isStableAsset, classifyCoin } from "@/lib/portfolio/tags";
 import type { PositionItem } from "@/lib/portfolio/positionView";
@@ -264,9 +264,19 @@ export async function getPortfolioItems() {
   for (const b of balanceRows) {
     if (b.usdValue === null) continue;
     const conn = connOf.get(b.connectionId);
-    // The platform's own currency, not an assumption. Reading a Trading 212
-    // euro balance as dollars understated it by about 15%.
-    const value = toBase(Number(b.usdValue), conn?.reportingCurrency ?? "USD", rates, base);
+    /**
+     * A cash balance is denominated in itself, not in the platform's currency.
+     *
+     * The platform's reporting currency is right for a token — an amount of BTC
+     * is worth so many dollars because IBKR reports in dollars. It is wrong for
+     * cash: 1.75 EUR held at a dollar-reporting broker is 1.75 euros, and
+     * converting it turned them into 1,50 €. `listBalances` was fixed for this
+     * and this path was not, so the Positions page and the Investments page
+     * disagreed about the same balance by the exchange rate.
+     */
+    const platformCurrency = conn?.reportingCurrency ?? "USD";
+    const denominated = isCurrencyCode(b.coin) ? b.coin.toUpperCase() : platformCurrency;
+    const value = toBase(Number(b.usdValue), denominated, rates, base);
     if (value === null || value === 0) continue;
 
     items.push({

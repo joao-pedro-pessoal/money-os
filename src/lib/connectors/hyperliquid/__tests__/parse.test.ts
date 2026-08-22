@@ -311,6 +311,10 @@ describe("parseSpotBalances", () => {
   });
 
   it("handles an empty spot account", () => {
-    expect(parseSpotBalances({ balances: [] })).toEqual({ balances: [], spotValue: 0 });
+    expect(parseSpotBalances({ balances: [] })).toEqual({
+      balances: [],
+      spotValue: 0,
+      heldValue: 0,
+    });
   });
 });

@@ -88,7 +88,7 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
         ...dexStates.filter((s): s is NormalizedAccountState => s !== null),
       ]);
 
-      const { balances, spotValue } = parseSpotBalances(
+      const { balances, spotValue, heldValue } = parseSpotBalances(
         spotRaw,
         buildSpotPriceMap(spotMetaRaw),
         parseAllMids(midsRaw)
@@ -125,31 +125,43 @@ export function createHyperliquidConnector(httpPost: HttpPost = defaultHttpPost)
         // portfolio endpoint failed, which is still better than adding pots.
         const portfolioValue = parsePortfolioValue(portfolioRaw) ?? Math.round((spotValue + Number.EPSILON) * 100) / 100;
 
+        /**
+         * Margin is read, not derived from `withdrawable`.
+         *
+         * It used to be `portfolioValue − withdrawable`, on the reasoning that
+         * the perps `totalMarginUsed` describes only the perps sub-account and
+         * so understates the pot behind it. That reasoning depended on
+         * `withdrawable` describing the whole balance, and on a unified account
+         * it does not: the perps sub-account holds no free collateral of its
+         * own — everything lives in spot — so the venue answers **0.0**.
+         *
+         * Fed through the subtraction, that zero declared the entire balance
+         * committed: 149,29 € of "margin in use" against one open trade tying
+         * up 9,15 €, and 0 € reported as free when about 140 € was. A zero that
+         * means "not applicable here" was read as a measurement, which is the
+         * same mistake in the same connector as the HYPE price.
+         *
+         * The perps summary reports 10.708233 committed and the spot USDC
+         * balance shows exactly 10.708233 on `hold` — two endpoints, one
+         * answer. `heldValue` is that second reading, used when the perps
+         * summary is missing rather than trusted over it.
+         */
+        const marginUsed = merged.totalMarginUsed ?? (heldValue > 0 ? heldValue : null);
+
         return {
           ...native,
           ...merged,
           equity: portfolioValue,
           /**
-           * What the venue says you can trade with. The difference between the
-           * two is what is committed to open trades — which is exactly how the
-           * app now describes it, rather than deriving margin separately.
+           * Free = the pot minus what is held against open trades, so that
+           * `withdrawable + totalMarginUsed` adds back to the account value.
+           * An identity that has to hold is one a wrong number cannot hide in.
            */
-          withdrawable: merged.withdrawable,
-          /**
-           * Committed to open trades = account value − what you can trade with.
-           *
-           * Under a unified account the perps `totalMarginUsed` describes only
-           * the perps sub-account, which is a fraction of the pot backing it.
-           * The subtraction is the honest figure and matches what the venue's
-           * own screen implies.
-           */
-          totalMarginUsed:
-            merged.withdrawable === null
-              ? merged.totalMarginUsed
-              : Math.max(
-                  0,
-                  Math.round(((parsePortfolioValue(portfolioRaw) ?? spotValue) - merged.withdrawable + Number.EPSILON) * 100) / 100
-                ),
+          withdrawable:
+            marginUsed === null
+              ? merged.withdrawable
+              : Math.max(0, Math.round((portfolioValue - marginUsed + Number.EPSILON) * 100) / 100),
+          totalMarginUsed: marginUsed,
           balances,
           spotValue,
           // False: the balances are the account, not a second pot.

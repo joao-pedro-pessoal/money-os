@@ -327,6 +327,29 @@ Two rules fall out of it:
   find the price leaves the token unpriced and the screen says unpriced. That is
   the honest outcome, and the whole bug was preferring a number to an absence.
 
+### `withdrawable: 0.0` does not mean nothing is free
+
+Same connector, same shape of mistake, found the same week. Under a unified
+account the perps sub-account holds no collateral of its own — it all sits in
+spot, marked `hold` — so `clearinghouseState` answers `withdrawable: 0.0`. It is
+answering about the sub-account, not about your money.
+
+Margin used to be derived as `portfolioValue − withdrawable`. With that zero it
+declared the whole balance committed: 149,29 € of margin against one open trade
+tying up 9,15 €, and 0 € free when about 140 € was.
+
+Read the margin instead of deriving it. `marginSummary.totalMarginUsed` reports
+10.708233 and the spot USDC balance shows exactly 10.708233 on `hold` — two
+endpoints, one answer, and `parseSpotBalances` returns that second reading as
+`heldValue` so they can be compared. `withdrawable` is then the pot minus the
+margin, which keeps `withdrawable + totalMarginUsed === equity` true; an
+identity that has to hold is one a wrong number cannot hide in.
+
+Note this breaks the `looksUnified` heuristic in `parse.ts`, which infers a
+unified account from `withdrawable` exceeding the perps equity. That was true of
+the account which exposed it and is not true of this one. It survives only as a
+fallback for when `userAbstraction` cannot be reached — never prefer it.
+
 ## Trade Republic
 
 There is no connector and there must not be one built from a login. See
