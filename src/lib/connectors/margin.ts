@@ -130,3 +130,38 @@ export function describePressure(view: MarginView): string {
       return "";
   }
 }
+
+/**
+ * How much of a connection's balances is already counted by its open positions.
+ *
+ * On a venue where the spot balance **is** the collateral — a Hyperliquid
+ * unified account, a Bybit unified one — the money backing an open trade never
+ * leaves the balance. It is marked as held inside it. So the portfolio counted
+ * that money twice: once in the spot balance and again as the position's
+ * capital at risk. About 9 € on a 789 € portfolio, and it grows with every
+ * position opened.
+ *
+ * The subtraction has to be exactly the margin and no more, which is why it
+ * reads `marginUsed` rather than the balances' `hold`. Held units are not
+ * always collateral: coins reserved for a resting spot order are held too, and
+ * subtracting those would understate the portfolio — swapping a bug that
+ * flatters you for one that alarms you.
+ *
+ * Returns 0 whenever it cannot be certain:
+ *
+ * - Balances that are a separate pool overlap nothing by definition.
+ * - No open positions means anything held is a resting order.
+ * - An unknown margin is not an excuse to guess; leaving the overlap in is
+ *   visible and wrong, while an invented subtraction is invisible and wrong.
+ */
+export function collateralOverlap(input: {
+  /** True when the balances sit beside the positions rather than behind them. */
+  balancesAreSeparatePool: boolean;
+  marginUsed: number | null;
+  openPositions: number;
+}): number {
+  if (input.balancesAreSeparatePool) return 0;
+  if (input.openPositions === 0) return 0;
+  if (input.marginUsed === null || !Number.isFinite(input.marginUsed)) return 0;
+  return Math.max(0, input.marginUsed);
+}

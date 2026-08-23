@@ -312,3 +312,43 @@ describe("normalizeAccountId", () => {
     expect(normalizeAccountId("U1234567 ")).toBe("U1234567");
   });
 });
+
+/**
+ * IBKR's ledger reports realised P&L and the app never read it, so closed
+ * trades there left no trace — the same gap Hyperliquid had, and in the same
+ * shape: the field was declared in the raw type from the start.
+ */
+describe("realised P&L from the ledger", () => {
+  const ledger = (over: Record<string, unknown> = {}) => ({
+    BASE: {
+      currency: "BASE",
+      netliquidationvalue: 35.33,
+      cashbalance: 1.75,
+      unrealizedpnl: 0.85,
+      ...over,
+    },
+  });
+
+  it("reads what the gateway reports", () => {
+    expect(parseLedger(ledger({ realizedpnl: 12.4 })).realizedPnl).toBe(12.4);
+  });
+
+  it("keeps a real loss rather than clamping it", () => {
+    expect(parseLedger(ledger({ realizedpnl: -8.2 })).realizedPnl).toBe(-8.2);
+  });
+
+  it("reports a silent gateway as unknown, never as zero", () => {
+    // "You have realised nothing" and "nobody told us" must not render alike.
+    expect(parseLedger(ledger()).realizedPnl).toBeNull();
+  });
+
+  it("takes it from BASE, not from a per-currency row", () => {
+    // Summing the per-currency rows would mix currencies; BASE is the one
+    // already converted to the account's own.
+    const mixed = {
+      BASE: { currency: "BASE", netliquidationvalue: 35.33, realizedpnl: 12.4 },
+      EUR: { currency: "EUR", netliquidationvalue: 1.75, realizedpnl: 99 },
+    };
+    expect(parseLedger(mixed).realizedPnl).toBe(12.4);
+  });
+});

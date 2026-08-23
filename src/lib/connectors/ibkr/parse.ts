@@ -125,6 +125,19 @@ export interface LedgerState {
   /** Cash available, base currency. */
   cash: number | null;
   unrealizedPnl: number | null;
+  /**
+   * All-time realised P&L, as the gateway reports it in the BASE row.
+   *
+   * Declared in `RawLedgerEntry` from the start and never read, so IBKR's
+   * `lastRealizedPnl` stayed null and closed trades there left no trace — the
+   * same gap Hyperliquid had, in the same shape: the platform did say, and
+   * nobody asked.
+   *
+   * Null means the gateway did not report it, which the interface shows as
+   * unknown rather than as zero. "You have realised nothing" and "nobody told
+   * us" must not render alike.
+   */
+  realizedPnl: number | null;
   /** Per-currency cash balances, excluding the synthetic BASE row. */
   balances: NormalizedBalance[];
   baseCurrency: string | null;
@@ -180,6 +193,7 @@ export function parseLedger(raw: unknown): LedgerState {
     equity: num(base.netliquidationvalue) ?? 0,
     cash: num(base.cashbalance) ?? num(base.settledcash),
     unrealizedPnl: num(base.unrealizedpnl),
+    realizedPnl: num(base.realizedpnl),
     balances,
     baseCurrency: base.currency === "BASE" ? null : (base.currency ?? null),
   };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { marginView, pressureOf, describePressure } from "../margin";
+import { collateralOverlap, marginView, pressureOf, describePressure } from "../margin";
 
 describe("marginView", () => {
   it("trusts what the platform reports over anything derived", () => {
@@ -80,5 +80,40 @@ describe("describePressure", () => {
     const text = describePressure(marginView({ equity: 100, marginUsed: 90, withdrawable: null }));
     expect(text).not.toContain("liquidat");
     expect(text.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The money behind an open trade on a unified account never leaves the spot
+ * balance, so the portfolio counted it twice: once as the balance and again as
+ * the position's capital at risk.
+ */
+describe("collateralOverlap", () => {
+  const base = { balancesAreSeparatePool: false, marginUsed: 10.71, openPositions: 1 };
+
+  it("is the margin, when the balances are what backs the positions", () => {
+    expect(collateralOverlap(base)).toBeCloseTo(10.71, 2);
+  });
+
+  it("is nothing when the balances are a pool of their own", () => {
+    // Trading 212 reports free cash beside its ETFs; nothing overlaps.
+    expect(collateralOverlap({ ...base, balancesAreSeparatePool: true })).toBe(0);
+  });
+
+  it("is nothing with no position open", () => {
+    // Then anything held is a resting order, not collateral, and subtracting
+    // it would understate the portfolio.
+    expect(collateralOverlap({ ...base, openPositions: 0 })).toBe(0);
+  });
+
+  it("does not guess when the margin is unknown", () => {
+    // Leaving the overlap in is visible and wrong; inventing a subtraction is
+    // invisible and wrong.
+    expect(collateralOverlap({ ...base, marginUsed: null })).toBe(0);
+    expect(collateralOverlap({ ...base, marginUsed: NaN })).toBe(0);
+  });
+
+  it("never returns a negative, which would inflate the portfolio", () => {
+    expect(collateralOverlap({ ...base, marginUsed: -5 })).toBe(0);
   });
 });

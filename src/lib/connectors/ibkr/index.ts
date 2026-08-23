@@ -209,6 +209,11 @@ export function createIbkrConnector(get: IbkrGet = defaultGet(gatewayUrl())): Co
         equity: ledger.equity,
         withdrawable: ledger.cash,
         totalMarginUsed: null,
+        // What the gateway says closed trades have made, all-time. Read rather
+        // than derived, same rule as everywhere else: a figure we computed
+        // under our own cost-basis method would quietly disagree with the
+        // broker's own and there would be no way to tell which was right.
+        realizedPnl: ledger.realizedPnl,
         totalNotionalPosition: positions.reduce((s, p) => s + (p.positionValue ?? 0), 0),
         asOf: new Date(),
         positions,

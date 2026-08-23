@@ -22,7 +22,7 @@ import { toBase, isCurrencyCode } from "@/lib/fx";
 import { marketValue, unrealizedPnL, isUnpriced } from "@/lib/portfolio";
 import { STABLE_ASSET_TYPES, isStableAsset, classifyCoin } from "@/lib/portfolio/tags";
 import type { PositionItem } from "@/lib/portfolio/positionView";
-import { capitalAtRisk } from "@/lib/connectors/margin";
+import { capitalAtRisk, collateralOverlap } from "@/lib/connectors/margin";
 import { meaningOf, holdingCountsOnTop } from "@/lib/accounting/balanceScope";
 import { compose, type AccountPart } from "@/lib/accounting/composition";
 import { monthFlows, fixedRunway, needsClassifying } from "@/lib/accounting/fixedVariable";
@@ -261,7 +261,42 @@ export async function getPortfolioItems() {
    * counted in Net Worth (through the account balance) but were invisible as an
    * asset. They belong in the picture; they just must not be added on top.
    */
-  for (const b of balanceRows) {
+  /**
+   * Collateral is counted once, not twice.
+   *
+   * On a unified account the money behind an open trade never leaves the spot
+   * balance, so the balance and the position's capital at risk described the
+   * same euros. `collateralOverlap` says how much, per connection, and it is
+   * taken off the balances rather than off the positions: that way each row
+   * still shows a number that means something — the balance shows what is free,
+   * the position shows what it ties up — and together they add to the pot.
+   *
+   * Taken from the largest balance first, and never below zero, so a rounding
+   * difference between what the venue calls margin and what the balances are
+   * worth cannot turn into a negative holding.
+   */
+  const overlapLeft = new Map<string, number>();
+  for (const conn of connRows) {
+    const positionsHere = positionRows.filter((p) => p.connectionId === conn.id).length;
+    const balancesSeparate = balanceRows.some(
+      (b) => b.connectionId === conn.id && b.countsInPortfolio
+    );
+    const overlap = collateralOverlap({
+      balancesAreSeparatePool: balancesSeparate,
+      marginUsed: conn.lastMarginUsed === null ? null : Number(conn.lastMarginUsed),
+      openPositions: positionsHere,
+    });
+    if (overlap > 0) {
+      const inBase = toBase(overlap, conn.reportingCurrency ?? "USD", rates, base);
+      if (inBase !== null) overlapLeft.set(conn.id, inBase);
+    }
+  }
+
+  const balancesLargestFirst = [...balanceRows].sort(
+    (a, b) => Number(b.usdValue ?? 0) - Number(a.usdValue ?? 0)
+  );
+
+  for (const b of balancesLargestFirst) {
     if (b.usdValue === null) continue;
     const conn = connOf.get(b.connectionId);
     /**
@@ -276,8 +311,15 @@ export async function getPortfolioItems() {
      */
     const platformCurrency = conn?.reportingCurrency ?? "USD";
     const denominated = isCurrencyCode(b.coin) ? b.coin.toUpperCase() : platformCurrency;
-    const value = toBase(Number(b.usdValue), denominated, rates, base);
-    if (value === null || value === 0) continue;
+    const gross = toBase(Number(b.usdValue), denominated, rates, base);
+    if (gross === null || gross === 0) continue;
+
+    // Whatever of this balance is already reported as an open position's margin.
+    const owed = overlapLeft.get(b.connectionId) ?? 0;
+    const taken = Math.min(owed, gross);
+    if (taken > 0) overlapLeft.set(b.connectionId, Math.round((owed - taken) * 100) / 100);
+    const value = Math.round((gross - taken + Number.EPSILON) * 100) / 100;
+    if (value === 0) continue;
 
     items.push({
       id: `b:${b.id}`,
