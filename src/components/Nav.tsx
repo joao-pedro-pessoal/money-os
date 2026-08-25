@@ -101,9 +101,12 @@ export default function Nav() {
         ))}
       </div>
 
-      {/* Settings is somewhere you go rarely and deliberately, so it sits apart
-          from the pages you actually work in. */}
-      <div className="pt-4 mt-4 border-t border-[var(--border)]">
+      {/* Settings and the manual are both somewhere you go rarely and
+          deliberately, so they sit apart from the pages you actually work in. */}
+      <div className="pt-4 mt-4 border-t border-[var(--border)] space-y-1">
+        <Link href="/manual" className={linkClass("/manual")}>
+          Manual
+        </Link>
         <Link href="/settings" className={linkClass("/settings")}>
           Settings
         </Link>

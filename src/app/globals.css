@@ -19,11 +19,17 @@
   --font-heading: Georgia, "Times New Roman", serif;
 }
 
+/* --border-strong is a divider that has to read as deliberate: chart baselines,
+   the Explain block, a card's hover edge. It existed in three of the eight
+   themes, so in the other five those borders fell back to currentColor and a
+   reference line drew in the text colour. Every theme defines it now — a token
+   used anywhere must exist everywhere. */
 [data-accent="gold"][data-mode="light"] {
   --background: #faf6ee;
   --surface: #ffffff;
   --surface-2: #f2ead9;
   --border: #e6ddc8;
+  --border-strong: #cdbc9b;
   --foreground: #2b2416;
   --muted: #8a8067;
   --accent: #c9862a;
@@ -39,6 +45,7 @@
   --surface: #121e19;
   --surface-2: #16241d;
   --border: #1c2a24;
+  --border-strong: #2d3f37;
   --foreground: #e6f2ec;
   --muted: #7c9186;
   --accent: #1d9e75;
@@ -54,6 +61,7 @@
   --surface: #ffffff;
   --surface-2: #e3f3ea;
   --border: #cfe6d9;
+  --border-strong: #a9ccb8;
   --foreground: #0f2620;
   --muted: #5f7a6e;
   --accent: #0f6e56;
@@ -69,6 +77,7 @@
   --surface: #12151b;
   --surface-2: #171b22;
   --border: #23272f;
+  --border-strong: #383d48;
   --foreground: #e8e9ec;
   --muted: #8a8f98;
   --accent: #6366f1;
@@ -84,6 +93,7 @@
   --surface: #ffffff;
   --surface-2: #ececf7;
   --border: #e1e3ec;
+  --border-strong: #c3c7d8;
   --foreground: #14151a;
   --muted: #6b6f7d;
   --accent: #4f46e5;
