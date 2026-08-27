@@ -1,10 +1,19 @@
 # Money OS — o que faz e o que falta
 
-Estado a 14 de agosto de 2026. 431 testes em 21 ficheiros, 13 migrations,
-28 tabelas no backup.
+Estado a 23 de agosto de 2026. 1592 testes em 84 ficheiros, 34 migrations,
+39 tabelas, 78 módulos de lógica, 26 módulos de acesso a dados, 31 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
+
+> **Mantém isto atualizado.** Durante uma semana este ficheiro listou como
+> pendentes o câmbio histórico e os preços automáticos, ambos já construídos —
+> e isso levou a que fossem propostos outra vez como trabalho a fazer. Um
+> documento que mente sobre o que está feito é pior do que não existir: manda-te
+> resolver problemas resolvidos.
+
+Para saber **como se usa** cada ecrã, o manual está dentro da app, em
+`/manual`. Este ficheiro é o estado do projeto, não as instruções.
 
 ---
 
@@ -148,6 +157,78 @@ Módulo separado da contabilidade, de propósito.
 - **Playlists**: grupos de posições que tens.
 - **Watchlist**: coisas que não tens, com preço-alvo e notas.
 
+## Preços automáticos
+
+Construído depois da primeira versão deste documento, que o listava como falta.
+
+Posições em ações e ETFs são avaliadas a partir do **ISIN**, sem teres de
+escrever preços à mão. A cadeia é ISIN → símbolo → cotação, e tem três
+verificações, cada uma existente porque faltou uma vez:
+
+1. **A moeda tem de vir declarada e bater certo.** A primeira versão deixava
+   passar qualquer resposta que omitisse o campo. Um número sem etiqueta é o
+   único caso em que estar errado é indetetável. Recusa, nunca converte.
+2. **O preço tem de ser recente.** Uma praça que deixou de negociar há anos
+   continua a responder, com o instrumento certo e a última cotação que teve.
+   O SXR8 andava nos 425 € em 2021 e nos 714 € em 2026, e a app mostrava 425.
+3. **O conjunto tem de concordar com a corretora.** Os preços são todos
+   recolhidos, a soma é comparada com o que a conta declara, e só então
+   gravados. Gravar cada preço à medida que chega foi o que deixou onze preços
+   individualmente plausíveis produzirem uma carteira a perder quando estava a
+   ganhar.
+
+## Câmbio histórico
+
+Também listado como falta na primeira versão, e também já feito.
+
+Cada snapshot guarda **a taxa do dia**, por isso o gráfico do património deixa
+de reescrever o passado à taxa de hoje. Com um pormenor honesto: está resolvido
+**para a frente**. Os snapshots antigos não têm taxa guardada e continuam a usar
+a de hoje — mas o gráfico **diz que esse troço é aproximado**, em vez de o
+apresentar como exato. O erro não desapareceu do passado; deixou de ser
+invisível.
+
+## Histórico de trades
+
+O que *fizeste*, por oposição ao que tens. As outras tabelas descrevem o
+presente e são substituídas a cada sincronização — uma posição que fechaste
+simplesmente deixa de ser devolvida, e era por isso que não deixava rasto
+nenhum.
+
+- Duas fontes: os fills que as plataformas reportam (a Hyperliquid dá-os todos)
+  e a importação de extrato para as que não reportam.
+- Re-sincronizar é gratuito: a deduplicação usa o id de trade da própria
+  plataforma.
+- **Comissões ficam ao lado do valor, nunca dentro dele.** Somá-las ao montante
+  faria o livro subtraí-las duas vezes.
+- **P&L realizado fica nulo quando o fill abriu posição** em vez de fechar. A
+  Hyperliquid escreve "0.0" nesses casos e guardá-lo poria no histórico trades
+  empatadas que nunca existiram.
+
+Quatro painéis por cima: resultado ao longo do tempo, resultado por
+instrumento, com que frequência negoceias, e quanto tempo aguentas uma posição.
+As comissões são sempre uma linha própria — numa conta pequena costumam ser
+maiores do que o resultado, e só a linha líquida diz isso.
+
+Horas em **UTC**, e a página di-lo. A app não sabe onde estavas quando
+colocaste cada ordem, e um gráfico com horas erradas seria lido como facto.
+
+## P&L realizado, como as plataformas o reportam
+
+O que cada plataforma diz que as trades fechadas renderam, **lido e nunca
+reconstruído**. Um número calculado aqui com o nosso próprio método de custo
+discordaria em silêncio do que a corretora te mostra, e não haveria forma de
+saber qual estava certo.
+
+Quando uma plataforma não diz, fica **desconhecido** — não zero. "Não realizaste
+nada" e "ninguém nos disse" não podem aparecer iguais.
+
+## Manual
+
+Em `/manual`, dentro da app. Usa as mesmas palavras dos ecrãs, de propósito: se
+um rótulo mudar e o manual continuar com o antigo, a diferença fica visível a
+quem estiver a ler ao lado do ecrã.
+
 ## Análise da carteira
 
 - Agrupável por nove eixos: playlist, conta, tipo de ativo, risco, retorno,
@@ -174,10 +255,12 @@ código.
 
 | Plataforma | Estado | Notas |
 |---|---|---|
-| Hyperliquid | Funciona | Endpoint público, sem credenciais |
+| Hyperliquid | Funciona | Endpoint público, sem credenciais. Traz também o histórico de trades |
+| Trading 212 | Funciona | Chave API, gerada com as permissões de ordens desligadas |
 | Bybit (global) | Funciona | Chave API + secret, IP na allowlist |
 | Bybit EU | **Impossível** | Ver abaixo |
-| Interactive Brokers | Funciona | Precisa do gateway local a correr |
+| Interactive Brokers | Funciona | Precisa do gateway local a correr num computador |
+| Trade Republic | Só CSV | Sem API pública, por decisão. Ver `docs/trade-republic.md` |
 
 - Credenciais cifradas com **AES-256-GCM**, IV novo por cifragem, autenticado.
   A chave-mestra vem do ambiente e nunca entra na base de dados. Ao mostrar,
@@ -212,6 +295,19 @@ código.
   projeções, e quando cada objetivo chega ao fim.
 - Concentração e runway.
 
+## Biblioteca
+
+Livros e cursos, com progresso de leitura, capas e favoritos. Não toca nas
+contas — está na app porque aprender sobre dinheiro e geri-lo andam juntos.
+
+A posição editorial é **dados, não código**: o que lidera a biblioteca sai dos
+campos `editorialRank`, `heroFeatured` e `specialBadge` da própria linha, nunca
+de uma comparação por título. Há um teste que muda o nome do livro e verifica
+que nada se mexe.
+
+Os seeds são idempotentes por slug: voltar a correr um acrescenta o que falta e
+não sobrepõe nada que tenhas editado.
+
 ## Backup
 
 - Exportação completa em JSON e CSV, 28 tabelas.
@@ -236,22 +332,37 @@ Ordenado por quanto acho que te faria falta, não por dificuldade.
 
 ## Erros conhecidos e coisas por acabar
 
-**Taxas de câmbio históricas.** Os gráficos usam a taxa de *hoje* para todo o
-histórico. Se tens contas em dólares, a linha do património está errada em
-qualquer ponto que não seja hoje — e não te avisa disso. É o defeito mais sério
-que a app tem neste momento, porque o número parece certo.
+**Telemóvel: 87 pixels.** É o defeito mais concreto que a app tem. Num ecrã de
+375px sobram 87px para o conteúdo, porque o esqueleto é uma barra lateral de
+224px fixos (`w-56 shrink-0`, sem comportamento móvel) mais 64px de margens
+(`p-8`). Não é uma página — é a app inteira. Medido, não estimado.
+
+**Metade da app nunca foi usada a sério.** Zero transações, zero subscrições,
+zero transferências, zero alocações de buckets. O lado dos investimentos tem 187
+movimentos e quatro plataformas ligadas, e foi por isso que os erros dele
+apareceram. O lado do dinheiro não está certo — está *por estrear*, o que é
+diferente e pior de avaliar.
+
+Já há uma prova disso: `src/actions/stats.ts` deita fora a moeda das transações
+antes de as somar. No dia em que lançares uma despesa em dólares, a média mensal
+de despesas fica errada. É o mesmo erro corrigido dez vezes, à espera na metade
+que ninguém pôs à prova.
+
+**Aviso de hidratação em todas as páginas.** O `data-accent` e o `data-mode` são
+postos no `<html>` pelo cliente e não existem na renderização do servidor. É o
+badge vermelho no canto em modo de desenvolvimento. Cosmético, mas está lá.
 
 **IBKR expira a sessão.** O gateway da IB desliga a sessão ao fim de algumas
 horas e obriga a novo login no browser. É desenho deles, não há volta. A app
 deteta e explica, mas continua a ser chato.
 
-**Preços não são atualizados sozinhos** para posições manuais. Quem sincroniza
-tem preços reais; quem regista à mão tem de os atualizar. Falta uma fonte de
-preços para ações, ETFs e cripto.
-
 **Sem limite de tentativas no login.** Numa app pessoal atrás de uma password
 é aceitável, mas se alguma vez a puseres na internet aberta, isto é o primeiro
 buraco.
+
+**Uma tabela de segurança por apagar.** `investment_activities_pre0033` guarda a
+cópia dos 107 registos anteriores à migração da tabela de movimentos. Verificado
+que nenhuma linha se perderia; fica até dizeres que sai.
 
 **Bybit EU não tem solução.** As chaves da bybit.eu ficam presas aos servidores
 das aplicações aprovadas por eles — nenhum endereço teu vai coincidir. Não é um
@@ -260,6 +371,11 @@ saída seria o Broker Program, que exige empresa registada e volume de negociaç
 que um tracker não gera.
 
 ## Funcionalidades que faltam
+
+Por ordem do que faria mais diferença, não do que é mais fácil. **Os alertas são
+o primeiro** com folga: a app já *sabe* que um orçamento estourou e que uma
+subscrição cobra amanhã. Toda a informação existe; falta apenas fazer alguma
+coisa com ela. É a diferença entre uma app que regista e uma que avisa.
 
 **Transações recorrentes.** As subscrições dizem o que *vai* sair, mas não
 criam as transações. Continuas a lançar o Netflix à mão todos os meses, ou a
@@ -284,15 +400,20 @@ incluí-los no backup e no restauro — custo alto para o valor.
 maturidade, não preço de mercado. Modelada como está, dá um número errado com
 ar de certo. Só vale a pena se tiveres alguma.
 
-**Mais plataformas.** Trade Republic, Revolut, Binance, Kraken, Degiro,
-Coinbase. Cada uma é uma pasta e um `case` — a arquitetura aguenta. A questão
-é sempre a mesma: a plataforma dá API de leitura sem exigir ser empresa?
+**Mais plataformas.** Revolut, Binance, Kraken, Degiro, Coinbase. Cada uma é uma
+pasta e um `case` — a arquitetura aguenta. A questão é sempre a mesma: a
+plataforma dá API de leitura sem exigir ser empresa? A Trade Republic saiu desta
+lista: está decidido que fica em CSV, e a razão está em `docs/trade-republic.md`.
 
 **Multi-utilizador.** A app assume uma pessoa. Contas partilhadas, ou dar
-acesso a alguém, não existe.
+acesso a alguém, não existe. É o que separa esta app de uma que possa ser
+distribuída a estranhos, mais do que qualquer funcionalidade desta lista.
 
-**Telemóvel.** Funciona no browser do telemóvel mas não foi desenhado para
-ecrãs pequenos. As tabelas largas sofrem.
+**Telemóvel.** Ver o número exato em "Erros conhecidos" acima: 87px de conteúdo
+num ecrã de 375px. O trabalho é no esqueleto — a barra lateral recolher e as
+margens encolherem — e não em cada página. Feito isso, a app fica instalável
+como PWA sem passar por loja nenhuma, o que é o passo seguinte mais barato se
+alguma vez a quiseres no telemóvel.
 
 ## Coisas que decidi não fazer
 
@@ -324,7 +445,7 @@ está listado em `drizzle/meta/_journal.json`. Um ficheiro sem entrada no journa
 `npx drizzle-kit generate`.
 
 **As bibliotecas em `src/lib/` não tocam na base de dados.** É por isso que há
-431 testes sem precisar de Postgres. As queries ficam em `src/actions/`.
+1592 testes sem precisar de Postgres. As queries ficam em `src/actions/`.
 
 **`balancesAreSeparatePool`** é o campo que impede a quinta variante do erro de
 contagem dupla. Cada connector declara se os saldos que devolve estão *fora* do
@@ -335,3 +456,43 @@ duplicava o dinheiro.
 durante o desenvolvimento um teste falhou e o código estava certo — era a minha
 expectativa que estava mal. Quando um teste falha, verifica primeiro qual dos
 dois lados está errado.
+
+**Os testes não apanham este tipo de erro.** Vale a pena olhar para isto de
+frente: durante a semana de 21 a 23 de agosto foram encontrados e corrigidos
+cerca de dez números errados no ecrã — o HYPE a valer 0,09 em vez de 76, dólares
+mostrados como euros, margem a dizer 149 € em vez de 9 €, a Análise a mostrar um
+terço da carteira. **Os 1592 testes estavam todos verdes o tempo todo.**
+
+Nenhum foi apanhado por um teste. Todos foram apanhados da mesma maneira:
+alguém abriu um ecrã, olhou para um número e disse *isto está mal*. Os testes
+protegem contra regressões no que já se percebeu; não descobrem o que ainda
+ninguém percebeu. Dados reais num ecrã é que fazem isso.
+
+**Nunca emparelhes dois arrays por posição quando ambos têm identificador.** O
+`spotMetaAndAssetCtxs` da Hyperliquid devolve `[meta, contextos]` e é natural
+assumir que `contextos[i]` descreve `universe[i]`. Não descreve — nem sequer têm
+o mesmo tamanho (326 contra 717 numa resposta real). Cada contexto diz a que par
+pertence no campo `coin`. Ler por posição avaliou o HYPE a 0,092721 quando o par
+dele dizia 76,51, e desviou todos os outros tokens spot pelo mesmo deslocamento.
+
+**Um zero de uma API pode significar "não aplicável".** Numa conta unificada da
+Hyperliquid a sub-conta de perps não tem colateral próprio — está tudo no spot —
+por isso o `withdrawable` responde `0.0`. Lido como medição, declarou a carteira
+inteira empenhada: 149,29 € de margem contra uma posição que prendia 9,15 €.
+Duas vezes na mesma semana, no mesmo connector, um zero passou por medição.
+
+**Converter antes de somar: já vai em dez sítios.** A conta ao adicionar uma
+soma nunca é "são a mesma moeda?" mas "o que as converte?". Os últimos cinco
+estavam todos no mesmo ficheiro, incluindo um denominador de yield — uma
+percentagem errada com ar perfeitamente normal.
+
+**Um token de CSS usado em qualquer sítio tem de existir em todos os temas.** O
+`--border-strong` estava definido em três dos oito temas. Nos outros cinco as
+bordas que o usavam caíam para `currentColor` — uma linha de base de gráfico
+desenhada na cor do texto.
+
+**Uma migration pode ter corrido sem estar no journal.** Uma tabela foi dada
+como nunca criada e tinha 107 linhas reais lá dentro. O `drizzle-kit migrate`
+recusou-se com `42P07` em vez de fazer alguma coisa destrutiva, e foi só por
+isso que se apanhou antes dos dados. Confirma sempre contra a base de dados, não
+contra o histórico de ficheiros.
