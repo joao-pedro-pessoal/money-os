@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useNav } from "./NavContext";
 
 /**
  * Eleven entries in three groups, down from fifteen in a flat list.
@@ -56,6 +57,7 @@ const OWNED_BY: Record<string, string[]> = {
 
 export default function Nav() {
   const pathname = usePathname();
+  const { open, setOpen } = useNav();
 
   const isActive = (href: string) => {
     // "/" is exact, or it would match every page.
@@ -71,14 +73,66 @@ export default function Nav() {
         : "text-[var(--muted)] hover:text-[var(--foreground)]"
     }`;
 
+  /**
+   * A fixed rail on a wide screen, a drawer on a narrow one.
+   *
+   * It used to be `w-56 shrink-0` at every width, which on a 375px phone left
+   * 87px for the content once the page padding was taken off — every table and
+   * every card squeezed into a column narrower than the sidebar beside it.
+   *
+   * Off-canvas rather than collapsed to icons: eleven entries in three labelled
+   * groups don't survive being reduced to glyphs, and a menu you open on
+   * purpose costs one tap while a row of ambiguous icons costs a guess.
+   */
   return (
-    <nav className="w-56 shrink-0 border-r border-[var(--border)] p-4 min-h-screen flex flex-col">
-      <div
-        style={{ fontFamily: "var(--font-heading)" }}
-        className="text-lg mb-6 tracking-tight text-[var(--foreground)]"
+    <>
+      {/* Covers the page while the drawer is over it, and closes on a tap. */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <nav
+        id="app-nav"
+        className={`
+          border-r border-[var(--border)] p-4 flex flex-col
+          bg-[var(--background)]
+          fixed inset-y-0 left-0 z-50 w-64 overflow-y-auto
+          transition-transform duration-200 ease-out
+          motion-reduce:transition-none
+          ${open ? "translate-x-0" : "-translate-x-full"}
+          md:static md:translate-x-0 md:w-56 md:shrink-0 md:min-h-screen md:z-auto
+        `}
+        aria-label="Main"
       >
-        Money OS
-      </div>
+        <div className="flex items-center justify-between mb-6">
+          <div
+            style={{ fontFamily: "var(--font-heading)" }}
+            className="text-lg tracking-tight text-[var(--foreground)]"
+          >
+            Money OS
+          </div>
+          {/*
+            Only reachable when the drawer is showing; the rail has no close.
+            The wrapper carries `md:hidden` because `.icon-btn` sets its own
+            `display` later in globals.css and would win against the utility.
+          */}
+          <div className="md:hidden">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="icon-btn"
+              aria-label="Close menu"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
       <div className="space-y-5 flex-1">
         {groups.map((g, i) => (
@@ -111,6 +165,7 @@ export default function Nav() {
           Settings
         </Link>
       </div>
-    </nav>
+      </nav>
+    </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { usePrivacy } from "./PrivacyContext";
 import { useTheme } from "./ThemeContext";
+import { useNav } from "./NavContext";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -33,9 +34,34 @@ function SunMoonIcon({ light }: { light: boolean }) {
 export default function TopBar() {
   const { hidden, toggle } = usePrivacy();
   const { mode, toggleMode } = useTheme();
+  const { open, setOpen } = useNav();
 
   return (
-    <div className="flex justify-end gap-2 px-8 pt-6">
+    <div className="flex items-center gap-2 px-4 md:px-8 pt-4 md:pt-6">
+      {/*
+        Opens the nav drawer. Only exists where the nav is a drawer.
+
+        `md:hidden` sits on the wrapper, not on the button: `.icon-btn` sets
+        `display: inline-flex` in globals.css, which is declared after the
+        Tailwind import and so beats a utility of equal specificity. Any
+        `md:hidden` written directly on an `.icon-btn` is silently ignored.
+      */}
+      <div className="md:hidden">
+        <button
+          onClick={() => setOpen(!open)}
+          className="icon-btn"
+          aria-label="Open menu"
+          aria-expanded={open}
+          aria-controls="app-nav"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="flex-1" />
+
       <button
         onClick={toggle}
         className="icon-btn"
