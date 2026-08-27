@@ -271,29 +271,34 @@ export default function ManualPage() {
           </p>
 
           <div className="overflow-x-auto">
-            <table className="data-table whitespace-nowrap">
+            <table className="data-table" style={{ minWidth: 560 }}>
+              <colgroup>
+                <col style={{ width: "22%" }} />
+                <col style={{ width: "40%" }} />
+                <col style={{ width: "38%" }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Choose</th>
                   <th>When</th>
-                  <th className="whitespace-normal">What the app does</th>
+                  <th>What the app does</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>Cash sitting idle</td>
                   <td>A current account, or a broker where the balance is only uninvested cash</td>
-                  <td className="whitespace-normal">Positions you record are <strong>added on top</strong> of the balance</td>
+                  <td>Positions you record are <strong>added on top</strong> of the balance</td>
                 </tr>
                 <tr>
                   <td>Total value, positions included</td>
                   <td>The balance is the whole account as the broker shows it</td>
-                  <td className="whitespace-normal">Positions are detail only and <strong>never added again</strong></td>
+                  <td>Positions are detail only and <strong>never added again</strong></td>
                 </tr>
                 <tr>
                   <td>Both</td>
                   <td>One account that is bank and broker at once — Trade Republic</td>
-                  <td className="whitespace-normal">Enter the total, then say how much is invested; the rest is cash</td>
+                  <td>Enter the total, then say how much is invested; the rest is cash</td>
                 </tr>
               </tbody>
             </table>
@@ -427,39 +432,44 @@ export default function ManualPage() {
           </p>
 
           <div className="overflow-x-auto">
-            <table className="data-table whitespace-nowrap">
+            <table className="data-table" style={{ minWidth: 560 }}>
+              <colgroup>
+                <col style={{ width: "20%" }} />
+                <col style={{ width: "34%" }} />
+                <col style={{ width: "46%" }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Platform</th>
                   <th>What it needs</th>
-                  <th className="whitespace-normal">Worth knowing</th>
+                  <th>Worth knowing</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>Hyperliquid</td>
                   <td>Your public wallet address</td>
-                  <td className="whitespace-normal">No keys, no secrets. Brings trade history too.</td>
+                  <td>No keys, no secrets. Brings trade history too.</td>
                 </tr>
                 <tr>
                   <td>Trading 212</td>
                   <td>API key (Settings → API)</td>
-                  <td className="whitespace-normal">Generate it with order permissions switched off.</td>
+                  <td>Generate it with order permissions switched off.</td>
                 </tr>
                 <tr>
                   <td>Bybit</td>
                   <td>Read-only API key and secret</td>
-                  <td className="whitespace-normal">bybit.com only. bybit.eu cannot be connected — their restriction.</td>
+                  <td>bybit.com only. bybit.eu cannot be connected — their restriction.</td>
                 </tr>
                 <tr>
                   <td>Interactive Brokers</td>
                   <td>A gateway running on your computer</td>
-                  <td className="whitespace-normal">Needs an IBKR Pro account. The session expires and needs a new login.</td>
+                  <td>Needs an IBKR Pro account. The session expires and needs a new login.</td>
                 </tr>
                 <tr>
                   <td>Trade Republic</td>
                   <td>CSV import</td>
-                  <td className="whitespace-normal">No public API. See <a href="#import" style={{ color: "var(--accent)" }}>Importing statements</a>.</td>
+                  <td>No public API. See <a href="#import" style={{ color: "var(--accent)" }}>Importing statements</a>.</td>
                 </tr>
               </tbody>
             </table>
