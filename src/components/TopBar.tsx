@@ -3,6 +3,8 @@
 import { usePrivacy } from "./PrivacyContext";
 import { useTheme } from "./ThemeContext";
 import { useNav } from "./NavContext";
+import AlertBell from "./AlertBell";
+import type { Alert } from "@/lib/alerts/rules";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -31,7 +33,7 @@ function SunMoonIcon({ light }: { light: boolean }) {
   );
 }
 
-export default function TopBar() {
+export default function TopBar({ alerts }: { alerts: Alert[] }) {
   const { hidden, toggle } = usePrivacy();
   const { mode, toggleMode } = useTheme();
   const { open, setOpen } = useNav();
@@ -61,6 +63,9 @@ export default function TopBar() {
       </div>
 
       <div className="flex-1" />
+
+      {/* Only rendered when there is something to say; see AlertBell. */}
+      <AlertBell alerts={alerts} />
 
       <button
         onClick={toggle}
