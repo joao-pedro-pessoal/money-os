@@ -680,6 +680,36 @@ export default function ManualPage() {
         </Entry>
       </div>
 
+      {/*
+        AGPL-3.0 §13: anyone interacting with this over a network must be able
+        to get the source. On a private single-user instance the operator and
+        the user are the same person, so this changes nothing — but it is what
+        makes the licence easy to honour for anyone who runs a copy for someone
+        else, and it costs one line.
+      */}
+      <div className="card p-4 text-xs text-[var(--muted)]">
+        <div className="text-[var(--foreground)] font-medium mb-1">Your data, your copy</div>
+        <p>
+          This is your own instance. There is no shared database and no operator
+          with access to it — nobody else can see these figures, including
+          whoever wrote the app.
+        </p>
+        <p className="mt-2">
+          Money OS is free software under the{" "}
+          <a
+            href="https://www.gnu.org/licenses/agpl-3.0.html"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "var(--accent)" }}
+          >
+            GNU AGPL-3.0
+          </a>
+          . You may run, study and change it. If you modify it and offer it to
+          other people over a network, you have to share your changes under the
+          same licence.
+        </p>
+      </div>
+
       <div className="text-xs text-[var(--muted)]">
         <Link href="/" style={{ color: "var(--accent)" }}>
           Back to the dashboard
