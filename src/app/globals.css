@@ -119,6 +119,19 @@ h1 {
   font-family: var(--font-heading);
 }
 
+/*
+ * Installed on a phone, the app runs without browser chrome and the top bar
+ * would otherwise sit under the notch and the bottom under the home indicator.
+ * `viewport-fit=cover` in the layout is what makes these variables resolve to
+ * anything; in a browser tab they are all zero and this changes nothing.
+ */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
