@@ -173,7 +173,7 @@ describe("an account that is a bank and a broker", () => {
   });
 });
 
-import { computeNetWorth, type NetWorthInput } from "../networth";
+import { computeNetWorth, type NetWorthInput , purposeSplit } from "../networth";
 
 function input(over: Partial<NetWorthInput> = {}): NetWorthInput {
   return {
@@ -289,5 +289,89 @@ describe("computeNetWorth", () => {
   it("rounds to cents rather than accumulating float noise", () => {
     const r = computeNetWorth(input({ cash: 0.1, manualPortfolio: 0.2 }));
     expect(r.total).toBe(0.3);
+  });
+});
+
+/**
+ * Net worth is assets minus liabilities, and for a long time this app did only
+ * the first half. Anyone with a mortgage was shown a patrimony that did not
+ * exist.
+ */
+describe("what you owe", () => {
+  const assets = {
+    cash: 10_000,
+    manualPortfolio: 5_000,
+    syncedPortfolio: 0,
+    openPositionValue: 0,
+    floatingPortfolio: 5_000,
+  };
+
+  it("takes debt off the headline and reports both sides", () => {
+    const r = computeNetWorth({ ...assets, liabilities: 200_000 });
+
+    expect(r.assets).toBe(15_000);
+    expect(r.liabilities).toBe(200_000);
+    // Owing more than you hold is a real situation, not an error to clamp away.
+    expect(r.total).toBe(-185_000);
+  });
+
+  it("changes nothing at all when there is no debt", () => {
+    // Every figure computed before liabilities existed has to stay identical.
+    const withField = computeNetWorth({ ...assets, liabilities: 0 });
+    const without = computeNetWorth(assets);
+
+    expect(withField).toEqual(without);
+    expect(without.total).toBe(without.assets);
+  });
+
+  it("leaves what you hold untouched", () => {
+    // A mortgage does not make the cash in your account less spendable, nor
+    // the ETFs in it less market-exposed.
+    const clear = computeNetWorth(assets);
+    const owing = computeNetWorth({ ...assets, liabilities: 200_000 });
+
+    expect(owing.cash).toBe(clear.cash);
+    expect(owing.portfolio).toBe(clear.portfolio);
+    expect(owing.floating).toBe(clear.floating);
+    expect(owing.guaranteed).toBe(clear.guaranteed);
+  });
+
+  it("refuses a negative liability rather than treating it as a windfall", () => {
+    const r = computeNetWorth({ ...assets, liabilities: -5_000 });
+    expect(r.liabilities).toBe(0);
+    expect(r.total).toBe(15_000);
+  });
+
+  it("keeps assets, debt and the headline reconcilable", () => {
+    const r = computeNetWorth({ ...assets, liabilities: 4_000 });
+    expect(r.assets - r.liabilities).toBeCloseTo(r.total, 2);
+  });
+});
+
+/**
+ * The purpose slices describe money you hold. A mortgage is not a fifth purpose
+ * your money is serving — it is money you do not have.
+ */
+describe("purpose slices against debt", () => {
+  const result = computeNetWorth({
+    cash: 10_000,
+    manualPortfolio: 5_000,
+    syncedPortfolio: 0,
+    openPositionValue: 0,
+    floatingPortfolio: 5_000,
+    liabilities: 200_000,
+  });
+
+  it("does not shrink free cash by the outstanding loan", () => {
+    // The wrong version reported nothing free to spend on the day a payment
+    // was due, which is the worst possible moment to be told that.
+    const split = purposeSplit({ result, investingCash: 0, promisedToBuckets: 0 });
+    expect(split.free).toBe(10_000);
+  });
+
+  it("still adds up to what is held", () => {
+    const split = purposeSplit({ result, investingCash: 0, promisedToBuckets: 2_000 });
+    const sum = split.invested + split.waitingToInvest + split.promised + split.free;
+    expect(sum).toBeCloseTo(result.assets, 2);
   });
 });

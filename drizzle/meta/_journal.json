@@ -239,6 +239,13 @@
       "when": 1787405729905,
       "tag": "0033_lowly_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1788085011189,
+      "tag": "0034_omniscient_warstar",
+      "breakpoints": true
     }
   ]
 }

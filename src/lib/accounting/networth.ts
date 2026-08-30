@@ -58,13 +58,36 @@ export interface NetWorthInput {
    * here.
    */
   insideBalances?: { cash: number; invested: number }[];
+  /**
+   * What you owe: mortgages, loans, credit cards.
+   *
+   * Net worth is assets **minus** liabilities, and for a long time this app did
+   * only the first half — so anyone with a mortgage was shown a patrimony that
+   * did not exist. Defaults to zero, which is why every figure computed before
+   * this existed stays exactly as it was.
+   *
+   * A debt that is already a negative account balance must not arrive here.
+   * The balance has counted it once inside `cash`; passing it again would
+   * subtract it twice, which is the same double-count this file exists to
+   * prevent, only pointing the other way.
+   */
+  liabilities?: number;
   /** Amounts that had no exchange rate and were therefore left out entirely. */
   unconverted?: { amount: number; currency: string }[];
 }
 
 export interface NetWorthResult {
-  /** cash + portfolio. The headline number. */
+  /**
+   * assets − liabilities. The headline number, and the whole reason the two
+   * fields below are reported separately: "worth 40 000" means something
+   * different when it is 40 000 owned outright and when it is 250 000 of house
+   * against 210 000 of mortgage.
+   */
   total: number;
+  /** cash + portfolio, before anything owed is taken off. */
+  assets: number;
+  /** What you owe, as a positive number. */
+  liabilities: number;
   cash: number;
   /** manualPortfolio + syncedPortfolio. */
   portfolio: number;
@@ -134,15 +157,21 @@ export function purposeSplit(input: {
    *
    * Deriving it from `cash` gives the same answer whenever the inputs are
    * consistent, and a chart that quietly stops adding up when they aren't. This
-   * way the four slices always sum to the net worth: if something upstream is
+   * way the four slices always sum to the assets: if something upstream is
    * contradictory the free slice absorbs it and goes to zero, which is visible,
    * rather than the total drifting, which is not.
+   *
+   * The four slices describe what you **hold**, so they add to `assets` and not
+   * to the headline. A mortgage is not a fifth purpose your money is serving —
+   * it is money you do not have. Taking it off here would shrink "free to
+   * spend" by the whole outstanding loan, which is exactly the wrong advice on
+   * the day a payment is due.
    */
   return {
     invested,
     waitingToInvest,
     promised: round2(promised),
-    free: round2(Math.max(0, result.total - invested - waitingToInvest - promised)),
+    free: round2(Math.max(0, result.assets - invested - waitingToInvest - promised)),
   };
 }
 
@@ -152,7 +181,20 @@ function clamp(value: number, low: number, high: number): number {
 
 export function computeNetWorth(input: NetWorthInput): NetWorthResult {
   const portfolio = round2(input.manualPortfolio + input.syncedPortfolio);
-  const total = round2(input.cash + portfolio);
+  const assets = round2(input.cash + portfolio);
+  /**
+   * Owed money is taken off the headline and off nothing else.
+   *
+   * It does not reduce what you hold — a mortgage does not make the cash in
+   * your account any less spendable — so `cash`, `portfolio`, `floating` and
+   * `guaranteed` all continue to describe the asset side alone. Only `total`
+   * knows about the debt, because only `total` claims to be your net worth.
+   *
+   * Clamped at zero: a negative liability would be an asset, and if one ever
+   * arrives it is a bug upstream rather than a windfall to be added in.
+   */
+  const liabilities = round2(Math.max(0, input.liabilities ?? 0));
+  const total = round2(assets - liabilities);
   const floating = round2(input.floatingPortfolio);
 
   /**
@@ -172,13 +214,18 @@ export function computeNetWorth(input: NetWorthInput): NetWorthResult {
 
   return {
     total,
+    assets,
+    liabilities,
     cash,
     portfolio: invested,
     // Positions are market-exposed wherever they are filed, so reclassifying
     // them has to move them out of the guaranteed side too — otherwise the app
     // would call €177 of ETFs capital-guaranteed.
     floating: round2(floating + heldInPositions),
-    guaranteed: round2(total - floating - heldInPositions),
+    // Against assets, not against the headline: a mortgage does not make the
+    // cash in your account any less guaranteed, and subtracting it here would
+    // take the debt off twice.
+    guaranteed: round2(assets - floating - heldInPositions),
     excluded: {
       openPositionValue: round2(input.openPositionValue),
       declaredInvested: round2(input.declaredInvested ?? 0),

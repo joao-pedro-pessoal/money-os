@@ -50,7 +50,7 @@ const groups: { label?: string; links: { href: string; label: string }[] }[] = [
  */
 const OWNED_BY: Record<string, string[]> = {
   "/analytics": ["/statistics", "/money-map"],
-  "/accounts": ["/interest"],
+  "/accounts": ["/interest", "/liabilities"],
   "/investments": ["/positions", "/connections"],
   "/transactions": ["/import"],
 };

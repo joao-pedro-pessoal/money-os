@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { accounts, positions, accountConnections } from "@/db/schema";
+import { accounts, positions, accountConnections, liabilities } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
@@ -114,8 +114,22 @@ export async function getNetWorth(): Promise<NetWorthResult & { baseCurrency: st
     };
   });
 
+  /**
+   * What is owed, converted like everything else before it is subtracted.
+   *
+   * Rows linked to an account are skipped on purpose: that account's balance is
+   * already negative by this amount, so `cash` has taken it off once. Counting
+   * it again would subtract the same debt twice — the recurring double-count of
+   * this codebase, pointing the other way for once.
+   */
+  const liabilityRows = await db.select().from(liabilities).where(eq(liabilities.active, true));
+  const owed = liabilityRows
+    .filter((l) => l.accountId === null)
+    .reduce((sum, l) => sum + (toBase(Number(l.balance), l.currency, rates, base) ?? 0), 0);
+
   const result = computeNetWorth({
     cash,
+    liabilities: owed,
     declaredInvested,
     insideBalances,
     // getPortfolioContribution already merges manual holdings and synced spot,

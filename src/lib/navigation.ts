@@ -17,6 +17,9 @@ export const ANALYTICS_TABS = [
 
 export const ACCOUNTS_TABS = [
   { href: "/accounts", label: "Accounts" },
+  // The other half of net worth. It sits with Accounts because both answer
+  // "what is my position", one side each.
+  { href: "/liabilities", label: "What you owe" },
   { href: "/interest", label: "Interest received" },
 ];
 

@@ -1071,3 +1071,49 @@ export const investmentActivities = pgTable(
   },
   (t) => [unique("investment_activities_account_fingerprint").on(t.accountId, t.fingerprint)]
 );
+
+/**
+ * What you owe. The other half of net worth.
+ *
+ * The app computed assets and called the result a patrimony, which is right
+ * only for someone with no mortgage, no car loan and no card balance. Net worth
+ * is assets minus liabilities; this is the minus.
+ *
+ * **A debt already showing as a negative account balance does not belong here.**
+ * Accounts may legitimately go negative — credit cards, margin, overdrafts —
+ * and such a balance has already reduced net worth once through `cash`.
+ * Recording it again would subtract it twice. `accountId` is how a row says
+ * which case it is: set, the balance already carries it and this is detail;
+ * null, it is money owed that nothing else knows about, and it comes off the
+ * total. Same declaration-not-inference rule as `balanceMeaning` on accounts.
+ */
+export const liabilities = pgTable("liabilities", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  name: text("name").notNull(),
+  // mortgage | credit_card | personal_loan | car_loan | student | tax | other
+  kind: text("kind").notNull().default("other"),
+  /**
+   * What is still owed today, as a positive number.
+   *
+   * Positive because "owing minus four hundred euros" is a sentence nobody
+   * means, and a sign convention that flips halfway through a codebase is how
+   * a debt ends up added to a total.
+   */
+  balance: numeric("balance", { precision: 18, scale: 2 }).notNull().default("0"),
+  currency: text("currency").notNull().default("EUR"),
+  /** Annual rate, as a percentage. 4.25 means 4.25%. */
+  apr: numeric("apr", { precision: 6, scale: 3 }),
+  /** What leaves your account for this each month, when it is a fixed figure. */
+  monthlyPayment: numeric("monthly_payment", { precision: 18, scale: 2 }),
+  /** When the last payment is due, where that is known. */
+  endsOn: timestamp("ends_on", { withTimezone: true }),
+  /**
+   * Set only when this debt is already a negative balance on that account.
+   * Then it is shown as detail and never subtracted a second time.
+   */
+  accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
