@@ -1,4 +1,9 @@
-import { getPortfolioAnalysis, getGroupedPerformance } from "@/actions/investments";
+import {
+  getPortfolioAnalysis,
+  getGroupedPerformance,
+  getPortfolioReturns,
+} from "@/actions/investments";
+import PortfolioReturns from "@/components/PortfolioReturns";
 import { Money } from "@/components/PrivacyContext";
 import DonutChart from "@/components/DonutChart";
 import { tagLabel, riskColor } from "@/lib/portfolio/tags";
@@ -32,6 +37,7 @@ export default async function PortfolioAnalysisPage({
 
   const statement = await getStatementBreakdown();
   const a = await getPortfolioAnalysis(includeSynced);
+  const returns = await getPortfolioReturns();
   const grouped = await getGroupedPerformance(groupBy, sort, dir, includeSynced);
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
   const best = [...grouped].filter((g) => g.cost > 0).sort((x, y) => y.pnlPercent - x.pnlPercent)[0];
@@ -131,6 +137,21 @@ export default async function PortfolioAnalysisPage({
           </Link>
         </div>
       </div>
+
+      {/*
+        How the investing has gone, before anything about what it holds.
+        Profit against cost is below; these two are what a return actually
+        means once money has moved in and out.
+      */}
+      <PortfolioReturns
+        timeWeighted={returns.timeWeighted}
+        moneyWeighted={returns.moneyWeighted}
+        withheld={returns.withheld}
+        coverage={returns.coverage}
+        netContributed={returns.netContributed}
+        currentValue={returns.currentValue}
+        currency={returns.baseCurrency}
+      />
 
       {/* Where the movement came from, before the headline numbers that mix
           the sources together. */}

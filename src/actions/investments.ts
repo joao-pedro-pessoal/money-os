@@ -14,6 +14,7 @@ import {
   platformBalances,
   accountConnections,
   positionMeta,
+  investmentActivities,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -31,6 +32,15 @@ import {
 import { isCapitalStable, isStableAsset } from "@/lib/portfolio/tags";
 import { STABLE_ASSET_TYPES } from "@/lib/portfolio/tags";
 import { toBase } from "@/lib/fx";
+import {
+  timeWeightedReturn,
+  internalRateOfReturn,
+  returnCoverage,
+  contributionsExplainValue,
+  historyLooksLikePerformance,
+  type CashFlow,
+  type ValuePoint,
+} from "@/lib/portfolio/returns";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 // The same list the Investments page renders, so the two cannot disagree about
@@ -866,4 +876,119 @@ export async function sellHolding(formData: FormData) {
   revalidatePath("/investments");
   revalidatePath(`/investments/${id}`);
   revalidatePath("/investments/analysis");
+}
+
+/**
+ * How the investing has actually gone, by both measures that mean anything.
+ *
+ * The app has only ever shown profit against cost, which stops being a return
+ * the moment money moves in or out: deposit 500 € and the portfolio is bigger
+ * without a single thing having performed.
+ *
+ * Two figures, because they answer different questions and neither substitutes
+ * for the other. Time-weighted removes deposits and withdrawals and answers
+ * "were the choices good"; money-weighted keeps them and answers "how did my
+ * money do". A fund quotes the first because it cannot control when investors
+ * add money; you are not a fund.
+ *
+ * Both come back null when the data cannot support them, and the coverage is
+ * returned alongside so the page can say which window it measured. On this
+ * account the external flows run January to July and the value history starts
+ * in August — so the money-weighted figure spans everything and the
+ * time-weighted one cannot, and the difference has to be visible rather than
+ * quietly resolved in the arithmetic.
+ */
+export async function getPortfolioReturns() {
+  const [series, activityRows, base] = await Promise.all([
+    getPortfolioValueOverTime(),
+    db.select().from(investmentActivities),
+    getBaseCurrency(),
+  ]);
+
+  const rates = await getRates();
+
+  const values: ValuePoint[] = series.map((p) => ({
+    date: p.date,
+    value: p.portfolioValue,
+  }));
+
+  /**
+   * Only money crossing the boundary counts as a flow.
+   *
+   * A buy moves money from cash into a holding and changes nothing about what
+   * you put in; counting it would make every trade look like a deposit and
+   * destroy both figures. Deposits and withdrawals are the only rows that are
+   * genuinely money arriving from, or leaving for, outside.
+   */
+  const external: CashFlow[] = activityRows
+    .filter((a) => a.type === "DEPOSIT" || a.type === "WITHDRAWAL")
+    .map((a) => {
+      const amount = toBase(Number(a.amount), a.currency, rates, base);
+      return amount === null
+        ? null
+        : {
+            date: new Date(a.date).toISOString().slice(0, 10),
+            // Stored signed from the account's view — a deposit is positive
+            // there. The return maths wants the investor's view, where money
+            // leaving your pocket is negative, so it flips.
+            amount: -amount,
+          };
+    })
+    .filter((f): f is CashFlow => f !== null);
+
+  const currentValue = values[values.length - 1]?.value ?? 0;
+
+  /**
+   * The terminal value closes the series: what you would have if you sold
+   * today. Without it every deposit looks like money that never came back.
+   */
+  const irrFlows: CashFlow[] =
+    currentValue > 0
+      ? [...external, { date: new Date().toISOString().slice(0, 10), amount: currentValue }]
+      : external;
+
+  const netContributed =
+    Math.round((external.reduce((s, f) => s - f.amount, 0) + Number.EPSILON) * 100) / 100;
+
+  /**
+   * Both figures are withheld when their inputs cannot support them, and the
+   * reason is returned so the page can say which.
+   *
+   * This is not defensive coding for its own sake. The first run against real
+   * data produced a time-weighted return of **+8091%** — the value series
+   * begins the day the accounts were connected, so the app being filled in read
+   * as a portfolio multiplying — and a money-weighted return computed from a
+   * net contribution of −46 € against a portfolio of 730 €, which is
+   * arithmetically impossible and means the deposits of three platforms are
+   * simply not recorded anywhere.
+   *
+   * Both numbers were wrong. Both looked like numbers.
+   */
+  const historyUsable = historyLooksLikePerformance(values);
+  const contributionsUsable = contributionsExplainValue({ netContributed, currentValue });
+
+  const twr = historyUsable ? timeWeightedReturn(values, external) : null;
+
+  return {
+    baseCurrency: base,
+    currentValue,
+    externalFlows: external.length,
+    /** Net of deposits against withdrawals — what you have actually put in. */
+    netContributed,
+    timeWeighted: twr,
+    moneyWeighted: contributionsUsable ? internalRateOfReturn(irrFlows) : null,
+    coverage: returnCoverage(values, external),
+    /**
+     * Why a figure is missing, in words the page can show. Null when it is
+     * there.
+     */
+    withheld: {
+      timeWeighted: historyUsable
+        ? null
+        : "The value history starts when the accounts were first connected, so its early growth is data arriving rather than the portfolio performing. This becomes measurable once there is a stretch of history that begins with the portfolio already whole.",
+      moneyWeighted: contributionsUsable
+        ? null
+        : "Deposits and withdrawals are only recorded for platforms that report them, and they do not account for what is held. A money-weighted return computed from an incomplete record of money going in would be a confident number answering a different question.",
+    },
+  };
 }
