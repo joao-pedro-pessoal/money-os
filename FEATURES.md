@@ -1,7 +1,7 @@
 # Money OS — o que faz e o que falta
 
-Estado a 23 de agosto de 2026. 1592 testes em 84 ficheiros, 34 migrations,
-39 tabelas, 78 módulos de lógica, 26 módulos de acesso a dados, 31 páginas.
+Estado a 30 de agosto de 2026. 1661 testes em 87 ficheiros, 35 migrations,
+40 tabelas, 81 módulos de lógica, 28 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
@@ -156,6 +156,122 @@ Módulo separado da contabilidade, de propósito.
   saldo dela é cash parado e as posições são contadas por cima, sem sobreposição.
 - **Playlists**: grupos de posições que tens.
 - **Watchlist**: coisas que não tens, com preço-alvo e notas.
+
+## O que deves (passivos)
+
+O maior erro conceptual que a app teve, e não foi um teste que o apanhou — foi
+ler uma lista do que uma app de finanças deve fazer.
+
+Durante meses a app somou **ativos** e chamou ao resultado património. Isso está
+certo para quem não tem hipoteca, crédito automóvel nem saldo de cartão, e
+errado para quase toda a gente — e o erro corria na direção lisonjeira.
+
+O `computeNetWorth` reporta agora `assets`, `liabilities` e um `total` que é a
+diferença. Dever mais do que se tem aparece como negativo, não é limado a zero.
+
+Duas decisões dentro disso:
+
+- **A dívida sai do número de topo e de mais nada.** O `cash`, a carteira e o
+  `guaranteed` continuam a descrever só os ativos — uma hipoteca não torna o
+  dinheiro na conta menos gastável.
+- **As fatias de propósito somam aos ativos, não ao património.** Uma hipoteca
+  não é um quinto propósito que o dinheiro serve; é dinheiro que não se tem.
+  Subtraí-la lá encolheria o "livre para gastar" pelo empréstimo inteiro — o
+  conselho errado no dia em que há prestação para pagar.
+
+**A armadilha que isto podia ter criado:** as contas podem ficar negativas, por
+decisão, porque cartões e descobertos ficam mesmo. Esse saldo já reduziu o
+património uma vez. Por isso cada dívida declara se já é um saldo negativo numa
+conta — mesma regra do `balanceMeaning`, aplicada ao outro lado do balanço.
+
+A página diz o que um saldo não diz: quanto custa dever por mês, e quando a
+dívida acaba. O `payoffMonths` devolve **"nunca"** em vez de um número enorme
+quando o pagamento só cobre os juros — a armadilha do pagamento mínimo é
+*nunca*, e "417 anos" faria isso parecer muito tempo.
+
+## Retorno a sério: TWR e TIR
+
+Lucro sobre o custo deixa de ser um retorno assim que entra ou sai dinheiro:
+depositar 500 € torna a carteira maior sem nada ter desempenhado. Duas medidas
+agora, lado a lado, e nenhuma é chamada *o* retorno — respondem a perguntas
+diferentes e discordarem é o caso normal.
+
+- **TWR** (time-weighted) retira depósitos e levantamentos. Responde a *"as
+  minhas escolhas foram boas?"*.
+- **TIR** (money-weighted, o XIRR de uma folha de cálculo) mantém-nos. Responde
+  a *"como é que o meu dinheiro se portou?"*.
+
+**Ambas se recusam a responder nesta conta, e esse é o resultado que interessa.**
+
+A primeira execução deu um TWR de **+8091% em 18 dias**. A matemática estava
+certa: a série de valor começa a 7 de agosto porque foi quando as contas foram
+ligadas, e a app a ser preenchida leu-se como uma carteira a multiplicar. E a
+TIR nem se resolvia — contribuições líquidas de **−46 €** contra uma carteira de
+**730 €**, aritmeticamente impossível, porque os depósitos de três plataformas
+não estão registados em lado nenhum.
+
+Dois guardas, cada um testado:
+
+- `historyLooksLikePerformance` rejeita uma série que começa abaixo de um quinto
+  do próprio pico. Nada nos dados distingue uma carteira a crescer de uma app a
+  ser preenchida — ambas são "o valor subiu" — por isso a regra é a forma.
+- `contributionsExplainValue` rejeita a TIR quando o que entrou não explica o que
+  se tem. Um registo incompleto de contribuições não é uma imprecisão pequena
+  nesta métrica; é outra pergunta a ser respondida.
+
+Onde falta número, a página escreve **"Not measurable yet"** com a razão, nunca
+um traço — um traço lê-se como zero, e zero é uma medição.
+
+**O que os faz aparecer**, sem mais trabalho: o TWR assim que houver um período
+de histórico que comece com a carteira já completa; a TIR quando os depósitos
+das outras plataformas estiverem registados.
+
+## Alertas
+
+A app sempre soube que um orçamento estourou, que uma subscrição cobra amanhã,
+que um saldo não é confirmado há dois meses, que uma sincronização está a
+falhar. Nunca dizia nada.
+
+O motor decide; o canal por onde te chega é outra pergunta e ainda não está
+respondida. Por agora é um sino na barra de topo, que **só existe quando há algo
+a dizer** — um ícone sempre presente e quase sempre vazio ensina-te a ignorá-lo.
+
+Três regras moldaram os limiares:
+
+- **Um alerta tem de ser acionável.** "A carteira mexeu 3%" é um facto, não um
+  alerta.
+- **O silêncio é o estado normal.** O contador conta só crítico e aviso; uma
+  subscrição a cobrar sexta pertence à lista, não a um número que significa
+  "algo está mal".
+- **Um alerta não pode ser uma segunda opinião.** Lê pelas mesmas funções que as
+  páginas, nunca com consultas próprias.
+
+E os limiares, que são juízos: o ritmo do orçamento só dispara depois de 1/5 do
+período; as subscrições avisam a 3 dias e não a 1, para dar margem de cancelar;
+um saldo manual fica velho aos 60 dias e não aos 30; uma ligação que **nunca**
+sincronizou não diz nada, porque acabaste de a criar.
+
+## Telemóvel: instalável
+
+O esqueleto era `w-56 shrink-0` a qualquer largura, o que num ecrã de 375px
+deixava **87px** para o conteúdo. Agora é uma barra fixa acima dos 768px e uma
+gaveta abaixo, com fundo escurecido, fecho por Escape, por toque fora, por botão
+e ao navegar.
+
+Com `manifest.webmanifest`, ícones desenhados a partir da marca, `apple-touch-
+icon` e área segura para o entalhe, a app **instala-se no ecrã principal**.
+
+O service worker **não guarda nada em cache** — nem uma página, nem uma resposta
+da API. Cada ecrã é um número lido ao vivo, e um património servido de cache é
+indistinguível de um atual. Existe só para que tocar no ícone sem ligação abra
+uma página que explica, em vez do erro do browser.
+
+**Dois obstáculos que ninguém adivinharia**, ambos resolvidos e ambos registados
+porque voltarão a morder: o manifest, o service worker, a página offline e os
+ícones estavam atrás do redirecionamento de login e devolviam 307, o que impedia
+a instalação por completo; e `md:hidden` **não funciona** num `.icon-btn`, porque
+o `globals.css` define `display` depois do import do Tailwind e ganha por ser
+mais tardio.
 
 ## Preços automáticos
 
@@ -332,11 +448,6 @@ Ordenado por quanto acho que te faria falta, não por dificuldade.
 
 ## Erros conhecidos e coisas por acabar
 
-**Telemóvel: 87 pixels.** É o defeito mais concreto que a app tem. Num ecrã de
-375px sobram 87px para o conteúdo, porque o esqueleto é uma barra lateral de
-224px fixos (`w-56 shrink-0`, sem comportamento móvel) mais 64px de margens
-(`p-8`). Não é uma página — é a app inteira. Medido, não estimado.
-
 **Metade da app nunca foi usada a sério.** Zero transações, zero subscrições,
 zero transferências, zero alocações de buckets. O lado dos investimentos tem 187
 movimentos e quatro plataformas ligadas, e foi por isso que os erros dele
@@ -348,9 +459,15 @@ antes de as somar. No dia em que lançares uma despesa em dólares, a média men
 de despesas fica errada. É o mesmo erro corrigido dez vezes, à espera na metade
 que ninguém pôs à prova.
 
-**Aviso de hidratação em todas as páginas.** O `data-accent` e o `data-mode` são
-postos no `<html>` pelo cliente e não existem na renderização do servidor. É o
-badge vermelho no canto em modo de desenvolvimento. Cosmético, mas está lá.
+**Duas medidas de retorno estão retidas.** O TWR e a TIR não podem ser
+calculados com os dados de hoje — ver a secção acima. Não é um defeito do
+cálculo; é falta de histórico e de registo de contribuições, e ambos se
+resolvem sozinhos com o tempo.
+
+**A metade dos investimentos não é o problema; a do dinheiro é.** Vale a pena
+notar a assimetria: os investimentos têm 187 movimentos e quatro plataformas
+ligadas, e foi por isso que os erros deles apareceram. Cada erro encontrado foi
+encontrado da mesma maneira — alguém abriu um ecrã e disse *isto está mal*.
 
 **IBKR expira a sessão.** O gateway da IB desliga a sessão ao fim de algumas
 horas e obriga a novo login no browser. É desenho deles, não há volta. A app
@@ -372,10 +489,11 @@ que um tracker não gera.
 
 ## Funcionalidades que faltam
 
-Por ordem do que faria mais diferença, não do que é mais fácil. **Os alertas são
-o primeiro** com folga: a app já *sabe* que um orçamento estourou e que uma
-subscrição cobra amanhã. Toda a informação existe; falta apenas fazer alguma
-coisa com ela. É a diferença entre uma app que regista e uma que avisa.
+Por ordem do que faria mais diferença, não do que é mais fácil.
+
+**A comparação com um índice de referência é a primeira.** Sem ela, um retorno
+não significa nada: 3,5% é bom ou mau consoante o que o mercado fez no mesmo
+período. Os dados de valor já existem; falta a série do índice e a sobreposição.
 
 **Transações recorrentes.** As subscrições dizem o que *vai* sair, mas não
 criam as transações. Continuas a lançar o Netflix à mão todos os meses, ou a
@@ -383,10 +501,10 @@ esperar pelo extrato. O passo natural é a app propor a transação quando a dat
 chega, para tu confirmares — nunca criar sozinha, porque uma transação
 inventada num registo financeiro é pior do que uma em falta.
 
-**Alertas.** Nada te avisa de nada. Um orçamento estourado, uma subscrição a
-cobrar amanhã, um preço a chegar ao alvo da watchlist, uma conta com saldo
-velho — a app sabe tudo isto e não faz nada com essa informação. Faltaria
-escolher o canal: email, notificação do browser, ou só um sino dentro da app.
+**Alertas fora da app.** O motor está feito e o sino existe — ver a Parte 1 —
+mas só te avisa se abrires a app. Falta o canal: notificação push, email, ou
+ambos. O service worker de que a push precisa já está instalado, portanto o que
+falta é a decisão e as chaves VAPID, não a infraestrutura.
 
 **Relatório mensal.** Um resumo do mês fechado: quanto entrou, quanto saiu,
 onde falhaste o orçamento, como está o património contra o mês anterior.
@@ -409,11 +527,10 @@ lista: está decidido que fica em CSV, e a razão está em `docs/trade-republic.
 acesso a alguém, não existe. É o que separa esta app de uma que possa ser
 distribuída a estranhos, mais do que qualquer funcionalidade desta lista.
 
-**Telemóvel.** Ver o número exato em "Erros conhecidos" acima: 87px de conteúdo
-num ecrã de 375px. O trabalho é no esqueleto — a barra lateral recolher e as
-margens encolherem — e não em cada página. Feito isso, a app fica instalável
-como PWA sem passar por loja nenhuma, o que é o passo seguinte mais barato se
-alguma vez a quiseres no telemóvel.
+**Widgets e ecrã principal.** A app já instala no telemóvel e funciona lá — ver
+a Parte 1. O que falta é o que só um app nativo dá: widgets no ecrã principal e
+biometria. Nenhum dos dois vale, por si, o custo de embrulhar isto em Capacitor
+e passar pela revisão das lojas.
 
 ## Coisas que decidi não fazer
 
@@ -490,6 +607,35 @@ percentagem errada com ar perfeitamente normal.
 `--border-strong` estava definido em três dos oito temas. Nos outros cinco as
 bordas que o usavam caíam para `currentColor` — uma linha de base de gráfico
 desenhada na cor do texto.
+
+**Um número certo com dados errados continua errado.** O TWR deu +8091% e a
+matemática estava impecável — a série de valor é que começava no dia em que as
+contas foram ligadas. A lição não é "verificar a fórmula", é que uma fórmula
+correta alimentada por dados que não a suportam produz exatamente aquilo que
+ninguém deteta: um número plausível. Quando uma métrica depende de histórico,
+escreve o guarda **antes** de a mostrares.
+
+**Antes de mexer num árbitro, lê os testes dele.** Os passivos entraram no
+`networth.ts` sem partir nenhum dos 26 testes existentes, e isso não foi sorte:
+os passivos entram a zero por omissão, e essa foi a restrição de desenho. Os
+testes daquele ficheiro guardam decisões que não se veem no código.
+
+**`md:hidden` não funciona num `.icon-btn`.** O `globals.css` define
+`display: inline-flex` depois do `@import "tailwindcss"`; à mesma
+especificidade, a regra mais tardia ganha e a utilidade é ignorada em silêncio.
+Põe a variante num invólucro. Qualquer utilidade de `display` nessas classes bate
+na mesma parede.
+
+**O hot reload pode deixar um módulo velho em memória.** Uma gaveta de navegação
+pareceu completamente morta durante minutos — o botão existia, nada por cima, e
+o clique não fazia nada — porque o botão e o provider estavam a ler contextos
+diferentes. Se acrescentares um contexto e ele parecer não funcionar, recarrega
+antes de procurar o bug.
+
+**O `proxy.ts` bloqueia mais do que julgas.** O manifest, o service worker, a
+página offline e os ícones devolviam 307 para o login, o que impedia a instalação
+por completo. Ao acrescentar qualquer ficheiro estático que o browser vá buscar
+fora de uma sessão, confirma que passa.
 
 **Uma migration pode ter corrido sem estar no journal.** Uma tabela foi dada
 como nunca criada e tinha 107 linhas reais lá dentro. O `drizzle-kit migrate`
