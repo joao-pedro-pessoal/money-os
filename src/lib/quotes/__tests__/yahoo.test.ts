@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { parseYahooChart, yahooUrl, yahooSymbol } from "../yahoo";
+import {
+  parseYahooChart,
+  yahooUrl,
+  yahooSymbol,
+  yahooHistoryUrl,
+  parseYahooHistory,
+} from "../yahoo";
 
 const chart = (meta: Record<string, unknown>) => ({ chart: { result: [{ meta }] } });
 
@@ -64,5 +70,88 @@ describe("Yahoo symbols", () => {
     const url = yahooUrl("sxr8.de");
     expect(url).toContain("SXR8.DE");
     expect(url).toContain("interval=1d");
+  });
+});
+
+/**
+ * The daily series behind the benchmark comparison.
+ *
+ * Same endpoint as the single quote, asked for a range. The payload is two
+ * parallel arrays, which in this codebase is normally the shape of a bug — see
+ * the Hyperliquid section of CLAUDE.md — so the guard is that their lengths
+ * must agree, since neither carries an identifier to join on.
+ */
+const history = (
+  timestamp: unknown,
+  close: unknown,
+  meta: Record<string, unknown> = { symbol: "SXR8.DE", currency: "EUR" }
+) => ({ chart: { result: [{ meta, timestamp, indicators: { quote: [{ close }] } }] } });
+
+/** 2026-01-01, 2026-01-02, 2026-01-05 in seconds. */
+const T1 = Math.floor(Date.UTC(2026, 0, 1) / 1000);
+const T2 = Math.floor(Date.UTC(2026, 0, 2) / 1000);
+const T3 = Math.floor(Date.UTC(2026, 0, 5) / 1000);
+
+describe("reading a Yahoo daily series", () => {
+  it("asks the same endpoint for a range", () => {
+    expect(yahooHistoryUrl("SXR8.DE", "1y")).toContain("range=1y");
+    expect(yahooHistoryUrl("SXR8.DE", "1y")).toContain("SXR8.DE");
+  });
+
+  it("pairs each close with its own day", () => {
+    const s = parseYahooHistory(history([T1, T2, T3], [400, 405, 410]))!;
+    expect(s.points).toEqual([
+      { date: "2026-01-01", close: 400 },
+      { date: "2026-01-02", close: 405 },
+      { date: "2026-01-05", close: 410 },
+    ]);
+    expect(s.currency).toBe("EUR");
+  });
+
+  /**
+   * A holiday comes back as a null close, and it is not a price of zero. A
+   * benchmark that touches zero for one day reports −100% and then a recovery
+   * of several thousand percent — and both look like real market events.
+   */
+  it("drops a null close instead of reading it as zero", () => {
+    const s = parseYahooHistory(history([T1, T2, T3], [400, null, 410]))!;
+    expect(s.points.map((p) => p.close)).toEqual([400, 410]);
+  });
+
+  it("drops a zero close for the same reason", () => {
+    const s = parseYahooHistory(history([T1, T2, T3], [400, 0, 410]))!;
+    expect(s.points.map((p) => p.close)).toEqual([400, 410]);
+  });
+
+  /**
+   * The guard that the Hyperliquid bug earned. Two arrays with no identifier
+   * can only be paired by position, and position is only meaningful if they
+   * are the same length. Off by one is a series drifting by a day, which looks
+   * like a plausible market everywhere.
+   */
+  it("refuses when the two arrays disagree in length", () => {
+    expect(parseYahooHistory(history([T1, T2, T3], [400, 405]))).toBeNull();
+    expect(parseYahooHistory(history([T1, T2], [400, 405, 410]))).toBeNull();
+  });
+
+  it("returns the points oldest first, whatever order they arrived in", () => {
+    const s = parseYahooHistory(history([T3, T1, T2], [410, 400, 405]))!;
+    expect(s.points.map((p) => p.date)).toEqual(["2026-01-01", "2026-01-02", "2026-01-05"]);
+  });
+
+  it("has nothing to say about an empty or malformed payload", () => {
+    expect(parseYahooHistory(history([], []))).toBeNull();
+    expect(parseYahooHistory({ chart: { result: [] } })).toBeNull();
+    expect(parseYahooHistory({})).toBeNull();
+    expect(parseYahooHistory(null)).toBeNull();
+  });
+
+  it("returns null when every close was unusable, rather than an empty series", () => {
+    expect(parseYahooHistory(history([T1, T2], [null, null]))).toBeNull();
+  });
+
+  it("reports a missing currency as null rather than guessing one", () => {
+    const s = parseYahooHistory(history([T1, T2], [400, 410], { symbol: "X" }))!;
+    expect(s.currency).toBeNull();
   });
 });

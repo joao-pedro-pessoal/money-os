@@ -32,6 +32,77 @@ export function yahooUrl(symbol: string): string {
   )}?interval=1d&range=1d`;
 }
 
+/**
+ * The same endpoint, asked for a range instead of a day.
+ *
+ * `range` takes Yahoo's own vocabulary — `1mo`, `6mo`, `1y`, `5y`, `max`. The
+ * benchmark needs whatever window the portfolio's own history covers, and
+ * asking for more than that costs nothing but is thrown away by the comparison.
+ */
+export function yahooHistoryUrl(symbol: string, range: string): string {
+  return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+    symbol.trim().toUpperCase()
+  )}?interval=1d&range=${encodeURIComponent(range)}`;
+}
+
+export interface YahooSeries {
+  symbol: string;
+  currency: string | null;
+  /** One point per trading day with a close, oldest first. */
+  points: { date: string; close: number }[];
+}
+
+/**
+ * Reads a daily close series.
+ *
+ * `timestamp[]` and `indicators.quote[0].close[]` are the one place in this
+ * codebase where reading two arrays by position is correct: neither carries an
+ * identifier, and Yahoo defines them as parallel. CLAUDE.md's rule is about
+ * arrays that *do* carry one — so the guard here is different, and it is that
+ * the lengths must agree. When they don't, the pairing is guesswork and this
+ * returns null rather than a series drifting by an unknown offset, which is
+ * exactly the shape of the Hyperliquid bug.
+ *
+ * Nulls inside `close` are real and ordinary — a holiday, a halt, a fund that
+ * did not trade. Those days are dropped. They are not zeros and must never be
+ * read as a price of zero: a benchmark that touches zero for one day reports a
+ * −100% period and then a recovery of several thousand percent.
+ */
+export function parseYahooHistory(payload: unknown): YahooSeries | null {
+  const result = dig(payload, "chart.result.0");
+  if (!result || typeof result !== "object") return null;
+
+  const meta = dig(payload, "chart.result.0.meta") as Record<string, unknown> | undefined;
+  const timestamps = dig(payload, "chart.result.0.timestamp");
+  const closes = dig(payload, "chart.result.0.indicators.quote.0.close");
+
+  if (!Array.isArray(timestamps) || !Array.isArray(closes)) return null;
+  if (timestamps.length === 0) return null;
+  if (timestamps.length !== closes.length) return null;
+
+  const points: { date: string; close: number }[] = [];
+  for (let i = 0; i < timestamps.length; i += 1) {
+    const seconds = timestamps[i];
+    const close = closes[i];
+    if (typeof seconds !== "number" || !Number.isFinite(seconds)) continue;
+    if (typeof close !== "number" || !Number.isFinite(close) || close <= 0) continue;
+    points.push({
+      date: new Date(seconds * 1000).toISOString().slice(0, 10),
+      close,
+    });
+  }
+
+  if (points.length === 0) return null;
+
+  points.sort((a, b) => a.date.localeCompare(b.date));
+
+  return {
+    symbol: typeof meta?.symbol === "string" ? meta.symbol : "",
+    currency: typeof meta?.currency === "string" ? meta.currency.toUpperCase() : null,
+    points,
+  };
+}
+
 const dig = (value: unknown, path: string): unknown => {
   let cursor: unknown = value;
   for (const part of path.split(".")) {

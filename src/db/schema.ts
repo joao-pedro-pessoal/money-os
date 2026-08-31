@@ -1117,3 +1117,38 @@ export const liabilities = pgTable("liabilities", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// ---------- BenchmarkPrices ----------
+/**
+ * A cached daily close series for one benchmark proxy.
+ *
+ * The comparison needs a price for every day the portfolio has history, which
+ * is one network round trip for a whole series rather than one per day — but it
+ * is still a fetch on the way to drawing a chart, and a page must not depend on
+ * a third party answering before it can render. So the series is stored, and a
+ * refresh tops it up.
+ *
+ * Keyed by symbol and day rather than by benchmark id: the id is this app's
+ * label and could be re-pointed at a different listing, while the symbol is
+ * what was actually priced. Storing what was measured, not what it was called.
+ */
+export const benchmarkPrices = pgTable(
+  "benchmark_prices",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    /** The Yahoo symbol priced, e.g. "SXR8.DE". */
+    symbol: text("symbol").notNull(),
+    /** ISO day, "2026-08-31". Text so a day is a day and never a timezone. */
+    date: text("date").notNull(),
+    close: numeric("close", { precision: 20, scale: 6 }).notNull(),
+    /**
+     * The currency the venue quoted, stored beside the number as everywhere
+     * else here. A close with no currency is not a price.
+     */
+    currency: text("currency").notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique("benchmark_prices_symbol_date").on(t.symbol, t.date)]
+);

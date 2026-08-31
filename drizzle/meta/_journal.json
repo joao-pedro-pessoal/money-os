@@ -246,6 +246,13 @@
       "when": 1788085011189,
       "tag": "0034_omniscient_warstar",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1788188887660,
+      "tag": "0035_confused_forge",
+      "breakpoints": true
     }
   ]
 }

@@ -10,12 +10,12 @@ before changing anything; none of it is style preference.
 
 | Where | What | Rule |
 | ----- | ---- | ---- |
-| `src/lib/**` | 81 modules of pure logic — accounting, portfolio, quotes, csv, fx, connectors, stats | no DB, no React; no `fetch` outside the four below |
-| `src/actions/**` | 25 server-action modules; every database access | `"use server"`, async exports only |
+| `src/lib/**` | 82 modules of pure logic — accounting, portfolio, quotes, csv, fx, connectors, stats | no DB, no React; no `fetch` outside the four below |
+| `src/actions/**` | 29 server-action modules; every database access | `"use server"`, async exports only |
 | `src/app/(app)/**` | pages, server components by default | |
-| `src/components/**` | 48 components; `"use client"` only where it earns it | |
+| `src/components/**` | 56 components; `"use client"` only where it earns it | |
 | `src/db/schema.ts` | one file, the whole schema | migrations generated, never written |
-| `drizzle/` | 32 migrations + `meta/_journal.json` | the journal is what makes them run |
+| `drizzle/` | 36 migrations + `meta/_journal.json` | the journal is what makes them run |
 
 Four files in `src/lib/**` do call `fetch`, and the table above says "pure" of
 all of them: `connectors/bybit/index.ts`, `connectors/trading212/index.ts`,
@@ -270,6 +270,48 @@ Two traps specific to this codebase:
 - **`toBase` returns null when it has no rate.** Treat that as "leave it out and
   say so", never as zero.
 
+## Only a time-weighted line may be drawn against a benchmark
+
+Net worth rises when money is paid in. An index has no equivalent event, so
+overlaying the two compares a return against a return plus your salary, and the
+day of a deposit renders as a day of beating the market. `timeWeightedSeries`
+exists for this and is the only portfolio line the comparison may use.
+
+Its last point and `timeWeightedReturn`'s `totalReturn` are the same
+measurement, and a test asserts it across generated flow dates — including the
+case they could most easily disagree on, a flow on a day with no snapshot, where
+`valueAt` breaks the period at the *previous* reading. A chart whose end
+contradicts the headline above it is worse than either number alone.
+
+The window comes from `twr.from`/`twr.to`, never from the index. Where the index
+series does not reach that far back, `compareOverWindow` refuses: comparing
+eleven months of market against two of portfolio presents a difference in
+periods as a difference in performance.
+
+**The proxy must be an accumulating share class.** There is no free total-return
+series for an index, so the benchmark is an ETF that tracks it — and the share
+class matters more than the index does. An accumulating fund reinvests dividends
+internally, so its price *is* a total-return series. A distributing fund sheds
+its dividend from the price on every ex-date, which would understate the index
+by roughly its yield every year: about two points on a world tracker, small
+enough to look right and large enough to reverse the verdict.
+
+### A deposit on the last day used to read as a loss
+
+Found while building the above, by a property test walking flow dates across the
+window after every hand-written example had passed — each of those happened to
+put its flow in the middle.
+
+`timeWeightedReturn` closed its trailing leg against `last` even when the period
+had opened on that same final day, so the leg ran from `value + deposit` down to
+`value`: a loss exactly the size of the money paid in. €500 into a €1 300
+portfolio reported −28% for the year, on a portfolio that had done nothing. The
+app snapshots daily, so "a deposit on the most recent snapshot" is the ordinary
+case rather than the exotic one.
+
+The guard is `periodStartDate < to`: a period with no valuation after it is not
+closed at all.
+
 ## Count calendar days by the calendar
 
 `(a.getTime() - b.getTime()) / 86_400_000` is not the number of days between two
@@ -335,7 +377,7 @@ overwrite nothing the user edited.
 
 ```
 npx tsc --noEmit
-npx vitest run          # 1680+ tests; all must pass
+npx vitest run          # 1710+ tests; all must pass
 npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"

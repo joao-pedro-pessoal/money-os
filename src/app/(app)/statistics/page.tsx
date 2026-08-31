@@ -2,6 +2,7 @@ import { getStatistics } from "@/actions/stats";
 import { Money } from "@/components/PrivacyContext";
 import PageTabs from "@/components/PageTabs";
 import { ANALYTICS_TABS } from "@/lib/navigation";
+import BenchmarkCard from "@/components/BenchmarkCard";
 
 export default async function StatisticsPage() {
   const s = await getStatistics();
@@ -66,6 +67,9 @@ export default async function StatisticsPage() {
           </div>
         )}
       </div>
+
+      {/* ---- Against the market ---- */}
+      <BenchmarkCard />
 
       {/* ---- Drawdown ---- */}
       {s.drawdown.maxDrawdown > 0 && (

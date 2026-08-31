@@ -1,7 +1,7 @@
 # Money OS — o que faz e o que falta
 
-Estado a 31 de agosto de 2026. 1681 testes em 89 ficheiros, 35 migrations,
-40 tabelas, 81 módulos de lógica, 28 módulos de acesso a dados, 32 páginas.
+Estado a 31 de agosto de 2026. 1716 testes em 90 ficheiros, 36 migrations,
+41 tabelas, 82 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
@@ -225,6 +225,37 @@ um traço — um traço lê-se como zero, e zero é uma medição.
 **O que os faz aparecer**, sem mais trabalho: o TWR assim que houver um período
 de histórico que comece com a carteira já completa; a TIR quando os depósitos
 das outras plataformas estiverem registados.
+
+## Contra o mercado
+
+O TWR ao lado do que o índice fez **na mesma janela**, com a diferença em pontos
+percentuais e as duas linhas sobrepostas, ambas a começar em 100.
+
+Três decisões que decidem se isto é honesto:
+
+**Compara-se o TWR, nunca o património.** O património sobe quando pões dinheiro
+lá dentro e um índice não tem acontecimento equivalente — sobrepor os dois faria
+um depósito parecer um dia em que bateste o mercado. A linha da carteira é a do
+retorno com depósitos e levantamentos removidos, que é a mesma coisa que o nível
+de um índice é.
+
+**A janela é a que o teu retorno cobre, não a do índice.** Se a série do índice
+não chega ao início do teu histórico, a app recusa em vez de comparar onze meses
+de mercado contra dois da carteira e apresentar a diferença como desempenho.
+
+**O proxy é um ETF de acumulação, e isso é a parte que carrega o peso.** Não há
+série gratuita do "S&P 500 com dividendos", mas há do ETF que o segue — e a
+classe de ações importa mais do que o índice. Um fundo de acumulação reinveste
+os dividendos por dentro, portanto o preço dele *é* uma série de retorno total.
+Um de distribuição perde o dividendo no preço a cada pagamento, o que subavaliaria
+o índice em cerca do rendimento dele todos os anos: uns dois pontos num tracker
+mundial, pequeno o suficiente para parecer certo e grande o suficiente para
+inverter o veredicto. A app mostra o símbolo que cotou, para poderes conferir.
+
+S&P 500 via SXR8.DE e MSCI World via EUNL.DE, ambos em euros na Xetra — o que
+evita precisar de uma série histórica de câmbios que a app não guarda. A série
+fica guardada na base de dados; um refresh falhado deixa o gráfico de ontem de
+pé em vez de o esvaziar.
 
 ## Alertas
 
@@ -511,9 +542,8 @@ que um tracker não gera.
 
 Por ordem do que faria mais diferença, não do que é mais fácil.
 
-**A comparação com um índice de referência é a primeira.** Sem ela, um retorno
-não significa nada: 3,5% é bom ou mau consoante o que o mercado fez no mesmo
-período. Os dados de valor já existem; falta a série do índice e a sobreposição.
+**Transações recorrentes** passou a ser a primeira, porque a comparação com um
+índice já está feita — ver a Parte 1.
 
 **Transações recorrentes.** As subscrições dizem o que *vai* sair, mas não
 criam as transações. Continuas a lançar o Netflix à mão todos os meses, ou a

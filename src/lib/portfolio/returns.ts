@@ -181,6 +181,8 @@ export function timeWeightedReturn(
   let chained = 1;
   let periodStartValue = points[0].value;
   let periods = 0;
+  /** When the open period began, so a period with nothing after it is not closed. */
+  let periodStartDate = from;
 
   for (const flow of inside) {
     const before = valueAt(flow.date);
@@ -188,6 +190,7 @@ export function timeWeightedReturn(
       // Nothing to measure this leg against. Reopen from the flow rather than
       // inventing a return for it.
       periodStartValue = (before ?? 0) - flow.amount;
+      periodStartDate = flow.date;
       continue;
     }
 
@@ -202,10 +205,26 @@ export function timeWeightedReturn(
      * deposit changes the base, never the return.
      */
     periodStartValue = before - flow.amount;
+    periodStartDate = flow.date;
   }
 
   const last = points[points.length - 1].value;
-  if (periodStartValue > 0) {
+  /**
+   * A period that opened on the last day has no valuation after it.
+   *
+   * This used to close it against `last` anyway — the same reading that had
+   * just ended the previous leg — so a deposit dated on the final snapshot
+   * produced a leg from `value + deposit` down to `value`: a loss exactly the
+   * size of the money paid in, and a large one. €500 into a €1 300 portfolio
+   * reported −28% for the year, on the day of the deposit, from a portfolio
+   * that had done nothing at all.
+   *
+   * Found by a property test walking flow dates across the window after every
+   * hand-written example had passed; each of those happened to put its flow in
+   * the middle. The app syncs and snapshots daily, so "a deposit on the most
+   * recent snapshot" is the ordinary case, not the exotic one.
+   */
+  if (periodStartValue > 0 && periodStartDate < to) {
     chained *= last / periodStartValue;
     periods += 1;
   }
@@ -224,6 +243,78 @@ export function timeWeightedReturn(
     to,
     periods,
   };
+}
+
+/**
+ * The same chaining, kept as a curve instead of collapsed to one number.
+ *
+ * Rebased to 100 at the first value point, so it plots against an index rebased
+ * the same way. This is the **only** portfolio line that may be drawn against a
+ * benchmark: the net worth line moves when money is paid in, and an index has
+ * no equivalent event, so overlaying the two compares a return against a return
+ * plus your salary. A deposit would show as the portfolio "beating" the market
+ * on the day it landed.
+ *
+ * Every point is the growth of one unit of money left in from the start, which
+ * is the same thing an index level is.
+ *
+ * Returns an empty array on fewer than two value points, matching
+ * `timeWeightedReturn` returning null on the same input.
+ */
+export function timeWeightedSeries(values: ValuePoint[], flows: CashFlow[]): ValuePoint[] {
+  const points = [...values]
+    .filter((p) => Number.isFinite(p.value))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (points.length < 2) return [];
+
+  const from = points[0].date;
+  const to = points[points.length - 1].date;
+  const inside = flows.filter((f) => f.date >= from && f.date <= to && f.amount !== 0);
+
+  const sumBetween = (after: string, before: string) =>
+    inside.filter((f) => f.date > after && f.date < before).reduce((s, f) => s + f.amount, 0);
+  const sumOn = (date: string) =>
+    inside.filter((f) => f.date === date).reduce((s, f) => s + f.amount, 0);
+
+  let chained = 1;
+  /**
+   * A flow on the very first day breaks the period before any return exists,
+   * which is what `timeWeightedReturn` does too — its `valueAt` resolves that
+   * flow to this same point.
+   */
+  let periodStartValue = points[0].value - sumOn(points[0].date);
+  const curve: ValuePoint[] = [{ date: from, value: 100 }];
+
+  for (let i = 1; i < points.length; i += 1) {
+    const prev = points[i - 1];
+    const point = points[i];
+
+    /**
+     * A flow on a day with no snapshot breaks the period at the **previous**
+     * reading, because that is the last value known when it happened — and
+     * because `valueAt` in `timeWeightedReturn` resolves it exactly that way.
+     * The two must agree: a chart whose last point contradicts the headline
+     * above it is worse than either number alone.
+     */
+    const between = sumBetween(prev.date, point.date);
+    if (between !== 0) {
+      if (periodStartValue > 0) chained *= prev.value / periodStartValue;
+      periodStartValue = prev.value - between;
+    }
+
+    if (periodStartValue > 0) chained *= point.value / periodStartValue;
+
+    /**
+     * A flow dated on this reading is taken off the base for the next leg, and
+     * never off this one. `amount` is negative for money in, so subtracting it
+     * raises the base — the deposit moves the starting line, not the score.
+     */
+    periodStartValue = point.value - sumOn(point.date);
+    curve.push({ date: point.date, value: round2(chained * 100) });
+  }
+
+  return curve;
 }
 
 // ---------------------------------------------------------------------------

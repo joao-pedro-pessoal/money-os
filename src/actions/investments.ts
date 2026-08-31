@@ -34,6 +34,7 @@ import { STABLE_ASSET_TYPES } from "@/lib/portfolio/tags";
 import { toBase } from "@/lib/fx";
 import {
   timeWeightedReturn,
+  timeWeightedSeries,
   internalRateOfReturn,
   returnCoverage,
   contributionsExplainValue,
@@ -976,6 +977,16 @@ export async function getPortfolioReturns() {
     /** Net of deposits against withdrawals — what you have actually put in. */
     netContributed,
     timeWeighted: twr,
+    /**
+     * The same measurement as a line, for drawing against a benchmark.
+     *
+     * Built here and not in `actions/benchmark.ts` because `values` and
+     * `external` are assembled here: rebuilding them there would be a second
+     * definition of what a flow is and which value series counts, and the two
+     * would drift. Empty whenever the figure above is withheld, so a chart can
+     * never show a return the app has declined to state.
+     */
+    timeWeightedCurve: historyUsable ? timeWeightedSeries(values, external) : [],
     moneyWeighted: contributionsUsable ? internalRateOfReturn(irrFlows) : null,
     coverage: returnCoverage(values, external),
     /**
