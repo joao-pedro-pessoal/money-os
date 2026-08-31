@@ -28,11 +28,29 @@ export interface Composition {
   floating: number;
   /** Unrealised gain or loss on the floating part, when known. */
   unrealisedPnl: number;
+  /**
+   * Market-exposed positions whose gain or loss could not be worked out, and
+   * which are therefore **not** inside `unrealisedPnl`.
+   *
+   * A P&L needs two prices: what it cost and what it is worth. A holding with
+   * no price yet has one of them, and a synced exchange balance has no cost
+   * basis at all — neither can contribute, and neither contributes zero.
+   *
+   * Counted rather than ignored because the sum is otherwise a confident
+   * number that quietly leaves things out, which is this codebase's most
+   * repeated bug. A caller showing `unrealisedPnl` must say when this is above
+   * zero, or it is showing a total it cannot stand behind.
+   */
+  pnlUnmeasured: number;
   /** Share of the account exposed to the market, 0-100. */
   floatingPercent: number | null;
 }
 
-export function compose(parts: AccountPart[], unrealisedPnl = 0): Composition {
+export function compose(
+  parts: AccountPart[],
+  unrealisedPnl = 0,
+  pnlUnmeasured = 0
+): Composition {
   let stable = 0;
   let floating = 0;
 
@@ -47,6 +65,7 @@ export function compose(parts: AccountPart[], unrealisedPnl = 0): Composition {
     stable: round2(stable),
     floating: round2(floating),
     unrealisedPnl: round2(unrealisedPnl),
+    pnlUnmeasured,
     floatingPercent: total === 0 ? null : round2((floating / total) * 100),
   };
 }

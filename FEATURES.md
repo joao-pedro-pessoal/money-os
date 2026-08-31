@@ -1,6 +1,6 @@
 # Money OS — o que faz e o que falta
 
-Estado a 31 de agosto de 2026. 1721 testes em 91 ficheiros, 36 migrations,
+Estado a 31 de agosto de 2026. 1725 testes em 91 ficheiros, 36 migrations,
 41 tabelas, 82 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
@@ -27,6 +27,12 @@ garantido*. Toda a arquitetura pende sobre isso. Por isso o menu tem uma secçã
 chamada "Não garantido", por isso o Net Worth mostra sempre a parte flutuante
 entre parênteses, e por isso os investimentos vivem num módulo à parte da
 contabilidade.
+
+Nos cartões do painel, os parênteses passaram a mostrar o **ganho ou perda não
+realizado** em vez da parte flutuante. A razão é prática: numa carteira toda
+investida os dois números eram o mesmo, e `629,67 € (629,67 €)` não diz nada. O
+que não é garantido continua lá, na linha por baixo, a âmbar — o princípio não
+mudou, mudou onde está escrito.
 
 O segundo princípio é derivado do primeiro: **o mesmo dinheiro nunca pode ser
 contado duas vezes.** Isto falhou cinco vezes durante o desenvolvimento, sempre

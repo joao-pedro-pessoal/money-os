@@ -102,6 +102,16 @@ export default async function DashboardPage({
   const totalFloating = composition.reduce((s, c) => s + c.composition.floating, 0);
 
   /**
+   * The unrealised gain across every account, and how much of the portfolio
+   * could not contribute one. The count travels with the number so the card
+   * can say "approximate" rather than presenting a partial sum as a whole one.
+   */
+  const totalPnl = {
+    value: composition.reduce((s, c) => s + c.composition.unrealisedPnl, 0),
+    unmeasured: composition.reduce((s, c) => s + c.composition.pnlUnmeasured, 0),
+  };
+
+  /**
    * Flattened for the client component: a Map can't cross the boundary, and
    * the filters need a comparable value per row rather than a raw balance in
    * whatever currency the account happens to use.
@@ -264,6 +274,7 @@ export default async function DashboardPage({
           label="Net Worth"
           value={inDisplay(nw.total)}
           floating={inDisplay(nw.floating)}
+          pnl={{ value: inDisplay(totalPnl.value), unmeasured: totalPnl.unmeasured }}
           currency={base}
           note={
             nw.portfolio > 0
@@ -274,19 +285,22 @@ export default async function DashboardPage({
             "Everything you own, added once. Bank balances, broker accounts, crypto and manually recorded holdings.",
             "Cash here means anything that holds its value: money in a bank, and also fiat and stablecoins sitting on a platform. Only assets a market can reprice count as investments.",
             "The hard part is counting each euro exactly once: a broker's balance already contains its ETFs, so those are filed under investments rather than added again. That is why cash plus investments equals this figure instead of exceeding it.",
-            "The amber figure is how much of it a market can move — the part that could be worth less tomorrow without you doing anything.",
+            "The figure in parentheses is the unrealised gain or loss: what the market-exposed part is worth now against what it cost. Unrealised means nothing has been sold, so it is a position and not money in your hand.",
+            "The amber figure below it is how much of the total a market can move — the part that could be worth less tomorrow without you doing anything.",
+            "A position with no price yet, and a synced exchange balance with no record of what it cost, cannot produce a gain. Those are left out and counted rather than added as zero, and the card says so when there are any.",
           ]}
         />
         <StatCard
           label="Investments"
           value={inDisplay(nw.portfolio)}
           floating={inDisplay(nw.floating)}
+          pnl={{ value: inDisplay(totalPnl.value), unmeasured: totalPnl.unmeasured }}
           currency={base}
           explain={[
             "Assets whose price can move: ETFs, shares, crypto, and any part of an account you've told the app is invested.",
             "Euros, dollars and stablecoins are not counted here even when they sit in a broker or an exchange. They hold their value, so they belong with your cash — including collateral sitting free beside an open trade, which is money you still have.",
             "It is not added on top of Net Worth; it is a slice of it. A broker's balance already contains its positions, so this reclassifies that money rather than counting it twice.",
-            "The amber figure is the part a market can move — for this card, usually all of it.",
+            "The figure in parentheses is the unrealised gain or loss against what these cost. The amber figure below is the part a market can move — for this card, usually all of it.",
           ]}
         />
         <StatCard
@@ -551,13 +565,24 @@ export default async function DashboardPage({
 }
 
 /**
- * `floating` is the market-exposed slice of the value — shown in parentheses so
- * the headline number never hides how much of it isn't guaranteed.
+ * The parentheses hold the unrealised gain or loss on the market-exposed part.
+ *
+ * They used to hold `floating` — how much of the total isn't guaranteed — which
+ * is a founding principle of this app and is still shown, moved to the line
+ * below. It was replaced because on a portfolio that is entirely invested the
+ * two numbers are identical, and `629,67 € (629,67 €)` says nothing at all.
+ *
+ * `pnl.unmeasured` is how many market-exposed positions could not contribute:
+ * an unpriced holding, or a synced exchange balance with no cost basis. When it
+ * is above zero the figure is marked approximate, because a gain that quietly
+ * leaves positions out is the confident-but-incomplete number this codebase
+ * keeps having to remove.
  */
 function StatCard({
   label,
   value,
   floating,
+  pnl,
   currency = "EUR",
   note,
   explain,
@@ -565,25 +590,56 @@ function StatCard({
   label: string;
   value: number;
   floating?: number;
+  pnl?: { value: number; unmeasured: number };
   currency?: string;
   note?: string;
   /** What this figure counts, shown on hover or keyboard focus. */
   explain?: string | string[];
 }) {
+  const showFloating = floating !== undefined && floating > 0;
+  /**
+   * Nothing measurable means nothing to show. A P&L of zero with every
+   * position unmeasured is not a flat portfolio, and must not render as one.
+   */
+  const showPnl = pnl !== undefined && !(pnl.value === 0 && pnl.unmeasured > 0);
+  const up = showPnl && pnl.value >= 0;
+
   const card = (
     <div className="card p-4 h-full">
       <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
       <div className="text-xl font-semibold">
         <Money value={value} currency={currency} />
-        {floating !== undefined && floating > 0 && (
-          <span className="text-sm font-normal text-[var(--amber)]">
+        {showPnl && (
+          <span
+            className="text-sm font-normal"
+            style={{ color: up ? "var(--green)" : "var(--red)" }}
+          >
             {" "}
-            (<Money value={floating} currency={currency} />)
+            ({up ? "+" : "−"}
+            <Money value={Math.abs(pnl.value)} currency={currency} />)
           </span>
         )}
       </div>
-      {floating !== undefined && floating > 0 && (
-        <div className="text-[10px] text-[var(--muted)] mt-1">in parentheses: not guaranteed</div>
+      {showPnl && (
+        <div className="text-[10px] text-[var(--muted)] mt-1">
+          in parentheses: unrealised {up ? "gain" : "loss"}
+          {pnl.unmeasured > 0 && (
+            <span style={{ color: "var(--amber)" }}>
+              {" "}
+              · approximate, {pnl.unmeasured} position{pnl.unmeasured === 1 ? "" : "s"} with no
+              cost basis or price left out
+            </span>
+          )}
+        </div>
+      )}
+      {/* The founding distinction, kept: how much of this a market can move. */}
+      {showFloating && (
+        <div className="text-[10px] text-[var(--muted)] mt-1">
+          <span className="text-[var(--amber)]">
+            <Money value={floating} currency={currency} />
+          </span>{" "}
+          not guaranteed
+        </div>
       )}
       {note && <div className="text-[10px] text-[var(--muted)] mt-1">{note}</div>}
       {explain && (

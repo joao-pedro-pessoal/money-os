@@ -126,3 +126,42 @@ describe("growthOverDays", () => {
     expect(g?.gain).not.toBeNull();
   });
 });
+
+/**
+ * A gain that leaves positions out must say so.
+ *
+ * Two market-exposed things cannot produce a P&L: a holding with no price yet,
+ * and a synced exchange balance, which reports what it is worth and never what
+ * it cost. Both used to contribute nothing while the total presented itself as
+ * whole — the same shape as the twelve rows that once read `+0,00 €` on a
+ * portfolio that was up.
+ */
+describe("what the P&L could not measure", () => {
+  it("is zero when everything contributed", () => {
+    expect(compose([{ value: 3000, floating: true }], 240).pnlUnmeasured).toBe(0);
+  });
+
+  it("is carried through rather than folded into the number", () => {
+    const c = compose([{ value: 3000, floating: true }], 240, 2);
+    // The gain is still 240 — of the part that could be measured.
+    expect(c.unrealisedPnl).toBe(240);
+    expect(c.pnlUnmeasured).toBe(2);
+  });
+
+  /**
+   * The case that matters: nothing measurable at all. The gain is 0 and that 0
+   * means "nobody measured", not "flat". A caller has to be able to tell the
+   * two apart, which is what the count is for.
+   */
+  it("reports a count beside a zero, so the zero can be read as absence", () => {
+    const c = compose([{ value: 500, floating: true }], 0, 1);
+    expect(c.unrealisedPnl).toBe(0);
+    expect(c.pnlUnmeasured).toBe(1);
+  });
+
+  it("leaves the value split untouched — an unmeasured position still has value", () => {
+    const c = compose([{ value: 500, floating: true }], 0, 1);
+    expect(c.floating).toBe(500);
+    expect(c.total).toBe(500);
+  });
+});

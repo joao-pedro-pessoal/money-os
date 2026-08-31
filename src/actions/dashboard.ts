@@ -68,6 +68,14 @@ export async function getAccountComposition() {
   return accountRows.map((a) => {
     const parts: AccountPart[] = [];
     let pnl = 0;
+    /**
+     * Market-exposed things whose gain or loss cannot be worked out.
+     *
+     * Counted rather than silently added as zero. Two sources, and both used to
+     * disappear into the total: a holding with no price yet, and a synced
+     * exchange balance, which has a value but no record of what it cost.
+     */
+    let pnlUnmeasured = 0;
 
     // The balance itself. For an account whose balance already contains its
     // positions, the split can't be known from a single number, so it is
@@ -91,7 +99,29 @@ export async function getAccountComposition() {
 
       const stable = h.assetType !== null && STABLE_ASSET_TYPES.includes(h.assetType);
       parts.push({ value, floating: !stable });
-      if (!stable) pnl += toBase(unrealizedPnL(shaped), h.currency, rates, base) ?? 0;
+
+      if (!stable) {
+        /**
+         * An unpriced holding has no gain to report.
+         *
+         * `shaped.currentPrice` falls back to the entry price a few lines up,
+         * which is what the position itself stores when nothing has priced it
+         * — so `unrealizedPnL` returns exactly 0 for it. That zero is not a
+         * measurement of a flat position, it is the absence of one, and it is
+         * how twelve rows once read `+0,00 €` on a portfolio that was up.
+         */
+        const converted = isUnpriced({
+          avgEntryPrice: entry,
+          currentPrice: shaped.currentPrice,
+          quoteSymbol: h.quoteSymbol,
+          lastPriceUpdate: h.lastPriceUpdate,
+        })
+          ? null
+          : toBase(unrealizedPnL(shaped), h.currency, rates, base);
+
+        if (converted === null) pnlUnmeasured += 1;
+        else pnl += converted;
+      }
     }
 
     // Synced spot balances that are a pool of their own.
@@ -105,10 +135,18 @@ export async function getAccountComposition() {
         base
       );
       if (value === null) continue;
-      parts.push({
-        value,
-        floating: !isStableAsset(b.coin, assetTypeOf.get(`${b.connectionId}:${b.coin}`)),
-      });
+      const floating = !isStableAsset(b.coin, assetTypeOf.get(`${b.connectionId}:${b.coin}`));
+      parts.push({ value, floating });
+
+      /**
+       * A synced balance knows what it is worth and not what it cost.
+       *
+       * The exchange reports a quantity and a mark price; nothing in that says
+       * what was paid. So these carry value into `floating` and can carry no
+       * gain at all — and before this they simply were not counted either way,
+       * which made the P&L look complete while omitting them.
+       */
+      if (floating) pnlUnmeasured += 1;
     }
 
     return {
@@ -117,7 +155,7 @@ export async function getAccountComposition() {
       institution: a.institution,
       currency: a.currency,
       accountType: a.accountType,
-      composition: compose(parts, pnl),
+      composition: compose(parts, pnl, pnlUnmeasured),
     };
   });
 }
