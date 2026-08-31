@@ -8,6 +8,17 @@
  * and the floating part is shown in parentheses.
  *
  * Pure: the caller resolves currencies and holdings; this decides the split.
+ *
+ * **There is deliberately no P&L here.** This file used to carry
+ * `unrealisedPnl`, summed from manual holdings on accounts whose positions
+ * count on top — a *subset* of the portfolio, so it reported 0,00 € on an
+ * account whose positions were up 17,79 €, while the Investments page had the
+ * right figure. `portfolioSummary` in `lib/portfolio/positionView.ts` is the
+ * arbiter for a gain: it works from the same items the Investments table
+ * renders, and reports `costUnknown` separately so value with no cost basis is
+ * never folded in as break-even. Its own comment records fixing this exact bug
+ * once already; it came back in this file because the number was recomputed
+ * instead of read.
  */
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -26,31 +37,11 @@ export interface Composition {
   stable: number;
   /** Exposed to the market. */
   floating: number;
-  /** Unrealised gain or loss on the floating part, when known. */
-  unrealisedPnl: number;
-  /**
-   * Market-exposed positions whose gain or loss could not be worked out, and
-   * which are therefore **not** inside `unrealisedPnl`.
-   *
-   * A P&L needs two prices: what it cost and what it is worth. A holding with
-   * no price yet has one of them, and a synced exchange balance has no cost
-   * basis at all — neither can contribute, and neither contributes zero.
-   *
-   * Counted rather than ignored because the sum is otherwise a confident
-   * number that quietly leaves things out, which is this codebase's most
-   * repeated bug. A caller showing `unrealisedPnl` must say when this is above
-   * zero, or it is showing a total it cannot stand behind.
-   */
-  pnlUnmeasured: number;
   /** Share of the account exposed to the market, 0-100. */
   floatingPercent: number | null;
 }
 
-export function compose(
-  parts: AccountPart[],
-  unrealisedPnl = 0,
-  pnlUnmeasured = 0
-): Composition {
+export function compose(parts: AccountPart[]): Composition {
   let stable = 0;
   let floating = 0;
 
@@ -64,8 +55,6 @@ export function compose(
     total: round2(total),
     stable: round2(stable),
     floating: round2(floating),
-    unrealisedPnl: round2(unrealisedPnl),
-    pnlUnmeasured,
     floatingPercent: total === 0 ? null : round2((floating / total) * 100),
   };
 }

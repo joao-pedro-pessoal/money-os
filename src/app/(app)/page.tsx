@@ -11,7 +11,8 @@ import NetWorthChart from "@/components/NetWorthChart";
 import DonutChart from "@/components/DonutChart";
 import Section from "@/components/Section";
 import FlowBars from "@/components/FlowBars";
-import { getAccountComposition, getMonthShape } from "@/actions/dashboard";
+import { getAccountComposition, getMonthShape, getPortfolioItems } from "@/actions/dashboard";
+import { portfolioSummary } from "@/lib/portfolio/positionView";
 import { listPurposes } from "@/actions/purpose";
 import { listGoalsByPriority } from "@/actions/distribute";
 import { getTotalNetWorthOverTime } from "@/actions/analytics";
@@ -78,12 +79,14 @@ export default async function DashboardPage({
   const base = display;
   const platformTotals = await getAccountPlatformTotals();
 
-  const [composition, month, purposes, netWorthSeries, ranked] = await Promise.all([
+  const [composition, month, purposes, netWorthSeries, ranked, portfolioItems] = await Promise.all([
     getAccountComposition(),
     getMonthShape(),
     listPurposes(),
     getTotalNetWorthOverTime(),
     listGoalsByPriority(),
+    // The same list the Investments page reads, so the two cannot disagree.
+    getPortfolioItems(),
   ]);
 
   /**
@@ -102,13 +105,22 @@ export default async function DashboardPage({
   const totalFloating = composition.reduce((s, c) => s + c.composition.floating, 0);
 
   /**
-   * The unrealised gain across every account, and how much of the portfolio
-   * could not contribute one. The count travels with the number so the card
-   * can say "approximate" rather than presenting a partial sum as a whole one.
+   * The unrealised gain, read from the arbiter rather than recomputed.
+   *
+   * `portfolioSummary` works from the same items the Investments table renders,
+   * which is the whole reason it exists. Summing it out of the per-account
+   * composition instead gave 0,00 € against the 17,79 € that page showed — the
+   * composition only sees manual holdings on accounts whose positions count on
+   * top, and everything synced was invisible to it.
+   *
+   * `costUnknown` is market-exposed value whose cost nobody states, so it
+   * contributes no gain. Carried through so the card can say the figure is
+   * partial instead of presenting a subset as the whole.
    */
+  const portfolio = portfolioSummary(portfolioItems.items);
   const totalPnl = {
-    value: composition.reduce((s, c) => s + c.composition.unrealisedPnl, 0),
-    unmeasured: composition.reduce((s, c) => s + c.composition.pnlUnmeasured, 0),
+    value: portfolio.pnl,
+    costUnknown: portfolio.costUnknown,
   };
 
   /**
@@ -274,7 +286,10 @@ export default async function DashboardPage({
           label="Net Worth"
           value={inDisplay(nw.total)}
           floating={inDisplay(nw.floating)}
-          pnl={{ value: inDisplay(totalPnl.value), unmeasured: totalPnl.unmeasured }}
+          pnl={{
+            value: inDisplay(totalPnl.value),
+            costUnknown: inDisplay(totalPnl.costUnknown),
+          }}
           currency={base}
           note={
             nw.portfolio > 0
@@ -294,7 +309,10 @@ export default async function DashboardPage({
           label="Investments"
           value={inDisplay(nw.portfolio)}
           floating={inDisplay(nw.floating)}
-          pnl={{ value: inDisplay(totalPnl.value), unmeasured: totalPnl.unmeasured }}
+          pnl={{
+            value: inDisplay(totalPnl.value),
+            costUnknown: inDisplay(totalPnl.costUnknown),
+          }}
           currency={base}
           explain={[
             "Assets whose price can move: ETFs, shares, crypto, and any part of an account you've told the app is invested.",
@@ -572,11 +590,11 @@ export default async function DashboardPage({
  * below. It was replaced because on a portfolio that is entirely invested the
  * two numbers are identical, and `629,67 € (629,67 €)` says nothing at all.
  *
- * `pnl.unmeasured` is how many market-exposed positions could not contribute:
- * an unpriced holding, or a synced exchange balance with no cost basis. When it
- * is above zero the figure is marked approximate, because a gain that quietly
- * leaves positions out is the confident-but-incomplete number this codebase
- * keeps having to remove.
+ * `pnl.costUnknown` is market-exposed value whose cost nobody states — a synced
+ * exchange balance reports what it is worth and never what it was bought for.
+ * It contributes no gain, so when it is above zero the figure covers only part
+ * of the portfolio and the card says so. A gain that quietly leaves positions
+ * out is the confident-but-incomplete number this codebase keeps removing.
  */
 function StatCard({
   label,
@@ -590,7 +608,7 @@ function StatCard({
   label: string;
   value: number;
   floating?: number;
-  pnl?: { value: number; unmeasured: number };
+  pnl?: { value: number; costUnknown: number };
   currency?: string;
   note?: string;
   /** What this figure counts, shown on hover or keyboard focus. */
@@ -598,10 +616,11 @@ function StatCard({
 }) {
   const showFloating = floating !== undefined && floating > 0;
   /**
-   * Nothing measurable means nothing to show. A P&L of zero with every
-   * position unmeasured is not a flat portfolio, and must not render as one.
+   * Nothing measurable means nothing to show. A P&L of exactly zero while some
+   * of the portfolio has no cost basis is not a flat portfolio — it is a sum
+   * over the part that could be measured, which was empty.
    */
-  const showPnl = pnl !== undefined && !(pnl.value === 0 && pnl.unmeasured > 0);
+  const showPnl = pnl !== undefined && !(pnl.value === 0 && pnl.costUnknown > 0);
   const up = showPnl && pnl.value >= 0;
 
   const card = (
@@ -623,11 +642,11 @@ function StatCard({
       {showPnl && (
         <div className="text-[10px] text-[var(--muted)] mt-1">
           in parentheses: unrealised {up ? "gain" : "loss"}
-          {pnl.unmeasured > 0 && (
+          {pnl.costUnknown > 0 && (
             <span style={{ color: "var(--amber)" }}>
               {" "}
-              · approximate, {pnl.unmeasured} position{pnl.unmeasured === 1 ? "" : "s"} with no
-              cost basis or price left out
+              · partial, <Money value={pnl.costUnknown} currency={currency} /> of it has no
+              recorded cost
             </span>
           )}
         </div>

@@ -91,6 +91,39 @@ bucket allocation — and the same euro must be counted once.
 - `src/lib/accounting/networth.ts` is the arbiter. Changing it requires reading
   its tests first; they encode decisions that are not obvious from the code.
 
+## A second definition is worse than a wrong one
+
+This has now happened twice with the same number.
+
+`portfolioSummary` in `lib/portfolio/positionView.ts` is the arbiter for an
+unrealised gain. Its own comment records why it exists: the cards once read
+"Unrealized P&L 0,00 €" while the table below them reported −0,51 €, because
+the cards were computed from manual holdings alone.
+
+It came back. `lib/accounting/composition.ts` grew an `unrealisedPnl` field
+summed inside `getAccountComposition`, which walks holdings filtered by
+`holdingCountsOnTop` and never sees a synced position at all. The dashboard
+showed `+0,00 €` beside an Investments page showing `17,79 €`, on the same
+portfolio, on the same screen refresh.
+
+The tell is not that the number was wrong — it is that the number was
+**recomputed**. If a figure already has a function that defines it, a second
+sum over a different set of rows will agree right up until the rows differ,
+and then it disagrees in a way nobody notices because both look plausible.
+
+`compose` no longer reports a P&L at all, and says so where the field used to
+be. The rule: **before summing anything, search for the function that already
+defines it.** `networth.ts`, `portfolioSummary`, `holdingSource.ts` and
+`reconstruct.ts` are the four that exist; the correct move is always to call
+one, never to reproduce it.
+
+There is a second lesson underneath. `portfolioSummary` reports `costUnknown`
+— market-exposed value whose cost nobody states — separately, with the
+invariant `cost + pnl + costUnknown === floating`. A synced exchange balance
+knows what it is worth and never what it cost, so it can never contribute a
+gain. Anything showing `pnl` has to show that too, or it presents a subset of
+the portfolio as all of it.
+
 ## Holdings can now be known two ways
 
 Positions can come from a live connector *or* be rebuilt from an imported

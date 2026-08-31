@@ -1,6 +1,6 @@
 # Money OS — o que faz e o que falta
 
-Estado a 31 de agosto de 2026. 1725 testes em 91 ficheiros, 36 migrations,
+Estado a 31 de agosto de 2026. 1721 testes em 91 ficheiros, 36 migrations,
 41 tabelas, 82 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
