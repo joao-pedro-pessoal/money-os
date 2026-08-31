@@ -343,10 +343,12 @@ export default async function DashboardPage({
 
       {unconverted.length > 0 && (
         <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
-          <div className="text-sm">Some balances could not be converted to EUR</div>
+          <div className="text-sm">Some amounts could not be converted to EUR</div>
           <div className="text-xs text-[var(--muted)] mt-1">
             No exchange rate for {Array.from(new Set(unconverted.map((u) => u.currency))).join(", ")}. Those
-            amounts are left out of the totals above rather than counted as if they were euros. Add a rate in{" "}
+            balances — and any debt in the same currency, which would otherwise make net worth look
+            higher than it is — are left out of the totals above rather than counted as if they were
+            euros. Add a rate in{" "}
             <Link href="/settings" className="text-[var(--accent)]">
               Settings
             </Link>

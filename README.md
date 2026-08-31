@@ -106,7 +106,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (1615 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (1681 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 
@@ -159,6 +159,7 @@ the one this app was built for.
 
 Next.js App Router, TypeScript, Drizzle ORM, PostgreSQL, Recharts, Tailwind.
 
-`src/lib/**` is pure logic — no database, no `fetch`, no React. That discipline
-is why 1615 tests run without Postgres. Every database call lives in
+`src/lib/**` is pure logic — no database and no React, and no `fetch` outside
+the four connector/FX files that are the outbound edge. That discipline is why
+1681 tests run without Postgres. Every database call lives in
 `src/actions/**`.

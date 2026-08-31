@@ -123,9 +123,27 @@ export async function getNetWorth(): Promise<NetWorthResult & { baseCurrency: st
    * this codebase, pointing the other way for once.
    */
   const liabilityRows = await db.select().from(liabilities).where(eq(liabilities.active, true));
-  const owed = liabilityRows
-    .filter((l) => l.accountId === null)
-    .reduce((sum, l) => sum + (toBase(Number(l.balance), l.currency, rates, base) ?? 0), 0);
+
+  /**
+   * Through `sumInBase`, like every other component of this figure.
+   *
+   * This was the one that wasn't: a raw `reduce` with `?? 0`, so a debt in a
+   * currency with no rate became a debt of zero. Every asset in this function
+   * that cannot be converted is left out **and named**, and the dashboard says
+   * so; the liabilities quietly rounded to nothing and the headline came out
+   * too high, with no marker anywhere that something was missing.
+   *
+   * It is the same rule pointing the other way, and the direction is what makes
+   * it worse than the asset case: money you own going missing understates you,
+   * money you owe going missing tells you that you are richer than you are.
+   */
+  const { total: owed, unconverted: owedUnconverted } = sumInBase(
+    liabilityRows
+      .filter((l) => l.accountId === null)
+      .map((l) => ({ amount: Number(l.balance), currency: l.currency })),
+    rates,
+    base
+  );
 
   const result = computeNetWorth({
     cash,
@@ -138,7 +156,7 @@ export async function getNetWorth(): Promise<NetWorthResult & { baseCurrency: st
     syncedPortfolio: portfolio.syncedValue,
     openPositionValue,
     floatingPortfolio: portfolio.floating,
-    unconverted: [...cashUnconverted, ...portfolio.unconverted],
+    unconverted: [...cashUnconverted, ...portfolio.unconverted, ...owedUnconverted],
   });
 
   return { ...result, baseCurrency: base };

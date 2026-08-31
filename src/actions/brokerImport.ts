@@ -16,6 +16,9 @@ import {
   type BrokerEvent,
 } from "@/lib/csv/broker";
 import { reconstructHoldings, gainAgainstCost } from "@/lib/portfolio/reconstruct";
+import { sumInBase, toBase } from "@/lib/fx";
+import { getRates } from "./fx";
+import { getBaseCurrency } from "./settings";
 
 /**
  * Reads a statement and says what it would do, writing nothing.
@@ -160,6 +163,13 @@ export async function importBrokerStatement(formData: FormData) {
  * Returns null when no statement has been imported: without one there is no
  * honest way to tell a deposit from a gain, and guessing is what the whole
  * exercise is meant to stop.
+ *
+ * Everything it returns is in the base currency, and everything it could not
+ * put there is named. Both halves of this used to be added raw: the flows
+ * across whatever currencies the statement held, and `currentValue` across the
+ * balances of every account with an event in it — then subtracted from each
+ * other and labelled with the base currency's symbol. Two numbers in no
+ * currency making a third.
  */
 export async function getContributionBreakdown() {
   const rows = await db.select().from(brokerEvents);
@@ -182,22 +192,78 @@ export async function getContributionBreakdown() {
 
   const accountIds = [...new Set(rows.map((r) => r.accountId))];
   const accountRows = await db.select().from(accounts);
-  const currentValue = accountRows
-    .filter((a) => accountIds.includes(a.id))
-    .reduce((s, a) => s + Number(a.balance), 0);
+  const mine = accountRows.filter((a) => accountIds.includes(a.id));
+
+  const [rates, base] = await Promise.all([getRates(), getBaseCurrency()]);
+
+  /**
+   * The balances converted before they are added, not after.
+   *
+   * A statement can cover more than one account — an IBKR export routinely
+   * does — and those accounts need not share a currency. Summing the raw
+   * balances gave a number denominated in nothing, which then had the base
+   * currency's symbol put in front of it by the component.
+   */
+  const { total: currentValue, unconverted } = sumInBase(
+    mine.map((a) => ({ amount: Number(a.balance), currency: a.currency })),
+    rates,
+    base
+  );
 
   const flows = summariseCashFlows(events);
   const opening = checkOpeningBalance(events);
 
+  /**
+   * The flows brought into the same currency as the balance, or refused.
+   *
+   * `summariseCashFlows` is pure and has no rates, so it hands back the figures
+   * with the currency they are in. Here there are rates, so this is the layer
+   * that either converts or says why it could not.
+   */
+  const flowsInBase =
+    flows.currency === null
+      ? null
+      : (() => {
+          const to = (amount: number | null) =>
+            amount === null ? null : toBase(amount, flows.currency!, rates, base);
+          const deposits = to(flows.deposits);
+          const withdrawals = to(flows.withdrawals);
+          const net = to(flows.net);
+          return deposits === null || withdrawals === null || net === null
+            ? null
+            : { deposits, withdrawals, net, currency: base };
+        })();
+
+  /**
+   * Why the split cannot be shown, in the caller's words rather than a bare
+   * null. Three different situations used to collapse into one message about
+   * an incomplete statement, which was only right in one of them.
+   */
+  const unavailable: "incomplete_statement" | "mixed_currencies" | "no_rate" | null =
+    opening.needsOpeningBalance
+      ? "incomplete_statement"
+      : flows.currencies.length > 1
+        ? "mixed_currencies"
+        : flowsInBase === null && flows.currencies.length > 0
+          ? "no_rate"
+          : null;
+
   return {
     flows,
+    flowsInBase,
     opening,
+    currency: base,
+    unavailable,
     // With an incomplete statement the opening balance is unknown, so the
     // "gain" would be whatever is missing. Reported as null instead of wrong.
-    growth: opening.needsOpeningBalance ? null : growthBreakdown(currentValue, flows),
+    growth:
+      unavailable !== null || flowsInBase === null
+        ? null
+        : growthBreakdown(currentValue, { ...flows, ...flowsInBase }),
     currentValue,
+    unconverted,
     events: events.length,
-    accountNames: accountRows.filter((a) => accountIds.includes(a.id)).map((a) => a.name),
+    accountNames: mine.map((a) => a.name),
   };
 }
 
@@ -517,8 +583,23 @@ export async function getStatementBreakdown() {
       ) * 100
     ) / 100;
 
+  /**
+   * Every currency in the file, not just the first row's.
+   *
+   * This used to be `rows[0].currency`, applied as the label to every figure
+   * below — costs, interest, dividends, fees, realised P&L — each of which is
+   * still summed across currencies inside `reconstructHoldings`. Converting all
+   * of those properly means threading a rate through the reconstruction, which
+   * is a larger job than this one; naming the currencies at least stops a
+   * mixed-currency statement from being presented as though it were in euros.
+   * The UI warns when there is more than one.
+   */
+  const currencies = [...new Set(rows.map((r) => r.currency))].sort();
+
   return {
-    currency: rows[0]?.currency ?? "EUR",
+    currency: currencies[0] ?? "EUR",
+    /** More than one means every total below is a sum of unlike things. */
+    currencies,
     /** What you put in and took out across the account boundary. */
     flows,
     /** Where it ended up: one row per instrument, at what it cost. */

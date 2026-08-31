@@ -36,7 +36,9 @@ export default function StatementBreakdown({
 }: {
   data: {
     currency: string;
-    flows: { deposits: number; withdrawals: number; net: number };
+    /** Every currency in the file. More than one and the totals are unlike things. */
+    currencies?: string[];
+    flows: { deposits: number | null; withdrawals: number | null; net: number | null };
     holdings: Holding[];
     stillInvested: number;
     realizedPnl: number;
@@ -60,8 +62,27 @@ export default function StatementBreakdown({
   const held = data.holdings.filter((h) => h.quantity > 0);
   const closed = data.holdings.filter((h) => h.quantity === 0);
 
+  const mixedCurrencies = (data.currencies ?? []).length > 1;
+
   return (
     <div className="space-y-4">
+      {/* Costs, income and fees below are still summed straight across the
+          file, so in a mixed-currency statement each is a total of unlike
+          things. Converting them properly means threading a rate through the
+          reconstruction; until that exists, the page says so rather than
+          letting the currency symbol imply otherwise. */}
+      {mixedCurrencies && (
+        <div
+          className="rounded-lg border p-3 text-xs leading-relaxed"
+          style={{ borderColor: "var(--amber)", color: "var(--amber)" }}
+        >
+          <strong>This statement is in {(data.currencies ?? []).join(", ")}.</strong> The deposits
+          and withdrawals are reported as unmeasured because they cannot be added into one
+          figure. The cost, income and fee totals below are still sums across all of those
+          currencies — read them per instrument, not as a total.
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Figure label="You put in" value={data.flows.deposits} currency={c} />
         <Figure label="You took out" value={data.flows.withdrawals} currency={c} />
@@ -245,7 +266,8 @@ function Figure({
   tone,
 }: {
   label: string;
-  value: number;
+  /** Null when the statement mixes currencies and the figure cannot be one number. */
+  value: number | null;
   currency: string;
   tone?: "good";
 }) {
@@ -254,9 +276,15 @@ function Figure({
       <div className="text-[10px] text-[var(--muted)] mb-1">{label}</div>
       <div
         className="text-base font-semibold"
-        style={{ color: tone === "good" && value > 0 ? "var(--green)" : undefined }}
+        style={{ color: tone === "good" && value !== null && value > 0 ? "var(--green)" : undefined }}
       >
-        <Money value={value} currency={currency} />
+        {/* A dash, never 0,00: "nothing moved" and "nothing was measured" must
+            not render the same. */}
+        {value === null ? (
+          <span className="text-[var(--muted)]">—</span>
+        ) : (
+          <Money value={value} currency={currency} />
+        )}
       </div>
     </div>
   );

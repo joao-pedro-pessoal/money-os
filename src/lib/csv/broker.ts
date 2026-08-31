@@ -575,12 +575,21 @@ export function matchTicker(symbol: string, tickers: readonly string[]): string 
 }
 
 export interface CashFlowSummary {
-  /** Money you put in. */
-  deposits: number;
-  /** Money you took out, as a positive number. */
-  withdrawals: number;
-  /** Deposits minus withdrawals: what you actually committed. */
-  net: number;
+  /** Money you put in. Null when the flows are in more than one currency. */
+  deposits: number | null;
+  /** Money you took out, as a positive number. Null on mixed currencies. */
+  withdrawals: number | null;
+  /** Deposits minus withdrawals: what you actually committed. Null on mixed. */
+  net: number | null;
+  /**
+   * The currency the three figures above are in.
+   *
+   * Null when the flows span more than one, and null when there are no flows at
+   * all — with nothing to denominate there is no currency to name.
+   */
+  currency: string | null;
+  /** Every currency the deposits and withdrawals arrived in, sorted. */
+  currencies: string[];
   first: Date | null;
   last: Date | null;
 }
@@ -591,9 +600,28 @@ export interface CashFlowSummary {
  * Buys and sells are deliberately excluded: moving cash into a position isn't
  * money entering the account, it's the same money in another shape. Only
  * transfers across the account boundary count.
+ *
+ * **The totals are null when the statement mixes currencies.** `BrokerEvent`
+ * has carried a `currency` all along and this function used to add the amounts
+ * straight through it, producing a figure in no currency at all — which the
+ * screen then labelled with whatever the page's base currency happened to be.
+ * That is the recurring bug of this codebase (CLAUDE.md, "never add two amounts
+ * without converting first"), and it was sitting in the one place with no
+ * exchange rates to convert with.
+ *
+ * Refusing rather than converting is deliberate and matches `quotes/`: this
+ * module is pure and has no rates, so the honest answer is to hand the caller
+ * the currencies and let a layer that has rates decide. Zero would be a lie and
+ * a single number would be a worse one.
+ *
+ * An empty statement still reports 0, not null: nothing moved is a
+ * measurement, nothing was measured is not, and these are not the same.
  */
 export function summariseCashFlows(events: readonly BrokerEvent[]): CashFlowSummary {
   const flows = events.filter((e) => e.kind === "DEPOSIT" || e.kind === "WITHDRAWAL");
+
+  const currencies = [...new Set(flows.map((e) => e.currency))].sort();
+  const mixed = currencies.length > 1;
 
   const deposits = flows
     .filter((e) => e.kind === "DEPOSIT")
@@ -605,9 +633,11 @@ export function summariseCashFlows(events: readonly BrokerEvent[]): CashFlowSumm
   const dates = flows.map((e) => e.date.getTime()).sort((a, b) => a - b);
 
   return {
-    deposits: round2(deposits),
-    withdrawals: round2(withdrawals),
-    net: round2(deposits - withdrawals),
+    deposits: mixed ? null : round2(deposits),
+    withdrawals: mixed ? null : round2(withdrawals),
+    net: mixed ? null : round2(deposits - withdrawals),
+    currency: currencies.length === 1 ? currencies[0] : null,
+    currencies,
     first: dates.length > 0 ? new Date(dates[0]) : null,
     last: dates.length > 0 ? new Date(dates[dates.length - 1]) : null,
   };
@@ -672,12 +702,18 @@ export interface GrowthBreakdown {
  * zero for a full history, which is the usual case for an account opened this
  * year. Getting this wrong flatters or maligns the return, so it is a
  * parameter rather than an assumption.
+ *
+ * Returns null when the flows have no single currency. The subtraction
+ * `currentValue − netContributed` is only meaningful if both sides are in the
+ * same money, and there is nothing here that could put them there.
  */
 export function growthBreakdown(
   currentValue: number,
   flows: CashFlowSummary,
   openingValue = 0
-): GrowthBreakdown {
+): GrowthBreakdown | null {
+  if (flows.net === null) return null;
+
   const netContributed = flows.net;
   const gain = round2(currentValue - openingValue - netContributed);
   const committed = openingValue + netContributed;

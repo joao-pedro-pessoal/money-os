@@ -10,12 +10,19 @@ before changing anything; none of it is style preference.
 
 | Where | What | Rule |
 | ----- | ---- | ---- |
-| `src/lib/**` | 73 modules of pure logic — accounting, portfolio, quotes, csv, fx, connectors, stats | no DB, no `fetch`, no React |
+| `src/lib/**` | 81 modules of pure logic — accounting, portfolio, quotes, csv, fx, connectors, stats | no DB, no React; no `fetch` outside the four below |
 | `src/actions/**` | 25 server-action modules; every database access | `"use server"`, async exports only |
 | `src/app/(app)/**` | pages, server components by default | |
 | `src/components/**` | 48 components; `"use client"` only where it earns it | |
 | `src/db/schema.ts` | one file, the whole schema | migrations generated, never written |
 | `drizzle/` | 32 migrations + `meta/_journal.json` | the journal is what makes them run |
+
+Four files in `src/lib/**` do call `fetch`, and the table above says "pure" of
+all of them: `connectors/bybit/index.ts`, `connectors/trading212/index.ts`,
+`connectors/types.ts` and `fx/index.ts`. They are the outbound edge and have to
+reach the network. Everything else there is genuinely pure, which is what makes
+the suite run without Postgres — but don't read the rule as covering these, and
+don't add a fifth without a reason.
 
 The arbiters — the modules that decide what a number means — are
 `lib/accounting/networth.ts`, `lib/accounting/balanceScope.ts`,
@@ -23,11 +30,37 @@ The arbiters — the modules that decide what a number means — are
 looks wrong, it is almost always because something computed it outside one of
 these rather than because one of them is wrong.
 
+## A missing secret is refused, never defaulted
+
+`APP_SECRET` fell back to `"dev-secret-change-me"` and `APP_PASSWORD` to
+`"changeme"`. This repository is public, so both values are known to anyone who
+can read `src/lib/auth.ts`: an instance started without a `.env` was open to
+whoever found it, with a session cookie they could compute themselves. Only
+`docker-compose.yml` caught it, and only on the Docker path — the README also
+offers "on your own machine", where `npm start` checked nothing.
+
+`deriveKey` throws without `ENCRYPTION_KEY` and `/api/sync` answers 503 without
+`SYNC_SECRET`. Auth was the one place doing the opposite. **A secret is a
+measurement like any other, and absence is not a value** — the same rule as the
+rest of this file, applied to configuration.
+
+An empty string counts as missing: `${APP_SECRET:-}` in a compose file leaves
+one behind, and it is not a secret.
+
 ## Never hand-write a migration
 
 `drizzle-kit migrate` reads `drizzle/meta/_journal.json`. A `.sql` file with no
 journal entry is **skipped silently** — the app then fails at runtime with
 `column "x" does not exist`, which looks like a code bug and isn't.
+
+This warning was already here in bold and it happened anyway:
+`0012_smooth_ledger.sql` sat in the folder for three weeks with no journal
+entry, colliding on index 12 with the generated `0012_whole_firelord.sql`, and
+would never have run. It was harmless — the journalled file created the same
+three tables — but only by luck. `src/lib/__tests__/migrations.test.ts` now
+fails the suite on any orphan, any journal entry with no file, and any two
+migrations claiming the same index. A rule that has to be remembered is a rule
+that gets forgotten.
 
 Always:
 
@@ -203,8 +236,26 @@ across rows is a bug unless every row is already in the same currency, and the
 result is a number in no currency at all — rendered with whatever symbol the
 page happened to use.
 
-This has now been fixed in eight places. When adding a sum, the question is not
+This has now been fixed in eleven places. When adding a sum, the question is not
 "are these the same currency" but "what converts them".
+
+**Where the answer is "nothing can convert them here", refuse.** `src/lib/**` is
+pure and holds no rates, so `summariseCashFlows` returns `deposits`,
+`withdrawals` and `net` as `number | null` — null exactly when the statement
+spans more than one currency — plus the list of currencies it saw. A layer with
+rates converts; this one hands back what it knows. Making the totals nullable is
+what found the two components rendering them, because the compiler had to.
+
+Note the asymmetry that makes this the right default: an empty statement still
+reports `0`, because nothing moved *is* a measurement. Only the mixed case is
+null.
+
+**A component that only subtracts still has to report what it left out.** Every
+part of `getNetWorth` went through `sumInBase`, which returns `unconverted` —
+except liabilities, which used a raw `reduce` with `?? 0`. A debt in a currency
+with no rate became a debt of zero, and the headline came out too high with no
+marker anywhere. Money you own going missing understates you; money you owe
+going missing tells you that you are richer than you are.
 
 Two traps specific to this codebase:
 
@@ -284,11 +335,19 @@ overwrite nothing the user edited.
 
 ```
 npx tsc --noEmit
-npx vitest run          # 1480+ tests; all must pass
-npx eslint src          # 0 errors; a few warnings are pre-existing
+npx vitest run          # 1680+ tests; all must pass
+npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"
 ```
+
+**The layer these checks do not cover.** `src/lib/**` is ~17 000 lines against
+~15 000 lines of test. `src/actions/**`, `src/app/**` and `src/components/**`
+are ~25 000 lines with **no tests at all** — and that is where the money bugs
+live, because it is where two currencies meet. The suite being green says
+nothing about them. When a fix lands in an action, ask what pure function could
+have held it instead: `sumInBase` and `computeNetWorth` exist because that
+question was asked, and the answer is what made them testable.
 
 Tests here are expected to encode *why*, not just *what*. Several real bugs in
 this codebase were found by property tests over a range of inputs after every

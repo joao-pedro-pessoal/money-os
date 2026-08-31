@@ -142,6 +142,12 @@ export interface MonthlyFlow {
  * Savings rate is net / income. It is null when there was no income that month
  * rather than 0 or -Infinity, because "you saved 0%" and "there was nothing to
  * save from" are different statements.
+ *
+ * **Every amount must already be in the same currency.** There is no `currency`
+ * field on the input on purpose: this module is pure and holds no rates, so it
+ * cannot convert and must not appear to. The caller converts first — and for a
+ * long time `actions/stats.ts` did not, dropping `transactions.currency` on the
+ * way in and adding dollars to euros for the whole page below.
  */
 export function monthlyFlows(
   transactions: { date: string; amount: number; type: string }[]

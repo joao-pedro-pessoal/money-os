@@ -10,6 +10,8 @@ import {
   growthBreakdown,
   checkOpeningBalance,
   cumulativeHistory,
+  type BrokerEvent,
+  type CashFlowSummary,
 } from "../broker";
 
 /**
@@ -83,29 +85,30 @@ describe("what you added versus what you made", () => {
 
   it("ignores buys and sells, which move money without adding any", () => {
     // Thirty buys totalling well over a hundred euros, none of it new money.
-    expect(flows.deposits + flows.withdrawals).toBeLessThan(600);
+    expect(flows.deposits! + flows.withdrawals!).toBeLessThan(600);
+  });
+
+  it("names the single currency the figures are in", () => {
+    expect(flows.currency).toBe("EUR");
+    expect(flows.currencies).toEqual(["EUR"]);
   });
 
   it("separates growth from money paid in", () => {
     // The whole reason the statement matters: a balance that rose because you
     // deposited is not a balance that rose because you did well.
-    const g = growthBreakdown(125.39, flows);
+    const g = growthBreakdown(125.39, flows)!;
     expect(g.netContributed).toBe(-46);
     expect(g.gain).toBe(171.39);
   });
 
   it("reports no return when nothing was committed", () => {
     // Dividing by zero would print Infinity next to someone's money.
-    const g = growthBreakdown(100, { deposits: 0, withdrawals: 0, net: 0, first: null, last: null });
+    const g = growthBreakdown(100, single({ deposits: 0, withdrawals: 0, net: 0 }))!;
     expect(g.returnPercent).toBeNull();
   });
 
   it("works out a percentage on what was actually committed", () => {
-    const g = growthBreakdown(
-      220,
-      { deposits: 100, withdrawals: 0, net: 100, first: null, last: null },
-      100
-    );
+    const g = growthBreakdown(220, single({ deposits: 100, withdrawals: 0, net: 100 }), 100)!;
     // 220 now, 100 opening, 100 added → 20 earned on 200 committed.
     expect(g.gain).toBe(20);
     expect(g.returnPercent).toBe(10);
@@ -113,9 +116,85 @@ describe("what you added versus what you made", () => {
 
   it("handles an account with no cash movements at all", () => {
     const flat = summariseCashFlows([]);
-    expect(flat).toEqual({ deposits: 0, withdrawals: 0, net: 0, first: null, last: null });
+    // Zero, not null: nothing moved is a measurement. And no currency, because
+    // there is nothing here to denominate.
+    expect(flat).toEqual({
+      deposits: 0,
+      withdrawals: 0,
+      net: 0,
+      currency: null,
+      currencies: [],
+      first: null,
+      last: null,
+    });
   });
 });
+
+/**
+ * Money in two currencies does not add.
+ *
+ * `BrokerEvent` has always carried a `currency` and `summariseCashFlows` used
+ * to sum straight through it, producing a figure denominated in nothing — which
+ * the screen then labelled with the page's own currency symbol. An IBKR export
+ * covering a dollar and a euro account is the ordinary way to reach it.
+ */
+describe("a statement that mixes currencies", () => {
+  const flow = (kind: "DEPOSIT" | "WITHDRAWAL", amount: number, currency: string): BrokerEvent => ({
+    date: new Date("2026-03-01T00:00:00Z"),
+    kind,
+    symbol: null,
+    isin: null,
+    quantity: null,
+    price: null,
+    amount,
+    fees: null,
+    currency,
+    description: null,
+    externalId: null,
+    line: 1,
+  });
+
+  const mixed = summariseCashFlows([
+    flow("DEPOSIT", 1000, "EUR"),
+    flow("DEPOSIT", 1000, "USD"),
+    flow("WITHDRAWAL", -200, "USD"),
+  ]);
+
+  it("refuses to total them, rather than adding 1000 € to 1000 $", () => {
+    expect(mixed.deposits).toBeNull();
+    expect(mixed.withdrawals).toBeNull();
+    expect(mixed.net).toBeNull();
+  });
+
+  it("says which currencies it found, so a caller with rates can convert", () => {
+    expect(mixed.currency).toBeNull();
+    expect(mixed.currencies).toEqual(["EUR", "USD"]);
+  });
+
+  it("still reports the dates, which are currency-free", () => {
+    expect(mixed.first).not.toBeNull();
+    expect(mixed.last).not.toBeNull();
+  });
+
+  it("refuses a growth breakdown built on a total that does not exist", () => {
+    // The failure mode this replaces: 1800 subtracted from a euro balance and
+    // presented as a gain, with a euro sign in front of it.
+    expect(growthBreakdown(2000, mixed)).toBeNull();
+  });
+
+  it("totals normally once every flow is in one currency", () => {
+    const same = summariseCashFlows([flow("DEPOSIT", 1000, "USD"), flow("WITHDRAWAL", -200, "USD")]);
+    expect(same.deposits).toBe(1000);
+    expect(same.withdrawals).toBe(200);
+    expect(same.net).toBe(800);
+    expect(same.currency).toBe("USD");
+  });
+});
+
+/** A single-currency summary, for the growth tests that only care about totals. */
+function single(f: { deposits: number; withdrawals: number; net: number }): CashFlowSummary {
+  return { ...f, currency: "EUR", currencies: ["EUR"], first: null, last: null };
+}
 
 describe("noticing that the statement doesn't start at the beginning", () => {
   it("spots it in the real file", () => {

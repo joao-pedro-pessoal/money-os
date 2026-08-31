@@ -1,6 +1,6 @@
 # Money OS — o que faz e o que falta
 
-Estado a 30 de agosto de 2026. 1661 testes em 87 ficheiros, 35 migrations,
+Estado a 31 de agosto de 2026. 1681 testes em 89 ficheiros, 35 migrations,
 40 tabelas, 81 módulos de lógica, 28 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
@@ -454,10 +454,25 @@ movimentos e quatro plataformas ligadas, e foi por isso que os erros dele
 apareceram. O lado do dinheiro não está certo — está *por estrear*, o que é
 diferente e pior de avaliar.
 
-Já há uma prova disso: `src/actions/stats.ts` deita fora a moeda das transações
-antes de as somar. No dia em que lançares uma despesa em dólares, a média mensal
-de despesas fica errada. É o mesmo erro corrigido dez vezes, à espera na metade
-que ninguém pôs à prova.
+Havia uma prova disso e já está corrigida: o `src/actions/stats.ts` deitava fora
+a moeda das transações antes de as somar, portanto a primeira despesa em dólares
+teria estragado a média mensal, a taxa de poupança, a autonomia e as duas
+projeções. Agora converte antes de agrupar e a página nomeia as moedas para as
+quais não há taxa, em vez de as contar como euros.
+
+Na mesma passagem apareceram mais duas do mesmo erro, ambas corrigidas: o
+`summariseCashFlows` somava depósitos e levantamentos através das moedas do
+extrato (agora recusa-se e devolve a lista de moedas, para quem tem taxas
+converter), e os passivos eram a única componente do património que não dizia o
+que não tinha conseguido converter — uma hipoteca numa moeda sem taxa
+desaparecia, e o património ficava mais alto do que é, sem marcador nenhum.
+
+O que **continua** por converter: dentro do `getStatementBreakdown`, os totais de
+custo, juros, dividendos e taxas são somados em bruto através das moedas do
+ficheiro (vêm assim do `reconstructHoldings`). Num extrato de moeda única — o
+caso normal — estão certos. Num extrato misto o ecrã avisa que aqueles totais
+são somas de coisas diferentes, mas ainda não os converte. Fazê-lo implica passar
+uma taxa por dentro da reconstrução.
 
 **Duas medidas de retorno estão retidas.** O TWR e a TIR não podem ser
 calculados com os dados de hoje — ver a secção acima. Não é um defeito do
@@ -475,7 +490,12 @@ deteta e explica, mas continua a ser chato.
 
 **Sem limite de tentativas no login.** Numa app pessoal atrás de uma password
 é aceitável, mas se alguma vez a puseres na internet aberta, isto é o primeiro
-buraco.
+buraco. (O segundo buraco, esse já foi tapado: o `APP_PASSWORD` caía para
+`"changeme"` e o `APP_SECRET` para `"dev-secret-change-me"` quando não estavam
+definidos. Como o repositório é público, qualquer pessoa que encontrasse uma
+instância arrancada sem `.env` entrava, e podia calcular o cookie de sessão a
+partir do código. Agora rebenta a dizer o que falta, como o `ENCRYPTION_KEY`
+sempre fez.)
 
 **Uma tabela de segurança por apagar.** `investment_activities_pre0033` guarda a
 cópia dos 107 registos anteriores à migração da tabela de movimentos. Verificado

@@ -15,6 +15,20 @@ export default async function StatisticsPage() {
         Everything here is measured from your own history, not estimated.
       </p>
 
+      {/* Every figure on this page is converted to the base currency first.
+          Anything that had no rate is left out and named here, rather than
+          counted as though it were already in {c}. */}
+      {s.unconverted.length > 0 && (
+        <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
+          <div className="text-sm">Some amounts could not be converted to {c}</div>
+          <div className="text-xs text-[var(--muted)] mt-1">
+            No exchange rate for {s.unconverted.join(", ")}. Transactions, balances and bucket
+            allocations in {s.unconverted.length === 1 ? "that currency" : "those currencies"} are
+            left out of every figure below rather than counted as {c}. Add a rate in Settings.
+          </div>
+        </div>
+      )}
+
       {/* ---- Returns by period ---- */}
       <div className="card p-4">
         <div className="text-sm font-medium mb-3">How the money has moved</div>
