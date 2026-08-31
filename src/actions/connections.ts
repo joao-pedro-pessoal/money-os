@@ -24,6 +24,7 @@ import { createHyperliquidConnector } from "@/lib/connectors/hyperliquid";
 import { createBybitConnector } from "@/lib/connectors/bybit";
 import { createIbkrConnector, discoverIbkrAccounts } from "@/lib/connectors/ibkr";
 import { createTrading212Connector } from "@/lib/connectors/trading212";
+import { createKrakenConnector } from "@/lib/connectors/kraken";
 import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
 import { freshnessOf } from "@/lib/connectors/freshness";
 import { marginView, describePressure } from "@/lib/connectors/margin";
@@ -75,6 +76,9 @@ function connectorFor(
         undefined,
         bybitBaseUrl(region)
       );
+    case "kraken":
+      if (!secret) throw new Error("This Kraken connection has no stored API secret");
+      return createKrakenConnector({ apiKey: externalId, apiSecret: secret });
     case "trading212":
       // The secret is optional at the protocol level but mandatory here: if
       // Trading 212 issued you one, storing only half the pair would fail on
@@ -87,7 +91,7 @@ function connectorFor(
 }
 
 /** Platforms whose credentials must be encrypted before being stored. */
-const NEEDS_SECRET = new Set(["bybit", "trading212"]);
+const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken"]);
 
 /**
  * Whether secret storage is usable at all.

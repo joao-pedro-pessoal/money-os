@@ -431,7 +431,7 @@ overwrite nothing the user edited.
 
 ```
 npx tsc --noEmit
-npx vitest run          # 1720+ tests; all must pass
+npx vitest run          # 1760+ tests; all must pass
 npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"
@@ -504,6 +504,29 @@ Note this breaks the `looksUnified` heuristic in `parse.ts`, which infers a
 unified account from `withdrawable` exceeding the perps equity. That was true of
 the account which exposed it and is not true of this one. It survives only as a
 fallback for when `userAbstraction` cannot be reached — never prefer it.
+
+## Adding a platform touches four places
+
+`PLATFORM_LABELS` puts it in the picker, `PLATFORM_SETUP` says what it needs,
+`NEEDS_SECRET` decides whether the credential is encrypted, and the `switch` in
+`actions/connections.ts` builds the connector. Three out of four is worse than
+none: the platform is offered, accepted and saved, then throws "No connector
+for platform" on the first sync, far from anything that explains it. Missing
+`NEEDS_SECRET` is worse again — the secret is stored unencrypted, silently.
+
+`lib/connectors/__tests__/wiring.test.ts` fails on any of those gaps.
+
+### Kraken, and the two traps in it
+
+**An error arrives with HTTP 200.** `{"error":["EAPI:Invalid key"],"result":{}}`
+with a good status line. Checked only by status, a wrong key reads as an account
+holding nothing. `krakenError` is called before anything is parsed.
+
+**A pair is named by the venue.** DOGE's asset code is `XXDG` and its dollar
+pair is `XDGUSD`; `XXDGZUSD` does not exist. Pair names are read from
+`AssetPairs` and joined on base/quote, never constructed — the Hyperliquid
+lesson in a different costume, and this one was confirmed against the live API
+rather than guessed at.
 
 ## Trade Republic
 

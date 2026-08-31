@@ -15,6 +15,7 @@ export const PLATFORM_LABELS: Record<string, string> = {
   bybit: "Bybit",
   ibkr: "Interactive Brokers",
   trading212: "Trading 212",
+  kraken: "Kraken",
 };
 
 /**
@@ -61,6 +62,19 @@ export const PLATFORM_SETUP: Record<
     ],
     warning:
       "bybit.eu cannot be connected, and no setting here changes that: its keys are issued only through “Connect to Third-Party Applications” and stay locked to that application's servers, so none of them authenticate from your own machine. Tested against a live account — it always answers “Unmatched IP”. If you are on bybit.eu, track that account manually instead.",
+  },
+  kraken: {
+    identifierLabel: "API key",
+    identifierHint: "from Kraken → Settings → API",
+    needsSecret: true,
+    help:
+      "Kraken issues keys with individual permissions. This needs Query Funds and nothing else — a key without trade permission cannot place an order even if the app were wrong. The secret is encrypted before it is stored and never shown again.",
+    steps: [
+      "Set ENCRYPTION_KEY in .env and restart the app, or the secret cannot be stored.",
+      "In Kraken, go to Settings → API and create a new key.",
+      "Tick Query Funds. Leave every trading and withdrawal permission OFF.",
+      "Paste the key and its private key below.",
+    ],
   },
   ibkr: {
     identifierLabel: "Account id",

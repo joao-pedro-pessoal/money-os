@@ -1,7 +1,7 @@
 # Money OS — o que faz e o que falta
 
-Estado a 31 de agosto de 2026. 1721 testes em 91 ficheiros, 36 migrations,
-41 tabelas, 82 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
+Estado a 31 de agosto de 2026. 1765 testes em 93 ficheiros, 36 migrations,
+41 tabelas, 84 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
@@ -397,6 +397,38 @@ quem estiver a ler ao lado do ecrã.
   posição volátil.
 - Botão para incluir ou excluir spot e stablecoins da análise.
 
+## Kraken
+
+O quinto connector, e o primeiro construído sem uma conta por trás. Lê saldos
+(`BalanceEx`), a avaliação da conta (`TradeBalance`) e preços públicos. Nenhum
+endpoint que mova seja o que for é sequer importado, e a chave que pede só
+precisa da permissão *Query Funds*.
+
+Três coisas desta API decidiram o desenho:
+
+**Um erro chega com HTTP 200.** A Kraken responde a uma chave errada com
+`{"error":["EAPI:Invalid key"],"result":{}}` e um estado 200. Quem só olha para
+o estado lê uma conta vazia — uma credencial errada a aparecer como uma carteira
+que desapareceu. O `krakenError` existe para isso nunca ser lido como dado.
+
+**Os códigos de ativo não são tickers.** Bitcoin é `XXBT`, euro é `ZEUR`, e os
+prefixos X e Z são um esquema antigo que a Kraken deixou de aplicar. A regra não
+pode ser "tirar a primeira letra": `XTZ` é Tezos, e ficaria `TZ`. Os sufixos
+também contam — `.S` é staking e `.F` é o produto de rendimento, e ambos são o
+mesmo ativo noutro estado.
+
+**O nome de um par é da corretora, não teu.** O DOGE tem código `XXDG` e negoceia
+no par `XDGUSD` — e um par chamado `XXDGZUSD` **não existe**. Construir o nome a
+partir dos códigos daria nada, e um preço em falta é indistinguível de um ativo
+não listado, portanto a moeda ficaria sem preço para sempre sem ninguém perceber
+porquê. O connector pergunta que pares existem e junta pelo identificador, que é
+a mesma lição que a Hyperliquid ensinou cara.
+
+Verificado contra a API real no que não precisa de credenciais: 1437 pares lidos,
+oito preços resolvidos, e a assinatura reproduz exatamente o vetor publicado na
+documentação da Kraken. **Por verificar:** os dois endpoints privados, que
+precisam de uma chave.
+
 ## Ligações a plataformas
 
 Arquitetura: Connector → Normalizer → Base de dados → UI. Acrescentar uma
@@ -597,10 +629,16 @@ incluí-los no backup e no restauro — custo alto para o valor.
 maturidade, não preço de mercado. Modelada como está, dá um número errado com
 ar de certo. Só vale a pena se tiveres alguma.
 
-**Mais plataformas.** Revolut, Binance, Kraken, Degiro, Coinbase. Cada uma é uma
-pasta e um `case` — a arquitetura aguenta. A questão é sempre a mesma: a
-plataforma dá API de leitura sem exigir ser empresa? A Trade Republic saiu desta
-lista: está decidido que fica em CSV, e a razão está em `docs/trade-republic.md`.
+**Mais plataformas.** A Kraken já está feita — ver a Parte 1 — e **falta
+testá-la contra uma conta real**, que é o único passo que descobre erros de
+connector neste projeto. Ficam a Binance e a Coinbase, que emitem chaves de
+leitura a pessoas singulares e encaixam no mesmo molde.
+
+A Revolut pessoal e os bancos portugueses passam por PSD2 e exigem licença
+AISP. A Degiro não tem API pública: os clientes que existem são engenharia
+inversa sobre o login, o que os põe na mesma objeção da Trade Republic — seriam
+credenciais capazes de mover dinheiro. A Trade Republic saiu desta lista: fica
+em CSV, e a razão está em `docs/trade-republic.md`.
 
 **Multi-utilizador.** A app assume uma pessoa. Contas partilhadas, ou dar
 acesso a alguém, não existe. É o que separa esta app de uma que possa ser
