@@ -312,6 +312,27 @@ case rather than the exotic one.
 The guard is `periodStartDate < to`: a period with no valuation after it is not
 closed at all.
 
+## A token used anywhere must exist in every theme
+
+`--border-strong` was defined in three of the eight themes; in the other five
+the borders using it fell back to `currentColor`, so a chart baseline drew in
+the text colour. `src/lib/__tests__/theme-tokens.test.ts` now parses
+`globals.css` and fails on any theme whose token set differs from the others,
+on any `var(--x)` in the app that no theme defines, and on any override that
+invents a name.
+
+There are three axes, not two. `data-accent` × `data-mode` gives the eight
+complete themes; `data-signal` is an override that applies only to the
+monochrome pair and redefines a deliberate subset — the good/bad colours and
+the categorical `--chart-N` palette. Overrides carry three attributes and so
+win on specificity wherever they apply, regardless of order.
+
+**A component with a colour literal in it cannot be themed.** `DonutChart` held
+four hex values, so the monochrome theme was not monochrome past the fourth
+slice: it drew blue, purple and cyan on a page that had deliberately thrown
+every hue away. Slice colours are `--chart-1`…`--chart-4` now. A theme is only
+honoured by the components that ask it.
+
 ## Count calendar days by the calendar
 
 `(a.getTime() - b.getTime()) / 86_400_000` is not the number of days between two
@@ -377,7 +398,7 @@ overwrite nothing the user edited.
 
 ```
 npx tsc --noEmit
-npx vitest run          # 1710+ tests; all must pass
+npx vitest run          # 1720+ tests; all must pass
 npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"

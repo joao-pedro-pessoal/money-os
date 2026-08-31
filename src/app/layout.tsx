@@ -52,9 +52,11 @@ const applyStoredTheme = `
 try {
   var a = localStorage.getItem("moneyos_accent");
   var m = localStorage.getItem("moneyos_mode");
+  var s = localStorage.getItem("moneyos_signal");
   document.documentElement.dataset.accent =
     ["gold","emerald","indigo","mono"].indexOf(a) >= 0 ? a : "gold";
   document.documentElement.dataset.mode = m === "light" ? "light" : "dark";
+  document.documentElement.dataset.signal = s === "colour" ? "colour" : "mono";
   var t = document.querySelector('meta[name="theme-color"]');
   if (t) t.setAttribute("content", m === "light" ? "#faf6ee" : "#141210");
 } catch (e) {}

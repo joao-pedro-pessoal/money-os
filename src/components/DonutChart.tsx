@@ -4,15 +4,28 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { usePrivacy } from "./PrivacyContext";
 import { fmt } from "@/lib/format";
 
+/**
+ * Every slice colour comes from the theme, none from here.
+ *
+ * Four of these used to be literal hex — `#7aa2f7`, `#bb9af7`, `#7dcfff`,
+ * `#e0af68` — so the monochrome theme was not monochrome: a donut with five or
+ * more slices put blue, purple and cyan on a page that had deliberately thrown
+ * away every hue. A theme can only be honoured by components that ask it.
+ *
+ * The order matters. The first four are the tokens that already mean something
+ * elsewhere, so a two- or three-slice chart reads consistently with the rest of
+ * the page; `--chart-1` onwards are the categorical ones, which mean nothing
+ * beyond "not the last one".
+ */
 const COLORS = [
   "var(--accent)",
   "var(--green)",
   "var(--amber)",
   "var(--red)",
-  "#7aa2f7",
-  "#bb9af7",
-  "#7dcfff",
-  "#e0af68",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
   "var(--muted)",
 ];
 

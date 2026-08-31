@@ -1,6 +1,6 @@
 # Money OS — o que faz e o que falta
 
-Estado a 31 de agosto de 2026. 1716 testes em 90 ficheiros, 36 migrations,
+Estado a 31 de agosto de 2026. 1721 testes em 91 ficheiros, 36 migrations,
 41 tabelas, 82 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
@@ -454,6 +454,29 @@ que nada se mexe.
 
 Os seeds são idempotentes por slug: voltar a correr um acrescenta o que falta e
 não sobrepõe nada que tenhas editado.
+
+## Temas
+
+Oito temas: quatro acentos (Gold, Emerald, Indigo, Monocromático) vezes claro e
+escuro. O monocromático não tem matiz nenhuma — o escuro é preto a sério, o
+claro é branco a sério.
+
+**E tem um terceiro eixo.** No monocromático podes escolher se a cor que
+*significa* alguma coisa volta:
+
+- **Nenhuma** — um ganho é mais claro, uma perda mais escura. Aguenta ser
+  impresso e é legível para quem não separa vermelho de verde.
+- **Verde, vermelho e ativos** — a página continua a preto e branco, e as únicas
+  partes com cor passam a ser as que querem dizer alguma coisa: ganho/perda, e a
+  paleta que distingue um ativo do outro nos gráficos.
+
+Só aparece no monocromático, porque nos outros acentos os sinais já são a cores
+e não haveria nada para repor.
+
+Ao construir isto descobriu-se que o tema monocromático **não era monocromático**:
+o gráfico de rosca tinha quatro cores fixas no código, portanto a partir da
+quinta fatia desenhava azul, roxo e ciano numa página que tinha deitado fora
+todas as matizes. As cores das fatias são tokens do tema agora.
 
 ## Backup
 
