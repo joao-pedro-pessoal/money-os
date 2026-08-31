@@ -25,6 +25,7 @@ import { createBybitConnector } from "@/lib/connectors/bybit";
 import { createIbkrConnector, discoverIbkrAccounts } from "@/lib/connectors/ibkr";
 import { createTrading212Connector } from "@/lib/connectors/trading212";
 import { createKrakenConnector } from "@/lib/connectors/kraken";
+import { createBinanceConnector } from "@/lib/connectors/binance";
 import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
 import { freshnessOf } from "@/lib/connectors/freshness";
 import { marginView, describePressure } from "@/lib/connectors/margin";
@@ -76,6 +77,9 @@ function connectorFor(
         undefined,
         bybitBaseUrl(region)
       );
+    case "binance":
+      if (!secret) throw new Error("This Binance connection has no stored API secret");
+      return createBinanceConnector({ apiKey: externalId, apiSecret: secret });
     case "kraken":
       if (!secret) throw new Error("This Kraken connection has no stored API secret");
       return createKrakenConnector({ apiKey: externalId, apiSecret: secret });
@@ -91,7 +95,7 @@ function connectorFor(
 }
 
 /** Platforms whose credentials must be encrypted before being stored. */
-const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken"]);
+const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken", "binance"]);
 
 /**
  * Whether secret storage is usable at all.

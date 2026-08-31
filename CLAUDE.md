@@ -431,7 +431,7 @@ overwrite nothing the user edited.
 
 ```
 npx tsc --noEmit
-npx vitest run          # 1760+ tests; all must pass
+npx vitest run          # 1780+ tests; all must pass
 npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"
@@ -515,6 +515,26 @@ for platform" on the first sync, far from anything that explains it. Missing
 `NEEDS_SECRET` is worse again — the secret is stored unencrypted, silently.
 
 `lib/connectors/__tests__/wiring.test.ts` fails on any of those gaps.
+
+### Binance: compose a symbol, never decompose one
+
+The mirror image of the Kraken rule, from the same principle — use the
+direction the venue defines.
+
+`symbol === baseAsset + quoteAsset` holds for every one of Binance's 3 645 spot
+symbols, checked against the live `exchangeInfo`, so composing `BTC` + `USDT`
+is exact. Splitting is not: eight real symbols decompose two ways against
+Binance's own quote list — `BTCBUSD` is (BTC, BUSD) and also reads as
+(BTCB, USD). Anything splitting a symbol to learn what it prices is right most
+of the time and silently wrong for those.
+
+`exchangeInfo` is 16.65 MB and `ticker/price` is 153 KB, which is why prices
+come from the ticker and symbols are composed rather than resolved.
+
+**It reads the Spot wallet only**, and says so on the connection screen.
+Funding, Simple Earn and Futures are separate wallets with separate endpoints;
+a partial total presented as a whole one is the failure this codebase removes
+most often, so the gap is stated rather than hidden.
 
 ### Kraken, and the two traps in it
 

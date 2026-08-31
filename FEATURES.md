@@ -1,7 +1,7 @@
 # Money OS — o que faz e o que falta
 
-Estado a 31 de agosto de 2026. 1765 testes em 93 ficheiros, 36 migrations,
-41 tabelas, 84 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
+Estado a 31 de agosto de 2026. 1789 testes em 94 ficheiros, 36 migrations,
+41 tabelas, 86 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
@@ -429,6 +429,39 @@ oito preços resolvidos, e a assinatura reproduz exatamente o vetor publicado na
 documentação da Kraken. **Por verificar:** os dois endpoints privados, que
 precisam de uma chave.
 
+## Binance
+
+O sexto connector, e o segundo construído sem conta. Lê a carteira **Spot** e
+avalia-a com os preços públicos. Só precisa da permissão *Enable Reading*.
+
+**Lê a Spot e mais nada, e diz isso antes de ligares.** O dinheiro em Funding,
+Simple Earn, Futuros ou produtos bloqueados vive em carteiras separadas, cada
+uma com o seu endpoint e a sua resposta, e nenhuma se escreve sem uma chave real
+sem adivinhar o formato. Apresentar um total parcial como se fosse inteiro é o
+erro que este projeto mais vezes já removeu, portanto o limite está escrito no
+ecrã de ligação em vez de escondido.
+
+A regra dos símbolos aqui é o **inverso** da Kraken, e as duas saem do mesmo
+princípio: usar a direção que a corretora define.
+
+Verifiquei contra o `exchangeInfo` real que `symbol === baseAsset + quoteAsset`
+nos **3645 símbolos**, sem uma única exceção — portanto compor `BTC` + `USDT` e
+procurar o resultado é exato. Mas o sentido contrário não é: **oito símbolos
+reais decompõem-se de duas maneiras** contra a própria lista de cotações da
+Binance. O `BTCBUSD` é (BTC, BUSD) e também lê como (BTCB, USD). Quem partisse a
+string para saber o que ela cota acertaria quase sempre e erraria em silêncio
+naqueles — que é o pior resultado possível. Aqui compõe-se, nunca se decompõe.
+
+O `exchangeInfo` são 16,65 MB e o `ticker/price` são 153 KB, o que é a razão
+prática para os preços virem do segundo.
+
+Verificado contra a API real no que não precisa de credenciais: 3080 símbolos
+com preço lidos de 3688 devolvidos — e os 608 que caíram são **todos** preço
+exatamente zero, pares há muito deslistados (BCC, HSR, OAX, MCO). Os preços
+batem com os que a Kraken dá a 0,14%, que é a diferença normal entre duas
+exchanges. A assinatura reproduz o vetor publicado pela Binance. **Por
+verificar:** o `/api/v3/account`, que precisa de uma chave.
+
 ## Ligações a plataformas
 
 Arquitetura: Connector → Normalizer → Base de dados → UI. Acrescentar uma
@@ -629,10 +662,12 @@ incluí-los no backup e no restauro — custo alto para o valor.
 maturidade, não preço de mercado. Modelada como está, dá um número errado com
 ar de certo. Só vale a pena se tiveres alguma.
 
-**Mais plataformas.** A Kraken já está feita — ver a Parte 1 — e **falta
-testá-la contra uma conta real**, que é o único passo que descobre erros de
-connector neste projeto. Ficam a Binance e a Coinbase, que emitem chaves de
-leitura a pessoas singulares e encaixam no mesmo molde.
+**Mais plataformas.** A Kraken e a Binance já estão feitas — ver a Parte 1 — e
+**faltam testar contra contas reais**, que é o único passo que descobre erros de
+connector neste projeto. Da Binance falta também ler as carteiras Funding e
+Earn, que a app avisa que não lê. Fica a Coinbase, que mudou para chaves CDP com
+JWT ES256 — bastante mais superfície e um alvo em movimento, portanto mau
+candidato para construir sem uma chave para testar.
 
 A Revolut pessoal e os bancos portugueses passam por PSD2 e exigem licença
 AISP. A Degiro não tem API pública: os clientes que existem são engenharia

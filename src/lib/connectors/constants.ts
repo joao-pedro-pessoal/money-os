@@ -16,6 +16,7 @@ export const PLATFORM_LABELS: Record<string, string> = {
   ibkr: "Interactive Brokers",
   trading212: "Trading 212",
   kraken: "Kraken",
+  binance: "Binance",
 };
 
 /**
@@ -62,6 +63,22 @@ export const PLATFORM_SETUP: Record<
     ],
     warning:
       "bybit.eu cannot be connected, and no setting here changes that: its keys are issued only through “Connect to Third-Party Applications” and stay locked to that application's servers, so none of them authenticate from your own machine. Tested against a live account — it always answers “Unmatched IP”. If you are on bybit.eu, track that account manually instead.",
+  },
+  binance: {
+    identifierLabel: "API key",
+    identifierHint: "from Binance → API Management",
+    needsSecret: true,
+    help:
+      "Only the Enable Reading permission is needed, and a key without trading rights cannot place an order whatever the app does. The secret is encrypted before it is stored and never shown again.",
+    steps: [
+      "Set ENCRYPTION_KEY in .env and restart the app, or the secret cannot be stored.",
+      "In Binance, go to API Management and create a key.",
+      "Leave Enable Reading ticked and every other permission OFF.",
+      "Copy the secret before closing the page — Binance shows it exactly once.",
+      "Paste the key and the secret below.",
+    ],
+    warning:
+      "This reads your Spot wallet only. Money in Funding, Simple Earn, Futures or any locked product sits in a separate wallet with its own endpoint and will not appear — so the figure here can be lower than what Binance shows you. Those wallets need a live key to be built against without guessing at the reply; until then the limit is stated rather than hidden.",
   },
   kraken: {
     identifierLabel: "API key",
