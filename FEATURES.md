@@ -1,7 +1,7 @@
 # Money OS — o que faz e o que falta
 
-Estado a 1 de setembro de 2026. 1895 testes em 98 ficheiros, 37 migrations,
-41 tabelas, 92 módulos de lógica, 30 módulos de acesso a dados, 33 páginas.
+Estado a 2 de setembro de 2026. 1911 testes em 99 ficheiros, 37 migrations,
+41 tabelas, 93 módulos de lógica, 30 módulos de acesso a dados, 33 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
@@ -446,6 +446,38 @@ nenhum em comum.
 mas nenhum é compra ou venda (dividendos e transferências não têm resultado de
 negociação); ou há trades mas nenhum fechou posição ainda. Os três desenham
 gráficos vazios e querem dizer coisas diferentes.
+
+## Duas coisas que o histórico contava mal na IBKR
+
+Reportado do ecrã, com dados reais, e eram dois erros distintos.
+
+**Uma conversão cambial não é um trade.** A IBKR regista uma conversão como
+compra ou venda de `EUR.USD`, portanto ter uma ação em dólares numa conta em
+euros produz um rio delas. Na tua conta o `EUR.USD` era **o instrumento mais
+"negociado" da app** — 17 linhas, mais do que qualquer posição a sério — e
+contava para tudo: número de trades, taxa de acerto, tamanho médio, repartição
+por instrumento. **22 trades passaram a 5.**
+
+A regra exige que **as duas metades sejam moedas**, e é isso que a torna segura:
+o `BRK.B` parte-se em `BRK` e `B`, nenhum é moeda, e um ticker verdadeiro com
+ponto fica intacto. Testar só pelo ponto tê-lo-ia engolido.
+
+**Uma corretora que não reporta resultados não é uma corretora sem resultados.**
+Só a Hyperliquid publica P&L realizado por execução — 46 linhas em 96. A IBKR
+não publica em nenhuma das 22, e a Trading 212 em nenhuma das 30. Por isso o
+ecrã dizia *"none of which has closed a position yet"* sobre uma conta que
+comprou 3,465 FEMY e vendeu os 3,465 duas semanas depois.
+
+A app já sabia responder: o `reconstruct.ts` emparelha compras com vendas por
+custo médio. O histórico passou a fazer o mesmo — **o FEMY aparece agora com
+0,77 € realizados** — e mantém os dois tipos de número **separados**. A figura da
+corretora ganha sempre onde existe; onde não existe, o ecrã diz que aquele
+número foi calculado pela app sob custo médio e que os dois não vão bater
+exactamente.
+
+Uma venda sem nada comprado antes fica de fora, em vez de ser avaliada contra
+custo zero — isso reportaria a receita inteira como lucro, que é a mentira mais
+lisonjeira possível.
 
 ## Escrever ou colar no histórico
 

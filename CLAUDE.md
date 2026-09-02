@@ -135,6 +135,41 @@ knows what it is worth and never what it cost, so it can never contribute a
 gain. Anything showing `pnl` has to show that too, or it presents a subset of
 the portfolio as all of it.
 
+## A currency conversion is not a trade
+
+IBKR books an FX conversion as a buy or a sell of `EUR.USD`, so holding a
+dollar asset in a euro account produces a stream of them. On the live account
+`EUR.USD` was the most "traded" instrument in the app — 17 rows against about
+five real positions — and every figure in `lib/trading/stats.ts` counted them:
+the trade count, the win rate, the average size, the instrument breakdown.
+
+`isInstrumentTrade` is the predicate any figure must use; `isTrade` answers a
+narrower question and is not what a statistic wants. The test is that **both
+halves are currency codes**, which is what keeps `BRK.B` safe — it splits into
+`BRK` and `B`, and `B` is not a currency. A "contains a dot" rule would have
+eaten it.
+
+### A venue that reports no result is not a venue with no results
+
+Only Hyperliquid states a realised P&L per fill — 46 rows of 96. IBKR states
+none on any of its 22 and Trading 212 none on its 30, so the page said "none of
+which has closed a position yet" about an account that had bought 3.465 FEMY
+and sold all of it a fortnight later.
+
+`lib/trading/realised.ts` derives one by matching sells against average cost,
+the same method `reconstruct.ts` uses — a different method here would mean two
+screens disagreeing about the same sale. Three rules, each from the data:
+
+- **The venue's figure always wins.** Where any row of a symbol carries one,
+  nothing is derived for that symbol; mixing the two inside one instrument's
+  total gives a number belonging to neither method.
+- **A sale with nothing bought before it is left alone.** The feed reaches back
+  only as far as the import does, and pricing against a cost of zero reports
+  the whole proceeds as profit.
+- **`pnlDerived` travels on the row**, so a screen cannot total the broker's
+  figures and this app's together without choosing to. The two answer the same
+  question by different methods and will not agree.
+
 ## Dividends can be known three ways
 
 Same shape as holdings, one table further on. A distribution reaches the app
@@ -472,7 +507,7 @@ overwrite nothing the user edited.
 
 ```
 npx tsc --noEmit
-npx vitest run          # 1890+ tests; all must pass
+npx vitest run          # 1910+ tests; all must pass
 npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"

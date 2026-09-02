@@ -18,10 +18,11 @@ import {
   averageSize,
   holdingPeriods,
   holdingSummary,
-  isTrade,
+  isInstrumentTrade,
 } from "@/lib/trading/stats";
 import { toBase } from "@/lib/fx";
 import { tradeFilterOptions, type TradeHistoryRow } from "@/lib/trading/filter";
+import { deriveRealisedPnl } from "@/lib/trading/realised";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 
@@ -279,8 +280,19 @@ export async function getTradeAnalysis() {
     });
   }
 
-  const periods = holdingPeriods(converted);
-  const trades = converted.filter(isTrade);
+  /**
+   * A result worked out here where the venue publishes none.
+   *
+   * Only Hyperliquid states a realised P&L per fill — 46 rows of 96 on this
+   * account. Interactive Brokers states none on any of its 22, so the page
+   * reported "none of which has closed a position yet" about an account that
+   * had bought 3.465 FEMY and sold all of it a fortnight later. The venue's
+   * figure still wins wherever there is one; see `lib/trading/realised.ts`.
+   */
+  const enriched = deriveRealisedPnl(converted);
+
+  const periods = holdingPeriods(enriched);
+  const trades = enriched.filter(isInstrumentTrade);
 
   return {
     baseCurrency: base,
@@ -290,12 +302,12 @@ export async function getTradeAnalysis() {
     approximate: rows.some((r) => r.currency !== base),
     tradeCount: trades.length,
     closedCount: trades.filter((r) => r.realizedPnl !== null).length,
-    pnl: cumulativePnl(converted),
-    symbols: bySymbol(converted),
-    directions: byDirection(converted),
-    months: byMonth(converted),
-    hours: byHour(converted),
-    averageSize: averageSize(converted),
+    pnl: cumulativePnl(enriched),
+    symbols: bySymbol(enriched),
+    directions: byDirection(enriched),
+    months: byMonth(enriched),
+    hours: byHour(enriched),
+    averageSize: averageSize(enriched),
     holding: holdingSummary(periods),
     periods: periods.slice(0, 25),
     /**
@@ -305,7 +317,7 @@ export async function getTradeAnalysis() {
      * Sent rather than a second set of pre-filtered figures: there is one
      * implementation of "win rate", and filtering must not create a second.
      */
-    rows: converted,
-    options: tradeFilterOptions(converted),
+    rows: enriched,
+    options: tradeFilterOptions(enriched),
   };
 }

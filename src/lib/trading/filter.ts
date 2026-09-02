@@ -54,10 +54,10 @@ export const NO_TRADE_FILTERS: TradeFilters = {
  * of a boundary for anyone east or west of UTC, and the failure is seasonal —
  * the same trap `calendarDaysBetween` exists for.
  */
-export function applyTradeFilters(
-  rows: readonly TradeHistoryRow[],
+export function applyTradeFilters<T extends TradeHistoryRow>(
+  rows: readonly T[],
   filters: TradeFilters
-): TradeHistoryRow[] {
+): T[] {
   return rows.filter((row) => {
     if (filters.symbol !== null && row.symbol !== filters.symbol) return false;
     if (filters.type !== null && row.type.toUpperCase() !== filters.type.toUpperCase()) return false;
@@ -90,7 +90,9 @@ export interface TradeFilterOptions {
  * so choosing any of them leaves something on screen — a filter that can
  * produce an empty table by construction is a filter nobody trusts twice.
  */
-export function tradeFilterOptions(rows: readonly TradeHistoryRow[]): TradeFilterOptions {
+export function tradeFilterOptions(
+  rows: readonly TradeHistoryRow[]
+): TradeFilterOptions {
   const symbols = new Set<string>();
   const types = new Set<string>();
   const accounts = new Set<string>();

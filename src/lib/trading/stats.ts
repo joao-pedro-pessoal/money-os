@@ -33,10 +33,48 @@ export interface TradeRow {
   description: string | null;
 }
 
+import { isCurrencyCode } from "../fx";
+
 const TRADE_TYPES = new Set(["BUY", "SELL"]);
 
+/**
+ * A buy or a sell, by type alone.
+ *
+ * **Not the right question for a statistic.** IBKR books a currency conversion
+ * as a buy or a sell of `EUR.USD`, and on a live account those outnumbered
+ * every real position — so use `isInstrumentTrade` from `./realised.ts`
+ * anywhere a figure is being computed. This stays because the distinction
+ * between "a trade row" and "a position worth measuring" is real, and the
+ * narrower one is built on this.
+ */
 export function isTrade(row: TradeRow): boolean {
   return TRADE_TYPES.has(row.type.toUpperCase());
+}
+
+/**
+ * True for a symbol that names one currency against another.
+ *
+ * Both halves must be currency codes, which is what makes this safe: `BRK.B`
+ * splits into `BRK` and `B`, neither is a currency, and a real ticker with a
+ * dot in it is left alone. Testing only for a dot would have swallowed it.
+ */
+export function isCurrencyConversion(symbol: string | null | undefined): boolean {
+  if (typeof symbol !== "string") return false;
+  const parts = symbol.trim().toUpperCase().split(/[./]/);
+  if (parts.length !== 2) return false;
+  return isCurrencyCode(parts[0]) && isCurrencyCode(parts[1]);
+}
+
+/**
+ * A trade in an instrument — the only thing any figure below is about.
+ *
+ * Money changing shape between two currencies is a mechanic of holding a
+ * foreign asset, not a decision with a result. On a live IBKR account those
+ * conversions outnumbered every real position, and each of the six figures in
+ * this file was counting them.
+ */
+export function isInstrumentTrade(row: TradeRow): boolean {
+  return isTrade(row) && !isCurrencyConversion(row.symbol);
 }
 
 function round2(n: number): number {
@@ -79,7 +117,7 @@ export function cumulativePnl(rows: TradeRow[]): PnlPoint[] {
   const byDay = new Map<string, { realized: number; fees: number }>();
 
   for (const row of rows) {
-    if (!isTrade(row)) continue;
+    if (!isInstrumentTrade(row)) continue;
     const day = dayOf(row.date);
     const entry = byDay.get(day) ?? { realized: 0, fees: 0 };
     if (row.realizedPnl !== null) entry.realized += row.realizedPnl;
@@ -135,7 +173,7 @@ export function bySymbol(rows: TradeRow[]): SymbolStats[] {
   const groups = new Map<string, SymbolStats>();
 
   for (const row of rows) {
-    if (!isTrade(row) || !row.symbol) continue;
+    if (!isInstrumentTrade(row) || !row.symbol) continue;
 
     const stats =
       groups.get(row.symbol) ??
@@ -205,7 +243,7 @@ export function byDirection(rows: TradeRow[]): DirectionStats[] {
   const groups = new Map<Direction, { trades: number; wins: number; realized: number; fees: number }>();
 
   for (const row of rows) {
-    if (!isTrade(row)) continue;
+    if (!isInstrumentTrade(row)) continue;
     const key = directionOf(row);
     const g = groups.get(key) ?? { trades: 0, wins: 0, realized: 0, fees: 0 };
     if (row.fees !== null) g.fees += row.fees;
@@ -248,7 +286,7 @@ export function byMonth(rows: TradeRow[]): CadencePoint[] {
   const groups = new Map<string, CadencePoint>();
 
   for (const row of rows) {
-    if (!isTrade(row)) continue;
+    if (!isInstrumentTrade(row)) continue;
     const month = row.date.slice(0, 7);
     const g = groups.get(month) ?? { month, trades: 0, volume: 0, fees: 0 };
     g.trades += 1;
@@ -280,7 +318,7 @@ export function byHour(rows: TradeRow[]): HourBucket[] {
   const counts = new Array<number>(24).fill(0);
 
   for (const row of rows) {
-    if (!isTrade(row)) continue;
+    if (!isInstrumentTrade(row)) continue;
     const hour = new Date(row.date).getUTCHours();
     if (Number.isFinite(hour)) counts[hour] += 1;
   }
@@ -330,7 +368,7 @@ export function holdingPeriods(rows: TradeRow[]): HoldingPeriod[] {
   const periods: HoldingPeriod[] = [];
 
   const chronological = rows
-    .filter((r) => isTrade(r) && r.symbol)
+    .filter((r) => isInstrumentTrade(r) && r.symbol)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   for (const row of chronological) {

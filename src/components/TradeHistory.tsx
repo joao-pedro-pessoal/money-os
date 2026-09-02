@@ -20,9 +20,10 @@ import {
   averageSize,
   holdingPeriods,
   holdingSummary,
-  isTrade,
+  isInstrumentTrade,
   type Direction,
 } from "@/lib/trading/stats";
+import { realisedProvenance, type Derivable } from "@/lib/trading/realised";
 
 /**
  * The trade history, and every figure about it, over whatever slice is chosen.
@@ -45,7 +46,7 @@ export default function TradeHistory({
   approximate,
   unconvertible,
 }: {
-  rows: TradeHistoryRow[];
+  rows: (TradeHistoryRow & Derivable)[];
   options: TradeFilterOptions;
   currency: string;
   approximate: boolean;
@@ -53,12 +54,18 @@ export default function TradeHistory({
 }) {
   const [filters, setFilters] = useState<TradeFilters>(NO_TRADE_FILTERS);
 
+  // The filter is generic over the row shape, so the derived-result flag each
+  // row carries survives into every figure below without a cast.
   const filtered = useMemo(() => applyTradeFilters(rows, filters), [rows, filters]);
 
   /** Every figure, recomputed against what is left. */
   const stats = useMemo(() => {
     const periods = holdingPeriods(filtered);
-    const trades = filtered.filter(isTrade);
+    // The narrow predicate: a currency conversion is a mechanic of holding a
+    // foreign asset, not a position with a result. IBKR books them as buys and
+    // sells of EUR.USD, and counting them made the page report 22 trades on an
+    // account that had made about five.
+    const trades = filtered.filter(isInstrumentTrade);
     return {
       pnl: cumulativePnl(filtered),
       symbols: bySymbol(filtered),
@@ -69,6 +76,8 @@ export default function TradeHistory({
       holding: holdingSummary(periods),
       tradeCount: trades.length,
       closedCount: trades.filter((r) => r.realizedPnl !== null).length,
+      /** Recomputed over the filtered set, like every other figure here. */
+      provenance: realisedProvenance(filtered),
     };
   }, [filtered]);
 
@@ -179,6 +188,35 @@ export default function TradeHistory({
             {stats.tradeCount} trade{stats.tradeCount === 1 ? "" : "s"}, none of which has
             closed a position yet — so there is no realised result to chart. What you hold is
             on the Investments page.
+          </p>
+        )}
+
+        {/* Where the results came from, and what was left out.
+            A figure this app derived and one a broker published answer the
+            same question by different methods and will not agree, so a total
+            mixing them without saying so cannot be checked against anything. */}
+        {(stats.provenance.derived > 0 || stats.provenance.conversions > 0) && (
+          <p className="text-[10px] text-[var(--muted)] mt-3 leading-relaxed">
+            {stats.provenance.derived > 0 && (
+              <>
+                {stats.provenance.reported > 0
+                  ? `${stats.provenance.reported} result${stats.provenance.reported === 1 ? "" : "s"} as the venue reported them, and `
+                  : ""}
+                <span style={{ color: "var(--amber)" }}>
+                  {stats.provenance.derived} worked out here
+                </span>{" "}
+                under average cost, because the venue publishes none. That is this app&apos;s
+                figure, not the broker&apos;s, and the two will not agree exactly.{" "}
+              </>
+            )}
+            {stats.provenance.conversions > 0 && (
+              <>
+                {stats.provenance.conversions} currency conversion
+                {stats.provenance.conversions === 1 ? "" : "s"} left out of every figure —
+                money changing shape between two currencies is a mechanic of holding a foreign
+                asset, not a position with a result.
+              </>
+            )}
           </p>
         )}
       </section>
