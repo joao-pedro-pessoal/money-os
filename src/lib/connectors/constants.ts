@@ -17,6 +17,7 @@ export const PLATFORM_LABELS: Record<string, string> = {
   trading212: "Trading 212",
   kraken: "Kraken",
   binance: "Binance",
+  okx: "OKX",
 };
 
 /**
@@ -33,6 +34,15 @@ export const PLATFORM_SETUP: Record<
     identifierLabel: string;
     identifierHint: string;
     needsSecret: boolean;
+    /**
+     * A third credential, chosen when the key is created.
+     *
+     * OKX and KuCoin issue key + secret + passphrase and require all three on
+     * every signed request. Declared here so the form asks for it and the
+     * action encrypts it, rather than each connector discovering it is missing
+     * at the first sync.
+     */
+    needsPassphrase?: boolean;
     help: string;
     steps: string[];
     /** Set when the platform is known not to work for most users here. */
@@ -63,6 +73,23 @@ export const PLATFORM_SETUP: Record<
     ],
     warning:
       "bybit.eu cannot be connected, and no setting here changes that: its keys are issued only through “Connect to Third-Party Applications” and stay locked to that application's servers, so none of them authenticate from your own machine. Tested against a live account — it always answers “Unmatched IP”. If you are on bybit.eu, track that account manually instead.",
+  },
+  okx: {
+    identifierLabel: "API key",
+    identifierHint: "a UUID, from OKX → API",
+    needsSecret: true,
+    needsPassphrase: true,
+    help:
+      "OKX issues three things rather than two: a key, a secret and a passphrase you choose when creating the key. All three are needed on every request, and the secret and passphrase are both encrypted before they are stored.",
+    steps: [
+      "Set ENCRYPTION_KEY in .env and restart the app, or nothing can be stored.",
+      "In OKX, go to API and create a V5 key.",
+      "Give it the Read permission only. Leave Trade and Withdraw OFF.",
+      "Choose a passphrase and write it down — OKX never shows it again.",
+      "Paste the key, the secret and the passphrase below.",
+    ],
+    warning:
+      "This reads your trading account. Funding is a separate account on OKX with its own endpoint and will not appear, so the figure here can be lower than what OKX shows you.",
   },
   binance: {
     identifierLabel: "API key",

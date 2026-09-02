@@ -26,12 +26,13 @@ import { createIbkrConnector, discoverIbkrAccounts } from "@/lib/connectors/ibkr
 import { createTrading212Connector } from "@/lib/connectors/trading212";
 import { createKrakenConnector } from "@/lib/connectors/kraken";
 import { createBinanceConnector } from "@/lib/connectors/binance";
+import { createOkxConnector } from "@/lib/connectors/okx";
 import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
 import { freshnessOf } from "@/lib/connectors/freshness";
 import { marginView, describePressure } from "@/lib/connectors/margin";
 import { refreshRates } from "./fx";
 import type { Connector } from "@/lib/connectors/types";
-import { NEW_ACCOUNT, PLATFORM_LABELS, bybitBaseUrl, BYBIT_REGIONS } from "@/lib/connectors/constants";
+import { NEW_ACCOUNT, PLATFORM_LABELS, PLATFORM_SETUP, bybitBaseUrl, BYBIT_REGIONS } from "@/lib/connectors/constants";
 import { listAccountUsage } from "./accounts";
 import { writeSnapshot } from "./snapshots";
 import { suggestAssetType, assetTypeOnSync } from "@/lib/portfolio/assetType";
@@ -59,7 +60,8 @@ function connectorFor(
   platform: string,
   externalId: string,
   secret: string | null,
-  region: string | null = null
+  region: string | null = null,
+  passphrase: string | null = null
 ): Connector {
   switch (platform) {
     case "hyperliquid":
@@ -80,6 +82,10 @@ function connectorFor(
     case "binance":
       if (!secret) throw new Error("This Binance connection has no stored API secret");
       return createBinanceConnector({ apiKey: externalId, apiSecret: secret });
+    case "okx":
+      if (!secret) throw new Error("This OKX connection has no stored API secret");
+      if (!passphrase) throw new Error("This OKX connection has no stored passphrase");
+      return createOkxConnector({ apiKey: externalId, apiSecret: secret, passphrase });
     case "kraken":
       if (!secret) throw new Error("This Kraken connection has no stored API secret");
       return createKrakenConnector({ apiKey: externalId, apiSecret: secret });
@@ -95,7 +101,7 @@ function connectorFor(
 }
 
 /** Platforms whose credentials must be encrypted before being stored. */
-const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken", "binance"]);
+const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken", "binance", "okx"]);
 
 /**
  * Whether secret storage is usable at all.
@@ -126,7 +132,8 @@ export async function listConnections() {
 
   return conns.map((c) => {
     // The encrypted secret must never reach a page prop; only a masked hint.
-    const { encryptedSecret, ...safe } = c;
+    const { encryptedSecret, encryptedPassphrase, ...safe } = c;
+    void encryptedPassphrase;
     return {
       ...safe,
       hasSecret: encryptedSecret !== null,
@@ -376,6 +383,7 @@ export async function createConnection(formData: FormData) {
   if (!accountId) throw new Error("Pick the account this connection feeds");
 
   const apiSecret = String(formData.get("apiSecret") ?? "").trim();
+  const apiPassphrase = String(formData.get("apiPassphrase") ?? "").trim();
   const rawRegion = String(formData.get("region") ?? "").trim();
   // Only a known region is ever stored, so no arbitrary host can be reached.
   const region =
@@ -404,12 +412,23 @@ export async function createConnection(formData: FormData) {
     externalId = accounts[0].accountId;
   }
 
-  const connector = connectorFor(platform, externalId, apiSecret || null, region);
+  if (PLATFORM_SETUP[platform]?.needsPassphrase && !apiPassphrase) {
+    throw new Error(`${PLATFORM_LABELS[platform] ?? platform} also issues a passphrase, and every signed request needs it.`);
+  }
+
+  const connector = connectorFor(
+    platform,
+    externalId,
+    apiSecret || null,
+    region,
+    apiPassphrase || null
+  );
   const check = connector.validateIdentifier(externalId);
   if (!check.ok) throw new Error(check.reason);
 
   // Encrypted before it goes anywhere near the database.
   const encryptedSecret = apiSecret ? encryptSecret(apiSecret, masterKey()) : null;
+  const encryptedPassphrase = apiPassphrase ? encryptSecret(apiPassphrase, masterKey()) : null;
 
   // A platform you're connecting for the first time usually has no Account
   // yet, so offer to create it here rather than forcing a detour to /accounts.
@@ -449,7 +468,7 @@ export async function createConnection(formData: FormData) {
 
   const [c] = await db
     .insert(accountConnections)
-    .values({ accountId, platform, region, externalId, label, encryptedSecret })
+    .values({ accountId, platform, region, externalId, label, encryptedSecret, encryptedPassphrase })
     .returning();
 
   await db.insert(auditLog).values({
@@ -572,7 +591,10 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
 
   try {
     const secret = conn.encryptedSecret ? decryptSecret(conn.encryptedSecret, masterKey()) : null;
-    const connector = connectorFor(conn.platform, conn.externalId, secret, conn.region);
+    const passphrase = conn.encryptedPassphrase
+      ? decryptSecret(conn.encryptedPassphrase, masterKey())
+      : null;
+    const connector = connectorFor(conn.platform, conn.externalId, secret, conn.region, passphrase);
     const state = await connector.getAccountState(conn.externalId);
 
     // 1. Account balance = perps equity ONLY.

@@ -28,6 +28,7 @@ export default function ConnectionForm({
       identifierLabel: string;
       identifierHint: string;
       needsSecret: boolean;
+      needsPassphrase?: boolean;
       help: string;
       steps: string[];
       warning?: string;
@@ -143,6 +144,19 @@ export default function ConnectionForm({
           name="apiSecret"
           type="password"
           placeholder="API secret"
+          className="input font-mono"
+          required
+          autoComplete="new-password"
+        />
+      )}
+
+      {/* A third credential, for the venues that issue one. Same handling as
+          the secret: encrypted before storage and never shown again. */}
+      {config.needsPassphrase && (
+        <input
+          name="apiPassphrase"
+          type="password"
+          placeholder="API passphrase"
           className="input font-mono"
           required
           autoComplete="new-password"

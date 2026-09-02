@@ -1,0 +1,1 @@
+ALTER TABLE "account_connections" ADD COLUMN "encrypted_passphrase" text;

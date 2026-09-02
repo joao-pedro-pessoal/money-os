@@ -451,6 +451,19 @@ export const accountConnections = pgTable("account_connections", {
   externalId: text("external_id").notNull(), // public wallet address / account id
   label: text("label"),
   encryptedSecret: text("encrypted_secret"),
+  /**
+   * A third credential, for the venues that issue one.
+   *
+   * OKX and KuCoin hand out key + secret + passphrase, where the passphrase is
+   * chosen when the key is created and is required on every signed request. It
+   * is a credential like the secret and is encrypted like the secret — kept in
+   * its own column rather than packed into `encryptedSecret` as JSON, because a
+   * blob with structure hidden inside it is a thing nobody can query and
+   * everybody has to remember to unpack.
+   *
+   * Null for the platforms that issue two parts, which is most of them.
+   */
+  encryptedPassphrase: text("encrypted_passphrase"),
   active: boolean("active").notNull().default(true),
   lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
   lastSyncStatus: text("last_sync_status"), // "ok" | "error"

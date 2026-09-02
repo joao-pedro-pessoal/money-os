@@ -69,6 +69,43 @@ describe("every platform offered is a platform that works", () => {
     expect(overprotected, "in NEEDS_SECRET but declares no secret").toEqual([]);
   });
 
+  /**
+   * The third credential, which is new and therefore the easiest to half-wire.
+   *
+   * A platform declaring `needsPassphrase` must also declare `needsSecret` —
+   * no venue issues a passphrase without a key and secret to go with it — and
+   * the form has to ask for it, or the connection saves without one and the
+   * first sync fails on a credential the user was never given a box for.
+   */
+  it("asks for a passphrase wherever one is declared", () => {
+    const form = readFileSync(path.join(root, "src/components/ConnectionForm.tsx"), "utf8");
+    const withPassphrase = platforms.filter((p) => PLATFORM_SETUP[p].needsPassphrase);
+
+    for (const p of withPassphrase) {
+      expect(PLATFORM_SETUP[p].needsSecret, `${p} declares a passphrase but no secret`).toBe(true);
+    }
+
+    if (withPassphrase.length > 0) {
+      expect(form, "the form never renders an apiPassphrase input").toContain("apiPassphrase");
+      expect(form).toContain("config.needsPassphrase");
+    }
+  });
+
+  /**
+   * And the connector has to actually receive it. `connectorFor` takes the
+   * passphrase as its fifth argument; a case that ignores it builds a
+   * connector that will be rejected by the venue on every call.
+   */
+  it("passes the passphrase to the connectors that need one", () => {
+    for (const p of platforms.filter((x) => PLATFORM_SETUP[x].needsPassphrase)) {
+      const block = connections.slice(connections.indexOf(`case "${p}":`));
+      const untilNextCase = block.slice(0, block.indexOf("case ", 10));
+      expect(untilNextCase, `${p} builds its connector without the passphrase`).toContain(
+        "passphrase"
+      );
+    }
+  });
+
   it("gives each one steps someone could actually follow", () => {
     for (const p of platforms) {
       expect(PLATFORM_SETUP[p].steps.length, p).toBeGreaterThan(0);

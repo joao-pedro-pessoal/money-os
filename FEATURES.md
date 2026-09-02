@@ -1,7 +1,7 @@
 # Money OS — o que faz e o que falta
 
-Estado a 1 de setembro de 2026. 1802 testes em 94 ficheiros, 36 migrations,
-41 tabelas, 86 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
+Estado a 1 de setembro de 2026. 1825 testes em 95 ficheiros, 37 migrations,
+41 tabelas, 88 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
@@ -144,6 +144,29 @@ qualquer coisa nesse formato.
 - O parser de valores aguenta `1.234,56`, `1,234.56`, menos à direita,
   parênteses e símbolos de moeda. As datas são dia-primeiro (europeu) e rejeitam
   31 de fevereiro.
+
+## OKX, e a terceira credencial
+
+O sétimo connector. Lê a conta de negociação e usa o `eqUsd` que a própria OKX
+publica por moeda — em vez de ir buscar preços, o que é uma chamada a menos e
+garante que a app e o ecrã da OKX não podem discordar sobre quanto vale uma
+posição.
+
+**Trouxe uma mudança de esquema.** A OKX e a KuCoin emitem *três* coisas: chave,
+segredo e uma passphrase escolhida ao criar a chave, exigida em cada pedido
+assinado. A app só guardava duas. Há agora uma coluna `encrypted_passphrase`,
+encriptada como o segredo, em coluna própria e não empacotada dentro dele — um
+blob com estrutura escondida lá dentro é uma coisa que ninguém consegue
+consultar e toda a gente se esquece de desembrulhar.
+
+**A armadilha desta API:** o `code` é uma *string* e o sucesso é `"0"` — que em
+JavaScript é *truthy*. `if (!code)` é falso no sucesso e falso na falha;
+`if (code)` é verdadeiro nos dois. Só uma comparação explícita acerta, e a
+resposta errada aqui é uma conta que parece não ter nada. Confirmado contra a API
+real: um pedido bom responde `code: "0"`, um mau responde `code: "51000"`.
+
+Lê a conta de negociação. A Funding é uma conta separada na OKX com endpoint
+próprio, e o ecrã de ligação diz isso.
 
 ## Corretoras por extrato
 

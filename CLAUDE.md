@@ -442,7 +442,7 @@ overwrite nothing the user edited.
 
 ```
 npx tsc --noEmit
-npx vitest run          # 1800+ tests; all must pass
+npx vitest run          # 1820+ tests; all must pass
 npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"
@@ -526,6 +526,22 @@ for platform" on the first sync, far from anything that explains it. Missing
 `NEEDS_SECRET` is worse again — the secret is stored unencrypted, silently.
 
 `lib/connectors/__tests__/wiring.test.ts` fails on any of those gaps.
+
+### OKX: `code` is a string, and `"0"` is truthy
+
+Every reply is `{code, msg, data}` where `code` is text. Success is `"0"`, so
+`if (!code)` is false on success *and* on failure, and `if (code)` is true on
+both — a truthiness test gives the wrong answer in both directions, and the
+wrong answer is an account that appears to hold nothing. `okxError` compares
+explicitly and runs before anything is parsed.
+
+It also brought the third credential. OKX and KuCoin issue key + secret +
+passphrase, all three required per request, so `account_connections` has an
+`encrypted_passphrase` column — its own column rather than JSON packed into
+`encrypted_secret`, because structure hidden inside a blob is structure nobody
+can query. `PLATFORM_SETUP.needsPassphrase` drives the form, and
+`wiring.test.ts` fails if a platform declares one without the form asking for
+it or without `connectorFor` passing it on.
 
 ### Binance: compose a symbol, never decompose one
 
