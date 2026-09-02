@@ -511,7 +511,15 @@ npx vitest run          # 1910+ tests; all must pass
 npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"
+npm run audit           # invariants against the real database; needs DATABASE_URL
 ```
+
+`npm run audit` is the one that finds what tests cannot. It calls the same
+functions the screens call and checks the relationships their own comments
+promise — it never re-derives a figure, because re-deriving is how a second
+definition gets written. Its first run reported a failure that was the audit's
+own wrong assumption, which is the usual split: when something disagrees here,
+read both sides before believing either.
 
 **The layer these checks do not cover.** `src/lib/**` is ~17 000 lines against
 ~15 000 lines of test. `src/actions/**`, `src/app/**` and `src/components/**`

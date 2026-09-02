@@ -749,6 +749,42 @@ o gráfico de rosca tinha quatro cores fixas no código, portanto a partir da
 quinta fatia desenhava azul, roxo e ciano numa página que tinha deitado fora
 todas as matizes. As cores das fatias são tokens do tema agora.
 
+## Auditor de invariantes
+
+`npm run audit` — verifica contra a base de dados a sério as relações que o
+próprio código promete nos seus comentários.
+
+A razão é a que já está escrita na Parte 3: **todos os erros de números deste
+projeto foram encontrados da mesma maneira** — alguém abriu um ecrã, olhou para
+um número e disse *isto está mal*. Os testes estavam verdes o tempo todo. Isto é
+essa inspeção, tornada repetível.
+
+Não recalcula nada. Chama as mesmas funções que os ecrãs chamam e verifica as
+relações entre elas — recalcular seria escrever uma segunda definição, que é o
+erro que este ficheiro mais vezes descreve.
+
+Verifica hoje: `cash + portfolio = assets`, `assets − liabilities = total`,
+`floating + guaranteed = total`, `cost + pnl + costUnknown = floating`,
+`stable + floating = held`, distribuições + juros = tudo recebido, e que cada
+resultado de trade é ou da corretora ou da app mas nunca dos dois. E assinala o
+que merece um olhar: valores sem taxa de câmbio, posições sem custo declarado,
+conversões cambiais excluídas, e resultados que a app derivou.
+
+**Na primeira execução acusou uma coisa que era erro meu, não da app.** Afirmei
+que o património e a página de Investimentos tinham de dar o mesmo valor de
+carteira. Não têm: a página lista tudo o que tens, incluindo stablecoins e cash
+na corretora, e o património só pode reclassificar até ao saldo que contém os
+investimentos. A verificação passou a afirmar a direção — o património nunca
+pode dizer mais investido do que existe listado — que é a que a app promete.
+
+Fica por explicar uma diferença de 67,52 € entre as duas medidas de "exposto ao
+mercado". Parte é o limite da Trade Republic, que declara 450,83 € investidos
+contra 456,91 € listados. O resto está por contabilizar, e o auditor di-lo em
+vez de fingir que está tudo bem.
+
+Também apanhou **duas contas com o mesmo nome** ("Interactive Brokers"). Não é
+erro por si, mas tudo o que agrupa por nome funde-as em silêncio.
+
 ## Backup
 
 - Exportação completa em JSON e CSV, 28 tabelas.
