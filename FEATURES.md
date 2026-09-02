@@ -782,8 +782,26 @@ mercado". Parte é o limite da Trade Republic, que declara 450,83 € investidos
 contra 456,91 € listados. O resto está por contabilizar, e o auditor di-lo em
 vez de fingir que está tudo bem.
 
-Também apanhou **duas contas com o mesmo nome** ("Interactive Brokers"). Não é
-erro por si, mas tudo o que agrupa por nome funde-as em silêncio.
+### O que as verificações de contas apanharam
+
+**1 585,53 € em contas arquivadas.** Quatro contas — TR 1000,00, Tr 452,76,
+T212 100,00 e Interactive Brokers 32,77 — todas sem ligações, sem posições e sem
+movimentos, todas arquivadas. O `getNetWorth` lê só contas ativas, portanto esse
+dinheiro não está em total nenhum. Ou não existe e o saldo devia ser zero, ou
+existe e as contas deviam estar ativas; nenhum dos dois se vê em ecrã nenhum.
+
+O padrão diz o que provavelmente foram: nomes curtos (TR, Tr, T212), criadas em
+agosto, e o saldo de 452,76 é quase o da Trade Republic real. São tentativas de
+configuração deixadas para trás.
+
+**Duas contas "Interactive Brokers", uma em EUR e outra em USD.** A de EUR está
+arquivada, portanto não há dupla contagem — e o aviso de nomes repetidos só
+dispara para contas **vivas**, porque um duplicado arquivado é o que uma
+tentativa falhada deixa e ladrar por isso ensina as pessoas a ignorar o
+auditor.
+
+Uma mesma conta com duas moedas é a impressão digital dessa tentativa falhada:
+foi criada antes de a plataforma dizer em que moeda reporta.
 
 ## Backup
 

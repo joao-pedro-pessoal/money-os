@@ -150,21 +150,66 @@ async function main() {
     note("positions with no stated cost", unpriced.map((i) => i.symbol ?? i.id).join(", "));
   }
 
-  /**
-   * Two accounts under one name is not an error, but it is almost always a
-   * failed connection attempt left behind — and every screen that groups by
-   * name silently merges them, so a total can look right while describing two
-   * different things.
-   */
+  // ----------------------------------------------------------------- accounts
+  console.log("\nAccounts");
   const accountRows = await db.select().from(accounts);
-  const duplicated = [...new Set(accountRows.map((a) => a.name))].filter(
-    (name) => accountRows.filter((a) => a.name === name).length > 1
+
+  /**
+   * Two **live** accounts under one name is the hazard. Anything grouping by
+   * name merges them, so one figure ends up describing two accounts and looks
+   * perfectly reasonable while doing it.
+   *
+   * An archived duplicate is ordinary — it is what a failed connection attempt
+   * leaves behind — so warning about it would be crying wolf, and a check that
+   * cries wolf is one people learn to skip.
+   */
+  const activeNames = accountRows.filter((a) => a.active).map((a) => a.name);
+  const duplicatedLive = [...new Set(activeNames)].filter(
+    (name) => activeNames.filter((n) => n === name).length > 1
   );
-  if (duplicated.length > 0) {
+  check(
+    "no two live accounts share a name",
+    duplicatedLive.length === 0,
+    `${duplicatedLive.join(", ")} — anything grouping by name merges them, so one figure can describe two accounts`
+  );
+
+  /**
+   * An archived account holding money is a contradiction the app cannot
+   * resolve on its own: `getNetWorth` reads only active accounts, so that
+   * balance is in no total anywhere.
+   *
+   * Either the money is not there and the balance should be zero, or it is
+   * there and the account should be live. Both are worth knowing, and neither
+   * is visible on any screen.
+   */
+  const archivedWithMoney = accountRows.filter(
+    (a) => !a.active && Math.abs(Number(a.balance)) > CENT
+  );
+  if (archivedWithMoney.length > 0) {
     note(
-      "more than one account shares a name",
-      `${duplicated.join(", ")} — anything grouping by name merges them, which can make one ` +
-        `figure describe two accounts. Accounts has a cleanup for empty ones.`
+      "archived accounts still holding a balance",
+      archivedWithMoney
+        .map((a) => `${a.name} (${a.currency}) ${Number(a.balance).toFixed(2)}`)
+        .join("; ") +
+        " — archived accounts are read by no total, so this money is in none of them"
+    );
+  }
+
+  /**
+   * Same name, different currency is the fingerprint of a leftover: a
+   * connection attempt that created an account before the platform said what
+   * it reports in.
+   */
+  const byName = new Map<string, Set<string>>();
+  for (const a of accountRows) {
+    byName.set(a.name, (byName.get(a.name) ?? new Set()).add(a.currency));
+  }
+  const mixedCurrency = [...byName.entries()].filter(([, set]) => set.size > 1);
+  if (mixedCurrency.length > 0) {
+    note(
+      "one name, more than one currency",
+      mixedCurrency.map(([name, set]) => `${name}: ${[...set].join(", ")}`).join("; ") +
+        " — usually a connection attempt that created an account before the platform said what it reports in"
     );
   }
 
