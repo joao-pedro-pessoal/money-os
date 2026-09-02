@@ -19,9 +19,9 @@ import {
   holdingPeriods,
   holdingSummary,
   isTrade,
-  type TradeRow,
 } from "@/lib/trading/stats";
 import { toBase } from "@/lib/fx";
+import { tradeFilterOptions, type TradeHistoryRow } from "@/lib/trading/filter";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 
@@ -232,17 +232,27 @@ export async function undoInvestmentActivityImport(formData: FormData) {
  * points.
  */
 export async function getTradeAnalysis() {
-  const [rows, rates, base] = await Promise.all([
+  const [rows, accountRows, rates, base] = await Promise.all([
     db
       .select()
       .from(investmentActivities)
       .orderBy(desc(investmentActivities.date)),
+    db.select().from(accounts),
     getRates(),
     getBaseCurrency(),
   ]);
 
+  const accountNames = new Map(accountRows.map((account) => [account.id, account.name]));
+
   let unconvertible = 0;
-  const converted: TradeRow[] = [];
+  /**
+   * Carries the account and the original currency alongside the figures.
+   *
+   * The statistics do not need either, but the filters do — and the rows have
+   * to be the *same* rows the charts are computed from, or filtering would
+   * narrow one and not the other.
+   */
+  const converted: TradeHistoryRow[] = [];
 
   for (const row of rows) {
     const amount = toBase(Number(row.amount), row.currency, rates, base);
@@ -264,6 +274,8 @@ export async function getTradeAnalysis() {
       fees,
       realizedPnl: realized,
       description: row.description,
+      accountName: row.accountId ? accountNames.get(row.accountId) ?? "—" : "—",
+      currency: row.currency,
     });
   }
 
@@ -286,5 +298,14 @@ export async function getTradeAnalysis() {
     averageSize: averageSize(converted),
     holding: holdingSummary(periods),
     periods: periods.slice(0, 25),
+    /**
+     * The converted rows themselves, so the screen can narrow them and call
+     * the same statistics again over what is left.
+     *
+     * Sent rather than a second set of pre-filtered figures: there is one
+     * implementation of "win rate", and filtering must not create a second.
+     */
+    rows: converted,
+    options: tradeFilterOptions(converted),
   };
 }

@@ -1,7 +1,7 @@
 # Money OS — o que faz e o que falta
 
-Estado a 1 de setembro de 2026. 1825 testes em 95 ficheiros, 37 migrations,
-41 tabelas, 88 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
+Estado a 1 de setembro de 2026. 1850 testes em 96 ficheiros, 37 migrations,
+41 tabelas, 89 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
@@ -421,6 +421,31 @@ maiores do que o resultado, e só a linha líquida diz isso.
 
 Horas em **UTC**, e a página di-lo. A app não sabe onde estavas quando
 colocaste cada ordem, e um gráfico com horas erradas seria lido como facto.
+
+## Filtrar o histórico de trades
+
+Instrumento, tipo, conta, direção e intervalo de datas, na página do histórico.
+
+**O ponto não é esconder linhas da tabela — é que todas as figuras se
+recalculam sobre o que resta.** Filtras para BTC e a curva de P&L, a taxa de
+acerto, o tempo médio de posição e o tamanho médio passam todos a ser sobre o
+BTC. Mostrar a taxa de acerto da conta inteira ao lado de linhas de um
+instrumento seriam duas respostas para a mesma pergunta, e nada no ecrã diria
+qual era qual.
+
+Sai de graça do desenho: o `lib/trading/stats.ts` são funções puras sobre um
+array, portanto filtrar é chamá-las outra vez com menos linhas. Não há uma
+segunda implementação de "taxa de acerto", e não pode haver.
+
+As opções vêm dos dados, não de uma lista fixa — cada uma tem pelo menos uma
+linha, portanto nenhuma escolha isolada deixa o ecrã vazio. Duas escolhas
+combinadas já podem, e aí o ecrã diz que cada filtro tem eventos mas não têm
+nenhum em comum.
+
+**Três vazios diferentes, e o ecrã distingue-os.** Nada corresponde; há eventos
+mas nenhum é compra ou venda (dividendos e transferências não têm resultado de
+negociação); ou há trades mas nenhum fechou posição ainda. Os três desenham
+gráficos vazios e querem dizer coisas diferentes.
 
 ## P&L realizado, como as plataformas o reportam
 

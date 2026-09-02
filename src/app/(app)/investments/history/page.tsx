@@ -7,10 +7,7 @@ import {
 import { getBaseCurrency } from "@/actions/settings";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import InvestmentActivityImporter from "@/components/InvestmentActivityImporter";
-import TradeAnalysis from "@/components/TradeAnalysis";
-
-const amountClass = (amount: number) =>
-  amount > 0 ? "text-[var(--green)]" : amount < 0 ? "text-[var(--red)]" : "text-[var(--accent)]";
+import TradeHistory from "@/components/TradeHistory";
 
 export default async function InvestmentHistoryPage() {
   const [accounts, data, baseCurrency, analysis] = await Promise.all([
@@ -43,16 +40,13 @@ export default async function InvestmentHistoryPage() {
         </p>
       </div>
 
-      <TradeAnalysis
-        pnl={analysis.pnl}
-        symbols={analysis.symbols}
-        directions={analysis.directions}
-        months={analysis.months}
-        hours={analysis.hours}
-        holding={analysis.holding}
-        averageSize={analysis.averageSize}
-        tradeCount={analysis.tradeCount}
-        closedCount={analysis.closedCount}
+      {/* Filters, charts and table together, because they must describe the
+          same slice. Rendering the charts here and the table further down let
+          a figure about the whole account sit beside rows about one
+          instrument, with nothing on screen saying so. */}
+      <TradeHistory
+        rows={analysis.rows}
+        options={analysis.options}
         currency={analysis.baseCurrency}
         approximate={analysis.approximate}
         unconvertible={analysis.unconvertible}
@@ -70,21 +64,6 @@ export default async function InvestmentHistoryPage() {
         accounts={selectableAccounts.map((account) => ({ id: account.id, name: account.name, currency: account.currency }))}
         baseCurrency={baseCurrency}
       />
-
-      {data.activity.length > 0 ? (
-        <section className="card p-4">
-          <h2 className="text-sm font-medium">All account activity</h2>
-          <div className="overflow-auto max-h-[36rem] mt-3">
-            <table className="data-table whitespace-nowrap text-xs">
-              <thead><tr><th>Date</th><th>Account</th><th>Type</th><th>Asset</th><th>Description</th><th className="text-right">Quantity</th><th className="text-right">Price</th><th className="text-right">Net amount</th><th className="text-right">Realized P&amp;L</th></tr></thead>
-              <tbody>{data.activity.map((row) => {
-                const amount = Number(row.amount);
-                return <tr key={row.id}><td>{new Date(row.date).toLocaleDateString("pt-PT")}</td><td>{row.accountName}</td><td>{row.type}</td><td>{row.symbol ?? "—"}</td><td className="max-w-64 truncate">{row.description ?? "—"}</td><td className="text-right">{row.quantity ?? "—"}</td><td className="text-right">{row.price ? `${row.price} ${row.currency}` : "—"}</td><td className={`text-right ${amountClass(amount)}`}>{amount.toFixed(2)} {row.currency}</td><td className={`text-right ${row.realizedPnl === null ? "text-[var(--muted)]" : amountClass(row.realizedPnl)}`}>{row.realizedPnl === null ? "—" : `${row.realizedPnl.toFixed(2)} ${row.currency}`}</td></tr>;
-              })}</tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
 
       {data.imports.length > 0 ? (
         <section className="card p-4">
