@@ -67,6 +67,49 @@ export default async function DividendsPage() {
             </div>
           </div>
 
+          {/* Where each figure came from.
+              A payment can be recorded three ways — by a connector, by a broker
+              statement, or by a CSV import — and this page once read only the
+              first, so thirteen real distributions sitting in a statement were
+              invisible behind a confident total. One source wins per account
+              and per kind; the rest are kept as cross-checks and never added,
+              because on this account the same three payments exist twice. */}
+          {o.sources.length > 0 && (
+            <details className="card p-4">
+              <summary className="text-xs cursor-pointer text-[var(--muted)]">
+                Where these figures come from
+                {o.crossCheckOnly > 0 && ` · ${o.crossCheckOnly} record${o.crossCheckOnly === 1 ? "" : "s"} held back as a duplicate`}
+              </summary>
+              <table className="data-table text-xs mt-3">
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Kind</th>
+                    <th>Counted from</th>
+                    <th>Also recorded in</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {o.sources.map((s) => (
+                    <tr key={`${s.accountId}-${s.kind}`}>
+                      <td>{s.accountName}</td>
+                      <td>{s.kind === "interest" ? "interest" : "distributions"}</td>
+                      <td>{s.source}</td>
+                      <td className="text-[var(--muted)]">
+                        {s.others.length === 0 ? "—" : s.others.join(", ")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed">
+                A payment held in two places is counted once, from the source above. The other
+                copy is kept rather than deleted, so a disagreement between a broker&apos;s own
+                figures and an imported file stays visible instead of being resolved silently.
+              </p>
+            </details>
+          )}
+
           {/* Estimates first, and labelled as estimates in the heading itself. */}
           {o.upcoming.length > 0 && (
             <div className="card p-4">

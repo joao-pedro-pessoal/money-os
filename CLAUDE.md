@@ -135,6 +135,36 @@ knows what it is worth and never what it cost, so it can never contribute a
 gain. Anything showing `pnl` has to show that too, or it presents a subset of
 the portfolio as all of it.
 
+## Dividends can be known three ways
+
+Same shape as holdings, one table further on. A distribution reaches the app
+through a connector's `getDividends()` (`dividend_payments`), a broker
+statement (`broker_events`) or the activity CSV (`investment_activities`), and
+the page read the first alone — so thirteen real Trade Republic payments sat in
+a statement, invisible, behind a total built from three.
+
+Unioning the three would have been worse. On the live account Trading 212's
+three payments exist in two of the tables on identical dates, differing only in
+how the symbol is spelled: `EUN3d_EQ` from the API against `EUN3` from the
+import.
+
+`lib/portfolio/dividendSource.ts` is the arbiter, and the key is **the account
+and the kind**, not the account alone. That second half was forced by the data:
+Trading 212's connector reports dividends and no interest, while its import
+reports both, so choosing one source per account kept three dividends and lost
+sixty-five interest payments — one hole traded for another. The sources are not
+rivals describing the same thing; they cover different subsets.
+
+Counted went from 3 to 97, and the cross-check pile from 68 to 3 — exactly the
+three duplicated payments, kept rather than deleted so a disagreement between a
+broker's figures and an imported file stays visible.
+
+**A name comes from the user's own file or not at all.** The statement's
+dividend rows carry only an ISIN — "Cash Dividend for ISIN CA67077M1086" —
+while its purchase rows name the instrument. `nameByInstrument` joins them on
+the ISIN. Where nothing names it the screen shows the ISIN, which is true,
+rather than a guess, which this codebase forbids.
+
 ## Holdings can now be known two ways
 
 Positions can come from a live connector *or* be rebuilt from an imported
@@ -442,7 +472,7 @@ overwrite nothing the user edited.
 
 ```
 npx tsc --noEmit
-npx vitest run          # 1820+ tests; all must pass
+npx vitest run          # 1890+ tests; all must pass
 npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"

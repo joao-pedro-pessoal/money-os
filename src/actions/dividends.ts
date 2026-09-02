@@ -1,7 +1,14 @@
 "use server";
 
 import { db } from "@/db/client";
-import { dividendPayments, accounts, positions, accountConnections } from "@/db/schema";
+import {
+  dividendPayments,
+  accounts,
+  positions,
+  accountConnections,
+  brokerEvents,
+  investmentActivities,
+} from "@/db/schema";
 import { eq } from "drizzle-orm";
 import {
   summariseByTicker,
@@ -12,6 +19,11 @@ import {
   type DividendPayment,
 } from "@/lib/portfolio/dividends";
 import { attribute } from "@/lib/portfolio/attribution";
+import {
+  partitionDividends,
+  nameByInstrument,
+  type DividendRecord,
+} from "@/lib/portfolio/dividendSource";
 import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
@@ -55,27 +67,103 @@ async function converter() {
   return { base, convert, sum, unconverted: () => missing };
 }
 
-/** Every payment on record, newest first. */
-async function loadPayments(): Promise<(DividendPayment & { accountName: string })[]> {
-  const [rows, accountList] = await Promise.all([
+/**
+ * Every payment on record, from all three places one can be recorded.
+ *
+ * This used to read `dividend_payments` alone, which is what a connector
+ * writes. On a live account that meant thirteen Trade Republic distributions —
+ * imported from a statement into `broker_events` — were invisible while the
+ * page reported a confident total built from three.
+ *
+ * The three tables are not merged: `partitionDividends` picks one source per
+ * account, because Trading 212's three payments exist in two of them on
+ * identical dates and adding both would double them. See
+ * `lib/portfolio/dividendSource.ts`.
+ */
+async function loadPayments(): Promise<{
+  counted: (DividendPayment & { accountName: string })[];
+  crossCheckOnly: number;
+  chosenBy: ReturnType<typeof partitionDividends>["chosenBy"];
+}> {
+  const [rows, brokerRows, activityRows, accountList] = await Promise.all([
     db.select().from(dividendPayments),
+    db.select().from(brokerEvents),
+    db.select().from(investmentActivities),
     db.select().from(accounts),
   ]);
-  const accountName = new Map(accountList.map((a) => [a.id, a.name]));
+  const accountName = (id: string | null) =>
+    (id === null ? undefined : accountList.find((a) => a.id === id)?.name) ?? "(unknown account)";
 
-  return rows
-    .map((r) => ({
-      ticker: r.ticker,
-      instrumentName: r.instrumentName,
-      paidOn: r.paidOn,
+  /** A name for an ISIN, recovered from the purchase rows of the same import. */
+  const names = nameByInstrument(brokerRows.map((r) => ({ isin: r.isin, symbol: r.symbol })));
+
+  const records: DividendRecord[] = [
+    ...rows.map((r) => ({
+      accountId: r.accountId,
+      accountName: accountName(r.accountId),
+      source: "connector" as const,
+      kind: (isInterest(r.type) ? "interest" : "distribution") as "interest" | "distribution",
+      instrument: r.ticker,
+      name: r.instrumentName,
+      paidOn: new Date(r.paidOn).toISOString().slice(0, 10),
       amount: Number(r.amount),
       currency: r.currency,
+      type: r.type,
       quantity: r.quantity === null ? null : Number(r.quantity),
       grossPerShare: r.grossPerShare === null ? null : Number(r.grossPerShare),
+    })),
+    ...brokerRows
+      .filter((r) => r.kind === "DIVIDEND" || r.kind === "INTEREST")
+      .map((r) => ({
+        accountId: r.accountId,
+        accountName: accountName(r.accountId),
+        source: "statement" as const,
+        kind: (isInterest(r.kind) ? "interest" : "distribution") as "interest" | "distribution",
+        /** The ISIN where the row has no symbol, which is the usual case here. */
+        instrument: r.symbol ?? r.isin ?? "(unidentified)",
+        name: r.symbol ?? (r.isin === null ? null : names.get(r.isin) ?? null),
+        paidOn: new Date(r.date).toISOString().slice(0, 10),
+        amount: Math.abs(Number(r.amount)),
+        currency: r.currency,
+        type: r.kind,
+        quantity: r.quantity === null ? null : Number(r.quantity),
+        grossPerShare: r.price === null ? null : Number(r.price),
+      })),
+    ...activityRows
+      .filter((r) => r.type === "DIVIDEND" || r.type === "INTEREST")
+      .map((r) => ({
+        accountId: r.accountId ?? "",
+        accountName: accountName(r.accountId),
+        source: "import" as const,
+        kind: (isInterest(r.type) ? "interest" : "distribution") as "interest" | "distribution",
+        instrument: r.symbol ?? "(unidentified)",
+        name: r.symbol,
+        paidOn: new Date(r.date).toISOString().slice(0, 10),
+        amount: Math.abs(Number(r.amount)),
+        currency: r.currency,
+        type: r.type,
+        quantity: r.quantity === null ? null : Number(r.quantity),
+        grossPerShare: r.price === null ? null : Number(r.price),
+      })),
+  ];
+
+  const split = partitionDividends(records);
+
+  return {
+    counted: split.counted.map((r) => ({
+      ticker: r.name ?? r.instrument,
+      instrumentName: r.name,
+      paidOn: new Date(`${r.paidOn}T00:00:00.000Z`),
+      amount: r.amount,
+      currency: r.currency,
+      quantity: r.quantity,
+      grossPerShare: r.grossPerShare,
       type: r.type,
-      accountName: accountName.get(r.accountId) ?? "(unknown account)",
-    }))
-    .sort((a, b) => b.paidOn.getTime() - a.paidOn.getTime());
+      accountName: r.accountName,
+    })),
+    crossCheckOnly: split.crossCheckOnly.length,
+    chosenBy: split.chosenBy,
+  };
 }
 
 /**
@@ -87,7 +175,8 @@ async function loadPayments(): Promise<(DividendPayment & { accountName: string 
  * payer.
  */
 export async function getDividendOverview() {
-  const [payments, fx] = await Promise.all([loadPayments(), converter()]);
+  const [loaded, fx] = await Promise.all([loadPayments(), converter()]);
+  const payments = loaded.counted;
 
   const distributions = payments.filter((p) => !isInterest(p.type));
   const interest = payments.filter((p) => isInterest(p.type));
@@ -115,6 +204,13 @@ export async function getDividendOverview() {
   }
 
   return {
+    /**
+     * Which source each account's figures came from, and how many records were
+     * kept only as a cross-check. Shown rather than resolved silently: an
+     * account whose statement and connector disagree is worth knowing about.
+     */
+    sources: loaded.chosenBy,
+    crossCheckOnly: loaded.crossCheckOnly,
     totalAll: fx.sum(payments),
     totalDistributions: fx.sum(distributions),
     totalInterest: fx.sum(interest),
@@ -147,7 +243,7 @@ export async function getDividendOverview() {
 
 /** What one instrument has paid, for its own page. */
 export async function getDividendsForTicker(ticker: string) {
-  const payments = (await loadPayments()).filter((p) => p.ticker === ticker);
+  const payments = (await loadPayments()).counted.filter((p) => p.ticker === ticker);
   if (payments.length === 0) return null;
 
   const [summary] = summariseByTicker(payments);
@@ -174,12 +270,13 @@ export type DividendOverview = Awaited<ReturnType<typeof getDividendOverview>>;
  * a zero reads as a measurement rather than as a missing category.
  */
 export async function getRealisedTotal() {
-  const [payments, connections, fx] = await Promise.all([
+  const [loaded, connections, fx] = await Promise.all([
     loadPayments(),
     db.select().from(accountConnections),
     converter(),
   ]);
 
+  const payments = loaded.counted;
   const dividends = fx.sum(payments.filter((p) => !isInterest(p.type)));
   const interest = fx.sum(payments.filter((p) => isInterest(p.type)));
 
@@ -215,7 +312,7 @@ export async function getRealisedTotal() {
  * broker's own and there would be no way to tell which was right.
  */
 export async function getGainAttribution() {
-  const [payments, openPositions, connections, fx] = await Promise.all([
+  const [loaded, openPositions, connections, fx] = await Promise.all([
     loadPayments(),
     db.select().from(positions),
     db.select().from(accountConnections),
@@ -245,8 +342,8 @@ export async function getGainAttribution() {
     attribution: attribute({
       unrealised,
       realisedTrades: reported.length === 0 ? null : fx.sum(reported),
-      dividends: fx.sum(payments.filter((p) => !isInterest(p.type))),
-      interest: fx.sum(payments.filter((p) => isInterest(p.type))),
+      dividends: fx.sum(loaded.counted.filter((p) => !isInterest(p.type))),
+      interest: fx.sum(loaded.counted.filter((p) => isInterest(p.type))),
     }),
     /** Everything in the attribution is in this currency. */
     currency: fx.base,
