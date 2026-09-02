@@ -1,7 +1,7 @@
 # Money OS — o que faz e o que falta
 
-Estado a 1 de setembro de 2026. 1850 testes em 96 ficheiros, 37 migrations,
-41 tabelas, 89 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
+Estado a 1 de setembro de 2026. 1879 testes em 97 ficheiros, 37 migrations,
+41 tabelas, 91 módulos de lógica, 30 módulos de acesso a dados, 33 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
@@ -609,6 +609,45 @@ código.
   atualização automática.
 - **Sem taxa, o valor fica de fora do total e é nomeado.** Nunca é somado a 1:1.
   Isto já causou um erro real: 100 EUR + 87,70 USD apareciam como 187,70 €.
+
+## Onde o dinheiro é gasto
+
+Terceiro separador do Analytics, e o par do lado dos investimentos: mesma ideia,
+a outra metade da app.
+
+**Filtros:** categoria, subcategoria, comerciante, conta, intervalo de datas, e
+um interruptor entre custos comprometidos e o que escolheste gastar. Mais
+atalhos para o mês passado, os últimos 3 meses, os últimos 12 e o ano corrente —
+escrever duas datas para perguntar "como foi o mês passado" é atrito que faz uma
+página não ser usada.
+
+**Gráficos:** rosca por categoria, barras de entradas contra saídas mês a mês,
+barras por dia da semana com o fim de semana noutra cor, e uma tabela ordenável
+por gasto, quota, número de transações e maior transação. A tabela é clicável —
+clicar numa linha filtra por ela.
+
+Podes trocar o eixo entre **categoria, subcategoria, comerciante e conta** sem
+perder o filtro. O comerciante costuma ser o mais acionável dos quatro.
+
+Três decisões que decidem se os números são honestos:
+
+**As transferências nunca contam como gasto.** Mover 500 € da conta à ordem para
+a poupança não é gastar, e contá-lo fazia o mês parecer 500 € mais caro do que
+foi.
+
+**O que não tem categoria é nomeado, nunca deitado fora.** Aparece como
+"Uncategorised" e o ecrã diz quanto é — é a pilha que vale a pena arrumar
+primeiro, e escondê-la faria as quotas somar 100% descrevendo menos dinheiro do
+que gastaste.
+
+**Convertido antes de agrupar.** Esta é a mesma tabela de transações onde o
+`actions/stats.ts` deitava fora a moeda; aqui a conversão acontece na ação e as
+moedas sem taxa são deixadas de fora **e nomeadas**, nunca contadas como zero.
+
+> **Está vazio, e vai estar até lançares transações.** Tens 0 na base de dados.
+> A página funciona — verifiquei o caminho vazio contra a tua base a sério — e
+> mostra uma explicação em vez de gráficos em branco. Nada aqui foi visto com
+> dados reais, que é exatamente o teste que falta.
 
 ## Analytics
 

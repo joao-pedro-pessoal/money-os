@@ -12,6 +12,7 @@
 
 export const ANALYTICS_TABS = [
   { href: "/analytics", label: "Overview" },
+  { href: "/analytics/spending", label: "Where it goes" },
   { href: "/statistics", label: "Trends & projections" },
 ];
 
