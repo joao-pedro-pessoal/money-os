@@ -447,6 +447,28 @@ mas nenhum é compra ou venda (dividendos e transferências não têm resultado 
 negociação); ou há trades mas nenhum fechou posição ainda. Os três desenham
 gráficos vazios e querem dizer coisas diferentes.
 
+## Escrever ou colar no histórico
+
+O importador do histórico só aceitava **ficheiro**. Agora tem dois botões:
+*Upload a file* e *Paste or type*.
+
+A caixa de texto serve os dois casos que o ficheiro não servia: um trade que te
+lembras e queres registar, e uma tabela copiada da página da corretora. Antes
+tinhas de gravar isso num ficheiro sem razão nenhuma.
+
+**É o mesmo leitor.** Extraí a análise do `handleFile` para uma função só, que
+os dois caminhos chamam — dar a cada um o seu parser é como os dois começam a
+discordar sobre que colunas são obrigatórias. Uma linha que seria recusada num
+ficheiro é recusada aqui, com a mesma razão.
+
+O botão **"Start from an example"** preenche a caixa com o cabeçalho e três
+linhas de exemplo, porque a primeira linha tem de ser o cabeçalho e escrever
+isso de memória não é razoável.
+
+O texto colado é resumido em SHA-256 como um ficheiro, portanto colar as mesmas
+linhas duas vezes é reconhecido como o mesmo lote. E fica no histórico de
+imports com a data — o **Undo** funciona igual para o que escreveste à mão.
+
 ## P&L realizado, como as plataformas o reportam
 
 O que cada plataforma diz que as trades fechadas renderam, **lido e nunca
