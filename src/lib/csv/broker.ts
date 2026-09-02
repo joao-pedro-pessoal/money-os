@@ -128,6 +128,27 @@ const KIND_ALIASES: Record<string, EventKind> = {
   ACQUISTO: "BUY",
   VENDITA: "SELL",
   INTERESSI: "INTEREST",
+  /**
+   * Words in the order the broker wrote them.
+   *
+   * `foldToLetters` strips the punctuation, so Revolut's "BUY - MARKET"
+   * arrives as BUYMARKET while the table only had MARKETBUY. The same word in
+   * the other order is the same word, and a file was being refused over it.
+   */
+  BUYMARKET: "BUY",
+  BUYLIMIT: "BUY",
+  BUYSTOP: "BUY",
+  SELLMARKET: "SELL",
+  SELLLIMIT: "SELL",
+  SELLSTOP: "SELL",
+  CASHTOPUP: "DEPOSIT",
+  CASHWITHDRAWAL: "WITHDRAWAL",
+  CUSTODYFEE: "FEE",
+  SERVICEFEE: "FEE",
+  TRANSACTIONFEE: "FEE",
+  DIVIDENDTAX: "FEE",
+  WITHHOLDINGTAX: "FEE",
+
   AANKOOP: "BUY",
   VERKOOP: "SELL",
   RENTE: "INTEREST",
@@ -157,6 +178,24 @@ function foldToLetters(raw: string): string {
 
 export function normaliseKind(raw: string): EventKind | null {
   return KIND_ALIASES[foldToLetters(raw)] ?? null;
+}
+
+/**
+ * Buy or sell, from the sign of the quantity.
+ *
+ * The last resort, and only for a file with no type column and no readable
+ * description — Degiro's transactions export being the one that made this
+ * necessary. There, a purchase is `+12` and a sale is `-12`, and nothing else
+ * in the row says which.
+ *
+ * Null for zero and for absent. A quantity of zero is not a direction, and a
+ * row with no quantity is a deposit, a fee or a dividend — real events that
+ * this cannot type, and that must be reported as unreadable rather than filed
+ * as a purchase of nothing.
+ */
+export function directionFromQuantity(quantity: number | null): EventKind | null {
+  if (quantity === null || !Number.isFinite(quantity) || quantity === 0) return null;
+  return quantity > 0 ? "BUY" : "SELL";
 }
 
 /** The separators a broker might have used. */
@@ -221,6 +260,20 @@ export interface BrokerCsvInspection {
    */
   describedRows: number;
   /**
+   * Rows whose buy-or-sell would be taken from the sign of the quantity.
+   *
+   * Degiro's transactions export has no type column at all: a purchase is a
+   * positive quantity and a sale a negative one, and that is the only thing
+   * distinguishing them. Without this the file is refused for a missing column
+   * it will never have.
+   *
+   * Non-zero is worth showing before the import rather than after. The
+   * inference is sound for a trade file and says nothing about deposits, fees
+   * or dividends, which have no quantity — those rows are reported as
+   * unreadable rather than guessed at.
+   */
+  signedQuantityRows: number;
+  /**
    * This is a bank statement someone has brought to the broker importer.
    *
    * Worth naming rather than reporting as a generic failure, because it is the
@@ -231,16 +284,25 @@ export interface BrokerCsvInspection {
 }
 
 /** Every column the importer looks for, and the names it accepts for each. */
+/**
+ * Column names, in the languages these files actually arrive in.
+ *
+ * A broker exports in the locale of the account, not in English: Degiro writes
+ * "Data" and "Quantidade" to a Portuguese user and "Datum" and "Aantal" to a
+ * Dutch one. The type words were already translated — `KIND_ALIASES` covers six
+ * languages — and the headers were not, so a file whose *contents* the importer
+ * could read was rejected for its column titles.
+ */
 const COLUMN_ROLES: { role: string; required: boolean; names: string[] }[] = [
-  { role: "date", required: true, names: ["date", "time", "datetime"] },
-  { role: "type", required: true, names: ["type", "action", "kind"] },
-  { role: "amount", required: true, names: ["amount", "total", "value"] },
-  { role: "symbol", required: false, names: ["symbol", "ticker", "instrument"] },
+  { role: "date", required: true, names: ["date", "time", "datetime", "data", "datum", "fecha", "dataora"] },
+  { role: "type", required: true, names: ["type", "action", "kind", "tipo", "soort", "art", "operacao", "operacion"] },
+  { role: "amount", required: true, names: ["amount", "total", "value", "montante", "valor", "bedrag", "importe", "betrag", "totalamount"] },
+  { role: "symbol", required: false, names: ["symbol", "ticker", "instrument", "produto", "product", "produkt", "simbolo", "titulo"] },
   { role: "isin", required: false, names: ["isin", "isincode", "instrumentisin", "securityid"] },
-  { role: "quantity", required: false, names: ["quantity", "shares", "qty"] },
-  { role: "price", required: false, names: ["price", "priceshare", "shareprice"] },
-  { role: "fees", required: false, names: ["fees", "fee", "commission"] },
-  { role: "currency", required: false, names: ["currency", "currencycode"] },
+  { role: "quantity", required: false, names: ["quantity", "shares", "qty", "quantidade", "aantal", "anzahl", "cantidad", "quantita"] },
+  { role: "price", required: false, names: ["price", "priceshare", "shareprice", "preco", "precio", "prijs", "kurs", "prezzo", "pricepershare"] },
+  { role: "fees", required: false, names: ["fees", "fee", "commission", "comissao", "custos", "custosdetransacao", "kosten", "gebuhren", "comision"] },
+  { role: "currency", required: false, names: ["currency", "currencycode", "moeda", "valuta", "divisa", "wahrung"] },
   { role: "description", required: false, names: ["description", "notes", "note", "descricao", "descripcion", "beschreibung"] },
   { role: "reference", required: false, names: ["externalid", "id", "reference"] },
 ];
@@ -279,10 +341,19 @@ export function looksLikeBrokerStatement(headers: readonly string[]): boolean {
 
   if (has("isin", "isincode", "instrumentisin")) return true;
 
+  /**
+   * The hints are translated in step with `COLUMN_ROLES`, or a Degiro export in
+   * Portuguese would be recognised by the importer and never routed to it.
+   *
+   * Deliberately *not* including the amount or date words here. Those appear on
+   * every bank statement in every language, and this function's whole job is
+   * telling the two apart — the count still has to reach two, and a bank
+   * statement has no reason to carry a quantity or a price per share.
+   */
   const hints = [
-    has("symbol", "ticker", "instrument"),
-    has("quantity", "shares", "qty"),
-    has("price", "priceshare", "shareprice"),
+    has("symbol", "ticker", "instrument", "produto", "product", "produkt", "titulo"),
+    has("quantity", "shares", "qty", "quantidade", "aantal", "anzahl", "cantidad", "quantita"),
+    has("price", "priceshare", "shareprice", "pricepershare", "preco", "precio", "prijs", "kurs", "prezzo"),
   ].filter(Boolean).length;
 
   return hints >= 2;
@@ -311,6 +382,7 @@ export function inspectBrokerCsv(text: string): BrokerCsvInspection {
       unknownKinds: [],
       sample: [],
       describedRows: 0,
+      signedQuantityRows: 0,
       looksLikeBankStatement: false,
     };
   }
@@ -358,7 +430,33 @@ export function inspectBrokerCsv(text: string): BrokerCsvInspection {
     }
   }
 
-  const stillMissing = missingRequired.filter((role) => !(role === "type" && describable > 0));
+  /**
+   * Rows a signed quantity could type, when nothing else can.
+   *
+   * Gated on there being an ISIN column, which is the same thing that makes
+   * `looksLikeBrokerStatement` decisive: a bank statement has no reason to
+   * carry one, so this cannot start inferring purchases out of a spending
+   * export. Only consulted when the file has neither a type column nor a
+   * description the importer can read.
+   */
+  const isinIndex = normalised.findIndex((h) =>
+    COLUMN_ROLES.find((r) => r.role === "isin")!.names.includes(h)
+  );
+  const quantityIndex = normalised.findIndex((h) =>
+    COLUMN_ROLES.find((r) => r.role === "quantity")!.names.includes(h)
+  );
+
+  let signedQuantityRows = 0;
+  if (typeIndex === -1 && describable === 0 && quantityIndex !== -1 && isinIndex !== -1) {
+    for (const raw of rows) {
+      const cells = parseCsvLine(raw, delimiter);
+      if (directionFromQuantity(num(cells[quantityIndex] ?? null)) !== null) signedQuantityRows += 1;
+    }
+  }
+
+  const stillMissing = missingRequired.filter(
+    (role) => !(role === "type" && (describable > 0 || signedQuantityRows > 0))
+  );
 
   return {
     readable: stillMissing.length === 0,
@@ -367,6 +465,7 @@ export function inspectBrokerCsv(text: string): BrokerCsvInspection {
     columns,
     missingRequired: stillMissing,
     rowCount: rows.length,
+    signedQuantityRows,
     /** Rows this file can only be read through, not by column. */
     describedRows: describable,
     unknownKinds: [...unknown.entries()]
@@ -418,20 +517,34 @@ export function parseBrokerCsv(text: string): BrokerParseResult {
   // Folded exactly as `inspectBrokerCsv` folds them, or the report and the
   // parser would disagree about which columns exist.
   const headers = original.map(normaliseHeader);
-  const at = (...names: string[]) => headers.findIndex((h) => names.includes(h));
+
+  /**
+   * Resolved from `COLUMN_ROLES`, which is the only list of what a column may
+   * be called.
+   *
+   * This used to repeat all eleven name lists inline. They agreed until they
+   * didn't: translating the headers for Degiro updated `COLUMN_ROLES`, so
+   * `inspectBrokerCsv` reported a Portuguese file as readable and this threw
+   * "no column for date, type" on the same file. Two lists of the same thing
+   * agree right up until one is edited.
+   */
+  const at = (role: string) => {
+    const names = COLUMN_ROLES.find((r) => r.role === role)!.names;
+    return headers.findIndex((h) => names.includes(h));
+  };
 
   const cols = {
-    date: at("date", "time", "datetime"),
-    kind: at("type", "action", "kind"),
-    symbol: at("symbol", "ticker", "instrument"),
-    isin: at("isin", "isincode", "instrumentisin", "securityid"),
-    quantity: at("quantity", "shares", "qty"),
-    price: at("price", "priceshare", "shareprice"),
-    amount: at("amount", "total", "value"),
-    fees: at("fees", "fee", "commission"),
-    currency: at("currency", "currencycode"),
-    description: at("description", "notes", "note", "descricao", "descripcion", "beschreibung"),
-    externalId: at("externalid", "id", "reference"),
+    date: at("date"),
+    kind: at("type"),
+    symbol: at("symbol"),
+    isin: at("isin"),
+    quantity: at("quantity"),
+    price: at("price"),
+    amount: at("amount"),
+    fees: at("fees"),
+    currency: at("currency"),
+    description: at("description"),
+    externalId: at("reference"),
   };
 
   /**
@@ -452,7 +565,19 @@ export function parseBrokerCsv(text: string): BrokerParseResult {
       : 0;
   const readableFromDescription = describedKinds > 0;
 
-  if (cols.date === -1 || (cols.kind === -1 && !readableFromDescription) || cols.amount === -1) {
+  /**
+   * The same last resort `inspectBrokerCsv` reports: a trade file with no type
+   * column, where the direction is the sign of the quantity. Gated on an ISIN
+   * column for the same reason — it is what marks the file as trades rather
+   * than spending.
+   */
+  const readableFromSign = cols.kind === -1 && cols.quantity !== -1 && cols.isin !== -1;
+
+  if (
+    cols.date === -1 ||
+    (cols.kind === -1 && !readableFromDescription && !readableFromSign) ||
+    cols.amount === -1
+  ) {
     // Naming what was actually found, because the usual cause is a broker whose
     // columns are named something else — and "expected date, type and amount"
     // gives no clue which of the three is the problem.
@@ -483,15 +608,27 @@ export function parseBrokerCsv(text: string): BrokerParseResult {
     }
 
     const described = readDescription(cell(cols.description));
-    // The column wins when there is one; prose is the fallback, never an
-    // override — a file that states its types is stating them for a reason.
-    const kind = cols.kind === -1 ? described.kind : normaliseKind(cell(cols.kind) ?? "");
+    const quantity = num(cell(cols.quantity)) ?? described.quantity;
+
+    /**
+     * Column, then prose, then the sign of the quantity.
+     *
+     * The column wins when there is one and prose is a fallback, never an
+     * override — a file that states its types is stating them for a reason.
+     * The sign is the last resort and applies only where the first two said
+     * nothing, which is Degiro's export and files shaped like it.
+     */
+    const kind =
+      cols.kind !== -1
+        ? normaliseKind(cell(cols.kind) ?? "")
+        : (described.kind ?? directionFromQuantity(quantity));
+
     if (kind === null) {
       rejected.push({
         line,
         reason:
           cols.kind === -1
-            ? "Couldn't tell what this row is from its description."
+            ? "Couldn't tell what this row is from its description or its quantity."
             : `Unknown type "${cell(cols.kind) ?? ""}".`,
         raw,
       });
@@ -514,7 +651,7 @@ export function parseBrokerCsv(text: string): BrokerParseResult {
       // Whatever the file gave, then whatever the sentence gave.
       symbol: symbol !== "" ? symbol : described.name,
       isin: normaliseIsin(cell(cols.isin)) ?? described.isin,
-      quantity: num(cell(cols.quantity)) ?? described.quantity,
+      quantity,
       price: num(cell(cols.price)),
       amount,
       fees: num(cell(cols.fees)),

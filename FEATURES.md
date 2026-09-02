@@ -1,6 +1,6 @@
 # Money OS — o que faz e o que falta
 
-Estado a 31 de agosto de 2026. 1789 testes em 94 ficheiros, 36 migrations,
+Estado a 1 de setembro de 2026. 1802 testes em 94 ficheiros, 36 migrations,
 41 tabelas, 86 módulos de lógica, 29 módulos de acesso a dados, 32 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
@@ -144,6 +144,39 @@ qualquer coisa nesse formato.
 - O parser de valores aguenta `1.234,56`, `1,234.56`, menos à direita,
   parênteses e símbolos de moeda. As datas são dia-primeiro (europeu) e rejeitam
   31 de fevereiro.
+
+## Corretoras por extrato
+
+Para **corretoras**, ao contrário das exchanges, quase nenhuma dá API de leitura
+a pessoas singulares: eram a IBKR e a Trading 212, e ambas já estão ligadas. A
+Degiro não tem API pública, e os clientes que existem são engenharia inversa
+sobre o login — mesma objeção da Trade Republic. A Revolut e os bancos passam por
+PSD2 e exigem licença AISP.
+
+O caminho que funciona é o extrato, e o importador aprendeu três coisas:
+
+**Os nomes das colunas noutras línguas.** Uma corretora exporta na língua da
+conta: a Degiro escreve "Data" e "Quantidade" a um português e "Datum" e
+"Aantal" a um holandês. As palavras de *tipo* já estavam traduzidas em seis
+línguas há muito; os *títulos das colunas* não estavam, portanto um ficheiro cujo
+conteúdo a app sabia ler era recusado pelos cabeçalhos.
+
+**Palavras de tipo na ordem em que a corretora as escreve.** A Revolut escreve
+"BUY - MARKET", que depois de tirar a pontuação fica BUYMARKET — e a tabela só
+tinha MARKETBUY. A mesma palavra na outra ordem é a mesma palavra.
+
+**Ficheiros sem coluna de tipo nenhuma.** O extrato de transações da Degiro não
+tem: uma compra é quantidade positiva e uma venda é negativa, e não há mais nada
+na linha que diga qual. Agora o sinal é lido — mas só em último recurso, só se o
+ficheiro tiver coluna de ISIN (que é o que o marca como negociação e não como
+despesa), e o ecrã diz quantas linhas vão ser tipadas assim **antes** de
+importares. Uma linha sem quantidade — um depósito, uma taxa, um dividendo — não
+é adivinhada: é reportada como ilegível.
+
+> **Aviso honesto:** estes formatos foram escritos a partir da forma documentada
+> de cada extrato, não de ficheiros reais passados pela app. Provam que o
+> importador aguenta a *forma*; um ficheiro a sério continua a ser o que
+> encontra o detalhe em que ninguém pensou.
 
 ## Investimentos
 

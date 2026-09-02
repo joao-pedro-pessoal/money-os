@@ -5,6 +5,7 @@ import {
   parseBrokerCsv,
   looksLikeBrokerStatement,
   normaliseKind,
+  directionFromQuantity,
 } from "../broker";
 
 /** A semicolon export with comma decimals — the continental European default. */
@@ -69,8 +70,34 @@ describe("reporting on a file instead of failing on it", () => {
     const i = inspectBrokerCsv("Datum;Buchungstext;Betrag\n2026-01-15;Kauf;-251,00");
 
     expect(i.readable).toBe(false);
-    expect(i.missingRequired).toEqual(["date", "type", "amount"]);
+    /**
+     * `Datum` and `Betrag` are recognised now that the column names are
+     * translated, which is right — they genuinely are a date and an amount.
+     * What still refuses the file is the one column that decides what a row
+     * *is*, and without it nothing can be imported.
+     */
+    expect(i.missingRequired).toEqual(["type"]);
     expect(i.headers).toEqual(["Datum", "Buchungstext", "Betrag"]);
+  });
+
+  /**
+   * The mirror of the expensive bug: a Trade Republic export was once accepted
+   * by the bank importer and 219 trades were filed as ordinary expenses.
+   * Translating the column names must not start sending bank statements the
+   * other way, so this pins the routing guard on bank-shaped headers.
+   */
+  it("still does not mistake a bank statement for a broker one", () => {
+    expect(looksLikeBrokerStatement(["Datum", "Buchungstext", "Betrag", "Waehrung"])).toBe(false);
+    expect(looksLikeBrokerStatement(["Data", "Descricao", "Valor", "Saldo"])).toBe(false);
+  });
+
+  /**
+   * And the case the translation exists for: Degiro writes its headers in the
+   * language of the account, so a Portuguese export has to be read as trades.
+   */
+  it("recognises a broker export whose headers are not in English", () => {
+    expect(looksLikeBrokerStatement(["Data", "Produto", "Quantidade", "Preco", "Total"])).toBe(true);
+    expect(looksLikeBrokerStatement(["Datum", "Product", "Aantal", "Koers"])).toBe(true);
   });
 
   it("lists the type words it doesn't know, commonest first", () => {
@@ -194,5 +221,179 @@ describe("the error, when there has to be one", () => {
     expect(() => parseBrokerCsv("Datum;Buchungstext;Betrag\n2026-01-15;Kauf;-251,00")).toThrow(
       /Datum, Buchungstext, Betrag/
     );
+  });
+});
+
+/**
+ * Brokers whose exports the app could not read, and why.
+ *
+ * These fixtures are written from the documented shapes of each export, not
+ * from files anyone has run through the app — so they prove the importer
+ * handles the *shape*, and a real file is still the thing that would find a
+ * detail nobody thought of. Every connector bug in this project was found that
+ * way, and this is the same kind of guess in a different place.
+ */
+describe("exports that used to be refused", () => {
+  /**
+   * Revolut writes its order types with the order style attached and a hyphen
+   * in the middle. `foldToLetters` strips the punctuation, so "BUY - MARKET"
+   * arrives as BUYMARKET while the table only knew MARKETBUY — the same word
+   * in the other order, and the file was refused over it.
+   */
+  it("reads Revolut's order types, whichever order the words are in", () => {
+    expect(normaliseKind("BUY - MARKET")).toBe("BUY");
+    expect(normaliseKind("SELL - LIMIT")).toBe("SELL");
+    expect(normaliseKind("CASH TOP-UP")).toBe("DEPOSIT");
+    expect(normaliseKind("CUSTODY FEE")).toBe("FEE");
+    // And the order it already knew still works.
+    expect(normaliseKind("Market buy")).toBe("BUY");
+  });
+
+  it("still refuses a word it has genuinely never seen", () => {
+    expect(normaliseKind("STOCK SPLIT")).toBeNull();
+    expect(normaliseKind("Savings plan execution")).toBeNull();
+  });
+
+  /**
+   * Degiro's transactions export, in the shape a Portuguese account gets it:
+   * semicolon-separated, headers in Portuguese, and **no type column at all**.
+   * A purchase is a positive quantity and a sale a negative one.
+   */
+  const DEGIRO_PT = [
+    "Data;Produto;ISIN;Quantidade;Preco;Total;Custos de transacao;Moeda",
+    "2026-03-02;VANGUARD FTSE AW;IE00B3RBWM25;12;108,50;-1302,00;-1,00;EUR",
+    "2026-04-11;VANGUARD FTSE AW;IE00B3RBWM25;-5;112,20;561,00;-1,00;EUR",
+  ].join("\n");
+
+  it("recognises it as trades rather than spending", () => {
+    expect(looksLikeBrokerStatement(["Data", "Produto", "ISIN", "Quantidade", "Preco"])).toBe(true);
+  });
+
+  it("reads it, and says the types come from the sign of the quantity", () => {
+    const i = inspectBrokerCsv(DEGIRO_PT);
+
+    expect(i.readable).toBe(true);
+    expect(i.delimiter).toBe(";");
+    expect(i.missingRequired).toEqual([]);
+    expect(i.signedQuantityRows).toBe(2);
+    expect(i.columns.find((c) => c.role === "isin")?.header).toBe("ISIN");
+    expect(i.columns.find((c) => c.role === "quantity")?.header).toBe("Quantidade");
+    expect(i.columns.find((c) => c.role === "type")?.header).toBeNull();
+  });
+
+  it("turns the sign into a buy and a sell", () => {
+    const { events, rejected } = parseBrokerCsv(DEGIRO_PT);
+
+    expect(rejected).toEqual([]);
+    expect(events.map((e) => e.kind)).toEqual(["BUY", "SELL"]);
+    expect(events[0].quantity).toBe(12);
+    expect(events[1].quantity).toBe(-5);
+    expect(events[0].isin).toBe("IE00B3RBWM25");
+  });
+
+  /**
+   * The inference is only about direction. A deposit or a fee has no quantity,
+   * so it cannot be typed this way — and must be reported as unreadable rather
+   * than filed as a purchase of nothing.
+   */
+  it("refuses a row it cannot type instead of guessing at it", () => {
+    const withCash = [
+      "Data;Produto;ISIN;Quantidade;Preco;Total;Moeda",
+      "2026-03-02;VANGUARD FTSE AW;IE00B3RBWM25;12;108,50;-1302,00;EUR",
+      "2026-03-01;Deposito;;;;1500,00;EUR",
+    ].join("\n");
+
+    const { events, rejected } = parseBrokerCsv(withCash);
+    expect(events.map((e) => e.kind)).toEqual(["BUY"]);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toMatch(/quantity/);
+  });
+
+  /**
+   * The guard that stops this from spreading. Without an ISIN column the file
+   * has nothing marking it as a trade export, and inferring purchases from a
+   * quantity column on some bank's statement is exactly the mistake the
+   * routing guard exists to prevent.
+   */
+  it("does not infer types on a file with no ISIN column", () => {
+    const noIsin = [
+      "Data;Produto;Quantidade;Total",
+      "2026-03-02;Something;12;-1302,00",
+    ].join("\n");
+
+    const i = inspectBrokerCsv(noIsin);
+    expect(i.signedQuantityRows).toBe(0);
+    expect(i.readable).toBe(false);
+    expect(i.missingRequired).toEqual(["type"]);
+  });
+
+  /**
+   * A quantity of zero is not a direction, and neither is an absent one.
+   */
+  it("has no direction to read from a zero or missing quantity", () => {
+    expect(directionFromQuantity(12)).toBe("BUY");
+    expect(directionFromQuantity(-5)).toBe("SELL");
+    expect(directionFromQuantity(0)).toBeNull();
+    expect(directionFromQuantity(null)).toBeNull();
+    expect(directionFromQuantity(Number.NaN)).toBeNull();
+  });
+
+  /**
+   * A stated type always wins. A file that says what its rows are is saying so
+   * for a reason, and a sale booked with a positive quantity — which some
+   * brokers do, putting the direction in the type word instead — must not be
+   * overridden into a purchase.
+   */
+  it("never lets the sign override a type the file states", () => {
+    const stated = [
+      "Date;Type;ISIN;Quantity;Amount",
+      "2026-03-02;Sell;IE00B3RBWM25;5;561,00",
+    ].join("\n");
+
+    const { events } = parseBrokerCsv(stated);
+    expect(events[0].kind).toBe("SELL");
+    expect(events[0].quantity).toBe(5);
+  });
+});
+
+/**
+ * The report and the parser must agree about which columns exist.
+ *
+ * `parseBrokerCsv` used to repeat all eleven column-name lists inline instead
+ * of reading `COLUMN_ROLES`. They agreed until they didn't: translating the
+ * headers for Degiro updated one list, so `inspectBrokerCsv` called a
+ * Portuguese file readable and `parseBrokerCsv` threw "no column for date,
+ * type" on the very same file — the report promising something the importer
+ * then refused.
+ *
+ * Two lists of the same thing agree right up until one is edited, which is why
+ * there is now one and why this checks it stays that way.
+ */
+describe("the report and the parser read the same file the same way", () => {
+  const files = [
+    EUROPEAN,
+    "Data;Produto;ISIN;Quantidade;Preco;Total;Moeda\n2026-03-02;VWCE;IE00B3RBWM25;12;108,50;-1302,00;EUR",
+    "Datum;Product;ISIN;Aantal;Koers;Totaal\n2026-03-02;VWCE;IE00B3RBWM25;-5;112,20;561,00",
+    "Date,Type,Amount,ISIN\n2026-01-01,Buy,-100,IE00B4L5Y983",
+    "Fecha;Tipo;Importe;ISIN\n2026-01-01;Compra;-100;IE00B4L5Y983",
+  ];
+
+  it("never promises a file the parser then refuses", () => {
+    for (const file of files) {
+      const inspection = inspectBrokerCsv(file);
+      if (!inspection.readable) continue;
+
+      // Readable means parseBrokerCsv must not throw on it.
+      expect(() => parseBrokerCsv(file), file.split("\n")[0]).not.toThrow();
+    }
+  });
+
+  it("agrees on the delimiter, which decides everything after it", () => {
+    for (const file of files) {
+      const inspection = inspectBrokerCsv(file);
+      // Same detector, same header line — pinned because a disagreement here
+      // makes every column index wrong in one of the two.
+      expect(inspection.delimiter, file.split("\n")[0]).toBe(detectDelimiter(file.split("\n")[0]));
+    }
   });
 });

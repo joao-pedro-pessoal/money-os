@@ -93,7 +93,18 @@ bucket allocation — and the same euro must be counted once.
 
 ## A second definition is worse than a wrong one
 
-This has now happened twice with the same number.
+This has now happened three times, and the third was not even a number.
+
+`parseBrokerCsv` repeated all eleven column-name lists inline instead of reading
+`COLUMN_ROLES`, which `inspectBrokerCsv` uses. They agreed until they didn't:
+translating the headers so Degiro's Portuguese export could be read updated one
+list, so the report called the file readable and the parser threw "no column for
+date, type" on the very same file. The report promising something the importer
+then refuses is worse than either behaviour alone. There is one list now, and a
+test asserts that anything the inspection calls readable does not throw.
+
+The two cases below were both a figure. This one was a lookup table, which is
+the same failure: **if something already defines what a thing is, read it.**
 
 `portfolioSummary` in `lib/portfolio/positionView.ts` is the arbiter for an
 unrealised gain. Its own comment records why it exists: the cards once read
@@ -431,7 +442,7 @@ overwrite nothing the user edited.
 
 ```
 npx tsc --noEmit
-npx vitest run          # 1780+ tests; all must pass
+npx vitest run          # 1800+ tests; all must pass
 npx eslint src          # 0 errors; 3 warnings in bybit tests are pre-existing
 npm run build
 npm run db:generate     # must say "No schema changes"
