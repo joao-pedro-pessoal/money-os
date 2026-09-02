@@ -518,6 +518,32 @@ batem com os que a Kraken dá a 0,14%, que é a diferença normal entre duas
 exchanges. A assinatura reproduz o vetor publicado pela Binance. **Por
 verificar:** o `/api/v3/account`, que precisa de uma chave.
 
+## Verificar um connector contra a tua conta
+
+`scripts/probe-kraken.mjs`, `probe-binance.mjs` e `probe-okx.mjs`, ao lado dos
+que já existiam para a Bybit, a Hyperliquid e a IBKR.
+
+Cada um chama os endpoints a sério com as tuas chaves, e imprime a **forma** da
+resposta com todos os valores substituídos por `<amount>` — dá para colar a
+saída sem expor quanto tens. As credenciais assinam o pedido e nunca são
+impressas.
+
+A parte útil é a última linha de cada um: **os campos que a resposta traz e o
+parser não lê.** É aí que aparece uma carteira que falta ou um estado que não
+está a ser tratado, e não é coisa que um teste encontre — os testes verificam o
+que já se percebeu.
+
+Correndo-os com credenciais falsas, o caminho de erro dos três ficou verificado
+contra a realidade:
+
+| Venue | Resposta a uma chave errada |
+|---|---|
+| Kraken | **HTTP 200** com o erro no corpo — a armadilha contra a qual o connector foi desenhado |
+| Binance | HTTP 401, `code -2015`, que significa chave *ou* IP *ou* permissão |
+| OKX | HTTP 401, `code "50119"` — string, e o sucesso é `"0"` |
+
+Falta o caminho de sucesso dos três, que precisa de chaves reais.
+
 ## Ligações a plataformas
 
 Arquitetura: Connector → Normalizer → Base de dados → UI. Acrescentar uma
