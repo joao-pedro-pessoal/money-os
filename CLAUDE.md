@@ -805,6 +805,41 @@ Funding, Simple Earn and Futures are separate wallets with separate endpoints;
 a partial total presented as a whole one is the failure this codebase removes
 most often, so the gap is stated rather than hidden.
 
+### MEXC: the same API as Binance, the opposite error sign
+
+MEXC copied Binance's v3 spot API endpoint for endpoint. `/api/v3/account`,
+`/api/v3/ticker/price`, HMAC-SHA256 over the query string — all identical, which
+is why those shapes live in `connectors/spotV3.ts` and both connectors import
+them instead of holding a copy each. Only two things are MEXC's own, and both
+are places where assuming Binance gives the wrong answer without saying so.
+
+**Binance's error codes are negative; MEXC's are positive.** `binanceError`
+asks `code < 0`, so on a MEXC refusal it returns `null` — no error. The payload
+is then parsed for balances, `{balances:[...]}` is absent, nothing is found, and
+**the account reads as holding nothing**. A wrong key would look like an emptied
+exchange and net worth would drop silently. Confirmed against the live API with
+a deliberately invalid key: HTTP 400, `{"code":10072,"msg":"Api key info
+invalid"}`. `mexcError` therefore tests for the *presence* of a numeric `code`
+with a `msg`, not its sign, treating only the documented sentinels 0 and 200 as
+success — erring toward reporting an error, because a sync that stops loudly
+leaves the last good balance alone while one that succeeds emptily overwrites it.
+
+This is the third costume of the same bug: OKX's `"0"` is truthy, Kraken's
+errors arrive with HTTP 200, MEXC's codes are positive. **A venue's error shape
+is the last thing to assume is portable.**
+
+**The key format differs too.** MEXC keys are `mx0…` and about thirty
+characters; Binance's `isValidApiKey` demands forty and would have rejected
+every valid MEXC key at the form, before the venue ever saw it — which looks
+like the key being wrong rather than like the check being wrong.
+
+The composition rule holds here as well: `symbol === baseAsset + quoteAsset` for
+all 2 071 spot symbols, zero exceptions, checked against the live
+`exchangeInfo`. **Spot wallet only** — Futures is a separate API on a separate
+host, and the earn products are separate again; the connection screen says so.
+`scripts/probe-mexc.mjs` is the way to check a real key without pasting one
+anywhere.
+
 ### Kraken, and the two traps in it
 
 **An error arrives with HTTP 200.** `{"error":["EAPI:Invalid key"],"result":{}}`

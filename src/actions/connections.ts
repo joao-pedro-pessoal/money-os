@@ -26,6 +26,7 @@ import { createTrading212Connector } from "@/lib/connectors/trading212";
 import { createKrakenConnector } from "@/lib/connectors/kraken";
 import { createBinanceConnector } from "@/lib/connectors/binance";
 import { createOkxConnector } from "@/lib/connectors/okx";
+import { createMexcConnector } from "@/lib/connectors/mexc";
 import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
 import { freshnessOf } from "@/lib/connectors/freshness";
 import { marginView, describePressure } from "@/lib/connectors/margin";
@@ -85,6 +86,9 @@ function connectorFor(
       if (!secret) throw new Error("This OKX connection has no stored API secret");
       if (!passphrase) throw new Error("This OKX connection has no stored passphrase");
       return createOkxConnector({ apiKey: externalId, apiSecret: secret, passphrase });
+    case "mexc":
+      if (!secret) throw new Error("This MEXC connection has no stored API secret");
+      return createMexcConnector({ apiKey: externalId, apiSecret: secret });
     case "kraken":
       if (!secret) throw new Error("This Kraken connection has no stored API secret");
       return createKrakenConnector({ apiKey: externalId, apiSecret: secret });
@@ -100,7 +104,7 @@ function connectorFor(
 }
 
 /** Platforms whose credentials must be encrypted before being stored. */
-const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken", "binance", "okx"]);
+const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken", "binance", "okx", "mexc"]);
 
 /**
  * Whether secret storage is usable at all.

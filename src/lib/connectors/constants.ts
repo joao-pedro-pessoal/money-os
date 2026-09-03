@@ -18,6 +18,7 @@ export const PLATFORM_LABELS: Record<string, string> = {
   kraken: "Kraken",
   binance: "Binance",
   okx: "OKX",
+  mexc: "MEXC",
 };
 
 /**
@@ -106,6 +107,23 @@ export const PLATFORM_SETUP: Record<
     ],
     warning:
       "This reads your Spot wallet only. Money in Funding, Simple Earn, Futures or any locked product sits in a separate wallet with its own endpoint and will not appear — so the figure here can be lower than what Binance shows you. Those wallets need a live key to be built against without guessing at the reply; until then the limit is stated rather than hidden.",
+  },
+  mexc: {
+    identifierLabel: "API key",
+    identifierHint: "mx0… , from MEXC → API Management",
+    needsSecret: true,
+    help:
+      "MEXC copied Binance's API, so this needs the same thing: a key with read access only. A key without trading rights cannot place an order whatever the app does. The secret is encrypted before it is stored and never shown again.",
+    steps: [
+      "Set ENCRYPTION_KEY in .env and restart the app, or the secret cannot be stored.",
+      "In MEXC, open API Management from the account menu and create a key.",
+      "Tick the read permission only. Leave Trade and Withdraw OFF.",
+      "MEXC asks you to bind an IP address. Use the one this app runs from, or leave it unrestricted — a key bound to another machine will always answer “Signature for this request is not valid”.",
+      "Copy the secret before closing the page — MEXC shows it exactly once.",
+      "Paste the key and the secret below.",
+    ],
+    warning:
+      "This reads your Spot wallet only. Futures is a separate API on a separate host, and Savings, Staking and launchpad products are separate again — none of them will appear, so the figure here can be lower than what MEXC shows you. They need a live key to be built against without guessing at the reply.",
   },
   kraken: {
     identifierLabel: "API key",
