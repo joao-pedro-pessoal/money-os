@@ -22,6 +22,8 @@
  * Pure — no DB, no network.
  */
 
+import { eligibleCash, type AccountLike } from "./index";
+
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export interface UnallocatedInput {
@@ -107,6 +109,62 @@ export function unallocatedCash(input: UnallocatedInput): UnallocatedView {
     inSeparatePool: round2(separate),
     overAllocated: free < -0.005,
   };
+}
+
+/**
+ * What a connector says about an account, reduced to what "free" needs.
+ *
+ * Deliberately not the whole platform total: equity and unrealized P&L say what
+ * the account is worth, and this file is only ever asked what could be spent.
+ */
+export interface PlatformCashLike {
+  /** Free to trade with — margin already deducted, separate pool included. */
+  available: number;
+  /** The part of `available` sitting in a pool of its own. */
+  spot: number;
+  /** Backing open trades. Carried so the figure can explain itself. */
+  marginUsed: number;
+}
+
+/**
+ * The one definition of an account's free cash, connected or not.
+ *
+ * There used to be three, and they disagreed on live data. An IBKR account
+ * holding 10.34 USD showed a balance of 34.24 next to 134.24 "free" — more
+ * spendable money than the account contained — because the balance column read
+ * the platform while the free column read `accounts.balance`, a stored figure a
+ * manual transaction had pushed 100 above what the venue actually held.
+ *
+ * Cosmetic on the accounts screen, not cosmetic anywhere else: the same stored
+ * figure fed the buckets page's "distributable" total and `suggestDistribution`,
+ * so the app was offering to assign a hundred euros that were not on the
+ * platform. Which is the exact harm the top of this file exists to prevent,
+ * arrived at through a second definition rather than a wrong one.
+ *
+ * A connected account's own balance is not consulted at all. The platform is
+ * the authority on what is on the platform.
+ */
+export function accountFreeCash(
+  account: AccountLike,
+  allocatedToBuckets: number,
+  platform?: PlatformCashLike | null
+): UnallocatedView {
+  if (!platform) {
+    return unallocatedCash({
+      availableOnPlatform: eligibleCash(account),
+      allocatedToBuckets,
+    });
+  }
+
+  return unallocatedCash({
+    // `available` already contains the separate pool; pulling it back out here
+    // and passing it as `separatePool` is what lets the view name it without
+    // counting it twice.
+    availableOnPlatform: platform.available - platform.spot,
+    separatePool: platform.spot,
+    allocatedToBuckets,
+    marginUsed: platform.marginUsed,
+  });
 }
 
 /**

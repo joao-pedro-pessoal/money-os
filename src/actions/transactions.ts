@@ -36,10 +36,27 @@ export async function createTransaction(formData: FormData) {
 
   const signedAmount = type === "expense" || type === "investment_contribution" ? -Math.abs(amount) : Math.abs(amount);
 
+  /**
+   * The account's currency, not the column's default.
+   *
+   * `transactions.currency` defaults to EUR and this form has no currency
+   * field, so every row was stamped EUR whatever account it landed in — while
+   * the balance below was incremented raw. A 100 entered against a USD IBKR
+   * account became a 100 EUR row *and* 100 USD of balance: the amount recorded
+   * in one currency and added in another, which is the one arithmetic this
+   * codebase is not allowed to do.
+   *
+   * The figure is taken at face value in the account's own currency, because
+   * that is the only currency the form could have meant.
+   */
+  const [account] = await db.select().from(accounts).where(eq(accounts.id, accountId));
+  if (!account) throw new Error("Account not found");
+
   await db.insert(transactions).values({
     accountId,
     type,
     amount: String(signedAmount),
+    currency: account.currency,
     date,
     categoryId,
     description,

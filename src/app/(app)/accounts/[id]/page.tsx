@@ -5,7 +5,7 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import NetWorthChart from "@/components/NetWorthChart";
 import { growthOverDays, growth, type SeriesPoint } from "@/lib/accounting/composition";
 import { notFound } from "next/navigation";
-import { getAccountPlatformTotals } from "@/actions/connections";
+import { getAccountPlatformTotals } from "@/actions/platformTotals";
 import BalanceMeaningField from "@/components/BalanceMeaningField";
 import { meaningOf } from "@/lib/accounting/balanceScope";
 import { eligibleCash } from "@/lib/accounting";

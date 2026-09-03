@@ -28,8 +28,11 @@ import { getTradeAnalysis } from "../src/actions/investmentActivity";
 import { getSpendingAnalysis } from "../src/actions/spending";
 import { portfolioSummary } from "../src/lib/portfolio/positionView";
 import { realisedProvenance } from "../src/lib/trading/realised";
+import { listAccountsWithState } from "../src/actions/accounts";
+import { getAccountPlatformTotals } from "../src/actions/platformTotals";
 import { db } from "../src/db/client";
-import { accounts } from "../src/db/schema";
+import { accounts, transactions } from "../src/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 const CENT = 0.011;
 
@@ -258,6 +261,75 @@ async function main() {
   }
 
   // ----------------------------------------------------------------- spending
+  /**
+   * Free cash cannot exceed what the account is shown to hold.
+   *
+   * The reading that exposed this: Interactive Brokers, 34.24 USD of balance
+   * next to 134.24 "free". Two columns reading two sources — the balance from
+   * the connector, the free figure from `accounts.balance`, which a manual
+   * transaction had pushed 100 above what the venue actually held and which the
+   * failing sync never corrected.
+   *
+   * The stale-balance half is checked separately because it is the cause rather
+   * than the symptom, and it stays true even once every screen reads the
+   * platform: a connected account whose stored balance has drifted will still
+   * feed net worth, snapshots and the net-worth chart.
+   */
+  console.log("\nFree cash");
+  const accountsWithState = await listAccountsWithState();
+  const totals = await getAccountPlatformTotals();
+
+  for (const a of accountsWithState) {
+    const p = totals.get(a.id);
+    const shown = p ? p.total : a.balance;
+    check(
+      `${a.name}: free is within what it holds`,
+      a.free <= shown + CENT,
+      `free ${money(a.free, a.currency)} exceeds the ${money(shown, a.currency)} shown — ` +
+        `a figure labelled free that isn't there invites planning with money you don't have`
+    );
+
+    if (p && !near(a.balance, p.equity + p.spotOnTop)) {
+      note(
+        `${a.name}: stored balance has drifted from the platform`,
+        `the database says ${money(a.balance, a.currency)}, the connector reports ` +
+          `${money(p.equity + p.spotOnTop, a.currency)}. A manual transaction on a synced ` +
+          `account is overwritten by the next successful sync, so the difference is either ` +
+          `a sync that failed or an entry that is about to be silently discarded`
+      );
+    }
+  }
+
+  /**
+   * A transaction recorded in one currency and added to a balance in another.
+   *
+   * `transactions.currency` defaults to EUR, and the form has no currency field,
+   * so before this was fixed every row was stamped EUR whatever account it
+   * landed in while the balance was incremented raw.
+   */
+  const mismatched = await db
+    .select({
+      name: accounts.name,
+      accountCurrency: accounts.currency,
+      txCurrency: transactions.currency,
+      amount: transactions.amount,
+    })
+    .from(transactions)
+    .innerJoin(accounts, eq(accounts.id, transactions.accountId))
+    .where(sql`${transactions.currency} is distinct from ${accounts.currency}`);
+
+  check(
+    "every transaction is in its account's currency",
+    mismatched.length === 0,
+    mismatched
+      .map(
+        (m) =>
+          `${m.name} is ${m.accountCurrency} but holds ${m.amount} stamped ${m.txCurrency}, ` +
+          `added to the balance without conversion`
+      )
+      .join("\n        ")
+  );
+
   console.log("\nSpending");
   const spend = await getSpendingAnalysis();
   if (spend.total === 0) {

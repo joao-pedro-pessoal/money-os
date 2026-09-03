@@ -1,7 +1,7 @@
 import { listAccountsWithState } from "@/actions/accounts";
 import { listTransactions } from "@/actions/transactions";
 import { getNetWorth } from "@/actions/networth";
-import { getAccountPlatformTotals } from "@/actions/connections";
+import { getAccountPlatformTotals } from "@/actions/platformTotals";
 import { getSubscriptionTotals } from "@/actions/subscriptions";
 import { getRates } from "@/actions/fx";
 import { sumInBase, toBase } from "@/lib/fx";
@@ -18,7 +18,7 @@ import { listGoalsByPriority } from "@/actions/distribute";
 import { getTotalNetWorthOverTime } from "@/actions/analytics";
 import { fmt } from "@/lib/format";
 import Link from "next/link";
-import { unallocatedCash, explainFree, splitPortfolioCash } from "@/lib/accounting/unallocated";
+import { explainFree, splitPortfolioCash } from "@/lib/accounting/unallocated";
 import { getFavouriteCurrencies, getDashboardCurrency } from "@/actions/settings";
 import { resolveDisplayCurrency } from "@/lib/fx/favourites";
 import CurrencySwitch from "@/components/CurrencySwitch";
@@ -158,36 +158,18 @@ export default async function DashboardPage({
       // The share of this account's spare cash that is investing money, which
       // the dashboard's free-cash figure must not include.
       portfolioCashPercent: a.portfolioCashPercent === null ? null : Number(a.portfolioCashPercent),
-      free: p
-        ? unallocatedCash({
-            // Already has margin deducted by the connector.
-            availableOnPlatform: p.available - p.spot,
-            separatePool: p.spot,
-            allocatedToBuckets: a.allocated,
-            marginUsed: p.marginUsed,
-          }).free
-        : a.free,
-      freeExplained: p
-        ? explainFree(
-            unallocatedCash({
-              availableOnPlatform: p.available - p.spot,
-              separatePool: p.spot,
-              allocatedToBuckets: a.allocated,
-              marginUsed: p.marginUsed,
-            }),
-            a.currency
-          )
-        : explainFree(
-            unallocatedCash({ availableOnPlatform: a.balance, allocatedToBuckets: a.allocated }),
-            a.currency
-          ),
+      free: a.free,
+      freeExplained: explainFree(a.freeView, a.currency),
       marginUsed: p?.marginUsed ?? 0,
       /**
        * Everything converted once, here, so the card never mixes currencies.
        * A dollar figure beside a euro total is unreconcilable by eye, and this
        * is the page people check first.
        */
-      freeInBase: toBase(p ? p.available : a.free, a.currency, rates, base) ?? undefined,
+      // The same figure the row above states, converted — not the platform's
+      // raw `available`, which is free of margin but not of bucket allocations
+      // and so quietly re-offered money already promised to a goal.
+      freeInBase: toBase(a.free, a.currency, rates, base) ?? undefined,
       equityInBase: toBase(p?.equity ?? 0, a.currency, rates, base) ?? undefined,
       spotInBase: toBase(p?.spot ?? 0, a.currency, rates, base) ?? undefined,
       pnlInBase: toBase(p?.unrealizedPnl ?? 0, a.currency, rates, base) ?? undefined,

@@ -15,14 +15,28 @@ import {
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { reconciliationState, overallocatedAmount, freeCash, allocatedCash } from "@/lib/accounting";
+import { reconciliationState, overallocatedAmount, allocatedCash } from "@/lib/accounting";
+import { accountFreeCash } from "@/lib/accounting/unallocated";
+import { getAccountPlatformTotals } from "./platformTotals";
 import { isAbandoned, reasonsToKeep, type AccountUsage } from "@/lib/accounting/abandoned";
 import { meaningOf } from "@/lib/accounting/balanceScope";
 import { writeSnapshot } from "./snapshots";
 
 export async function listAccountsWithState() {
-  const allAccounts = await db.select().from(accounts).where(eq(accounts.active, true));
-  const allAllocations = await db.select().from(bucketAllocations);
+  const [allAccounts, allAllocations, platformTotals] = await Promise.all([
+    db.select().from(accounts).where(eq(accounts.active, true)),
+    db.select().from(bucketAllocations),
+    /**
+     * Read here rather than at each screen that happened to remember to.
+     *
+     * `free` was computed off the stored balance for every caller of this
+     * function — six of them, including the buckets page's distributable total
+     * and `suggestDistribution`. On a connected account that balance is only as
+     * fresh as the last successful sync, so an IBKR account holding 10.34 USD
+     * was offering 134.24 to assign to goals.
+     */
+    getAccountPlatformTotals(),
+  ]);
 
   return allAccounts.map((acc) => {
     const balance = Number(acc.balance);
@@ -46,11 +60,32 @@ export async function listAccountsWithState() {
           : null,
     };
 
+    /**
+     * The platform's answer where there is a platform.
+     *
+     * Not a fallback to the stored balance when a connector is present: a
+     * connected account that reports nothing has nothing free, and quietly
+     * substituting a stale local figure is how the two disagreed in the first
+     * place.
+     */
+    const platform = platformTotals.get(acc.id);
+    const allocated = allocatedCash(acc.id, allocations);
+    /**
+     * Computed once, here, and handed to the screens whole.
+     *
+     * The dashboard used to build its own from the platform figures, and then a
+     * second one for the explanation, and then read `p.available` for the
+     * number it actually rendered — four spellings of "free" on two pages, of
+     * which three were wrong in a different way.
+     */
+    const freeView = accountFreeCash(shape, allocated, platform);
+
     return {
       ...acc,
       balance,
-      free: freeCash(shape, allocations),
-      allocated: allocatedCash(acc.id, allocations),
+      free: freeView.free,
+      freeView,
+      allocated,
       state: reconciliationState(shape, allocations, acc.lastManualUpdate ?? acc.createdAt, new Date()),
       overallocatedBy: overallocatedAmount(shape, allocations),
     };

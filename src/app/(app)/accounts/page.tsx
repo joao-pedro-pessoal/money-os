@@ -6,10 +6,8 @@ import {
   listRemovableAccounts,
   removeEmptyAccounts,
 } from "@/actions/accounts";
-import {
-  getAccountPlatformTotals,
-  listConnections,
-} from "@/actions/connections";
+import { listConnections } from "@/actions/connections";
+import { getAccountPlatformTotals } from "@/actions/platformTotals";
 import ConnectablePlatforms from "@/components/ConnectablePlatforms";
 import { platformOptions } from "@/lib/connectors/catalogue";
 import { Money } from "@/components/PrivacyContext";
