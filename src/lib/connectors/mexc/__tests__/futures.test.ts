@@ -10,6 +10,7 @@ import {
   coinOf,
   settleOf,
   settlementRate,
+  inDollars,
 } from "../futures";
 import { mexcError } from "../parse";
 
@@ -358,5 +359,67 @@ describe("settlement currencies", () => {
 
   it("does not care about case", () => {
     expect(settlementRate("usd", ticker)).toBe(1);
+  });
+});
+
+/**
+ * MEXC settles in USDT, and a row labelled USDT is dropped by everything
+ * downstream: `toBase` has no rate for a stablecoin, because this codebase
+ * deliberately does not treat one as a currency. Nine real closed positions
+ * reached the database and `getTradeAnalysis` counted every one as
+ * unconvertible — the whole history stored and on no screen.
+ */
+describe("restating the history in dollars", () => {
+  const ROW = {
+    date: "2026-09-03T14:25:23.000Z",
+    type: "SELL",
+    symbol: "THETA",
+    quantity: 3374,
+    price: 0.173,
+    amount: 16.2959,
+    fees: null,
+    currency: "USDT",
+    description: "MEXC futures long closed",
+    externalId: "mexc-futures-1",
+    realizedPnl: 16.2959,
+  };
+  const peg = (c: string) => (c === "USDT" ? 1 : null);
+
+  it("labels the row in a currency the app can actually rate", () => {
+    const [out] = inDollars([ROW], peg);
+    expect(out.currency).toBe("USD");
+  });
+
+  it("keeps what it settled in where a person can still read it", () => {
+    expect(inDollars([ROW], peg)[0].description).toContain("settled USDT");
+  });
+
+  it("converts every figure at the same rate", () => {
+    const [out] = inDollars([ROW], (c) => (c === "USDT" ? 0.5 : null));
+    expect(out.amount).toBeCloseTo(8.14795, 6);
+    expect(out.price).toBeCloseTo(0.0865, 6);
+    expect(out.realizedPnl).toBeCloseTo(8.14795, 6);
+  });
+
+  /** Quantity is units of the asset, not money. Converting it would be absurd. */
+  it("leaves the quantity alone", () => {
+    expect(inDollars([ROW], (c) => (c === "USDT" ? 0.5 : null))[0].quantity).toBe(3374);
+  });
+
+  it("keeps a null figure null rather than turning it into zero", () => {
+    const [out] = inDollars([{ ...ROW, price: null, fees: null, realizedPnl: null }], peg);
+    expect(out.price).toBeNull();
+    expect(out.fees).toBeNull();
+    expect(out.realizedPnl).toBeNull();
+  });
+
+  /**
+   * An unrateable settlement currency leaves the row exactly as it came, so it
+   * is still reported as unconvertible rather than silently restated at a rate
+   * nobody has.
+   */
+  it("returns a row it cannot price untouched", () => {
+    const odd = { ...ROW, currency: "WEIRD" };
+    expect(inDollars([odd], peg)[0]).toEqual(odd);
   });
 });

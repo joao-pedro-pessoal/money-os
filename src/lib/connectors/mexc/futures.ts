@@ -337,6 +337,46 @@ export function parseHistoryPositions(
 }
 
 /**
+ * Trade history restated in dollars.
+ *
+ * MEXC settles in USDT, and a row leaving this connector labelled `USDT` is
+ * dropped by everything downstream: `toBase` has no rate for it, because this
+ * codebase deliberately does not treat a stablecoin as a currency — USDT is
+ * worth about a dollar since a peg holds, which is a fact about a holding.
+ * `getTradeAnalysis` obeys that correctly and counted nine real closed
+ * positions as unconvertible, so the whole MEXC history was in the database and
+ * on no screen.
+ *
+ * Converting here is where it belongs: the peg is the connector's assumption to
+ * make, the same one it already makes valuing the collateral, and the app's FX
+ * layer stays free of coins it has no business rating.
+ *
+ * A row whose settlement currency cannot be priced is returned untouched, so it
+ * is still reported as unconvertible rather than silently restated at a rate
+ * nobody has.
+ */
+export function inDollars(
+  rows: readonly InvestmentActivityRow[],
+  rateFor: (currency: string) => number | null
+): InvestmentActivityRow[] {
+  return rows.map((row) => {
+    const rate = rateFor(row.currency);
+    if (rate === null) return row;
+
+    return {
+      ...row,
+      amount: row.amount * rate,
+      price: row.price === null ? null : row.price * rate,
+      fees: row.fees === null ? null : row.fees * rate,
+      realizedPnl: row.realizedPnl === null ? null : row.realizedPnl * rate,
+      currency: "USD",
+      // What it actually settled in, kept where a person can still read it.
+      description: `${row.description} (settled ${row.currency})`,
+    };
+  });
+}
+
+/**
  * What one unit of a settlement currency is worth in dollars, or null.
  *
  * MEXC settles its contracts in four things, not one — `USDT`, `USDC`, `USD`

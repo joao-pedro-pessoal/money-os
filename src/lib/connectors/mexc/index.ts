@@ -41,6 +41,7 @@ import {
   parseOpenPositions,
   parseHistoryPositions,
   settlementRate,
+  inDollars,
 } from "./futures";
 
 export const MEXC_BASE_URL = "https://api.mexc.com";
@@ -290,7 +291,19 @@ export function createMexcConnector(
         withdrawable: futures.reachable ? round2(futuresAvailable) : null,
         totalMarginUsed: futures.reachable ? round2(futuresMargin) : null,
         totalNotionalPosition: null,
-        activity: futures.activity,
+        /**
+         * Restated in dollars before it leaves, because MEXC settles in USDT
+         * and nothing downstream will rate a stablecoin — nine real closed
+         * positions were reaching the database and being dropped as
+         * unconvertible by `getTradeAnalysis`, which was obeying the rule
+         * correctly. The peg is this connector's assumption to make.
+         */
+        activity:
+          futures.activity === undefined
+            ? undefined
+            : inDollars(futures.activity, (c) =>
+                settlementRate(c, (asset) => priceInDollars(prices, asset))
+              ),
         asOf: new Date(),
         positions: futures.positions,
         balances,

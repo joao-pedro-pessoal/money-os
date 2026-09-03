@@ -16,7 +16,7 @@ import {
   investmentActivities,
 } from "@/db/schema";
 import { investmentActivityFingerprint } from "@/lib/investment-activity";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createHyperliquidConnector } from "@/lib/connectors/hyperliquid";
@@ -749,7 +749,39 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
             }),
           }))
         )
-        .onConflictDoNothing();
+        /**
+         * The event is the venue's; the reading of it is ours, and ours can be
+         * wrong.
+         *
+         * This was `onConflictDoNothing`, which made a re-sync free but also
+         * made a correction impossible: the fingerprint is the venue's own id,
+         * so a fixed reading of the same event arrived with the same key and
+         * was discarded. MEXC's nine closed positions were stored labelled
+         * `USDT`, which nothing downstream will rate — a stablecoin is not a
+         * currency here — so `getTradeAnalysis` counted them as unconvertible
+         * and the whole history sat in the database, on no screen, uncorrectable
+         * by syncing again.
+         *
+         * Only the fields that are our interpretation are refreshed. `id` is
+         * untouched, so the tags you put on a trade — which live in their own
+         * table keyed by it — survive. Nothing here is hand-editable, so there
+         * is no authored value to overwrite.
+         */
+        .onConflictDoUpdate({
+          target: [investmentActivities.accountId, investmentActivities.fingerprint],
+          set: {
+            date: sql`excluded.date`,
+            type: sql`excluded.type`,
+            symbol: sql`excluded.symbol`,
+            quantity: sql`excluded.quantity`,
+            price: sql`excluded.price`,
+            amount: sql`excluded.amount`,
+            fees: sql`excluded.fees`,
+            currency: sql`excluded.currency`,
+            description: sql`excluded.description`,
+            realizedPnl: sql`excluded.realized_pnl`,
+          },
+        });
     }
 
     // 3. Replace the position set. Closed positions simply stop being returned
