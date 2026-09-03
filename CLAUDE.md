@@ -835,10 +835,50 @@ like the key being wrong rather than like the check being wrong.
 
 The composition rule holds here as well: `symbol === baseAsset + quoteAsset` for
 all 2 071 spot symbols, zero exceptions, checked against the live
-`exchangeInfo`. **Spot wallet only** — Futures is a separate API on a separate
-host, and the earn products are separate again; the connection screen says so.
-`scripts/probe-mexc.mjs` is the way to check a real key without pasting one
-anywhere.
+`exchangeInfo`.
+
+**Futures is a second connector wearing the same name.** Spot is
+`api.mexc.com`; futures is `contract.mexc.com`, and it shares nothing but the
+login. The signature covers `accessKey + timestamp + params` and travels in
+`ApiKey`, `Request-Time` and `Signature` headers; GET parameters must be in
+**dictionary order** — insertion order works by luck for `page_num`/`page_size`
+and breaks the day a third is added, as an invalid signature that reads exactly
+like a wrong key. Every reply is `{success, code, data}` and success is
+`code: 0`.
+
+`contractError` is separate from `mexcError` for a reason confirmed against the
+live host: an unauthenticated call answers `{"success":false,"code":401,
+"message":"Not logged in or login has expired"}` — under `message`, not `msg`,
+which `mexcError` would have read as no error.
+
+Four facts from the docs, each producing a plausible number rather than an error
+when assumed:
+
+- **`equity` already contains `unrealized`.** Adding them counts the same
+  floating profit twice. It is also never recomputed from
+  `cashBalance + unrealized` — that would be a second definition of a figure the
+  venue already states.
+- **Volumes are in contracts, not coins.** BTC_USDT's `contractSize` is 0.0001,
+  so 500 contracts is 0.05 BTC — read raw, a position is overstated ten thousand
+  times. Sizes come from the public `/api/v1/contract/detail`; a position whose
+  size is unknown is dropped rather than guessed, which costs nothing in the
+  totals because `equity` already holds its profit.
+- **`assets` is one row per settlement currency**, and MEXC settles in four:
+  USDT, USDC, USD and USD1 across its 1 170 contracts. `USD` is the unit itself
+  and gets a rate of 1 without asking a crypto ticker for a `USDUSDT` that does
+  not exist; `USD1` is a stablecoin, priced like any holding.
+- **`realised` on an *open* position is the floating result** — MEXC's word, not
+  this app's, so it is filed as unrealised. On a *closed* position it is the
+  real thing, and it travels on the row so `realised.ts` derives nothing.
+
+Closed positions are the trade history: one row per position opened and closed.
+A row whose close time cannot be read is skipped rather than dated to now — a
+trade filed under the wrong day corrupts every window a filter can select.
+
+The futures half is allowed to fail alone. MEXC has restricted futures API
+access for years, so a refusal there leaves the spot reading standing instead of
+killing the sync. Savings, Staking and launchpad products are still unread.
+`scripts/probe-mexc-wallets.mjs` checks a real key without pasting one anywhere.
 
 ### Kraken, and the two traps in it
 
