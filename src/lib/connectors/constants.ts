@@ -48,6 +48,16 @@ export const PLATFORM_SETUP: Record<
     steps: string[];
     /** Set when the platform is known not to work for most users here. */
     warning?: string;
+    /**
+     * The part of the venue the connector can see, when it is not all of it.
+     *
+     * Structured rather than left to `warning`, which is prose shown before
+     * connecting. This is read *after* a sync, so the app can explain a
+     * successful zero: MEXC synced fine, found an empty Spot wallet and showed
+     * `0,00 US$` beside a green connection, which reads as "the venue holds
+     * nothing" rather than "the wallet I can see holds nothing".
+     */
+    readsOnly?: { wallet: string; elsewhere: string };
   }
 > = {
   hyperliquid: {
@@ -91,6 +101,11 @@ export const PLATFORM_SETUP: Record<
     ],
     warning:
       "This reads your trading account. Funding is a separate account on OKX with its own endpoint and will not appear, so the figure here can be lower than what OKX shows you.",
+    readsOnly: {
+      wallet: "trading account",
+      elsewhere:
+        "Funding is a separate account on OKX with its own endpoint. Money held there will not appear here.",
+    },
   },
   binance: {
     identifierLabel: "API key",
@@ -107,6 +122,11 @@ export const PLATFORM_SETUP: Record<
     ],
     warning:
       "This reads your Spot wallet only. Money in Funding, Simple Earn, Futures or any locked product sits in a separate wallet with its own endpoint and will not appear — so the figure here can be lower than what Binance shows you. Those wallets need a live key to be built against without guessing at the reply; until then the limit is stated rather than hidden.",
+    readsOnly: {
+      wallet: "Spot wallet",
+      elsewhere:
+        "Binance keeps Funding, Simple Earn, Futures and locked products in separate wallets, each with its own endpoint. Money in any of those will not appear here.",
+    },
   },
   mexc: {
     identifierLabel: "API key",
@@ -124,6 +144,11 @@ export const PLATFORM_SETUP: Record<
     ],
     warning:
       "This reads your Spot wallet only. Futures is a separate API on a separate host, and Savings, Staking and launchpad products are separate again — none of them will appear, so the figure here can be lower than what MEXC shows you. They need a live key to be built against without guessing at the reply.",
+    readsOnly: {
+      wallet: "Spot wallet",
+      elsewhere:
+        "MEXC keeps Futures on a separate API, and Savings, Staking and launchpad products separately again. Money in any of those will not appear here. Run scripts/probe-mexc-wallets.mjs to find which wallet holds it.",
+    },
   },
   kraken: {
     identifierLabel: "API key",

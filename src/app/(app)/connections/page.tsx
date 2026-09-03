@@ -15,6 +15,7 @@ import { NEW_ACCOUNT, PLATFORM_SETUP, BYBIT_REGIONS, PLATFORM_LABELS } from "@/l
 import ConnectionForm from "@/components/ConnectionForm";
 import { listAccountsForHoldings } from "@/actions/investments";
 import { freshnessLabel, freshnessColor } from "@/lib/connectors/freshness";
+import { emptyReadScope } from "@/lib/connectors/scope";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
@@ -163,6 +164,29 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                       </span>
                     </div>
                   )}
+                  {/* A successful zero, explained.
+                      MEXC synced, reported ok, found an empty Spot wallet and
+                      showed 0,00 beside a green connection — which reads as
+                      "the venue holds nothing" when what was measured is "the
+                      one wallet this can see holds nothing". The money was in
+                      another wallet all along. The figure stays: the wallet
+                      really is empty, and that is a measurement. What was
+                      missing is which question it answers. */}
+                  {(() => {
+                    const scope = emptyReadScope({
+                      status: c.lastSyncStatus,
+                      equity: c.lastEquity === null ? null : Number(c.lastEquity),
+                      spotValue: c.lastSpotValue === null ? null : Number(c.lastSpotValue),
+                      readsOnly: PLATFORM_SETUP[c.platform]?.readsOnly ?? null,
+                    });
+                    if (scope === null) return null;
+                    return (
+                      <div className="text-xs text-[var(--amber)] mt-2 max-w-xl leading-relaxed">
+                        Synced fine, and the {scope.wallet} it reads is empty — so this zero is
+                        about that wallet, not about the whole account. {scope.elsewhere}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="flex items-center gap-3">
