@@ -1,17 +1,23 @@
 /**
- * MexcConnector — read-only.
+ * MexcConnector — read-only, across two wallets that share nothing but a login.
  *
- * Two endpoints: `/api/v3/account` for the spot wallet and the public
- * `/api/v3/ticker/price` to value it. `/api/v3/order` is never imported, so
- * placing an order is not something this code could do by mistake, and the key
- * it asks for needs only the read permission — which cannot trade regardless.
+ * Spot is `api.mexc.com`: a query-string signature, a bare reply, coins.
+ * Futures is `contract.mexc.com`: a header signature over
+ * `accessKey + timestamp + params`, a `{success, code, data}` envelope, and
+ * positions measured in contracts rather than coins. The two are kept apart in
+ * `./parse` and `./futures` because nothing about them is the same — see the
+ * note in `./futures` for the four facts that produce a plausible number rather
+ * than an error when they are assumed instead of read.
  *
- * **This reads the Spot wallet and nothing else.** MEXC keeps money in other
- * places that do not appear in `/api/v3/account`: Futures has its own API with
- * its own host and response shapes, and Savings, Staking and the various
- * launchpad products are separate again. None can be written against without a
- * live account to check the reply, so the limit is stated on the connection
- * screen rather than hidden (see PLATFORM_SETUP.mexc.warning).
+ * No order endpoint is imported from either host, so placing a trade is not
+ * something this code could do by mistake, and the key it asks for needs only
+ * read permissions — which cannot trade regardless.
+ *
+ * **The futures half is allowed to fail on its own.** MEXC has restricted
+ * futures API access for years, and a key that cannot reach it is common; when
+ * that happens the spot reading still stands rather than the whole sync dying.
+ * Savings, Staking and the launchpad products remain unread — separate again,
+ * and stated on the connection screen rather than hidden.
  *
  * The secret arrives already decrypted from src/lib/crypto and is never logged.
  */
@@ -26,8 +32,22 @@ import {
   buildQuery,
   isValidApiKey,
 } from "./parse";
+import {
+  contractError,
+  futuresSignature,
+  sortedQuery,
+  parseFuturesAssets,
+  parseContractSizes,
+  parseOpenPositions,
+  parseHistoryPositions,
+  settlementRate,
+} from "./futures";
 
 export const MEXC_BASE_URL = "https://api.mexc.com";
+/** Futures live on their own host, with their own auth and envelope. */
+export const MEXC_CONTRACT_URL = "https://contract.mexc.com";
+/** MEXC's cap is 100. One page is the recent history; the rest is an import. */
+const HISTORY_PAGE_SIZE = 100;
 
 /** How far a request may lag the server's clock before it is rejected. */
 const RECV_WINDOW = 5000;
@@ -42,7 +62,8 @@ export type MexcGet = (url: string, headers: Record<string, string>) => Promise<
 export function createMexcConnector(
   credentials: MexcCredentials,
   httpGet: MexcGet = defaultGet,
-  baseUrl: string = MEXC_BASE_URL
+  baseUrl: string = MEXC_BASE_URL,
+  contractUrl: string = MEXC_CONTRACT_URL
 ): Connector {
   /**
    * A signed GET.
@@ -77,6 +98,44 @@ export function createMexcConnector(
     return payload;
   }
 
+  /**
+   * A signed GET against the futures host.
+   *
+   * Different in every respect from the spot call above: the signature covers
+   * `accessKey + timestamp + params` rather than the query string, it travels
+   * in headers rather than in the URL, and the reply is checked against the
+   * `{success, code, data}` envelope instead of a bare `msg`.
+   */
+  async function callFutures(path: string, params: Record<string, string | number> = {}) {
+    const requestTime = String(Date.now());
+    // Dictionary order, which is the order MEXC signs — not insertion order.
+    const query = sortedQuery(params);
+    const signature = futuresSignature(
+      credentials.apiKey,
+      credentials.apiSecret,
+      requestTime,
+      query
+    );
+
+    const payload = await httpGet(`${contractUrl}${path}${query ? `?${query}` : ""}`, {
+      ApiKey: credentials.apiKey,
+      "Request-Time": requestTime,
+      Signature: signature,
+      "Content-Type": "application/json",
+    });
+
+    const error = contractError(payload);
+    if (error !== null) throw new Error(`MEXC futures refused ${path}: ${error}`);
+    return payload;
+  }
+
+  async function callFuturesPublic(path: string) {
+    const payload = await httpGet(`${contractUrl}${path}`, {});
+    const error = contractError(payload);
+    if (error !== null) throw new Error(`MEXC futures refused ${path}: ${error}`);
+    return payload;
+  }
+
   return {
     platform: "mexc",
 
@@ -91,15 +150,36 @@ export function createMexcConnector(
       const held = parseAccountBalances(await callSigned("/api/v3/account"));
 
       /**
-       * Prices are fetched only when something needs pricing, and symbols are
-       * composed from the asset and a dollar quote rather than resolved from a
-       * pair list — see the note on `priceInDollars` for why that direction is
-       * the safe one even on a venue whose symbol list nobody has audited.
+       * The futures account, read before prices because it decides whether any
+       * are needed. On this venue it is usually where the money is.
+       *
+       * Allowed to fail on its own: MEXC has restricted futures API access for
+       * years and a key that cannot reach it is common. When that happens the
+       * spot reading still stands rather than the whole sync failing — a
+       * partial answer that says what it covers beats no answer at all.
        */
-      const prices =
-        held.length > 0
-          ? parseTickerPrices(await callPublic("/api/v3/ticker/price"))
-          : new Map<string, number>();
+      const futures = await readFutures();
+
+      /**
+       * Fetched only when something actually needs pricing.
+       *
+       * `priceInDollars` answers for USDT and USDC from the peg alone, so an
+       * account holding nothing but USDT futures margin — the ordinary case
+       * here — never pays for the ticker. It is fetched when spot holds coins,
+       * or when futures settles in something that is not a dollar.
+       *
+       * Symbols are composed from the asset and a dollar quote rather than
+       * resolved from a pair list; see the note on `priceInDollars` for why
+       * that direction is the safe one.
+       */
+      const needsPricing =
+        held.length > 0 ||
+        futures.assets.some(
+          (a) => settlementRate(a.currency, (c) => priceInDollars(new Map(), c)) === null
+        );
+      const prices = needsPricing
+        ? parseTickerPrices(await callPublic("/api/v3/ticker/price"))
+        : new Map<string, number>();
 
       const balances: NormalizedBalance[] = held.map((b) => {
         const price = priceInDollars(prices, b.asset);
@@ -120,35 +200,125 @@ export function createMexcConnector(
         };
       });
 
+      /**
+       * Every futures figure, in dollars.
+       *
+       * `assets` is one row per settlement currency, and adding them raw would
+       * be adding different currencies — which this codebase forbids outright.
+       * USDT and USDC are dollars by peg; anything else is priced through the
+       * spot ticker.
+       *
+       * A currency that cannot be priced is left out of the totals and added to
+       * `balances` with a null value instead, so it is visible as a holding of
+       * unknown worth rather than silently absent. Excluding it is not the same
+       * as it being nothing, and the app already renders that distinction.
+       */
+      let futuresEquity = 0;
+      let futuresAvailable = 0;
+      let futuresMargin = 0;
+
+      for (const asset of futures.assets) {
+        const rate = settlementRate(asset.currency, (c) => priceInDollars(prices, c));
+        if (rate === null) {
+          balances.push({
+            coin: asset.currency,
+            total: asset.equity,
+            hold: asset.positionMargin,
+            price: null,
+            usdValue: null,
+            costBasis: null,
+          });
+          continue;
+        }
+        futuresEquity += asset.equity * rate;
+        futuresAvailable += asset.available * rate;
+        futuresMargin += asset.positionMargin * rate;
+      }
+
+      // After the unpriced futures currencies are appended, so their null value
+      // is counted as unknown rather than as zero.
       const spotValue = round2(balances.reduce((sum, b) => sum + (b.usdValue ?? 0), 0));
 
       return {
         currency: "USD",
         /**
-         * The spot wallet, valued in dollars. MEXC publishes no single
-         * account-equity figure covering only this wallet, so the sum of what
-         * could be priced is the reading — and anything unpriced is excluded
-         * from it and marked, rather than counted as nothing.
+         * The futures account's equity, and only that.
+         *
+         * MEXC's `equity` already contains the unrealised profit of every open
+         * position, so positions are never added on top. Spot is separate money
+         * and is reported below as `spotValue` with `balancesAreSeparatePool`,
+         * which is what tells the app to add it rather than assume it is a
+         * breakdown of this figure.
          */
-        equity: spotValue,
-        /**
-         * Nothing is committed as margin on a spot wallet, but this connector
-         * has not asked about the margin account and does not know. Null says
-         * "not measured", which is the honest claim.
-         */
-        withdrawable: null,
-        totalMarginUsed: null,
+        equity: round2(futuresEquity),
+        withdrawable: futures.reachable ? round2(futuresAvailable) : null,
+        totalMarginUsed: futures.reachable ? round2(futuresMargin) : null,
         totalNotionalPosition: null,
+        activity: futures.activity,
         asOf: new Date(),
-        positions: [],
+        positions: futures.positions,
         balances,
         spotValue,
         /**
-         * `equity` above is the sum of these same coins, so adding the two
-         * would count every holding twice.
+         * Spot coins sit outside the futures equity above — two separate pools
+         * on this venue, so they add rather than double count. This was `false`
+         * when the connector read spot alone and `equity` *was* the coins.
          */
-        balancesAreSeparatePool: false,
+        balancesAreSeparatePool: true,
       };
+
+      /**
+       * Everything the futures side can say, or an empty reading.
+       *
+       * Deliberately swallows its own failure. The alternative is a sync that
+       * dies whole because one of two wallets is not permitted, which would
+       * leave the account showing nothing at all — and this venue restricts
+       * futures API access often enough that it cannot be treated as a fault.
+       */
+      async function readFutures() {
+        const empty = {
+          reachable: false,
+          assets: [] as ReturnType<typeof parseFuturesAssets>,
+          positions: [] as NormalizedAccountState["positions"],
+          activity: undefined as NormalizedAccountState["activity"],
+        };
+
+        try {
+          const assets = parseFuturesAssets(await callFutures("/api/v1/private/account/assets"));
+
+          /**
+           * Contract sizes first, because a position is measured in contracts
+           * and one contract is 0.0001 BTC. Public, so it costs no permission.
+           */
+          const sizes = parseContractSizes(await callFuturesPublic("/api/v1/contract/detail"));
+          const open = parseOpenPositions(
+            await callFutures("/api/v1/private/position/open_positions"),
+            sizes
+          );
+
+          /**
+           * Closed positions are the trade history. Failing here must not lose
+           * the balance that was already read — history is the part that
+           * accumulates, and it can be caught up on the next sync.
+           */
+          let activity: NormalizedAccountState["activity"];
+          try {
+            activity = parseHistoryPositions(
+              await callFutures("/api/v1/private/position/list/history_positions", {
+                page_num: 1,
+                page_size: HISTORY_PAGE_SIZE,
+              }),
+              sizes
+            );
+          } catch {
+            activity = undefined;
+          }
+
+          return { reachable: true, assets, positions: open.positions, activity };
+        } catch {
+          return empty;
+        }
+      }
     },
   };
 }

@@ -133,21 +133,21 @@ export const PLATFORM_SETUP: Record<
     identifierHint: "mx0… , from MEXC → API Management",
     needsSecret: true,
     help:
-      "MEXC copied Binance's API, so this needs the same thing: a key with read access only. A key without trading rights cannot place an order whatever the app does. The secret is encrypted before it is stored and never shown again.",
+      "MEXC keeps Spot and Futures behind separate permissions on the same key. Tick both when creating it, or only half the account can be read. Read access is all that is needed — a key without trading rights cannot place an order whatever the app does. The secret is encrypted before it is stored and never shown again.",
     steps: [
       "Set ENCRYPTION_KEY in .env and restart the app, or the secret cannot be stored.",
       "In MEXC, open API Management from the account menu and create a key.",
-      "Tick the read permission only. Leave Trade and Withdraw OFF.",
+      "Tick the read permission for BOTH Spot and Futures. Leave Trade and Withdraw OFF.",
       "MEXC asks you to bind an IP address. Use the one this app runs from, or leave it unrestricted — a key bound to another machine will always answer “Signature for this request is not valid”.",
       "Copy the secret before closing the page — MEXC shows it exactly once.",
       "Paste the key and the secret below.",
     ],
     warning:
-      "This reads your Spot wallet only. Futures is a separate API on a separate host, and Savings, Staking and launchpad products are separate again — none of them will appear, so the figure here can be lower than what MEXC shows you. They need a live key to be built against without guessing at the reply.",
+      "This reads your Spot and Futures wallets. Enable both when creating the key, or the futures half is refused and only spot appears. Savings, Staking and launchpad products are separate again and will not appear, so the figure here can still be lower than what MEXC shows you.",
     readsOnly: {
-      wallet: "Spot wallet",
+      wallet: "Spot and Futures wallets",
       elsewhere:
-        "MEXC keeps Futures on a separate API, and Savings, Staking and launchpad products separately again. Money in any of those will not appear here. Run scripts/probe-mexc-wallets.mjs to find which wallet holds it.",
+        "Savings, Staking and launchpad products are separate on MEXC and are not read. If the key was created without futures access enabled, that half is refused too — run scripts/probe-mexc-wallets.mjs to see which it is.",
     },
   },
   kraken: {
