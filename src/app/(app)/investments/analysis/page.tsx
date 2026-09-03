@@ -493,67 +493,91 @@ export default async function PortfolioAnalysisPage({
                     totals above were summed from, so the detail cannot
                     disagree with the line it sits under. */}
                 {openGroup === g.key && (
-                  <tr>
-                    <td colSpan={7} style={{ background: "var(--surface-2)" }}>
-                      <table className="data-table text-xs w-full">
-                        <thead>
-                          <tr>
-                            <th>Position</th>
-                            <th className="text-right">Weight in group</th>
-                            <th className="text-right">Value</th>
-                            <th className="text-right">Cost</th>
-                            <th className="text-right">Unrealized</th>
-                            <th className="text-right">Unrealized %</th>
-                            <th className="text-right">Realized</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {g.members.map((m) => (
-                            <tr key={m.symbol}>
-                              <td className="max-w-64 truncate">{m.symbol}</td>
-                              <td className="text-right">{m.shareOfGroup.toFixed(1)}%</td>
-                              <td className="text-right">
-                                <Money value={m.value} />
-                              </td>
-                              <td className="text-right">
-                                <Money value={m.cost} />
-                              </td>
-                              <td
-                                className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
-                              >
-                                <Money value={m.pnl} />
-                              </td>
-                              <td
-                                className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
-                              >
-                                {m.pnlPercent.toFixed(1)}%
-                              </td>
-                              <td
-                                className={`text-right ${m.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
-                              >
-                                <Money value={m.realized} />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  <>
+                    {/*
+                      Rows of the same table, not a table of their own.
 
-                      {/* An instrument sold to nothing has no position left,
-                          so nothing records which group it belonged to. Its
-                          closed trades are in the history and cannot be shown
-                          here — said plainly rather than left as an absence
-                          that reads like "you never traded any". */}
-                      <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed">
-                        These are the positions still open in this group. An instrument you have
-                        sold entirely keeps no risk or horizon tag, so its closed trades cannot be
-                        placed in a group — they are on the{" "}
-                        <Link href="/investments/history" className="text-[var(--accent)]">
-                          history
-                        </Link>
-                        , where realised results are listed per instrument.
-                      </p>
-                    </td>
-                  </tr>
+                      A nested <table> sizes its columns from its own content,
+                      so the detail's Value could never line up under the Value
+                      it belongs to — "Weight in group" sat across two of the
+                      headings above it, and reading a member against its group
+                      meant measuring by eye. Sharing the table makes the
+                      alignment structural rather than something to maintain.
+                    */}
+                    <tr style={{ background: "var(--surface-2)" }}>
+                      <th className="text-[10px] uppercase tracking-wide pl-8">Position</th>
+                      {/*
+                        Wraps rather than widening the column. The heading is
+                        longer than any figure beneath it, and on one line it
+                        stretched the "Positions" column of every row in the
+                        table to fit a label only the open group shows.
+                      */}
+                      <th className="text-[10px] uppercase tracking-wide text-right whitespace-normal">
+                        Weight in group
+                      </th>
+                      <th className="text-[10px] uppercase tracking-wide text-right">Value</th>
+                      <th className="text-[10px] uppercase tracking-wide text-right">Cost</th>
+                      <th className="text-[10px] uppercase tracking-wide text-right">Unrealized</th>
+                      <th className="text-[10px] uppercase tracking-wide text-right">Unrealized %</th>
+                      <th className="text-[10px] uppercase tracking-wide text-right">Realized</th>
+                    </tr>
+
+                    {g.members.map((m) => (
+                      <tr key={m.symbol} style={{ background: "var(--surface-2)" }}>
+                        {/* Indented, so a member is visibly subordinate to the
+                            group above it now that both are in one table. */}
+                        <td className="max-w-64 truncate pl-8">{m.symbol}</td>
+                        <td className="text-right">{m.shareOfGroup.toFixed(1)}%</td>
+                        <td className="text-right">
+                          <Money value={m.value} />
+                        </td>
+                        <td className="text-right">
+                          <Money value={m.cost} />
+                        </td>
+                        <td
+                          className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                        >
+                          <Money value={m.pnl} />
+                        </td>
+                        <td
+                          className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                        >
+                          {m.pnlPercent.toFixed(1)}%
+                        </td>
+                        <td
+                          className={`text-right ${m.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                        >
+                          <Money value={m.realized} />
+                        </td>
+                      </tr>
+                    ))}
+
+                    {/* An instrument sold to nothing has no position left,
+                        so nothing records which group it belonged to. Its
+                        closed trades are in the history and cannot be shown
+                        here — said plainly rather than left as an absence
+                        that reads like "you never traded any". */}
+                    <tr style={{ background: "var(--surface-2)" }}>
+                      <td colSpan={7}>
+                        {/*
+                          `whitespace-normal` because the table sets
+                          `whitespace-nowrap` to keep figures on one line, and
+                          a paragraph inherited it: this note ran off the right
+                          edge and ended mid-sentence at "where realised resu",
+                          readable only by scrolling the table sideways.
+                        */}
+                        <p className="text-[10px] text-[var(--muted)] leading-relaxed whitespace-normal max-w-prose">
+                          These are the positions still open in this group. An instrument you have
+                          sold entirely keeps no risk or horizon tag, so its closed trades cannot be
+                          placed in a group — they are on the{" "}
+                          <Link href="/investments/history" className="text-[var(--accent)]">
+                            history
+                          </Link>
+                          , where realised results are listed per instrument.
+                        </p>
+                      </td>
+                    </tr>
+                  </>
                 )}
                 </Fragment>
               ))}

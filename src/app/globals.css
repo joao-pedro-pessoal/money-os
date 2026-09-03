@@ -244,6 +244,17 @@ table.data-table th {
   border-bottom: 1px solid var(--border);
 }
 
+/* A numeric heading belongs over its own numbers.
+   Every table here already asks for this with `text-right` on the header cell,
+   and none of them got it: `@import "tailwindcss"` puts utilities in a layer,
+   the rules in this file are unlayered, and unlayered styles win over layered
+   ones whatever their specificity. So "Value" sat at the left of a column of
+   right-aligned figures, in every data table in the app, and the class saying
+   otherwise looked like it was working. */
+table.data-table th.text-right {
+  text-align: right;
+}
+
 table.data-table td {
   padding: 0.6rem 0.75rem;
   border-bottom: 1px solid var(--border);
