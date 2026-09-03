@@ -1,6 +1,6 @@
 # Money OS — o que faz e o que falta
 
-Estado a 2 de setembro de 2026. 1950 testes em 102 ficheiros, 38 migrations,
+Estado a 2 de setembro de 2026. 1966 testes em 103 ficheiros, 38 migrations,
 41 tabelas, 93 módulos de lógica, 30 módulos de acesso a dados, 33 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
@@ -421,6 +421,40 @@ maiores do que o resultado, e só a linha líquida diz isso.
 
 Horas em **UTC**, e a página di-lo. A app não sabe onde estavas quando
 colocaste cada ordem, e um gráfico com horas erradas seria lido como facto.
+
+## Abrir um grupo na análise de performance
+
+Clicar num grupo — "Long term", "Unset", o que for — abre-o e mostra as posições
+que o compõem, com **quanto cada uma pesa dentro do grupo** (não na carteira: a
+percentagem da carteira já está na linha de cima, e repeti-la responderia a uma
+pergunta que ninguém fez).
+
+Os membros vêm agarrados ao grupo, não são procurados outra vez ao abrir. São as
+mesmas linhas de que os totais foram somados, portanto o detalhe **não pode**
+discordar da linha em que está pousado.
+
+Está no URL (`?open=...`) e não em estado de componente: a página é de servidor,
+já constrói query strings para agrupar e ordenar, e assim a vista aberta é um
+link a que se volta.
+
+### A coluna "Realized" só conseguia mostrar zero
+
+Descoberto ao construir isto. O `realizedPnl` de uma posição só é escrito por uma
+venda feita **à mão dentro da app** — para quem tem tudo por connector ou por
+importação é zero em todas as posições. A tabela de performance lia só isso,
+portanto a coluna era estruturalmente incapaz de mostrar outra coisa.
+
+O realizado a sério está no histórico. Agora é ligado por instrumento, com a
+mesma normalização do emparelhamento (`IGLAl_EQ` ↔ `IGLA`), e nos teus dados os
+grupos passaram a mostrar **−16,51 €** em *short* e **−5,41 €** em *Unset* em vez
+de zeros.
+
+### O que continua sem poder ser mostrado
+
+Um instrumento vendido por completo não guarda etiqueta de risco nem de
+horizonte — a posição deixou de existir — portanto **não pode ser colocado em
+grupo nenhum**. As suas trades fechadas estão no histórico, e o painel diz isso
+em vez de deixar uma ausência que se lê como "nunca negociaste nada disso".
 
 ## O que ainda não foi classificado
 

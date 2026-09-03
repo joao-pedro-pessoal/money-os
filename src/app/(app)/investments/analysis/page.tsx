@@ -22,11 +22,18 @@ import ContributionBreakdown from "@/components/ContributionBreakdown";
 import StatementBreakdown from "@/components/StatementBreakdown";
 import { getStatementBreakdown } from "@/actions/brokerImport";
 import Link from "next/link";
+import { Fragment } from "react";
 
 export default async function PortfolioAnalysisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ groupBy?: string; sort?: string; dir?: string; synced?: string }>;
+  searchParams: Promise<{
+    groupBy?: string;
+    sort?: string;
+    dir?: string;
+    synced?: string;
+    open?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const groupBy = (GROUP_BY_OPTIONS.find((o) => o.value === sp.groupBy)?.value ?? "playlist") as GroupByKey;
@@ -34,6 +41,15 @@ export default async function PortfolioAnalysisPage({
   const dir: "asc" | "desc" = sp.dir === "asc" ? "asc" : "desc";
   // Spot/stablecoins count by default; "off" narrows the view to at-risk positions.
   const includeSynced = sp.synced !== "off";
+  /**
+   * Which group is opened, in the URL rather than in component state.
+   *
+   * This page is a server component and already builds query strings for
+   * grouping and sorting, so a disclosure is one more parameter rather than a
+   * reason to move the whole table to the client — and the opened view is a
+   * link you can come back to.
+   */
+  const openGroup = sp.open ?? null;
 
   const statement = await getStatementBreakdown();
   const a = await getPortfolioAnalysis(includeSynced);
@@ -65,7 +81,14 @@ export default async function PortfolioAnalysisPage({
   const label = (k: string) => (translateKeys ? tagLabel(k, groupAxis) ?? k : k);
   const qs = (over: Record<string, string>) =>
     "?" +
-    new URLSearchParams({ groupBy, sort, dir, synced: includeSynced ? "on" : "off", ...over }).toString();
+    new URLSearchParams({
+      groupBy,
+      sort,
+      dir,
+      synced: includeSynced ? "on" : "off",
+      ...(openGroup === null ? {} : { open: openGroup }),
+      ...over,
+    }).toString();
   const pnlColor = a.totals.totalPnL >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
 
   const currentConfig = { groupBy, sort, dir, synced: includeSynced ? "on" : "off" };
@@ -430,11 +453,19 @@ export default async function PortfolioAnalysisPage({
             </thead>
             <tbody>
               {grouped.map((g) => (
-                <tr key={g.key}>
+                <Fragment key={g.key}>
+                <tr>
                   <td>
-                    <span style={groupBy === "riskLevel" ? { color: riskColor(g.key) } : undefined}>
+                    {/* Opening a group is a link, so the view survives a
+                        refresh and can be sent to someone. */}
+                    <Link
+                      href={qs({ open: openGroup === g.key ? "" : g.key })}
+                      className="hover:underline"
+                      style={groupBy === "riskLevel" ? { color: riskColor(g.key) } : undefined}
+                    >
+                      {openGroup === g.key ? "▾ " : "▸ "}
                       {label(g.key)}
-                    </span>
+                    </Link>
                     <div className="text-xs text-[var(--muted)]">{g.percent.toFixed(1)}% do portefólio</div>
                   </td>
                   <td className="text-right">{g.count}</td>
@@ -454,6 +485,74 @@ export default async function PortfolioAnalysisPage({
                     <Money value={g.realized} />
                   </td>
                 </tr>
+
+                {/* What the group is made of. These are the very rows the
+                    totals above were summed from, so the detail cannot
+                    disagree with the line it sits under. */}
+                {openGroup === g.key && (
+                  <tr>
+                    <td colSpan={7} style={{ background: "var(--surface-2)" }}>
+                      <table className="data-table text-xs w-full">
+                        <thead>
+                          <tr>
+                            <th>Position</th>
+                            <th className="text-right">Weight in group</th>
+                            <th className="text-right">Value</th>
+                            <th className="text-right">Cost</th>
+                            <th className="text-right">Unrealized</th>
+                            <th className="text-right">Unrealized %</th>
+                            <th className="text-right">Realized</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {g.members.map((m) => (
+                            <tr key={m.symbol}>
+                              <td className="max-w-64 truncate">{m.symbol}</td>
+                              <td className="text-right">{m.shareOfGroup.toFixed(1)}%</td>
+                              <td className="text-right">
+                                <Money value={m.value} />
+                              </td>
+                              <td className="text-right">
+                                <Money value={m.cost} />
+                              </td>
+                              <td
+                                className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                              >
+                                <Money value={m.pnl} />
+                              </td>
+                              <td
+                                className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                              >
+                                {m.pnlPercent.toFixed(1)}%
+                              </td>
+                              <td
+                                className={`text-right ${m.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                              >
+                                <Money value={m.realized} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      {/* An instrument sold to nothing has no position left,
+                          so nothing records which group it belonged to. Its
+                          closed trades are in the history and cannot be shown
+                          here — said plainly rather than left as an absence
+                          that reads like "you never traded any". */}
+                      <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed">
+                        These are the positions still open in this group. An instrument you have
+                        sold entirely keeps no risk or horizon tag, so its closed trades cannot be
+                        placed in a group — they are on the{" "}
+                        <Link href="/investments/history" className="text-[var(--accent)]">
+                          history
+                        </Link>
+                        , where realised results are listed per instrument.
+                      </p>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>

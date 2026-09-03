@@ -262,3 +262,81 @@ describe("analysing an item that carries value and P&L rather than prices", () =
     expect(total).toBeGreaterThan(456.54);
   });
 });
+
+/**
+ * Opening a group to see what it is made of.
+ *
+ * The members are the very rows the group's totals were summed from, carried
+ * on the group rather than fetched again when a row is opened — a detail
+ * fetched separately can disagree with the total above it, and the reader has
+ * no way to tell which is right.
+ */
+describe("what a group is made of", () => {
+  const holdings = [
+    { symbol: "BIG", quantity: 10, avgEntryPrice: 10, currentPrice: 12, timeHorizon: "long" },
+    { symbol: "SMALL", quantity: 1, avgEntryPrice: 10, currentPrice: 11, timeHorizon: "long" },
+    { symbol: "OTHER", quantity: 5, avgEntryPrice: 10, currentPrice: 9, timeHorizon: "short" },
+  ] as Parameters<typeof performanceBy>[0];
+
+  const groups = performanceBy(holdings, "timeHorizon");
+  const long = groups.find((g) => g.key === "long")!;
+
+  it("lists the members of each group, largest first", () => {
+    expect(long.members.map((m) => m.symbol)).toEqual(["BIG", "SMALL"]);
+    expect(long.count).toBe(long.members.length);
+  });
+
+  /**
+   * Of the group, not of the portfolio. The group's own share of the portfolio
+   * is on the row above, and repeating it here would answer a question nobody
+   * asked while hiding the one they did.
+   */
+  it("weighs each member inside its own group", () => {
+    // 120 and 11 of 131.
+    expect(long.members[0].shareOfGroup).toBeCloseTo(91.6, 1);
+    expect(long.members[1].shareOfGroup).toBeCloseTo(8.4, 1);
+    expect(long.members.reduce((s, m) => s + m.shareOfGroup, 0)).toBeCloseTo(100, 1);
+  });
+
+  it("adds up to the group's own totals", () => {
+    expect(long.members.reduce((s, m) => s + m.value, 0)).toBeCloseTo(long.value, 2);
+    expect(long.members.reduce((s, m) => s + m.cost, 0)).toBeCloseTo(long.cost, 2);
+    expect(long.members.reduce((s, m) => s + m.pnl, 0)).toBeCloseTo(long.pnl, 2);
+  });
+
+  /**
+   * A holding's own realizedPnl is only ever written by a manual sale, so for
+   * anyone whose trades arrive from a connector or an import it is zero for
+   * every position — which made this column structurally unable to show
+   * anything else. The trade history's figure wins where there is one.
+   */
+  it("takes realised from the trade history where it knows one", () => {
+    const withRealised = performanceBy(
+      holdings,
+      "timeHorizon",
+      "Unset",
+      new Map([["BIG", -16.51]])
+    );
+    const g = withRealised.find((x) => x.key === "long")!;
+    expect(g.realized).toBeCloseTo(-16.51, 2);
+    expect(g.members.find((m) => m.symbol === "BIG")!.realized).toBeCloseTo(-16.51, 2);
+    expect(g.members.find((m) => m.symbol === "SMALL")!.realized).toBe(0);
+  });
+
+  it("falls back to the holding's own figure when the history knows none", () => {
+    const manual = performanceBy(
+      [{ symbol: "SOLD", quantity: 1, avgEntryPrice: 10, currentPrice: 10, realizedPnl: 4 }] as Parameters<typeof performanceBy>[0],
+      "symbol"
+    );
+    expect(manual[0].realized).toBe(4);
+  });
+
+  /** A group worth nothing has no shares to divide between its members. */
+  it("does not invent weights inside a worthless group", () => {
+    const empty = performanceBy(
+      [{ symbol: "ZERO", quantity: 0, avgEntryPrice: 10, currentPrice: 10 }] as Parameters<typeof performanceBy>[0],
+      "symbol"
+    );
+    expect(empty[0].members[0].shareOfGroup).toBe(0);
+  });
+});

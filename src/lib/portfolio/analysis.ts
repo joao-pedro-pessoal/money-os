@@ -208,16 +208,53 @@ export interface GroupPerformance {
   /** Share of total portfolio value. */
   percent: number;
   count: number;
+  /**
+   * What the group is made of, largest first.
+   *
+   * Carried on the group rather than fetched separately when a row is opened,
+   * so the detail cannot disagree with the total above it — the members are
+   * the very rows the total was summed from.
+   */
+  members: GroupMember[];
 }
 
 /**
  * Full performance breakdown for any grouping — this is what answers
  * "which playlist is doing best?" for whichever dimension is chosen.
  */
+export interface GroupMember {
+  symbol: string;
+  value: number;
+  cost: number;
+  pnl: number;
+  pnlPercent: number;
+  /** Realised on this instrument, from the trade history where one is known. */
+  realized: number;
+  /**
+   * Weight inside its own group, 0-100 — not of the portfolio.
+   *
+   * The group's own share of the portfolio is already on the row above it, and
+   * repeating that here would answer a question nobody asked while hiding the
+   * one they did: which position is this group actually made of.
+   */
+  shareOfGroup: number;
+}
+
 export function performanceBy(
   holdings: AnalysisHolding[],
   key: GroupByKey,
-  unsetLabel = "Unset"
+  unsetLabel = "Unset",
+  /**
+   * Realised results per instrument, from the trade history.
+   *
+   * Optional, and passed rather than derived: a holding's own `realizedPnl` is
+   * only ever written by a manual sale, so for anyone whose trades arrive from
+   * a connector or an import it is zero for every position — which made the
+   * Realised column of this table structurally incapable of showing anything
+   * else. The real figures live in `investment_activities`, keyed by a symbol
+   * this module has no business joining on.
+   */
+  realisedBySymbol?: ReadonlyMap<string, number>
 ): GroupPerformance[] {
   const totalValue = holdings.reduce((s, h) => s + marketValue(h), 0);
   const groups = new Map<string, AnalysisHolding[]>();
@@ -234,7 +271,11 @@ export function performanceBy(
       const value = list.reduce((s, h) => s + marketValue(h), 0);
       const cost = list.reduce((s, h) => s + costBasis(h), 0);
       const pnl = list.reduce((s, h) => s + unrealizedPnL(h), 0);
-      const realized = list.reduce((s, h) => s + (h.realizedPnl ?? 0), 0);
+      /** The trade history's figure where there is one, the holding's otherwise. */
+      const realisedOf = (h: AnalysisHolding) =>
+        realisedBySymbol?.get(h.symbol) ?? h.realizedPnl ?? 0;
+      const realized = list.reduce((s, h) => s + realisedOf(h), 0);
+
       return {
         key: k,
         value: round2(value),
@@ -244,6 +285,24 @@ export function performanceBy(
         realized: round2(realized),
         percent: totalValue === 0 ? 0 : round2((value / totalValue) * 100),
         count: list.length,
+        members: list
+          .map((h) => {
+            const memberValue = marketValue(h);
+            const memberCost = costBasis(h);
+            return {
+              symbol: h.symbol,
+              value: round2(memberValue),
+              cost: round2(memberCost),
+              pnl: round2(unrealizedPnL(h)),
+              pnlPercent: memberCost === 0 ? 0 : round2((unrealizedPnL(h) / memberCost) * 100),
+              realized: round2(realisedOf(h)),
+              // Of the group, not of the portfolio. A group worth nothing has
+              // no shares to divide, and 0% would claim each member is
+              // weightless rather than that the question has no answer.
+              shareOfGroup: value === 0 ? 0 : round2((memberValue / value) * 100),
+            };
+          })
+          .sort((a, b) => b.value - a.value),
       };
     })
     .sort((a, b) => b.value - a.value);

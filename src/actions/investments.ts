@@ -52,6 +52,9 @@ import { getBaseCurrency } from "./settings";
 // The same list the Investments page renders, so the two cannot disagree about
 // what the portfolio contains.
 import { getPortfolioItems } from "./dashboard";
+import { getTradeAnalysis } from "./investmentActivity";
+import { bySymbol } from "@/lib/trading/stats";
+import { normaliseInstrument } from "@/lib/trading/holdingMatch";
 import {
   breakdownBy,
   stableVsFloating,
@@ -655,7 +658,40 @@ export async function getGroupedPerformance(
   includeStable = true
 ) {
   const { holdings: enriched } = await getPortfolioAnalysis(includeStable);
-  return sortPerformance(performanceBy(enriched, groupBy), sortKey, direction);
+
+  /**
+   * Realised results, from where they actually are.
+   *
+   * A holding's own `realizedPnl` is only ever written by a manual sale
+   * through this app. For anyone whose trades arrive from a connector or an
+   * import it is zero on every position — so the Realised column of this table
+   * could only ever show 0,00, on an account with real closed trades sitting
+   * in `investment_activities`.
+   *
+   * Joined on `normaliseInstrument`, because the two halves spell an
+   * instrument differently: the portfolio carries `IGLAl_EQ` and the history
+   * carries `IGLA`. An instrument that cannot be matched contributes nothing
+   * rather than a wrong figure.
+   */
+  const trades = await getTradeAnalysis();
+  const realisedBySymbol = new Map<string, number>();
+  for (const s of bySymbol(trades.rows)) {
+    const key = normaliseInstrument(s.symbol);
+    realisedBySymbol.set(key, (realisedBySymbol.get(key) ?? 0) + s.realized);
+  }
+
+  /** Keyed the way the holdings spell it, so `performanceBy` can look it up. */
+  const byHoldingSymbol = new Map<string, number>();
+  for (const h of enriched) {
+    const found = realisedBySymbol.get(normaliseInstrument(h.symbol));
+    if (found !== undefined) byHoldingSymbol.set(h.symbol, found);
+  }
+
+  return sortPerformance(
+    performanceBy(enriched, groupBy, "Unset", byHoldingSymbol),
+    sortKey,
+    direction
+  );
 }
 
 /**
