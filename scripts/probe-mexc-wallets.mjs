@@ -124,6 +124,37 @@ async function main() {
     console.log(`  fields per row: ${Object.keys(fPosBody.data[0] ?? {}).join(", ")}`);
   }
 
+  // ------------------------------------------------------ 2b. Trade history
+  /**
+   * Closed positions are what a trade history is made of on a futures venue:
+   * each row is a position opened and closed, with the venue's own realised
+   * result. That matters more than it sounds — `lib/trading/realised.ts` only
+   * derives a result when the venue states none, and mixing a derived figure
+   * with a stated one inside a single instrument gives a number belonging to
+   * neither method. So the field names here decide which path this takes.
+   */
+  const fHist = futuresSigned("/api/v1/private/position/list/history_positions", "page_num=1&page_size=5");
+  const fHistBody = report(
+    "FUTURES HISTORY  /api/v1/private/position/list/history_positions",
+    await getJson(fHist.url, fHist.headers)
+  );
+  if (Array.isArray(fHistBody?.data)) {
+    console.log(`  closed positions returned: ${fHistBody.data.length}`);
+    console.log(`  symbols: ${[...new Set(fHistBody.data.map((p) => p.symbol))].join(", ") || "(none)"}`);
+    console.log(`  fields per row: ${Object.keys(fHistBody.data[0] ?? {}).join(", ")}`);
+    console.log("  (looking for: a realised profit field, a side/direction, an open and a close time)");
+  }
+
+  const fOrders = futuresSigned("/api/v1/private/order/list/history_orders", "page_num=1&page_size=5");
+  const fOrdersBody = report(
+    "FUTURES ORDERS  /api/v1/private/order/list/history_orders",
+    await getJson(fOrders.url, fOrders.headers)
+  );
+  if (Array.isArray(fOrdersBody?.data)) {
+    console.log(`  orders returned: ${fOrdersBody.data.length}`);
+    console.log(`  fields per row: ${Object.keys(fOrdersBody.data[0] ?? {}).join(", ")}`);
+  }
+
   // --------------------------------------------------------- 3. Sub-accounts
   /**
    * A key on the main account cannot see a sub-account's balance. If the money
@@ -148,9 +179,18 @@ async function main() {
   report("ETF  /api/v3/etf/info", await getJson(etf.url, etf.headers));
 
   console.log(
-    "\n---\nWhat to look for: the section that reports holdings is where your money is." +
-      "\nIf FUTURES refuses, the exact code and msg matter — MEXC restricts futures API" +
-      "\naccess for some accounts, and that is a different problem from a wrong signature." +
+    "\n---\nWhat to look for:" +
+      "\n  · the section that reports holdings is where the money is;" +
+      "\n  · the FUTURES field names, which decide how the balance and the trade" +
+      "\n    history get read — especially whether a realised profit is stated;" +
+      "\n  · the exact code and msg from anything that refuses." +
+      "\n" +
+      "\nA refusal on the FUTURES sections is not necessarily a wrong signature." +
+      "\nMEXC has restricted futures API access for years and many accounts are" +
+      "\nsimply not permitted; the message says which, and that changes the plan" +
+      "\nfrom “read the API” to “import the CSV export”, which this app can" +
+      "\nalready do." +
+      "\n" +
       "\nNo amounts were printed, so this output is safe to paste."
   );
 }
