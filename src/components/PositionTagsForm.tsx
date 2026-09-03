@@ -69,7 +69,7 @@ export default function PositionTagsForm({
             you did. */}
         {assetType && (
           <div className="text-xs mt-1">
-            <span className="text-[var(--foreground)]">{tagLabel(assetType) ?? assetType}</span>
+            <span className="text-[var(--foreground)]">{tagLabel(assetType, "assetType") ?? assetType}</span>
             {assetTypeAuto && (
               <span
                 className="text-[10px] text-[var(--muted)] ml-1"
@@ -162,7 +162,7 @@ export default function PositionTagsForm({
         <option value="">Liquidity — unset</option>
         {LIQUIDITY_LEVELS.map((l) => (
           <option key={l.value} value={l.value}>
-            {tagLabel(l.value)}
+            {tagLabel(l.value, "liquidity")}
           </option>
         ))}
       </select>

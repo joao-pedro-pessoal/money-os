@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import DonutChart from "@/components/DonutChart";
 import { fmt } from "@/lib/format";
-import { tagLabel } from "@/lib/portfolio/tags";
+import { tagLabel, type TagAxis } from "@/lib/portfolio/tags";
 import { shortName } from "@/lib/portfolio/shortName";
 import {
   groupItems,
@@ -255,7 +255,18 @@ export default function PortfolioTable({
 
   const set = (patch: Partial<Filters>) => setFilters({ ...filters, ...patch });
 
-  const label = (value: string) => (value === UNTAGGED ? "Untagged" : tagLabel(value) ?? value);
+  /**
+   * The grouping key names the vocabulary, so a shared value labels right.
+   *
+   * This table groups by fewer things than the analysis page: only asset type
+   * and side are tag vocabularies, and "side" is the direction one — which is
+   * where `long` really does mean "gains when it rises".
+   */
+  const groupAxis: TagAxis | undefined =
+    group === "assetType" ? "assetType" : group === "side" ? "direction" : undefined;
+
+  const label = (value: string) =>
+    value === UNTAGGED ? "Untagged" : tagLabel(value, groupAxis) ?? value;
 
   const dropdown = (
     key: keyof Filters,
@@ -486,7 +497,7 @@ export default function PortfolioTable({
                             return (
                               <td key={c.key} className="text-xs text-[var(--muted)]">
                                 {i.assetType ? (
-                                  tagLabel(i.assetType) ?? i.assetType
+                                  tagLabel(i.assetType, "assetType") ?? i.assetType
                                 ) : (
                                   <Link
                                     href="/positions"

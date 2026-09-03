@@ -42,7 +42,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
         <div>
           <div className="text-xs text-[var(--muted)]">
             {holdingAccount?.name ?? holding.platform ?? "No account linked"}
-            {holding.assetType && <span> · {tagLabel(holding.assetType)}</span>}
+            {holding.assetType && <span> · {tagLabel(holding.assetType, "assetType")}</span>}
           </div>
           <h1 className="text-lg font-semibold">
             {holding.symbol}

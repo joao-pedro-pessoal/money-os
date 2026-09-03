@@ -6,7 +6,7 @@ import {
 import PortfolioReturns from "@/components/PortfolioReturns";
 import { Money } from "@/components/PrivacyContext";
 import DonutChart from "@/components/DonutChart";
-import { tagLabel, riskColor } from "@/lib/portfolio/tags";
+import { tagLabel, type TagAxis, riskColor } from "@/lib/portfolio/tags";
 import {
   GROUP_BY_OPTIONS,
   SORT_COLUMNS,
@@ -42,7 +42,27 @@ export default async function PortfolioAnalysisPage({
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
   const best = [...grouped].filter((g) => g.cost > 0).sort((x, y) => y.pnlPercent - x.pnlPercent)[0];
   const translateKeys = groupBy !== "playlist" && groupBy !== "account" && groupBy !== "symbol";
-  const label = (k: string) => (translateKeys ? tagLabel(k) ?? k : k);
+  /**
+   * Which vocabulary this grouping is drawn from.
+   *
+   * Without it `long` on a horizon chart resolved to "Long (gains when it
+   * rises)" and `low` on a risk chart to "Low liquidity" — five values mean
+   * different things on different axes, and a label that does not know the
+   * axis picks whichever list was flattened in last.
+   */
+  const groupAxis: TagAxis | undefined =
+    groupBy === "riskLevel"
+      ? "risk"
+      : groupBy === "timeHorizon"
+        ? "timeHorizon"
+        : groupBy === "liquidity"
+          ? "liquidity"
+          : groupBy === "expectedReturn"
+            ? "expectedReturn"
+            : groupBy === "assetType"
+              ? "assetType"
+              : undefined;
+  const label = (k: string) => (translateKeys ? tagLabel(k, groupAxis) ?? k : k);
   const qs = (over: Record<string, string>) =>
     "?" +
     new URLSearchParams({ groupBy, sort, dir, synced: includeSynced ? "on" : "off", ...over }).toString();
@@ -342,7 +362,7 @@ export default async function PortfolioAnalysisPage({
           {a.mismatches.map((m) => (
             <div key={m.id} className="text-sm text-[var(--muted)]">
               🕒 <span className="text-[var(--foreground)]">{m.symbol}</span> is tagged short term but{" "}
-              {tagLabel(m.riskLevel)?.toLowerCase()} — money you may need soon sitting in a volatile position.
+              {tagLabel(m.riskLevel, "risk")?.toLowerCase()} — money you may need soon sitting in a volatile position.
             </div>
           ))}
         </div>
@@ -443,9 +463,9 @@ export default async function PortfolioAnalysisPage({
       {/* ---- Breakdowns ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BreakdownCard title="By account / wallet" rows={a.byAccount} donut />
-        <BreakdownCard title="By asset type" rows={a.byAssetType} translate donut />
-        <BreakdownCard title="By risk level" rows={a.byRisk} translate colorByRisk />
-        <BreakdownCard title="By time horizon" rows={a.byTimeHorizon} translate />
+        <BreakdownCard title="By asset type" rows={a.byAssetType} axis="assetType" translate donut />
+        <BreakdownCard title="By risk level" rows={a.byRisk} axis="risk" translate colorByRisk />
+        <BreakdownCard title="By time horizon" rows={a.byTimeHorizon} axis="timeHorizon" translate />
       </div>
 
       {/* ---- Winners & losers ---- */}
@@ -491,9 +511,9 @@ export default async function PortfolioAnalysisPage({
                   </Link>
                 </td>
                 <td>{h.accountName ?? "—"}</td>
-                <td>{tagLabel(h.assetType) ?? "—"}</td>
-                <td style={{ color: riskColor(h.riskLevel) }}>{tagLabel(h.riskLevel) ?? "—"}</td>
-                <td>{tagLabel(h.timeHorizon) ?? "—"}</td>
+                <td>{tagLabel(h.assetType, "assetType") ?? "—"}</td>
+                <td style={{ color: riskColor(h.riskLevel) }}>{tagLabel(h.riskLevel, "risk") ?? "—"}</td>
+                <td>{tagLabel(h.timeHorizon, "timeHorizon") ?? "—"}</td>
                 <td>
                   <Money value={h.quantity * h.currentPrice} />
                 </td>
@@ -523,16 +543,19 @@ function BreakdownCard({
   title,
   rows,
   translate = false,
+  axis,
   donut = false,
   colorByRisk = false,
 }: {
   title: string;
   rows: Breakdown[];
   translate?: boolean;
+  /** Which vocabulary the keys come from, so a shared value is labelled right. */
+  axis?: TagAxis;
   donut?: boolean;
   colorByRisk?: boolean;
 }) {
-  const label = (key: string) => (translate ? tagLabel(key) ?? key : key);
+  const label = (key: string) => (translate ? tagLabel(key, axis) ?? key : key);
 
   return (
     <div className="card p-4">

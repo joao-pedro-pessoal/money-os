@@ -53,7 +53,7 @@ export default async function WatchlistPage() {
                       )}
                       {w.name && <div className="text-xs text-[var(--muted)]">{w.name}</div>}
                     </td>
-                    <td>{tagLabel(w.assetType) ?? "—"}</td>
+                    <td>{tagLabel(w.assetType, "assetType") ?? "—"}</td>
                     <td>{w.playlistName ?? "—"}</td>
                     <td className="text-right">
                       {w.currentPrice === null ? "—" : <Money value={w.currentPrice} currency={w.currency} />}

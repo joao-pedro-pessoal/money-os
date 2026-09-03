@@ -79,7 +79,7 @@ export default function HoldingTagsForm({
             tags — and its absence is what the button offers to fix. */}
         {assetType && (
           <span className="badge" style={{ color: "var(--muted)" }}>
-            {tagLabel(assetType) ?? assetType}
+            {tagLabel(assetType, "assetType") ?? assetType}
           </span>
         )}
         <HoldingTags

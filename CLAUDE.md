@@ -464,6 +464,31 @@ The general lesson: **when a script writes source code, check the bytes, not
 just that it compiles.** Escaping through a shell into a heredoc into a
 language is three chances to change what you meant.
 
+## A label has to know which question it answers
+
+Five tag values mean different things on different axes: `low` and `high` are
+risk levels *and* liquidity levels, `medium` is a risk level *and* a horizon,
+and `long` and `short` are horizons *and* directions.
+
+`tagLabel` flattened all seven vocabularies into one value→label map, so the
+last one spread in won every collision. The risk breakdown labelled its groups
+"Low liquidity" and "High liquidity"; the horizon breakdown labelled its groups
+"Long (gains when it rises)". Three of the four allocation axes were showing
+another axis's words, and each looked entirely deliberate.
+
+Spotted on a screenshot of the horizon chart, where "Medium term" sat between
+two direction labels — the tell being that `medium` collides with one other
+vocabulary and `long` with `DIRECTIONS`, which was last.
+
+`tagLabel(value, axis)` takes the axis now, and every caller that knows it
+passes it — which is nearly all of them, since a column of risk levels knows it
+is showing risk. Without an axis an **ambiguous** value comes back unchanged:
+`long` is not a wrong answer, "Long (gains when it rises)" on a horizon chart
+is.
+
+The general shape: **a lookup keyed only by value is a bug whenever the same
+value appears in two vocabularies.** Flattening them hides which one won.
+
 ## Count calendar days by the calendar
 
 `(a.getTime() - b.getTime()) / 86_400_000` is not the number of days between two

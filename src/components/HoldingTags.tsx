@@ -10,10 +10,10 @@ export interface HoldingTagValues {
 /** Renders whichever of the four asset-allocation tags are set as small badges. */
 export default function HoldingTags({ riskLevel, expectedReturn, timeHorizon, liquidity }: HoldingTagValues) {
   const items = [
-    riskLevel ? { label: tagLabel(riskLevel), color: riskColor(riskLevel) } : null,
-    timeHorizon ? { label: tagLabel(timeHorizon), color: "var(--muted)" } : null,
-    expectedReturn ? { label: tagLabel(expectedReturn), color: "var(--muted)" } : null,
-    liquidity ? { label: tagLabel(liquidity), color: "var(--muted)" } : null,
+    riskLevel ? { label: tagLabel(riskLevel, "risk"), color: riskColor(riskLevel) } : null,
+    timeHorizon ? { label: tagLabel(timeHorizon, "timeHorizon"), color: "var(--muted)" } : null,
+    expectedReturn ? { label: tagLabel(expectedReturn, "expectedReturn"), color: "var(--muted)" } : null,
+    liquidity ? { label: tagLabel(liquidity, "liquidity"), color: "var(--muted)" } : null,
   ].filter((x): x is { label: string | null; color: string } => x !== null);
 
   if (items.length === 0) return null;

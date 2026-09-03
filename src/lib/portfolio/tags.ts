@@ -222,24 +222,74 @@ export function isStableAsset(
   return isCapitalStable(symbol);
 }
 
-const LABELS: Record<string, string> = Object.fromEntries(
-  [
-    ...RISK_LEVELS,
-    ...EXPECTED_RETURNS,
-    ...TIME_HORIZONS,
-    ...LIQUIDITY_LEVELS,
-    ...ASSET_TYPES,
-    ...LEGACY_ASSET_TYPES,
-    ...DIRECTIONS,
-  ].map((o) => [
-    o.value,
-    o.label,
-  ])
-);
+/**
+ * The vocabularies, kept apart, because five values mean different things in
+ * different ones.
+ *
+ * `long` is "Long term" as a horizon and "Long (gains when it rises)" as a
+ * direction. `low` and `high` are risk levels *and* liquidity levels;
+ * `medium` is a risk level *and* a horizon.
+ *
+ * These used to be flattened into one value→label map. The last vocabulary
+ * spread in won every collision, so the risk breakdown labelled its groups
+ * "Low liquidity" and "High liquidity", the horizon breakdown labelled its
+ * groups "Long (gains when it rises)", and both looked deliberate. Three of the
+ * four allocation axes were showing another axis's words.
+ *
+ * A label needs to know which question it is answering, so it is asked.
+ */
+const BY_AXIS = {
+  risk: RISK_LEVELS,
+  expectedReturn: EXPECTED_RETURNS,
+  timeHorizon: TIME_HORIZONS,
+  liquidity: LIQUIDITY_LEVELS,
+  assetType: [...ASSET_TYPES, ...LEGACY_ASSET_TYPES],
+  direction: DIRECTIONS,
+} as const;
 
-export function tagLabel(value: string | null | undefined): string | null {
+export type TagAxis = keyof typeof BY_AXIS;
+
+/**
+ * The flat map, kept only for callers that genuinely cannot know the axis.
+ *
+ * Deliberately built from the vocabularies with **no collisions**, so a value
+ * that means two things resolves to neither rather than to whichever was
+ * spread in last. An ambiguous value with no axis falls through to itself,
+ * which is honest: "long" is not a wrong answer, "Long (gains when it rises)"
+ * on a horizon chart is.
+ */
+const AMBIGUOUS = new Set<string>();
+const UNAMBIGUOUS: Record<string, string> = {};
+for (const options of Object.values(BY_AXIS)) {
+  for (const option of options) {
+    if (option.value in UNAMBIGUOUS && UNAMBIGUOUS[option.value] !== option.label) {
+      AMBIGUOUS.add(option.value);
+      continue;
+    }
+    UNAMBIGUOUS[option.value] = option.label;
+  }
+}
+for (const value of AMBIGUOUS) delete UNAMBIGUOUS[value];
+
+/**
+ * A value's label on a given axis.
+ *
+ * Pass the axis wherever it is known — which is nearly everywhere, since a
+ * column of risk levels knows it is showing risk. Without one, an ambiguous
+ * value is returned unchanged rather than guessed at.
+ */
+export function tagLabel(value: string | null | undefined, axis?: TagAxis): string | null {
   if (!value) return null;
-  return LABELS[value] ?? value;
+  if (axis) {
+    const found = BY_AXIS[axis].find((o) => o.value === value);
+    if (found) return found.label;
+  }
+  return UNAMBIGUOUS[value] ?? value;
+}
+
+/** True for a value that means different things on different axes. */
+export function isAmbiguousTag(value: string): boolean {
+  return AMBIGUOUS.has(value);
 }
 
 /** Colour hint for the risk tag specifically — the one where a quick visual read matters most. */
