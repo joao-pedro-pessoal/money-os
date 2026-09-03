@@ -30,6 +30,11 @@ import {
   reducePosition,
 } from "@/lib/portfolio";
 import { isCapitalStable, isStableAsset } from "@/lib/portfolio/tags";
+import {
+  taggingSummary,
+  positionsNeedingTags,
+  axisCoverage,
+} from "@/lib/portfolio/untagged";
 import { STABLE_ASSET_TYPES } from "@/lib/portfolio/tags";
 import { toBase } from "@/lib/fx";
 import {
@@ -592,6 +597,22 @@ export async function getPortfolioAnalysis(includeStable = true) {
       realizedPnl: 0,
     }));
 
+  /**
+   * The same positions, seen only as "what has been classified".
+   *
+   * Built once and passed to all three: three copies of one mapping is three
+   * places for the axes to drift apart, which is the failure this codebase
+   * keeps removing.
+   */
+  const taggable = enriched.map((h) => ({
+    symbol: h.symbol,
+    value: marketValue(h),
+    riskLevel: h.riskLevel,
+    expectedReturn: h.expectedReturn,
+    timeHorizon: h.timeHorizon,
+    liquidity: h.liquidity,
+  }));
+
   const adjustedTotals = portfolioTotals(enriched);
 
   return {
@@ -607,6 +628,17 @@ export async function getPortfolioAnalysis(includeStable = true) {
     movers: topMovers(enriched),
     concentration: concentrationWarnings(enriched),
     mismatches: horizonRiskMismatches(enriched),
+    /**
+     * How much of the portfolio the four breakdowns above actually describe.
+     *
+     * Every one of them files anything unset under "unset", which reads as a
+     * category rather than as an admission. On the live account nothing carried
+     * all four axes, so those charts were mostly drawing the absence of an
+     * answer — worth saying out loud beside them.
+     */
+    tagging: taggingSummary(taggable),
+    needsTags: positionsNeedingTags(taggable),
+    coverage: axisCoverage(taggable),
     realizedTotal:
       Math.round((enriched.reduce((s, h) => s + (h.realizedPnl ?? 0), 0) + Number.EPSILON) * 100) / 100,
   };

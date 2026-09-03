@@ -29,7 +29,7 @@ import {
   type Direction,
 } from "@/lib/trading/stats";
 import { realisedProvenance, type Derivable } from "@/lib/trading/realised";
-import { setActivityTags } from "@/actions/investmentActivity";
+import { setActivityTags, setInstrumentTags } from "@/actions/investmentActivity";
 
 /**
  * The trade history, and every figure about it, over whatever slice is chosen.
@@ -110,6 +110,28 @@ export default function TradeHistory({
     [filtered, held, stats.symbols]
   );
   const unmatched = useMemo(() => unmatchedOpen(instruments), [instruments]);
+
+  /**
+   * The labels an instrument carries, gathered from its events.
+   *
+   * A union rather than an intersection: a label put on one fill is still a
+   * thing said about that instrument. Editing here writes the whole set to
+   * every event of it, which also normalises a set that had drifted apart
+   * across rows.
+   *
+   * Read from the unfiltered rows, so filtering to "tagged mistake" does not
+   * make every other label look as though it had been removed.
+   */
+  const tagsByInstrument = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const row of rows) {
+      if (row.symbol === null) continue;
+      const current = map.get(row.symbol) ?? [];
+      for (const tag of row.tags) if (!current.includes(tag)) current.push(tag);
+      map.set(row.symbol, current.sort((a, b) => a.localeCompare(b)));
+    }
+    return map;
+  }, [rows]);
 
   const active = hasActiveTradeFilters(filters);
   const describing = describeTradeFilters(filters);
@@ -289,6 +311,7 @@ export default function TradeHistory({
                   <th className="text-right">Unrealised</th>
                   <th className="text-right">Still held</th>
                   <th className="text-right">Units open</th>
+                  <th>Tags</th>
                 </tr>
               </thead>
               <tbody>
@@ -321,6 +344,18 @@ export default function TradeHistory({
                     </td>
                     <td className="text-right text-[var(--muted)]">
                       {i.netQuantity === 0 ? "—" : i.netQuantity}
+                    </td>
+                    {/* Editable whether the position is open or closed. A
+                        position you have sold has no row on any holdings
+                        screen, and "that one was a mistake" is mostly a thing
+                        you want to say after closing it. */}
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <TagCell
+                        tags={tagsByInstrument.get(i.symbol) ?? []}
+                        known={options.tags}
+                        onPick={(tag) => set("tag", tag)}
+                        save={(next) => setInstrumentTags(i.symbol, next)}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -373,10 +408,10 @@ export default function TradeHistory({
                     <td className="max-w-64 truncate">{r.description ?? "—"}</td>
                     <td>
                       <TagCell
-                        id={r.id}
                         tags={r.tags}
                         known={options.tags}
                         onPick={(tag) => set("tag", tag)}
+                        save={(next) => setActivityTags(r.id, next)}
                       />
                     </td>
                     <td className="text-right">{r.quantity ?? "—"}</td>
@@ -417,15 +452,16 @@ export default function TradeHistory({
  * what was stored, because the action either succeeds or throws.
  */
 function TagCell({
-  id,
   tags,
   known,
   onPick,
+  save: persist,
 }: {
-  id: string;
   tags: string[];
   known: readonly string[];
   onPick: (tag: string) => void;
+  /** Where the set goes: one event, or every event of an instrument. */
+  save: (next: string[]) => Promise<unknown>;
 }) {
   const [current, setCurrent] = useState(tags);
   const [editing, setEditing] = useState(false);
@@ -441,7 +477,7 @@ function TagCell({
     // saved and is not is worse than one that visibly failed.
     setCurrent(next);
     try {
-      await setActivityTags(id, next);
+      await persist(next);
     } catch {
       setCurrent(previous);
       setFailed(true);

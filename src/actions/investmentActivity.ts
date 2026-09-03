@@ -414,3 +414,37 @@ export async function listTagNames(): Promise<string[]> {
   const rows = await db.select().from(tags);
   return rows.map((t) => t.name).sort((a, b) => a.localeCompare(b));
 }
+
+/**
+ * The labels on every event of one instrument, including a closed one.
+ *
+ * A position you have sold is not in the portfolio any more, so there is no
+ * row on any holdings screen to label — but its trades are still in the
+ * history, and "that AAVE trade was a mistake" is a thing you mostly want to
+ * say *after* closing it.
+ *
+ * So an instrument is labelled through its events rather than through a second
+ * table keyed by symbol. One storage model means the tag filter, the counts and
+ * the vocabulary all keep working without knowing this exists — and a symbol
+ * with no position and a symbol with one are labelled the same way.
+ *
+ * Applied to every event of that symbol, which normalises a set that had
+ * drifted apart across rows.
+ */
+export async function setInstrumentTags(symbol: string, names: string[]) {
+  const rows = await db
+    .select({ id: investmentActivities.id })
+    .from(investmentActivities)
+    .where(eq(investmentActivities.symbol, symbol));
+
+  if (rows.length === 0) {
+    throw new Error(`No events found for ${symbol}, so there is nothing to label.`);
+  }
+
+  for (const row of rows) {
+    await setActivityTags(row.id, names);
+  }
+
+  revalidatePath("/investments/history");
+  return { events: rows.length, tags: names };
+}

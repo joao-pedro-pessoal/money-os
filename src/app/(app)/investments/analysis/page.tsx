@@ -96,6 +96,91 @@ export default async function PortfolioAnalysisPage({
           )}
         </div>
 
+      {/* How much of the portfolio the breakdowns above actually describe.
+          Every one of them files an unset axis under "unset", which reads as a
+          category rather than as an admission — so this says it plainly, and
+          says which positions to fix first. */}
+      {a.tagging.positions > 0 && a.needsTags.length > 0 && (
+        <section className="card p-4" style={{ borderLeft: "2px solid var(--amber)" }}>
+          <div className="text-sm font-medium">
+            {a.tagging.complete === 0
+              ? "None of these positions is fully classified"
+              : `${a.needsTags.length} of ${a.tagging.positions} positions are not fully classified`}
+          </div>
+          <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl leading-relaxed">
+            The breakdowns above group anything unanswered under <em>unset</em>, so where that
+            slice is large they are mostly drawing the absence of an answer.{" "}
+            <Money value={a.tagging.incompleteValue} currency="EUR" /> sits in positions missing
+            at least one axis.
+          </p>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+            {a.coverage.map((c) => (
+              <div key={c.axis}>
+                <div className="text-[10px] text-[var(--muted)] uppercase tracking-wide">
+                  {c.label}
+                </div>
+                <div
+                  className="text-lg font-semibold"
+                  style={{
+                    color:
+                      c.coverage === null
+                        ? "var(--muted)"
+                        : c.coverage === 0
+                          ? "var(--red)"
+                          : c.coverage < 50
+                            ? "var(--amber)"
+                            : "var(--green)",
+                  }}
+                >
+                  {/* Null, not 0%: a percentage of an empty portfolio is a
+                      question with no answer. */}
+                  {c.coverage === null ? "—" : `${c.coverage.toFixed(0)}%`}
+                </div>
+                <div className="text-[10px] text-[var(--muted)]">
+                  {c.untagged === 0
+                    ? "every position answered"
+                    : `${c.untagged} unanswered · ${c.untaggedValue.toFixed(2)} EUR`}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Ordered by money: classifying the largest holding moves every
+              breakdown on the page, and classifying the smallest moves none. */}
+          <div className="overflow-auto max-h-72 mt-4">
+            <table className="data-table whitespace-nowrap text-xs w-full">
+              <thead>
+                <tr>
+                  <th>Position</th>
+                  <th className="text-right">Value</th>
+                  <th>Still to answer</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {a.needsTags.map((g) => (
+                  <tr key={g.symbol}>
+                    <td className="max-w-64 truncate">{g.symbol}</td>
+                    <td className="text-right">
+                      <Money value={g.value} currency="EUR" />
+                    </td>
+                    <td className="text-[var(--amber)]">
+                      {g.missing.map((m) => m.label).join(", ")}
+                    </td>
+                    <td className="text-right">
+                      <Link href="/positions" className="text-[var(--accent)]">
+                        tag →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
         {/* Independent of the risk analysis above: these read the imported
             statement and the account history, not the tagged positions. */}
         <GainAttribution currency="EUR" />

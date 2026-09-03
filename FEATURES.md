@@ -1,6 +1,6 @@
 # Money OS — o que faz e o que falta
 
-Estado a 2 de setembro de 2026. 1911 testes em 99 ficheiros, 37 migrations,
+Estado a 2 de setembro de 2026. 1950 testes em 102 ficheiros, 38 migrations,
 41 tabelas, 93 módulos de lógica, 30 módulos de acesso a dados, 33 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
@@ -421,6 +421,46 @@ maiores do que o resultado, e só a linha líquida diz isso.
 
 Horas em **UTC**, e a página di-lo. A app não sabe onde estavas quando
 colocaste cada ordem, e um gráfico com horas erradas seria lido como facto.
+
+## O que ainda não foi classificado
+
+Painel novo na Análise da carteira, e apareceu por causa de uma medição: **das
+tuas 26 posições, nenhuma tinha as quatro etiquetas**, e 780 € dos 850 estavam
+em posições incompletas.
+
+Isso importa porque as repartições por risco, retorno esperado, horizonte e
+liquidez metem tudo o que está por responder num grupo chamado *unset* — que se
+lê como uma categoria e não como uma confissão. Os gráficos estavam
+maioritariamente a desenhar a ausência de resposta, e a página não o dizia.
+
+O painel diz, por eixo, **que percentagem do valor da carteira aquele gráfico
+descreve**, e lista as posições a preencher **por ordem de dinheiro**, não por
+quantas etiquetas faltam: classificar a posição de 105 € muda todos os gráficos
+da página, classificar a de 0,13 € não muda nada, e uma lista ordenada por
+incompletude poria as duas ao contrário.
+
+Uma cobertura de zero por cento aparece a vermelho. Uma carteira sem valor
+nenhum aparece a traço, não a 0% — uma percentagem de zero é uma pergunta sem
+resposta.
+
+## Etiquetar uma posição já fechada
+
+Uma posição que vendeste não existe em ecrã de carteira nenhum, e *"aquela foi
+um erro"* é sobretudo uma coisa que se quer dizer **depois** de fechar.
+
+A tabela "Result by instrument" no histórico já lista as fechadas, e tem agora
+uma coluna de tags. Editar ali escreve o conjunto em **todos** os eventos
+daquele instrumento — o que também normaliza um conjunto que tivesse divergido
+entre linhas.
+
+Não há uma segunda tabela de etiquetas por símbolo. É o mesmo armazenamento por
+evento, portanto o filtro de tags, as contagens e o vocabulário continuam a
+funcionar sem saber que isto existe — e um símbolo com posição e um sem posição
+etiquetam-se da mesma maneira.
+
+As etiquetas mostradas por instrumento são a **união** das dos seus eventos, e
+lidas da lista não filtrada: filtrar por "mistake" não pode fazer parecer que as
+outras etiquetas foram removidas.
 
 ## Tags nas trades, e realizado ao lado de não realizado
 
