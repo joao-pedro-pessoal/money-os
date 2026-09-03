@@ -219,25 +219,61 @@ export function createMexcConnector(
 
       for (const asset of futures.assets) {
         const rate = settlementRate(asset.currency, (c) => priceInDollars(prices, c));
-        if (rate === null) {
-          balances.push({
-            coin: asset.currency,
-            total: asset.equity,
-            hold: asset.positionMargin,
-            price: null,
-            usdValue: null,
-            costBasis: null,
-          });
-          continue;
-        }
+
+        /**
+         * The collateral, listed as the holding it is.
+         *
+         * Without this row the futures account reached Net Worth through
+         * `equity` and appeared in no chart at all: the portfolio view is built
+         * from holdings, open positions and balances, and an account with none
+         * of the three contributes nothing to look at. 36.06 USDT of collateral
+         * was real money at a venue, counted in the total and invisible in
+         * every breakdown of it.
+         *
+         * `countsInPortfolio: false` is what keeps it honest — this is
+         * `equity` itemised, not money beside it, so it is shown and never
+         * added on top. The same thing IBKR does with the euros inside its
+         * `netliquidationvalue`.
+         */
+        balances.push({
+          coin: asset.currency,
+          total: asset.equity,
+          // What is backing open trades and cannot be withdrawn.
+          hold: asset.positionMargin,
+          price: rate,
+          usdValue: rate === null ? null : round2(asset.equity * rate),
+          /**
+           * A stablecoin's cost is not knowable from a balance, and zero would
+           * claim it is exactly break-even.
+           */
+          costBasis: null,
+          countsInPortfolio: false,
+        });
+
+        // A currency with no price is left out of the totals and stays visible
+        // above as a holding of unknown worth. Excluded is not the same as nil.
+        if (rate === null) continue;
+
         futuresEquity += asset.equity * rate;
         futuresAvailable += asset.available * rate;
         futuresMargin += asset.positionMargin * rate;
       }
 
-      // After the unpriced futures currencies are appended, so their null value
-      // is counted as unknown rather than as zero.
-      const spotValue = round2(balances.reduce((sum, b) => sum + (b.usdValue ?? 0), 0));
+      /**
+       * The spot wallet, and only that.
+       *
+       * `balances` now also carries the futures collateral, which is `equity`
+       * itemised rather than money beside it — so summing every row here would
+       * report the same 36.06 twice, and the connections screen would read
+       * "account value 36.06 + coins 36.06 = 72.12". Rows that declare
+       * themselves inside the equity are excluded, which is the same rule the
+       * `countsInPortfolio` flag states.
+       */
+      const spotValue = round2(
+        balances
+          .filter((b) => b.countsInPortfolio !== false)
+          .reduce((sum, b) => sum + (b.usdValue ?? 0), 0)
+      );
 
       return {
         currency: "USD",

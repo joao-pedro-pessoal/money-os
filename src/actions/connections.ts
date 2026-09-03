@@ -690,7 +690,13 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
           price: b.price === null ? null : String(b.price),
           usdValue: b.usdValue === null ? null : String(b.usdValue),
           costBasis: b.costBasis === null ? null : String(b.costBasis),
-          countsInPortfolio: state.balancesAreSeparatePool,
+          /**
+           * The row's own answer where it gives one, the connection's
+           * otherwise. MEXC is the first venue where the two differ: its spot
+           * coins sit outside the futures equity, its futures collateral *is*
+           * that equity, itemised.
+           */
+          countsInPortfolio: b.countsInPortfolio ?? state.balancesAreSeparatePool,
           updatedAt: new Date(),
         }))
       );

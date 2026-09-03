@@ -86,6 +86,20 @@ export interface NormalizedBalance {
    * said so was up about 3 €.
    */
   costBasis: number | null;
+  /**
+   * Whether this row is money BESIDE the account's equity, overriding the
+   * connection-wide `balancesAreSeparatePool` for this row alone.
+   *
+   * Every venue before MEXC answered that question once for all its balances,
+   * so one flag on the reply was enough. MEXC is two wallets behind one login:
+   * the spot coins sit outside the futures equity and add to it, while the
+   * futures collateral *is* that equity, itemised. One boolean cannot say both,
+   * and saying it wrongly either hides real money or counts it twice.
+   *
+   * Omit it to mean "whatever the connection said", which is what every other
+   * connector does.
+   */
+  countsInPortfolio?: boolean;
 }
 
 /**
