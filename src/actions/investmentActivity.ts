@@ -3,7 +3,14 @@
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { accounts, auditLog, imports, investmentActivities } from "@/db/schema";
+import {
+  accounts,
+  auditLog,
+  imports,
+  investmentActivities,
+  investmentActivityTags,
+  tags,
+} from "@/db/schema";
 import {
   calculateInvestmentLedger,
   investmentActivityFingerprint,
@@ -234,18 +241,36 @@ export async function undoInvestmentActivityImport(formData: FormData) {
  * points.
  */
 export async function getTradeAnalysis() {
-  const [rows, accountRows, portfolio, rates, base] = await Promise.all([
+  const [rows, accountRows, tagLinks, tagRows, portfolio, rates, base] = await Promise.all([
     db
       .select()
       .from(investmentActivities)
       .orderBy(desc(investmentActivities.date)),
     db.select().from(accounts),
+    db.select().from(investmentActivityTags),
+    db.select().from(tags),
     getPortfolioItems(),
     getRates(),
     getBaseCurrency(),
   ]);
 
   const accountNames = new Map(accountRows.map((account) => [account.id, account.name]));
+
+  /**
+   * Your labels, per event.
+   *
+   * An event with none gets an empty array rather than a null: most rows are
+   * never labelled, and "unlabelled" is not itself a label. A link pointing at
+   * a tag that no longer exists is skipped — the cascade should have removed
+   * it, and reading a dangling one would put `undefined` on a row.
+   */
+  const tagName = new Map(tagRows.map((t) => [t.id, t.name]));
+  const tagsByActivity = new Map<string, string[]>();
+  for (const link of tagLinks) {
+    const name = tagName.get(link.tagId);
+    if (name === undefined) continue;
+    tagsByActivity.set(link.activityId, [...(tagsByActivity.get(link.activityId) ?? []), name]);
+  }
 
   let unconvertible = 0;
   /**
@@ -279,6 +304,8 @@ export async function getTradeAnalysis() {
       description: row.description,
       accountName: row.accountId ? accountNames.get(row.accountId) ?? "—" : "—",
       currency: row.currency,
+      id: row.id,
+      tags: (tagsByActivity.get(row.id) ?? []).sort((a, b) => a.localeCompare(b)),
     });
   }
 
@@ -339,4 +366,51 @@ export async function getTradeAnalysis() {
         value: i.value,
       })),
   };
+}
+
+/**
+ * The labels on one event, replaced wholesale.
+ *
+ * Whole-set rather than add-one/remove-one because the screen edits a set: it
+ * sends what the row should end up with, and a half-applied change cannot
+ * leave a tag behind that nobody asked for.
+ *
+ * A tag the vocabulary has never seen is created, so labelling never means a
+ * detour to a settings page — but it is matched case-insensitively first, or
+ * "Mistake" and "mistake" become two piles of the same idea.
+ */
+export async function setActivityTags(activityId: string, names: string[]) {
+  const wanted = [...new Set(names.map((n) => n.trim()).filter((n) => n !== ""))];
+
+  const existing = await db.select().from(tags);
+  const byLower = new Map(existing.map((t) => [t.name.toLowerCase(), t]));
+
+  const ids: string[] = [];
+  for (const name of wanted) {
+    const found = byLower.get(name.toLowerCase());
+    if (found) {
+      ids.push(found.id);
+      continue;
+    }
+    const [created] = await db.insert(tags).values({ name }).returning();
+    byLower.set(name.toLowerCase(), created);
+    ids.push(created.id);
+  }
+
+  await db.delete(investmentActivityTags).where(eq(investmentActivityTags.activityId, activityId));
+  if (ids.length > 0) {
+    await db
+      .insert(investmentActivityTags)
+      .values(ids.map((tagId) => ({ activityId, tagId })))
+      .onConflictDoNothing();
+  }
+
+  revalidatePath("/investments/history");
+  return { tags: wanted };
+}
+
+/** Every tag in the vocabulary, for offering what already exists. */
+export async function listTagNames(): Promise<string[]> {
+  const rows = await db.select().from(tags);
+  return rows.map((t) => t.name).sort((a, b) => a.localeCompare(b));
 }

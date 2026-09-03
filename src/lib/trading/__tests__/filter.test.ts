@@ -20,6 +20,8 @@ const row = (over: Partial<TradeHistoryRow> = {}): TradeHistoryRow => ({
   description: "Close Long",
   accountName: "Hyperliquid",
   currency: "USD",
+  id: "a1",
+  tags: [],
   ...over,
 });
 
@@ -295,5 +297,70 @@ describe("empty in two different ways", () => {
     expect(
       applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbol: "SOL", direction: "long" })
     ).toHaveLength(0);
+  });
+});
+
+/**
+ * Labels you put on a row yourself.
+ *
+ * Reusing the app's one `tags` vocabulary rather than growing a second, so a
+ * tag on a transaction and a tag on a trade are the same tag — "mistake" filed
+ * twice under two spellings is two piles of one idea.
+ */
+describe("your own labels", () => {
+  const TAGGED: TradeHistoryRow[] = [
+    row({ id: "1", symbol: "BTC", tags: ["mistake", "leveraged"] }),
+    row({ id: "2", symbol: "ETH", tags: ["leveraged"] }),
+    row({ id: "3", symbol: "SOL", tags: [] }),
+  ];
+
+  it("keeps only the rows carrying a label", () => {
+    expect(
+      applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "leveraged" }).map((r) => r.symbol)
+    ).toEqual(["BTC", "ETH"]);
+    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "mistake" })).toHaveLength(1);
+  });
+
+  /**
+   * An unlabelled row is not a row labelled "none", so no label selects it.
+   * Choosing the absence of a label is a different feature, and pretending a
+   * tag does it would be worse than not offering it.
+   *
+   * `null` is the only way to mean "every row". An empty string is a label
+   * nothing carries and matches nothing — the same as for symbol, type and
+   * account, and the reason the screen turns the empty option into `null`
+   * before it ever reaches here.
+   */
+  it("does not treat the absence of a label as a label", () => {
+    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "none" })).toHaveLength(0);
+    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "" })).toHaveLength(0);
+    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: null })).toHaveLength(3);
+  });
+
+  it("offers only labels actually in use", () => {
+    expect(tradeFilterOptions(TAGGED).tags).toEqual(["leveraged", "mistake"]);
+    expect(tradeFilterOptions([row({ tags: [] })]).tags).toEqual([]);
+  });
+
+  it("never offers a label that would empty the table", () => {
+    for (const tag of tradeFilterOptions(TAGGED).tags) {
+      expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag }).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("narrows alongside the other filters rather than replacing them", () => {
+    expect(
+      applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "leveraged", symbol: "BTC" })
+    ).toHaveLength(1);
+  });
+
+  it("says it is filtering by a label", () => {
+    expect(describeTradeFilters({ ...NO_TRADE_FILTERS, tag: "mistake" })).toBe('tagged "mistake"');
+  });
+
+  /** Every figure follows the label, like every other filter on this page. */
+  it("recomputes the figures over the labelled rows", () => {
+    const leveraged = applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "leveraged" });
+    expect(bySymbol(leveraged).map((s) => s.symbol).sort()).toEqual(["BTC", "ETH"]);
   });
 });

@@ -19,10 +19,17 @@ import { directionOf, type TradeRow, type Direction } from "./stats";
 
 /** A row with the fields the table shows but the statistics do not need. */
 export interface TradeHistoryRow extends TradeRow {
+  /** The stored event, so a label can be attached to this row and not a copy. */
+  id: string;
   /** Which account the event belongs to, for filtering by venue. */
   accountName: string;
   /** The currency it was recorded in, before conversion. */
   currency: string;
+  /**
+   * Your own labels. Empty is the ordinary case — most rows are never
+   * labelled, and an unlabelled row is not a row labelled "none".
+   */
+  tags: string[];
 }
 
 export interface TradeFilters {
@@ -32,6 +39,8 @@ export interface TradeFilters {
   type: string | null;
   accountName: string | null;
   direction: Direction | null;
+  /** One of your own labels, or null for every row whether labelled or not. */
+  tag: string | null;
   /** ISO day, inclusive. Null for open-ended. */
   from: string | null;
   to: string | null;
@@ -42,6 +51,7 @@ export const NO_TRADE_FILTERS: TradeFilters = {
   type: null,
   accountName: null,
   direction: null,
+  tag: null,
   from: null,
   to: null,
 };
@@ -63,6 +73,7 @@ export function applyTradeFilters<T extends TradeHistoryRow>(
     if (filters.type !== null && row.type.toUpperCase() !== filters.type.toUpperCase()) return false;
     if (filters.accountName !== null && row.accountName !== filters.accountName) return false;
     if (filters.direction !== null && directionOf(row) !== filters.direction) return false;
+    if (filters.tag !== null && !row.tags.includes(filters.tag)) return false;
 
     const day = row.date.slice(0, 10);
     if (filters.from !== null && day < filters.from) return false;
@@ -77,6 +88,8 @@ export interface TradeFilterOptions {
   types: string[];
   accounts: string[];
   directions: Direction[];
+  /** Labels actually in use, so choosing one always leaves something on screen. */
+  tags: string[];
   /** The span the data actually covers, for bounding the date inputs. */
   earliest: string | null;
   latest: string | null;
@@ -97,6 +110,7 @@ export function tradeFilterOptions(
   const types = new Set<string>();
   const accounts = new Set<string>();
   const directions = new Set<Direction>();
+  const tags = new Set<string>();
   let earliest: string | null = null;
   let latest: string | null = null;
 
@@ -104,6 +118,7 @@ export function tradeFilterOptions(
     if (row.symbol !== null && row.symbol !== "") symbols.add(row.symbol);
     if (row.type !== "") types.add(row.type.toUpperCase());
     if (row.accountName !== "") accounts.add(row.accountName);
+    for (const tag of row.tags) tags.add(tag);
     directions.add(directionOf(row));
 
     const day = row.date.slice(0, 10);
@@ -115,6 +130,7 @@ export function tradeFilterOptions(
     symbols: [...symbols].sort(),
     types: [...types].sort(),
     accounts: [...accounts].sort(),
+    tags: [...tags].sort((a, b) => a.localeCompare(b)),
     // Long, short, then unknown — the order they mean something in, not
     // alphabetical, which would lead with "long" and bury "short" after it.
     directions: (["long", "short", "unknown"] as const).filter((d) => directions.has(d)),
@@ -140,6 +156,7 @@ export function describeTradeFilters(filters: TradeFilters): string | null {
   if (filters.symbol !== null) parts.push(filters.symbol);
   if (filters.type !== null) parts.push(filters.type.toLowerCase());
   if (filters.direction !== null) parts.push(filters.direction);
+  if (filters.tag !== null) parts.push(`tagged "${filters.tag}"`);
   if (filters.accountName !== null) parts.push(`on ${filters.accountName}`);
   if (filters.from !== null && filters.to !== null) parts.push(`${filters.from} to ${filters.to}`);
   else if (filters.from !== null) parts.push(`from ${filters.from}`);

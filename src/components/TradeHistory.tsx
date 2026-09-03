@@ -29,6 +29,7 @@ import {
   type Direction,
 } from "@/lib/trading/stats";
 import { realisedProvenance, type Derivable } from "@/lib/trading/realised";
+import { setActivityTags } from "@/actions/investmentActivity";
 
 /**
  * The trade history, and every figure about it, over whatever slice is chosen.
@@ -153,6 +154,12 @@ export default function TradeHistory({
             value={filters.accountName ?? ""}
             onChange={(v) => set("accountName", pick(v))}
             options={options.accounts}
+          />
+          <Select
+            label="Tag"
+            value={filters.tag ?? ""}
+            onChange={(v) => set("tag", pick(v))}
+            options={options.tags}
           />
           <Select
             label="Direction"
@@ -350,6 +357,7 @@ export default function TradeHistory({
                   <th>Type</th>
                   <th>Asset</th>
                   <th>Description</th>
+                  <th>Tags</th>
                   <th className="text-right">Quantity</th>
                   <th className="text-right">Net amount</th>
                   <th className="text-right">Realized P&amp;L</th>
@@ -363,6 +371,14 @@ export default function TradeHistory({
                     <td>{r.type}</td>
                     <td>{r.symbol ?? "—"}</td>
                     <td className="max-w-64 truncate">{r.description ?? "—"}</td>
+                    <td>
+                      <TagCell
+                        id={r.id}
+                        tags={r.tags}
+                        known={options.tags}
+                        onPick={(tag) => set("tag", tag)}
+                      />
+                    </td>
                     <td className="text-right">{r.quantity ?? "—"}</td>
                     <td className={`text-right ${toneOf(r.amount)}`}>
                       {r.amount.toFixed(2)} {currency}
@@ -386,6 +402,119 @@ export default function TradeHistory({
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * The labels on one event, shown and edited in place.
+ *
+ * Editing is a whole set rather than add-one/remove-one: the row sends what it
+ * should end up with, so a half-applied change cannot leave a label behind
+ * that nobody asked for.
+ *
+ * The page is not re-fetched on save. `revalidatePath` in the action refreshes
+ * it on the next navigation, and until then this shows what was sent — which is
+ * what was stored, because the action either succeeds or throws.
+ */
+function TagCell({
+  id,
+  tags,
+  known,
+  onPick,
+}: {
+  id: string;
+  tags: string[];
+  known: readonly string[];
+  onPick: (tag: string) => void;
+}) {
+  const [current, setCurrent] = useState(tags);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function save(next: string[]) {
+    setBusy(true);
+    setFailed(false);
+    const previous = current;
+    // Shown immediately, and put back if the write refuses. A label that looks
+    // saved and is not is worse than one that visibly failed.
+    setCurrent(next);
+    try {
+      await setActivityTags(id, next);
+    } catch {
+      setCurrent(previous);
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <span className="flex items-center gap-1 flex-wrap">
+        {current.map((t) => (
+          <button
+            key={t}
+            onClick={() => onPick(t)}
+            className="badge text-[10px]"
+            title={`Show only rows tagged "${t}"`}
+          >
+            {t}
+          </button>
+        ))}
+        <button
+          onClick={() => setEditing(true)}
+          className="text-[10px] text-[var(--accent)]"
+        >
+          {current.length === 0 ? "tag" : "edit"}
+        </button>
+        {failed && <span className="text-[10px] text-[var(--red)]">not saved</span>}
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-1 flex-wrap">
+      {current.map((t) => (
+        <button
+          key={t}
+          disabled={busy}
+          onClick={() => save(current.filter((x) => x !== t))}
+          className="badge text-[10px]"
+          title="Remove"
+        >
+          {t} ×
+        </button>
+      ))}
+      <input
+        list="trade-tag-names"
+        className="input input-narrow text-[10px]"
+        style={{ width: 110 }}
+        placeholder="add…"
+        value={draft}
+        disabled={busy}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          const name = draft.trim();
+          // Case-insensitive, or "Mistake" and "mistake" become two piles of
+          // one idea — the same rule the action applies when it stores them.
+          if (name === "" || current.some((t) => t.toLowerCase() === name.toLowerCase())) return;
+          setDraft("");
+          void save([...current, name]);
+        }}
+      />
+      <datalist id="trade-tag-names">
+        {known.map((t) => (
+          <option key={t} value={t} />
+        ))}
+      </datalist>
+      <button onClick={() => setEditing(false)} className="text-[10px] text-[var(--muted)]">
+        done
+      </button>
+    </span>
   );
 }
 

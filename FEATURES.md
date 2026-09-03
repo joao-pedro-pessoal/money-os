@@ -422,6 +422,50 @@ maiores do que o resultado, e só a linha líquida diz isso.
 Horas em **UTC**, e a página di-lo. A app não sabe onde estavas quando
 colocaste cada ordem, e um gráfico com horas erradas seria lido como facto.
 
+## Tags nas trades, e realizado ao lado de não realizado
+
+**Podes etiquetar qualquer evento do histórico**, incluindo os antigos. Escreves
+na célula Tags, Enter, e fica gravado. Clicar numa tag filtra por ela, e há um
+filtro de tags ao lado dos outros.
+
+Usa o mesmo vocabulário (`tags`) das transações em vez de criar um segundo — uma
+tag posta numa transação e outra posta num trade têm de ser a mesma tag, senão
+"erro" fica arquivado duas vezes em duas grafias e nenhuma se encontra pela
+outra. A comparação é sem distinção de maiúsculas, pelo mesmo motivo.
+
+Uma linha sem etiqueta **não** é uma linha etiquetada "nenhuma": não há valor de
+filtro que a selecione, porque escolher a ausência de etiqueta é outra
+funcionalidade e fingir que uma tag a faz seria pior do que não a oferecer.
+
+### Resultado por instrumento
+
+Tabela nova com o **realizado** (o que fechar produziu) ao lado do **não
+realizado** (o que ainda está em cima do que tens). Só o primeiro é dinheiro que
+tens.
+
+O difícil não foi mostrar, foi juntar: **de 30 símbolos negociados, só 5
+coincidiam** com a carteira. As falhas eram duas famílias e um não-problema:
+
+- **Trading 212** guarda a grafia da API contra a do extrato: `IGLAl_EQ` contra
+  `IGLA`, `EUN3d_EQ` contra `EUN3` — uma letra minúscula de praça e `_EQ`.
+- **A Trade Republic dá o nome** onde o extrato dá o ticker: `Bitcoin` contra
+  `BTC`. Não há regra que transforme um no outro, só uma tabela de nomes, e esta
+  app não adivinha nomes.
+- **Posições fechadas**, que são a maioria. Não terem não realizado é a resposta
+  certa, não uma falha.
+
+Essa última distinção é o que torna o ecrã honesto: o `holdingMatch.ts` reporta
+"fechada" e "sem par" como coisas diferentes, e a página **nomeia** os
+instrumentos que as negociações dizem estar abertos e que não conseguiu ligar a
+uma posição. Em falta, não zero.
+
+A normalização é de propósito estreita — só uma letra minúscula antes de `_EQ`.
+Uma regra que tirasse qualquer letra final estragaria todos os tickers que
+acabam numa, que são quase todos.
+
+Nos teus dados passou de 5 pares exatos para **10**, com 9 corretamente
+fechadas e 10 nomeadas como sem par.
+
 ## Filtrar o histórico de trades
 
 Instrumento, tipo, conta, direção e intervalo de datas, na página do histórico.

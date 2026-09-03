@@ -1165,3 +1165,28 @@ export const benchmarkPrices = pgTable(
   },
   (t) => [unique("benchmark_prices_symbol_date").on(t.symbol, t.date)]
 );
+
+// ---------- InvestmentActivityTags ----------
+/**
+ * Your own labels on a historical event.
+ *
+ * Reuses the `tags` table rather than growing a second vocabulary. A tag you
+ * put on a transaction and a tag you put on a trade should be the same tag —
+ * "mistake" filed twice under two spellings is two piles of one idea, and
+ * neither is searchable as the other.
+ *
+ * The join is the same shape `transaction_tags` already uses, including the
+ * cascade: deleting an event or a tag removes the link and nothing else.
+ */
+export const investmentActivityTags = pgTable(
+  "investment_activity_tags",
+  {
+    activityId: text("activity_id")
+      .notNull()
+      .references(() => investmentActivities.id, { onDelete: "cascade" }),
+    tagId: text("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.activityId, t.tagId] })]
+);
