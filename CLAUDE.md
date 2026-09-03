@@ -442,6 +442,28 @@ slice: it drew blue, purple and cyan on a page that had deliberately thrown
 every hue away. Slice colours are `--chart-1`…`--chart-4` now. A theme is only
 honoured by the components that ask it.
 
+## A NUL byte in a source file passes every check that runs the code
+
+`dividendSource.ts` used a literal NUL as a map-key separator. It works — no id
+or kind can contain one — and `tsc` was clean, 1 911 tests passed, eslint was
+clean and the app ran. What broke was everything that *reads* the file: git
+called it binary and stopped producing diffs and blame, and grep skipped it.
+The defect was invisible to every tool that looks at behaviour, because the
+behaviour was correct.
+
+It arrived from an escape that did not survive being written through a shell:
+`\u0000` reaching the file as the byte rather than as six characters. Twice,
+because the second attempt to fix it made the same mistake.
+
+The separator is `|` now — plainly typed, and impossible in a cuid2 id or in a
+lowercase kind, so nothing is lost. `src/lib/__tests__/source-hygiene.test.ts`
+fails on any NUL or stray control character in a source file, checked by
+planting one and watching it name the file.
+
+The general lesson: **when a script writes source code, check the bytes, not
+just that it compiles.** Escaping through a shell into a heredoc into a
+language is three chances to change what you meant.
+
 ## Count calendar days by the calendar
 
 `(a.getTime() - b.getTime()) / 86_400_000` is not the number of days between two
