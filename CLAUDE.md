@@ -24,11 +24,38 @@ reach the network. Everything else there is genuinely pure, which is what makes
 the suite run without Postgres — but don't read the rule as covering these, and
 don't add a fifth without a reason.
 
-The arbiters — the modules that decide what a number means — are
-`lib/accounting/networth.ts`, `lib/accounting/balanceScope.ts`,
-`lib/portfolio/holdingSource.ts` and `lib/portfolio/reconstruct.ts`. If a total
-looks wrong, it is almost always because something computed it outside one of
-these rather than because one of them is wrong.
+The arbiters — the modules that decide what a number means. If a total looks
+wrong, it is almost always because something computed it outside one of these
+rather than because one of them is wrong.
+
+| Figure | Arbiter |
+| ------ | ------- |
+| Net worth | `lib/accounting/networth.ts` |
+| What a balance covers | `lib/accounting/balanceScope.ts` |
+| Free cash | `lib/accounting/unallocated.ts` — `accountFreeCash` |
+| Unrealised gain | `lib/portfolio/positionView.ts` — `portfolioSummary` |
+| Where a holding comes from | `lib/portfolio/holdingSource.ts` |
+| A rebuilt position | `lib/portfolio/reconstruct.ts` |
+| Which dividends are whose | `lib/portfolio/dividendSource.ts` |
+
+This list is the one to trust; keep it complete. It was out of date once and
+disagreed with the shorter list further down, which is the doc committing the
+exact mistake it spends a section warning about.
+
+## Before you start
+
+Two things orient faster than reading the rest of this file.
+
+Run `npm run audit`. It checks the invariants below against the real database
+and reports what is currently wrong with the **data** — as opposed to the code —
+so open issues announce themselves instead of living in a stale list here. At
+the time of writing it reports two, both the user's to decide: a 100 transaction
+stamped EUR on a USD account, and an IBKR stored balance that has drifted 100
+above what the connector says.
+
+Check `git branch`. Work has been happening on `fix/secrets-and-unconverted-sums`,
+which is a long way ahead of `main` and has never been merged. Starting from
+`main` means starting without any of it.
 
 ## A missing secret is refused, never defaulted
 
@@ -93,7 +120,39 @@ bucket allocation — and the same euro must be counted once.
 
 ## A second definition is worse than a wrong one
 
-This has now happened three times, and the third was not even a number.
+This has now happened four times, and the third was not even a number.
+
+The fourth was the most expensive, and it is the one to read first because it
+shows how far a duplicate definition travels before anyone sees it.
+
+The Interactive Brokers row read **34.24 USD of balance beside 134.24 "free"** —
+more money committed to nothing than the account contained. The balance column
+read the connector's equity; the free column read `accounts.balance`, a stored
+figure a manual transaction had pushed 100 above what the venue held, and which
+the last sync (status: `error`) never corrected.
+
+The screen was the cheap part. `a.free` is read in **six** places, including the
+buckets page's distributable total and `suggestDistribution`. Measured on real
+data: **736.28 offered to assign to goals against 440.69 actually free.**
+Trading 212 accounted for 144.19 of that on its own, because its balance is
+nearly all ETFs and only 0.13 is cash. Two more spellings were hiding on the
+dashboard — `explainFree` described the manual figure from the raw balance,
+ignoring the invested half, and the number the card actually rendered came from
+`p.available`, which is free of margin but not of bucket allocations.
+
+Four definitions of one word, three of them wrong in different directions, none
+of them failing a test.
+
+`accountFreeCash` in `lib/accounting/unallocated.ts` is now the only one, and
+`listAccountsWithState` computes it once and hands the whole view to the screens
+so no page builds its own. **A connected account's stored balance is not
+consulted at all** — falling back to it is precisely how the two diverged.
+
+Note where the fix had to go. Patching the accounts page would have left five
+readers wrong; the arbiter had to move to the action every screen already calls.
+`getAccountPlatformTotals` moved to `actions/platformTotals.ts` to make that
+possible, because `connections.ts` already imports `accounts.ts` and the obvious
+placement would have been a cycle.
 
 `parseBrokerCsv` repeated all eleven column-name lists inline instead of reading
 `COLUMN_ROLES`, which `inspectBrokerCsv` uses. They agreed until they didn't:
@@ -124,9 +183,8 @@ and then it disagrees in a way nobody notices because both look plausible.
 
 `compose` no longer reports a P&L at all, and says so where the field used to
 be. The rule: **before summing anything, search for the function that already
-defines it.** `networth.ts`, `portfolioSummary`, `holdingSource.ts` and
-`reconstruct.ts` are the four that exist; the correct move is always to call
-one, never to reproduce it.
+defines it.** The table of arbiters under "The map" lists them; the correct move is always to
+call one, never to reproduce it.
 
 There is a second lesson underneath. `portfolioSummary` reports `costUnknown`
 — market-exposed value whose cost nobody states — separately, with the
@@ -379,6 +437,15 @@ Two traps specific to this codebase:
 - **`toBase` returns null when it has no rate.** Treat that as "leave it out and
   say so", never as zero.
 
+**A column default is not a currency.** `transactions.currency` defaults to
+`EUR` and the transaction form has no currency field, so every manual row was
+stamped EUR whatever account it landed in — while `createTransaction`
+incremented the balance with a raw `balance + amount`. A 100 entered against a
+USD broker became a 100 EUR row *and* 100 USD of balance: recorded in one
+currency, added in another. It now reads the account and stamps that, which is
+the only currency the form could have meant. `npm run audit` checks that no
+transaction disagrees with its account.
+
 ## Only a time-weighted line may be drawn against a benchmark
 
 Net worth rises when money is paid in. An index has no equivalent event, so
@@ -420,6 +487,61 @@ case rather than the exotic one.
 
 The guard is `periodStartDate < to`: a period with no valuation after it is not
 closed at all.
+
+## An unlayered rule beats every Tailwind utility
+
+`@import "tailwindcss"` puts utilities in `@layer utilities`. Every rule written
+in `globals.css` after that import is **unlayered**, and unlayered styles win
+over layered ones whatever their specificity. A single-class utility cannot
+override anything in that file.
+
+`table.data-table th { text-align: left }` therefore beat `.text-right` on every
+header cell in the app: **71 of them across 19 files asked for right alignment
+and none of them got it**, so "Value" sat at the left of a column of
+right-aligned figures while the class saying otherwise looked like it worked.
+
+The fix is an explicit unlayered rule (`table.data-table th.text-right`), not a
+utility. Before assuming a Tailwind class is winning against something in
+`globals.css`, check the compiled stylesheet — `.next/static/chunks/*.css` — for
+which rules sit inside `@layer` and which do not. That check is what turned this
+from a plausible theory into a verified one.
+
+## A control that changes the view must not scroll it away
+
+Next resets scroll on every navigation. That is right when you are going
+somewhere and wrong when you are staying put — and the pages driven by search
+params (portfolio analysis, the library) express sorting, filtering and opening
+a row *as* navigation. Every filter threw the reader back to the top of a page
+they had scrolled down; sorting a table meant scrolling back down to see the
+result.
+
+**`FilterLink` is `<Link scroll={false}>`. Use it for any link that lands on the
+page it started from.** A link to a different page stays a plain `<Link>`:
+arriving halfway down a document you have never seen is its own kind of lost.
+`src/lib/__tests__/scroll-position.test.ts` fails if a same-page href appears on
+a bare `<Link>`, because this bug is invisible in review and in a screenshot and
+only shows up for someone who scrolls before clicking.
+
+**Never use `<form method="GET">` to change a parameter.** It is a full document
+navigation, and it carries only what is written into it as hidden inputs. The
+grouping form on the analysis page listed `sort` and `dir`, so changing "Group
+by" silently dropped `synced` — whose *absence reads as on* — and closed the
+open group. `FilterSelect` takes a whole href per option, built by the page's
+own query builder, so a parameter added later is carried without anyone
+remembering to add a hidden input for it.
+
+## Nested tables cannot align with the table they sit in
+
+A `<table>` sizes its columns from its own content. The analysis page's group
+detail was a nested table inside a `colSpan` cell, so its Value could never line
+up under the Value it belonged to, and comparing a member against its group
+meant measuring by eye. Detail rows now live in the same table as the row they
+expand, which makes the alignment structural rather than something to maintain.
+
+Two things follow. A sub-heading longer than the figures beneath it widens that
+column for **every** row in the table, so let it wrap. And `whitespace-nowrap`
+on the table is inherited by prose inside it — an explanatory paragraph ran off
+the right edge and ended mid-word, readable only by scrolling sideways.
 
 ## A token used anywhere must exist in every theme
 
