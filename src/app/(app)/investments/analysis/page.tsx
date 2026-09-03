@@ -17,6 +17,8 @@ import {
 import { listAnalysisViews, saveAnalysisView, deleteSavedView } from "@/actions/savedViews";
 import { suggestName } from "@/lib/portfolio/savedViews";
 import SavedViews from "@/components/SavedViews";
+import FilterLink from "@/components/FilterLink";
+import FilterSelect from "@/components/FilterSelect";
 import GainAttribution from "@/components/GainAttribution";
 import ContributionBreakdown from "@/components/ContributionBreakdown";
 import StatementBreakdown from "@/components/StatementBreakdown";
@@ -118,9 +120,9 @@ export default async function PortfolioAnalysisPage({
           <h1 className="text-lg font-semibold">Portfolio analysis</h1>
           {/* The toggle must stay reachable here, or switching it off with no
               manual positions would leave no way to switch it back on. */}
-          <Link href={qs({ synced: includeSynced ? "off" : "on" })} className="btn whitespace-nowrap">
+          <FilterLink href={qs({ synced: includeSynced ? "off" : "on" })} className="btn whitespace-nowrap">
             {includeSynced ? "Cash & stablecoins: ON" : "Cash & stablecoins: OFF"}
-          </Link>
+          </FilterLink>
         </div>
         <div className="card p-8 text-center text-sm text-[var(--muted)]">
           {includeSynced ? (
@@ -253,13 +255,13 @@ export default async function PortfolioAnalysisPage({
           </p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <Link
+          <FilterLink
             href={qs({ synced: includeSynced ? "off" : "on" })}
             className="btn whitespace-nowrap"
             title="Cash and stablecoins can't lose value to the market, so they flatten every risk breakdown they're in. Hiding them leaves what's actually exposed."
           >
             {includeSynced ? "Cash & stablecoins: ON" : "Cash & stablecoins: OFF"}
-          </Link>
+          </FilterLink>
           <Link href="/investments" className="btn whitespace-nowrap">
             Back to positions
           </Link>
@@ -416,20 +418,21 @@ export default async function PortfolioAnalysisPage({
               </div>
             )}
           </div>
-          <form method="GET" className="flex gap-2 text-xs">
-            <input type="hidden" name="sort" value={sort} />
-            <input type="hidden" name="dir" value={dir} />
-            <select name="groupBy" defaultValue={groupBy} className="input py-1">
-              {GROUP_BY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  Group by: {o.label}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="btn py-1 px-3">
-              Apply
-            </button>
-          </form>
+          {/* Built with `qs`, so the grouping carries the rest of the view with
+              it. The form this replaces listed `sort` and `dir` as hidden
+              inputs and stopped there, so changing the grouping dropped
+              `synced` — whose absence reads as on — and closed the open group. */}
+          <div className="flex gap-2 text-xs">
+            <FilterSelect
+              label="Group by"
+              value={groupBy}
+              options={GROUP_BY_OPTIONS.map((o) => ({
+                value: o.value,
+                label: `Group by: ${o.label}`,
+                href: qs({ groupBy: o.value }),
+              }))}
+            />
+          </div>
         </div>
 
         <DonutChart data={grouped.filter((g) => g.value > 0).map((g) => ({ name: label(g.key), value: g.value }))} />
@@ -440,13 +443,13 @@ export default async function PortfolioAnalysisPage({
               <tr>
                 {SORT_COLUMNS.map((c) => (
                   <th key={c.key} className={c.numeric ? "text-right" : undefined}>
-                    <Link
+                    <FilterLink
                       href={qs({ sort: c.key, dir: sort === c.key && dir === "desc" ? "asc" : "desc" })}
                       className="hover:underline"
                     >
                       {c.label}
                       {sort === c.key && (dir === "desc" ? " ↓" : " ↑")}
-                    </Link>
+                    </FilterLink>
                   </th>
                 ))}
               </tr>
@@ -458,14 +461,14 @@ export default async function PortfolioAnalysisPage({
                   <td>
                     {/* Opening a group is a link, so the view survives a
                         refresh and can be sent to someone. */}
-                    <Link
+                    <FilterLink
                       href={qs({ open: openGroup === g.key ? "" : g.key })}
                       className="hover:underline"
                       style={groupBy === "riskLevel" ? { color: riskColor(g.key) } : undefined}
                     >
                       {openGroup === g.key ? "▾ " : "▸ "}
                       {label(g.key)}
-                    </Link>
+                    </FilterLink>
                     <div className="text-xs text-[var(--muted)]">{g.percent.toFixed(1)}% do portefólio</div>
                   </td>
                   <td className="text-right">{g.count}</td>

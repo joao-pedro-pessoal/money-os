@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import FilterLink from "./FilterLink";
 
 export interface SavedViewChip {
   id: string;
@@ -50,7 +50,7 @@ export default function SavedViews({
               color: isCurrent ? "var(--accent)" : "var(--muted)",
             }}
           >
-            <Link href={`?${v.query}`}>{v.name}</Link>
+            <FilterLink href={`?${v.query}`}>{v.name}</FilterLink>
             <form action={deleteAction} className="contents">
               <input type="hidden" name="id" value={v.id} />
               <button

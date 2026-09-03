@@ -14,6 +14,7 @@ import { heroResource } from "@/lib/library/ranking";
 import { sortByFavourited, favouriteCount } from "@/lib/library/favourites";
 import Section from "@/components/Section";
 import Link from "next/link";
+import FilterLink from "@/components/FilterLink";
 
 async function seedAction() {
   "use server";
@@ -67,7 +68,7 @@ export default async function LibraryPage({
     .slice(0, 8);
 
   const tab = (href: string, label: string, active: boolean, count?: number) => (
-    <Link
+    <FilterLink
       key={label}
       href={href}
       className="badge border text-xs whitespace-nowrap"
@@ -78,7 +79,7 @@ export default async function LibraryPage({
     >
       {label}
       {count !== undefined && <span className="ml-1 opacity-70">{count}</span>}
-    </Link>
+    </FilterLink>
   );
 
   const qs = (over: Record<string, string | null>) => {
@@ -155,12 +156,12 @@ export default async function LibraryPage({
           )
         )}
         {activeCategory && (
-          <Link
+          <FilterLink
             href={qs({ category: null })}
             className="badge border border-[var(--accent)] text-[var(--accent)] text-xs"
           >
             {taxonomy.find((c) => c.slug === activeCategory)?.name ?? activeCategory} ×
-          </Link>
+          </FilterLink>
         )}
       </div>
 
@@ -199,9 +200,9 @@ export default async function LibraryPage({
             <div>
               <div className="flex items-baseline justify-between mb-2">
                 <span className="text-sm font-medium">Your favourites</span>
-                <Link href={qs({ view: "favourites" })} className="text-xs text-[var(--accent)]">
+                <FilterLink href={qs({ view: "favourites" })} className="text-xs text-[var(--accent)]">
                   All {favourites.length} →
-                </Link>
+                </FilterLink>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {favourites.slice(0, 3).map((r) => (
@@ -239,9 +240,9 @@ export default async function LibraryPage({
                 <div key={t.value}>
                   <div className="flex items-baseline justify-between mb-2">
                     <span className="text-sm font-medium">{t.label}</span>
-                    <Link href={qs({ type: t.value })} className="text-xs text-[var(--accent)]">
+                    <FilterLink href={qs({ type: t.value })} className="text-xs text-[var(--accent)]">
                       All {rows.length} →
-                    </Link>
+                    </FilterLink>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                     {rows.slice(0, 3).map((r) => (
@@ -257,7 +258,7 @@ export default async function LibraryPage({
             <div className="text-sm font-medium mb-2">Browse by category</div>
             <div className="flex gap-2 flex-wrap">
               {taxonomy.map((c) => (
-                <Link
+                <FilterLink
                   key={c.id}
                   href={qs({ category: c.slug })}
                   className="card px-3 py-2 hover:opacity-90 transition-opacity"
@@ -266,7 +267,7 @@ export default async function LibraryPage({
                   <div className="text-[10px] text-[var(--muted)]">
                     {c.count} {c.count === 1 ? "resource" : "resources"} · {c.subtags.length} subtags
                   </div>
-                </Link>
+                </FilterLink>
               ))}
             </div>
           </div>
