@@ -12,6 +12,11 @@ import {
   type TradeHistoryRow,
 } from "@/lib/trading/filter";
 import {
+  pairRealisedWithHeld,
+  unmatchedOpen,
+  type HeldPosition,
+} from "@/lib/trading/holdingMatch";
+import {
   cumulativePnl,
   bySymbol,
   byDirection,
@@ -42,12 +47,15 @@ import { realisedProvenance, type Derivable } from "@/lib/trading/realised";
 export default function TradeHistory({
   rows,
   options,
+  held,
   currency,
   approximate,
   unconvertible,
 }: {
   rows: (TradeHistoryRow & Derivable)[];
   options: TradeFilterOptions;
+  /** What is still held, for pairing a booked result with an open one. */
+  held: HeldPosition[];
   currency: string;
   approximate: boolean;
   unconvertible: number;
@@ -80,6 +88,27 @@ export default function TradeHistory({
       provenance: realisedProvenance(filtered),
     };
   }, [filtered]);
+
+  /**
+   * The booked result beside the one still riding, per instrument.
+   *
+   * Recomputed against the filtered rows like everything else, so narrowing to
+   * one instrument narrows both halves of its result together. What is held
+   * does not move with the filter; what was traded does.
+   *
+   * Realised comes from `stats.symbols` rather than being summed again — there
+   * is one definition of a realised result and this does not become a second.
+   */
+  const instruments = useMemo(
+    () =>
+      pairRealisedWithHeld(
+        filtered,
+        held,
+        new Map(stats.symbols.map((s) => [s.symbol, s.realized]))
+      ),
+    [filtered, held, stats.symbols]
+  );
+  const unmatched = useMemo(() => unmatchedOpen(instruments), [instruments]);
 
   const active = hasActiveTradeFilters(filters);
   const describing = describeTradeFilters(filters);
@@ -235,6 +264,75 @@ export default function TradeHistory({
         approximate={approximate}
         unconvertible={unconvertible}
       />
+
+      {instruments.length > 0 && (
+        <section className="card p-4">
+          <div className="text-sm font-medium">Result by instrument</div>
+          <p className="text-xs text-[var(--muted)] mt-1 mb-3">
+            What closing produced, beside what is still riding on what you hold. Only the first
+            is money you have.
+          </p>
+
+          <div className="overflow-auto max-h-96">
+            <table className="data-table whitespace-nowrap text-xs w-full">
+              <thead>
+                <tr>
+                  <th>Instrument</th>
+                  <th className="text-right">Realised</th>
+                  <th className="text-right">Unrealised</th>
+                  <th className="text-right">Still held</th>
+                  <th className="text-right">Units open</th>
+                </tr>
+              </thead>
+              <tbody>
+                {instruments.map((i) => (
+                  <tr
+                    key={i.symbol}
+                    className="cursor-pointer"
+                    onClick={() => set("symbol", i.symbol)}
+                  >
+                    <td>{i.symbol}</td>
+                    <td className={`text-right ${toneOf(i.realised)}`}>
+                      {i.realised.toFixed(2)} {currency}
+                    </td>
+                    {/* A dash, never 0,00. A closed position has no unrealised
+                        result and an unmatched one has an unknown result, and
+                        neither is a result of zero. */}
+                    <td
+                      className={`text-right ${
+                        i.unrealised === null ? "text-[var(--muted)]" : toneOf(i.unrealised)
+                      }`}
+                    >
+                      {i.unrealised === null
+                        ? i.missing === "closed"
+                          ? "closed"
+                          : "—"
+                        : `${i.unrealised.toFixed(2)} ${currency}`}
+                    </td>
+                    <td className="text-right text-[var(--muted)]">
+                      {i.value === null ? "—" : `${i.value.toFixed(2)} ${currency}`}
+                    </td>
+                    <td className="text-right text-[var(--muted)]">
+                      {i.netQuantity === 0 ? "—" : i.netQuantity}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* The gap that would otherwise be a blank cell reading as "nothing
+              gained". These are instruments the trades say are still open and
+              no holding could be matched to. */}
+          {unmatched.length > 0 && (
+            <p className="text-xs mt-3" style={{ color: "var(--amber)" }}>
+              {unmatched.length} instrument{unmatched.length === 1 ? "" : "s"} still open by these
+              trades could not be matched to a holding: {unmatched.join(", ")}. No unrealised
+              figure is shown for them — that is missing, not zero.
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="card p-4">
         <h2 className="text-sm font-medium">

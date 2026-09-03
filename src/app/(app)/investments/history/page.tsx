@@ -47,6 +47,7 @@ export default async function InvestmentHistoryPage() {
       <TradeHistory
         rows={analysis.rows}
         options={analysis.options}
+        held={analysis.held}
         currency={analysis.baseCurrency}
         approximate={analysis.approximate}
         unconvertible={analysis.unconvertible}

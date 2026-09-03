@@ -22,6 +22,7 @@ import {
 } from "@/lib/trading/stats";
 import { toBase } from "@/lib/fx";
 import { tradeFilterOptions, type TradeHistoryRow } from "@/lib/trading/filter";
+import { getPortfolioItems } from "./dashboard";
 import { deriveRealisedPnl } from "@/lib/trading/realised";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
@@ -233,12 +234,13 @@ export async function undoInvestmentActivityImport(formData: FormData) {
  * points.
  */
 export async function getTradeAnalysis() {
-  const [rows, accountRows, rates, base] = await Promise.all([
+  const [rows, accountRows, portfolio, rates, base] = await Promise.all([
     db
       .select()
       .from(investmentActivities)
       .orderBy(desc(investmentActivities.date)),
     db.select().from(accounts),
+    getPortfolioItems(),
     getRates(),
     getBaseCurrency(),
   ]);
@@ -319,5 +321,22 @@ export async function getTradeAnalysis() {
      */
     rows: enriched,
     options: tradeFilterOptions(enriched),
+    /**
+     * What is still held, for pairing a realised result with an unrealised one.
+     *
+     * Handed over rather than paired here, because the pairing has to follow
+     * the filter — it happens where the filtering happens, so narrowing to one
+     * instrument narrows both halves of its result together.
+     *
+     * `costUnknown` becomes a null gain rather than a zero: a synced exchange
+     * balance states no cost, and zero would claim it is exactly break-even.
+     */
+    held: portfolio.items
+      .filter((i) => i.symbol)
+      .map((i) => ({
+        symbol: i.symbol as string,
+        unrealised: i.costUnknown ? null : i.pnl,
+        value: i.value,
+      })),
   };
 }
