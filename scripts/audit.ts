@@ -27,6 +27,7 @@ import { getDividendOverview } from "../src/actions/dividends";
 import { getTradeAnalysis } from "../src/actions/investmentActivity";
 import { getSpendingAnalysis } from "../src/actions/spending";
 import { portfolioSummary } from "../src/lib/portfolio/positionView";
+import { STABLE_ASSET_TYPES } from "../src/lib/portfolio/tags";
 import { realisedProvenance } from "../src/lib/trading/realised";
 import { listAccountsWithState } from "../src/actions/accounts";
 import { getAccountPlatformTotals } from "../src/actions/platformTotals";
@@ -53,6 +54,7 @@ function note(name: string, detail: string) {
   console.log(`  note  ${name}\n        ${detail}`);
 }
 
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const near = (a: number, b: number) => Math.abs(a - b) <= CENT;
 const money = (n: number, c: string) => `${n.toFixed(2)} ${c}`;
 
@@ -151,6 +153,92 @@ async function main() {
   const unpriced = items.items.filter((i) => i.costUnknown);
   if (unpriced.length > 0) {
     note("positions with no stated cost", unpriced.map((i) => i.symbol ?? i.id).join(", "));
+  }
+
+  /**
+   * Every asset, one line each, and where each one lands.
+   *
+   * The totals above are relationships between figures; this is the ledger they
+   * were summed from. It exists because the note about "the two market-exposed
+   * figures differ" has stood unexplained for weeks at around 60 EUR, and a gap
+   * you cannot attribute to specific rows is a gap you cannot argue with.
+   *
+   * `inside` is the column that does the work. An item inside a balance is
+   * money the account's own figure already carries — it belongs in the picture
+   * of what you hold, and must never be added to net worth on top. That is the
+   * legitimate half of the difference, and printing it per asset turns "there
+   * is a gap" into "these rows are the gap".
+   */
+  console.log("\nAssets");
+  const assets = [...items.items].sort((a, b) => b.value - a.value);
+  const isStable = (assetType: string | null) =>
+    assetType !== null && STABLE_ASSET_TYPES.includes(assetType);
+
+  console.log(
+    `  ${"asset".padEnd(14)}${"account".padEnd(20)}${"source".padEnd(11)}${"value".padStart(10)}  kind      counts`
+  );
+  for (const i of assets) {
+    console.log(
+      `  ${i.symbol.slice(0, 13).padEnd(14)}` +
+        `${i.accountName.slice(0, 19).padEnd(20)}` +
+        `${i.source.padEnd(11)}` +
+        `${i.value.toFixed(2).padStart(10)}  ` +
+        `${(isStable(i.assetType) ? "stable" : "floating").padEnd(10)}` +
+        `${i.insideBalance ? "inside a balance" : "on top"}` +
+        `${i.atCost ? "  [value is cost]" : ""}` +
+        `${i.costUnknown ? "  [cost unknown]" : ""}`
+    );
+  }
+
+  /**
+   * The difference, attributed.
+   *
+   * Two causes, and naming them is the point — this note has stood at roughly
+   * 60 EUR for weeks saying only that a gap exists.
+   *
+   * **A market-exposed balance inside an account's equity.** Hyperliquid moved
+   * to a unified account, so its spot coins sit inside the perps equity and are
+   * stored `countsInPortfolio: false` — correctly, or they would be added to a
+   * balance that already contains them. But nothing then reclassifies them:
+   * `reclassifiable` moves *positions* and *declared* investments out of cash,
+   * and a coin balance is neither. So HYPE is market-exposed on the Investments
+   * page and capital-guaranteed in net worth, which is the larger half of this.
+   *
+   * **The reclassification cap.** An account cannot have more invested than its
+   * balance holds, so anything above it stays cash.
+   *
+   * Printed, not asserted. A check here would have to rebuild the per-account
+   * split `getNetWorth` makes internally, and that is the second definition this
+   * file exists to avoid — the first draft of this section did exactly that and
+   * reported a −646 EUR residual on a healthy account.
+   */
+  const floatingInsideEquity = round2(
+    assets
+      .filter((i) => i.source === "balance" && !isStable(i.assetType))
+      .reduce((s, i) => s + i.value, 0)
+  );
+  const gap = round2(summary.floating - nw.floating);
+
+  console.log(
+    `
+  market-exposed listed on Investments : ${money(summary.floating, c)}` +
+      `
+  market-exposed counted in net worth  : ${money(nw.floating, c)}` +
+      `
+  difference                           : ${money(gap, c)}` +
+      `
+    coin balances inside an equity     : ${money(floatingInsideEquity, c)}  (market-exposed on Investments, cash in net worth)` +
+      `
+    the rest                           : ${money(round2(gap - floatingInsideEquity), c)}  (the per-account cap, and rounding)`
+  );
+
+  if (floatingInsideEquity > CENT) {
+    note(
+      "a market-exposed balance is counted as guaranteed",
+      `${money(floatingInsideEquity, c)} of coin balances sit inside an account's equity, so they ` +
+        `are market-exposed on the Investments page and capital-guaranteed in net worth. ` +
+        `Both figures are defensible on their own; they cannot both be right about the same coins.`
+    );
   }
 
   // ----------------------------------------------------------------- accounts
