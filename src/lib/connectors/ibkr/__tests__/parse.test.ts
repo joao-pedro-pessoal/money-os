@@ -279,9 +279,20 @@ describe("parsePositions", () => {
 });
 
 describe("isValidAccountId", () => {
+  /**
+   * Invented ids only, and the eight-digit case is the reason to say so.
+   *
+   * It was written with a real account number, because that is what was in
+   * front of whoever wrote it — and this repository is public, so it stayed
+   * there. An account id is not a credential and cannot sign anything in on its
+   * own, but it identifies a person to their broker, which is exactly what a
+   * convincing phone call needs. Never paste a real one into a fixture; the
+   * lengths are the whole point and any number has them.
+   */
   it("accepts live and paper account ids", () => {
     expect(isValidAccountId("U1234567")).toBe(true);
-    expect(isValidAccountId("U24164013")).toBe(true);
+    // Eight digits, which IBKR also issues.
+    expect(isValidAccountId("U12345678")).toBe(true);
     expect(isValidAccountId("DU1234567")).toBe(true);
     expect(isValidAccountId("u1234567")).toBe(true);
   });
