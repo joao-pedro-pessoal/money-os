@@ -486,14 +486,25 @@ export default function TradeHistory({
                     {/* Read-only here. The classification belongs to the
                         instrument, and it is edited once, in the table above. */}
                     <td>
-                      {r.classification ? (
+                      {/* `HoldingTags` renders nothing when every axis is
+                          unset, which left an empty cell under a heading —
+                          indistinguishable from a column that had stopped
+                          working. A dash says "nothing here", which is the
+                          same thing this table says everywhere else. */}
+                      {r.classification &&
+                      (r.classification.riskLevel ||
+                        r.classification.expectedReturn ||
+                        r.classification.timeHorizon ||
+                        r.classification.liquidity) ? (
                         <HoldingTags
                           riskLevel={r.classification.riskLevel}
                           expectedReturn={r.classification.expectedReturn}
                           timeHorizon={r.classification.timeHorizon}
                           liquidity={r.classification.liquidity}
                         />
-                      ) : null}
+                      ) : (
+                        <span className="text-[var(--muted)]">—</span>
+                      )}
                     </td>
                     <td className="text-right">{r.quantity ?? "—"}</td>
                     <td className={`text-right ${toneOf(r.amount)}`}>
