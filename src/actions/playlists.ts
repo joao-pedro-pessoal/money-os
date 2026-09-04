@@ -17,18 +17,23 @@ import { capitalAtRisk } from "@/lib/connectors/margin";
 import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
+import { getTradeAnalysis } from "./investmentActivity";
+import { byTag } from "@/lib/trading/stats";
 
 /** Playlists with the totals of the positions assigned to each one. */
 export async function listPlaylistsWithTotals() {
-  const [lists, allHoldings, syncedPositions, meta, conns, rates, base] = await Promise.all([
-    db.select().from(playlists),
-    db.select().from(holdings),
-    db.select().from(positions),
-    db.select().from(positionMeta),
-    db.select().from(accountConnections),
-    getRates(),
-    getBaseCurrency(),
-  ]);
+  const [lists, allHoldings, syncedPositions, meta, conns, rates, base, trades] =
+    await Promise.all([
+      db.select().from(playlists),
+      db.select().from(holdings),
+      db.select().from(positions),
+      db.select().from(positionMeta),
+      db.select().from(accountConnections),
+      getRates(),
+      getBaseCurrency(),
+      // The arbiter for a realised result. Read rather than recomputed.
+      getTradeAnalysis(),
+    ]);
 
   /**
    * Everything converted before it is added.
@@ -83,6 +88,22 @@ export async function listPlaylistsWithTotals() {
     syncedByPlaylist.set(playlistId, list);
   }
 
+  /**
+   * Realised per playlist, from the trade history.
+   *
+   * `byTag` is the same grouping the history page uses, so this cannot become a
+   * second definition of a realised result. Keyed on the playlist id rather
+   * than its name, because two playlists may share a name and an id never
+   * collides.
+   */
+  const realisedByPlaylist = new Map(
+    byTag(trades.rows, (row) => {
+      const id = (row as { classification?: { playlistId: string | null } | null }).classification
+        ?.playlistId;
+      return id ? [id] : [];
+    }).map((g) => [g.tag, g.realized])
+  );
+
   return lists
     .map((p) => {
       const mine = allHoldings
@@ -113,7 +134,24 @@ export async function listPlaylistsWithTotals() {
         mine.reduce((s, h) => s + inBase(costBasis(h), h.currency), 0) +
           synced.reduce((s, x) => s + (x.value - x.pnl), 0)
       );
-      const realized = round2(mine.reduce((s, h) => s + inBase(h.realizedPnl, h.currency), 0));
+      /**
+       * What this playlist has actually booked.
+       *
+       * `holdings.realizedPnl` is only ever written by a sale made by hand
+       * inside the app, so summing it alone reported **0,00 for every playlist**
+       * on an account whose trades all arrive from connectors — a column
+       * structurally incapable of showing anything else. The same bug the
+       * analysis page's Realised column had, in a second place.
+       *
+       * The real figures come from the trade history, which is the arbiter for
+       * a realised result, and are added to the manual side rather than
+       * replacing it: a hand-entered sale is real too, and the two sets do not
+       * overlap — a holding sold in the app is not a connector's fill.
+       */
+      const realized = round2(
+        mine.reduce((s, h) => s + inBase(h.realizedPnl, h.currency), 0) +
+          (realisedByPlaylist.get(p.id) ?? 0)
+      );
 
       return {
         ...p,
