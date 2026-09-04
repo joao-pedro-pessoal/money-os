@@ -136,7 +136,17 @@ export default function TradeHistory({
       pairRealisedWithHeld(
         filtered,
         held,
-        new Map(stats.symbols.map((s) => [s.symbol, s.realized]))
+        /**
+         * Only the symbols that have closed something.
+         *
+         * `bySymbol` returns a row for every instrument traded, with a realised
+         * of 0 for one you have only bought — and passing those made the table
+         * print `0,00` in a Realised column beside a red unrealised figure,
+         * which reads as a position closed at a loss.
+         */
+        new Map(
+          stats.symbols.filter((s) => s.closedTrades > 0).map((s) => [s.symbol, s.realized])
+        )
       ),
     [filtered, held, stats.symbols]
   );
@@ -367,8 +377,16 @@ export default function TradeHistory({
                     onClick={() => set("symbol", i.symbol)}
                   >
                     <td>{i.symbol}</td>
-                    <td className={`text-right ${toneOf(i.realised)}`}>
-                      {i.realised.toFixed(2)} {currency}
+                    {/* A dash, never 0,00 — the same rule the events table
+                        follows. Having closed nothing is not a result of zero,
+                        and this column sits next to an unrealised figure that
+                        can be red. */}
+                    <td className={`text-right ${i.realised === null ? "" : toneOf(i.realised)}`}>
+                      {i.realised === null ? (
+                        <span className="text-[var(--muted)]">—</span>
+                      ) : (
+                        `${i.realised.toFixed(2)} ${currency}`
+                      )}
                     </td>
                     {/* A dash, never 0,00. A closed position has no unrealised
                         result and an unmatched one has an unknown result, and

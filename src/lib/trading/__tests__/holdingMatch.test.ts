@@ -117,9 +117,21 @@ describe("realised beside unrealised", () => {
    * There is one definition of a realised result and this is not going to be
    * a rival to it.
    */
-  it("takes realised from what it was given, and zero where nothing closed", () => {
-    expect(of("IGLA").realised).toBe(0);
-    expect(of("GRASS").realised).toBe(0);
+  it("takes realised from what it was given", () => {
+    expect(of("FEMY").realised).toBe(-1.2);
+    expect(of("HYPE").realised).toBe(8);
+  });
+
+  /**
+   * This asserted `0` until an account of eight buy-only ETFs showed what that
+   * meant on screen: a Realised column reading `0,00` beside a red unrealised
+   * figure, which is how a position that closed at a loss looks. Buying is not
+   * an outcome. Absent from the map means nothing closed, and the caller passes
+   * only symbols that did.
+   */
+  it("reports no realised result at all where nothing closed", () => {
+    expect(of("IGLA").realised).toBeNull();
+    expect(of("GRASS").realised).toBeNull();
   });
 
   /**

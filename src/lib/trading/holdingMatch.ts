@@ -60,8 +60,16 @@ export interface HeldPosition {
 export interface InstrumentPnl {
   /** As the trade history spells it, which is what the table shows. */
   symbol: string;
-  /** Booked: what closing produced. */
-  realised: number;
+  /**
+   * Booked: what closing produced, or null when nothing has closed.
+   *
+   * Null rather than 0. An instrument you have only ever bought has no realised
+   * result, and this reported `0,00` for it — sitting in a Realised column
+   * beside a red unrealised figure, which reads as a position that closed at a
+   * loss. Buying is not an outcome, and a column claiming otherwise about eight
+   * ETFs was the report of it.
+   */
+  realised: number | null;
   /** Still open, when a position could be matched. Null is "not matched". */
   unrealised: number | null;
   /** Market value of what is still held, when matched. */
@@ -83,7 +91,9 @@ export interface InstrumentPnl {
  *
  * `realisedBySymbol` comes from the trade statistics rather than being summed
  * again here — there is one definition of a realised result and this is not
- * going to be a second.
+ * going to be a second. **It must contain only symbols that have actually
+ * closed something**, because a symbol missing from it is reported as having no
+ * realised result at all, which is the whole point.
  */
 export function pairRealisedWithHeld(
   trades: readonly TradeRow[],
@@ -115,7 +125,9 @@ export function pairRealisedWithHeld(
 
       return {
         symbol,
-        realised: realisedBySymbol.get(symbol) ?? 0,
+        // Absent means nothing closed. The caller passes only the symbols that
+        // have a closed trade, so a miss here is a fact and not a gap.
+        realised: realisedBySymbol.get(symbol) ?? null,
         unrealised: position?.unrealised ?? null,
         value: position?.value ?? null,
         netQuantity: net,
@@ -129,7 +141,9 @@ export function pairRealisedWithHeld(
               : ("unmatched" as const),
       };
     })
-    .sort((a, b) => Math.abs(b.realised) - Math.abs(a.realised));
+    // Biggest booked result first; instruments that have closed nothing sort
+    // to the bottom rather than mingling with the ones that broke even.
+    .sort((a, b) => Math.abs(b.realised ?? 0) - Math.abs(a.realised ?? 0));
 }
 
 /** Instruments the trades say are still open and the portfolio could not match. */
