@@ -12,7 +12,7 @@ import QuoteSymbolField from "@/components/QuoteSymbolField";
 import RefreshPrices from "@/components/RefreshPrices";
 import PositionTagsForm from "@/components/PositionTagsForm";
 import AutoSync from "@/components/AutoSync";
-import { Money } from "@/components/PrivacyContext";
+import { Money, Bare } from "@/components/PrivacyContext";
 import PageTabs from "@/components/PageTabs";
 import { INVESTMENT_TABS } from "@/lib/navigation";
 import Link from "next/link";
@@ -377,7 +377,7 @@ export default async function PositionsPage() {
                   totalUnrealized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"
                 }`}
               >
-                <Money value={totalUnrealized} />
+                <Money value={totalUnrealized} currency={base} />
               </div>
             </div>
           </div>
@@ -392,11 +392,17 @@ export default async function PositionsPage() {
                     <th>Side</th>
                     <th>Account</th>
                     <th className="text-right">Size</th>
-                    <th className="text-right">Entry</th>
-                    <th className="text-right">Mark</th>
+                    <th className="text-right" title="In the instrument's own currency, which the platform does not tell us">
+                      Entry *
+                    </th>
+                    <th className="text-right" title="In the instrument's own currency, which the platform does not tell us">
+                      Mark *
+                    </th>
                     <th className="text-right">Value</th>
                     <th className="text-right">Leverage</th>
-                    <th className="text-right">Liquidation</th>
+                    <th className="text-right" title="In the instrument's own currency, which the platform does not tell us">
+                      Liquidation *
+                    </th>
                     <th className="text-right">Unrealized P&amp;L</th>
                   </tr>
                 </thead>
@@ -437,14 +443,27 @@ export default async function PositionsPage() {
                         <div className="text-xs text-[var(--muted)] capitalize">{p.platform}</div>
                       </td>
                       <td className="text-right">{p.size}</td>
+                      {/* No currency symbol, because nobody stores which one.
+                          These are quoted in the instrument's own currency and
+                          `positions` has no column for it — Trading 212 reports
+                          in euros while pricing IGLA and MVOL in dollars, which
+                          is provable from its own data: value ÷ (size × mark)
+                          is 1.00 on its euro lines and 0.8606 on those two,
+                          which is the EUR/USD rate. A "€" here was a real
+                          amount of the wrong money on every dollar-quoted row
+                          and on every position of a dollar-reporting platform. */}
                       <td className="text-right">
-                        {p.entryPrice === null ? "—" : <Money value={p.entryPrice} />}
+                        {p.entryPrice === null ? "—" : <Bare value={p.entryPrice} />}
                       </td>
                       <td className="text-right">
-                        {p.markPrice === null ? "—" : <Money value={p.markPrice} />}
+                        {p.markPrice === null ? "—" : <Bare value={p.markPrice} />}
                       </td>
                       <td className="text-right">
-                        {p.positionValue === null ? "—" : <Money value={p.positionValue} />}
+                        {p.positionValue === null ? (
+                          "—"
+                        ) : (
+                          <Money value={p.positionValue} currency={p.currency} />
+                        )}
                       </td>
                       <td className="text-right">
                         {p.leverage === null ? "—" : `${p.leverage}x`}
@@ -453,14 +472,18 @@ export default async function PositionsPage() {
                         )}
                       </td>
                       <td className="text-right text-[var(--amber)]">
-                        {p.liquidationPrice === null ? "—" : <Money value={p.liquidationPrice} />}
+                        {p.liquidationPrice === null ? "—" : <Bare value={p.liquidationPrice} />}
                       </td>
                       <td
                         className={`text-right ${
                           (p.unrealizedPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"
                         }`}
                       >
-                        {p.unrealizedPnl === null ? "—" : <Money value={p.unrealizedPnl} />}
+                        {p.unrealizedPnl === null ? (
+                          "—"
+                        ) : (
+                          <Money value={p.unrealizedPnl} currency={p.currency} />
+                        )}
                         {p.returnOnEquity !== null && (
                           <div className="text-xs">{(p.returnOnEquity * 100).toFixed(2)}%</div>
                         )}

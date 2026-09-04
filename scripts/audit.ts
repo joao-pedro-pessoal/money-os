@@ -32,7 +32,7 @@ import { realisedProvenance } from "../src/lib/trading/realised";
 import { listAccountsWithState } from "../src/actions/accounts";
 import { getAccountPlatformTotals } from "../src/actions/platformTotals";
 import { db } from "../src/db/client";
-import { accounts, transactions } from "../src/db/schema";
+import { accountConnections, accounts, positions, transactions } from "../src/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 const CENT = 0.011;
@@ -238,6 +238,39 @@ async function main() {
       `${money(floatingInsideEquity, c)} of coin balances sit inside an account's equity, so they ` +
         `are market-exposed on the Investments page and capital-guaranteed in net worth. ` +
         `Both figures are defensible on their own; they cannot both be right about the same coins.`
+    );
+  }
+
+  /**
+   * A position priced in a currency that is not the one it reports in.
+   *
+   * `positionValue / (size × markPrice)` is 1.00 when the price and the value
+   * are the same currency. Anything else is an FX rate, and it means the price
+   * columns cannot be labelled with the platform's currency — which is what
+   * the positions table used to do, showing a dollar price with a euro sign.
+   *
+   * Reported rather than failed: it is the venue's arrangement, not a defect.
+   * What would be a defect is a screen or a sum that assumed otherwise.
+   */
+  const positionRows = await db.select().from(positions);
+  const connRows = await db.select().from(accountConnections);
+  const reportsIn = new Map(connRows.map((r) => [r.id, r.reportingCurrency ?? "USD"]));
+  const foreign: string[] = [];
+  for (const p of positionRows) {
+    const size = Number(p.size);
+    const mark = p.markPrice === null ? null : Number(p.markPrice);
+    const value = p.positionValue === null ? null : Number(p.positionValue);
+    if (mark === null || value === null || size === 0 || mark === 0) continue;
+    const ratio = value / (size * mark);
+    if (Math.abs(ratio - 1) > 0.02) {
+      foreign.push(`${p.coin} (${reportsIn.get(p.connectionId)} account, priced at ×${ratio.toFixed(4)})`);
+    }
+  }
+  if (foreign.length > 0) {
+    note(
+      "positions priced in a currency the account does not report in",
+      `${foreign.join("; ")} — their entry, mark and liquidation prices are not in the ` +
+        `account's currency, so nothing may label them with it or add them to it`
     );
   }
 

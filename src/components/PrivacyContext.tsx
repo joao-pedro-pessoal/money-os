@@ -77,6 +77,29 @@ export function usePrivacy() {
  * currency before rendering, so callers pass the base there; per-account
  * figures pass the account's own currency.
  */
+/**
+ * A number that is money, whose currency nobody knows.
+ *
+ * A price quoted by a venue that never says what it is quoted in — a synced
+ * position's entry, mark and liquidation. `positions` has no currency column
+ * for them, and Trading 212 prices two of its instruments in dollars while
+ * reporting the account in euros, so the platform's currency is not the
+ * answer either.
+ *
+ * Formatted like money and labelled as none, because a symbol is a claim.
+ * `<Money>` defaults to EUR, which turned every one of those into a real
+ * amount of the wrong money.
+ *
+ * Hidden by privacy mode like any other figure — it is still your position.
+ */
+export function Bare({ value }: { value: number }) {
+  const { hidden } = usePrivacy();
+  if (hidden) return <span>••••••</span>;
+  return (
+    <span>{new Intl.NumberFormat("pt-PT", { minimumFractionDigits: 2 }).format(value)}</span>
+  );
+}
+
 export function Money({ value, currency = "EUR" }: { value: number; currency?: string }) {
   const { hidden } = usePrivacy();
   if (hidden) return <span>••••••</span>;

@@ -173,12 +173,20 @@ export async function listAllPositions() {
   const accountName = new Map(allAccounts.map((a) => [a.id, a.name]));
   const platformOf = new Map(conns.map((c) => [c.id, c.platform]));
   /**
-   * Every figure on a position is in the platform's own currency.
+   * The currency a position's **value** is in — not its prices.
    *
-   * Trading 212 reports euros, Hyperliquid dollars. Any page summing these
-   * without converting is adding euros to dollars, which is the fourth bug in
-   * this codebase's history and the reason the currency now travels with the
-   * row rather than being assumed by whoever reads it.
+   * Trading 212 reports euros, Hyperliquid dollars, so any page summing values
+   * without converting is adding euros to dollars: the fourth bug in this
+   * codebase's history, and the reason this travels with the row rather than
+   * being assumed by whoever reads it.
+   *
+   * It does **not** cover `entryPrice`, `markPrice` or `liquidationPrice`.
+   * Those are quoted in the instrument's own currency, which no column stores,
+   * and this comment used to claim otherwise. Trading 212's own data disproves
+   * it: `positionValue / (size × markPrice)` is 1.00 on its euro-quoted lines
+   * and 0.8606 on IGLA and MVOL, which is the EUR/USD rate. Same connection,
+   * same reporting currency, two instruments priced in dollars. The positions
+   * table renders those three without a symbol for that reason.
    */
   const currencyOf = new Map(conns.map((c) => [c.id, c.reportingCurrency ?? "USD"]));
   const playlistName = new Map(allPlaylists.map((p) => [p.id, p.name]));
