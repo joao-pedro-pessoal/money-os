@@ -13,6 +13,7 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts";
+import { Fragment, useState } from "react";
 import { fmt } from "@/lib/format";
 import type {
   PnlPoint,
@@ -106,6 +107,9 @@ export default function TradeAnalysis({
   approximate: boolean;
   unconvertible: number;
 }) {
+  /** Which group is opened. Local state: nothing else on the page reads it. */
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+
   if (tradeCount === 0) {
     return (
       <div className="card p-8 text-center text-sm text-[var(--muted)]">
@@ -252,8 +256,22 @@ export default function TradeAnalysis({
                 </thead>
                 <tbody>
                   {grouped.map((t) => (
-                    <tr key={t.tag}>
-                      <td>{t.tag}</td>
+                    <Fragment key={t.tag}>
+                    <tr>
+                      <td>
+                        {/* Opening a group shows the trades the row was summed
+                            from — carried on the group rather than fetched
+                            again, so the detail cannot disagree with the total
+                            it sits under. */}
+                        <button
+                          type="button"
+                          onClick={() => setOpenGroup(openGroup === t.tag ? null : t.tag)}
+                          className="hover:underline text-left"
+                        >
+                          {openGroup === t.tag ? "▾ " : "▸ "}
+                          {t.tag}
+                        </button>
+                      </td>
                       <td className="text-right">{t.closedTrades}</td>
                       <td className="text-right">
                         {t.winRate === null ? "—" : `${t.winRate.toFixed(0)}%`}
@@ -271,6 +289,42 @@ export default function TradeAnalysis({
                       <td className="text-right text-[var(--green)]">{money(t.best)}</td>
                       <td className="text-right text-[var(--red)]">{money(t.worst)}</td>
                     </tr>
+
+                    {openGroup === t.tag &&
+                      t.trades.map((trade, i) => (
+                        <tr key={`${t.tag}-${i}`} style={{ background: "var(--surface-2)" }}>
+                          {/* Indented, so a trade reads as belonging to the
+                              group above rather than as a group of its own. */}
+                          <td className="pl-8">
+                            <span className="text-[var(--muted)]">{trade.date.slice(0, 10)}</span>{" "}
+                            {trade.symbol ?? "—"}
+                          </td>
+                          {/* Under "Closed" and "Win rate", which count trades
+                              — a single trade has nothing to say there. */}
+                          <td />
+                          <td />
+                          <td
+                            className={`text-right ${trade.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                          >
+                            {money(trade.realized)}
+                          </td>
+                          <td
+                            className={`text-right ${trade.net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                          >
+                            {money(trade.net)}
+                          </td>
+                          {/* Best and worst are properties of a group, not of
+                              one trade. The fee it paid is the useful thing to
+                              put here instead, and it is why net differs from
+                              realised. */}
+                          <td className="text-right text-[var(--muted)]" colSpan={2}>
+                            {trade.fees === null || trade.fees === 0
+                              ? "no fee recorded"
+                              : `${money(trade.fees)} in fees`}
+                          </td>
+                        </tr>
+                      ))}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

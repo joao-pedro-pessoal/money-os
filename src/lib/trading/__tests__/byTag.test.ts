@@ -136,3 +136,50 @@ describe("how much of the history the table covers", () => {
     expect(totals.tagged + totals.untagged).toBe(3);
   });
 });
+
+/**
+ * The detail under an opened group is carried on the group rather than looked
+ * up again when it opens, so it cannot disagree with the total it sits under.
+ * Same rule as `performanceBy`'s members.
+ */
+describe("the trades a group is made of", () => {
+  const rows = [
+    trade({ description: "old", realizedPnl: 30, fees: 1 }),
+    trade({ description: "new", realizedPnl: -10 }),
+  ];
+  rows[0].date = "2026-06-01T00:00:00.000Z";
+  rows[1].date = "2026-08-01T00:00:00.000Z";
+  const tags = taggedBy({ old: ["breakout"], new: ["breakout"] });
+
+  it("carries every trade that was counted", () => {
+    const [g] = byTag(rows, tags);
+    expect(g.trades).toHaveLength(g.closedTrades);
+  });
+
+  it("adds up to the group's own total, because they are the same rows", () => {
+    const [g] = byTag(rows, tags);
+    const summed = g.trades.reduce((s, t) => s + t.realized, 0);
+    expect(summed).toBe(g.realized);
+    expect(g.trades.reduce((s, t) => s + t.net, 0)).toBe(g.net);
+  });
+
+  it("puts the newest first, so a run of losses reads as the run it was", () => {
+    const [g] = byTag(rows, tags);
+    expect(g.trades.map((t) => t.date.slice(0, 10))).toEqual(["2026-08-01", "2026-06-01"]);
+  });
+
+  it("nets each trade against its own fee", () => {
+    const [g] = byTag(rows, tags);
+    const winner = g.trades.find((t) => t.realized === 30)!;
+    expect(winner.net).toBe(29);
+    // A trade with no fee recorded is not a trade with a fee of zero, and the
+    // screen says so rather than printing 0,00.
+    expect(g.trades.find((t) => t.realized === -10)!.fees).toBeNull();
+  });
+
+  it("leaves out what the group left out", () => {
+    const withOpen = [...rows, trade({ description: "open", realizedPnl: null })];
+    const [g] = byTag(withOpen, taggedBy({ ...{ old: ["breakout"], new: ["breakout"] }, open: ["breakout"] }));
+    expect(g.trades).toHaveLength(2);
+  });
+});

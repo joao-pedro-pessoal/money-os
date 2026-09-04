@@ -268,6 +268,18 @@ export function byDirection(rows: TradeRow[]): DirectionStats[] {
     .sort((a, b) => b.net - a.net);
 }
 
+/** One closed trade, as it appears under the group it belongs to. */
+export interface TagTrade {
+  date: string;
+  symbol: string | null;
+  /** What the venue says this closed. Never null — only closed trades are here. */
+  realized: number;
+  fees: number | null;
+  /** Realised minus what it cost to do, which is what was actually kept. */
+  net: number;
+  description: string | null;
+}
+
 export interface TagStats {
   tag: string;
   closedTrades: number;
@@ -278,6 +290,14 @@ export interface TagStats {
   /** Best and worst single result carrying this tag. */
   best: number;
   worst: number;
+  /**
+   * The trades this group is made of, newest first.
+   *
+   * Carried on the group rather than looked up again when a row is opened, so
+   * the detail cannot disagree with the total above it — these are the very
+   * rows the total was summed from. Same rule as `performanceBy`'s members.
+   */
+  trades: TagTrade[];
 }
 
 /**
@@ -301,7 +321,15 @@ export interface TagStats {
 export function byTag(rows: TradeRow[], tagsOf: (row: TradeRow) => readonly string[]): TagStats[] {
   const groups = new Map<
     string,
-    { trades: number; wins: number; realized: number; fees: number; best: number; worst: number }
+    {
+      trades: number;
+      wins: number;
+      realized: number;
+      fees: number;
+      best: number;
+      worst: number;
+      rows: TagTrade[];
+    }
   >();
 
   for (const row of rows) {
@@ -317,8 +345,17 @@ export function byTag(rows: TradeRow[], tagsOf: (row: TradeRow) => readonly stri
         fees: 0,
         best: -Infinity,
         worst: Infinity,
+        rows: [],
       };
       g.trades += 1;
+      g.rows.push({
+        date: row.date,
+        symbol: row.symbol,
+        realized: round2(row.realizedPnl),
+        fees: row.fees,
+        net: round2(row.realizedPnl - (row.fees ?? 0)),
+        description: row.description,
+      });
       g.realized += row.realizedPnl;
       if (row.fees !== null) g.fees += row.fees;
       if (row.realizedPnl > 0) g.wins += 1;
@@ -338,6 +375,8 @@ export function byTag(rows: TradeRow[], tagsOf: (row: TradeRow) => readonly stri
       winRate: g.trades === 0 ? null : round2((g.wins / g.trades) * 100),
       best: round2(g.best),
       worst: round2(g.worst),
+      // Newest first, so a run of losses reads as the run it was.
+      trades: [...g.rows].sort((a, b) => b.date.localeCompare(a.date)),
     }))
     .sort((a, b) => b.net - a.net);
 }
