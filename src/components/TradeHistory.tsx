@@ -11,6 +11,7 @@ import {
   type TradeFilterOptions,
   type TradeHistoryRow,
   groupValuesOf,
+  onlyClosedPositions,
   type TradeGrouping,
 } from "@/lib/trading/filter";
 import {
@@ -77,7 +78,21 @@ export default function TradeHistory({
 
   // The filter is generic over the row shape, so the derived-result flag each
   // row carries survives into every figure below without a cast.
-  const filtered = useMemo(() => applyTradeFilters(rows, filters), [rows, filters]);
+  /**
+   * Everything on this page describes closed positions.
+   *
+   * An instrument you have only ever bought has produced no result, so it is a
+   * holding rather than a trade history entry — it belongs on Investments. Cut
+   * here, before the filters, so both tables and every figure derive from the
+   * same array; narrowing one and not the others is the failure this page's
+   * whole design avoids.
+   */
+  const { rows: closedOnly, openInstruments } = useMemo(() => onlyClosedPositions(rows), [rows]);
+
+  const filtered = useMemo(
+    () => applyTradeFilters(closedOnly, filters),
+    [closedOnly, filters]
+  );
 
   /** Which axis the "result by" panel groups on. */
   const [grouping, setGrouping] = useState<TradeGrouping>("assetType");
@@ -165,16 +180,16 @@ export default function TradeHistory({
    */
   const classificationBySymbol = useMemo(() => {
     const map = new Map<string, NonNullable<TradeHistoryRow["classification"]>>();
-    for (const row of rows) {
+    for (const row of closedOnly) {
       if (row.symbol === null || !row.classification) continue;
       if (!map.has(row.symbol)) map.set(row.symbol, row.classification);
     }
     return map;
-  }, [rows]);
+  }, [closedOnly]);
 
   const active = hasActiveTradeFilters(filters);
   const describing = describeTradeFilters(filters);
-  const hidden = rows.length - filtered.length;
+  const hidden = closedOnly.length - filtered.length;
 
   const set = <K extends keyof TradeFilters>(key: K, value: TradeFilters[K]) =>
     setFilters((f) => ({ ...f, [key]: value }));
@@ -184,6 +199,20 @@ export default function TradeHistory({
 
   return (
     <div className="space-y-4">
+      {/* Left out, and said so. Money leaving a page silently is how a total
+          gets trusted that shouldn't be — these instruments are not missing,
+          they are on Investments, where a thing you still hold belongs. */}
+      {openInstruments.length > 0 && (
+        <div className="text-[10px] text-[var(--muted)] leading-relaxed max-w-prose">
+          {openInstruments.length} instrument{openInstruments.length === 1 ? " is" : "s are"} not
+          shown here because {openInstruments.length === 1 ? "it has" : "they have"} closed
+          nothing yet — buying is not a result, so {openInstruments.length === 1 ? "it" : "they"}{" "}
+          belong{openInstruments.length === 1 ? "s" : ""} on{" "}
+          <span className="text-[var(--foreground)]">Investments</span> rather than in a record of
+          trading results: {openInstruments.join(", ")}.
+        </div>
+      )}
+
       <section className="card p-4">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
           <div className="text-sm font-medium">Filter</div>

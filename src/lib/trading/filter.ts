@@ -15,7 +15,7 @@
  * Pure — no DB, no React.
  */
 
-import { directionOf, type TradeRow, type Direction } from "./stats";
+import { directionOf, isCurrencyConversion, type TradeRow, type Direction } from "./stats";
 
 /** A row with the fields the table shows but the statistics do not need. */
 export interface TradeHistoryRow extends TradeRow {
@@ -227,4 +227,56 @@ export type TradeGrouping = (typeof TRADE_GROUPINGS)[number]["key"];
 export function groupValuesOf(row: TradeHistoryRow, grouping: TradeGrouping): string[] {
   const value = row.classification?.[grouping] ?? null;
   return value === null ? [] : [value];
+}
+
+/**
+ * Only the instruments that have actually closed something.
+ *
+ * A trade history is a record of *results*, and an instrument you have only
+ * ever bought has produced none — it is a holding, and it belongs on the
+ * Investments page. Eight buy-only ETFs sat in this table under a Realised
+ * column, which is what prompted this: they were not wrong figures, they were
+ * rows that had no business being there.
+ *
+ * The test is per instrument, not per row. A position closed in part leaves
+ * both its opening buys and its closing sells here, because those buys are what
+ * the result was made against and hiding them would leave a sale explaining
+ * nothing.
+ *
+ * Non-trade events — dividends, fees — follow their instrument. A dividend from
+ * something you still hold in full belongs with the holding, not in a record of
+ * trading results.
+ *
+ * Currency conversions are left where they are. IBKR books an FX leg as a buy
+ * of `EUR.USD`, which closes nothing and would be swept up by the rule — but it
+ * is not a position anybody opened, so calling it "still open" is wrong, and the
+ * page already explains those separately. Removing them here would delete that
+ * explanation along with them.
+ */
+export function onlyClosedPositions<T extends TradeHistoryRow>(
+  rows: readonly T[]
+): { rows: T[]; openInstruments: string[] } {
+  const closed = new Set<string>();
+  for (const row of rows) {
+    if (row.symbol === null) continue;
+    if (row.realizedPnl !== null) closed.add(row.symbol);
+  }
+
+  const openInstruments = new Set<string>();
+  const kept: T[] = [];
+  for (const row of rows) {
+    // A row with no instrument at all — a deposit, a platform fee — is not a
+    // position and is never something this can call open. Nor is an FX leg.
+    if (
+      row.symbol === null ||
+      closed.has(row.symbol) ||
+      isCurrencyConversion(row.symbol)
+    ) {
+      kept.push(row);
+      continue;
+    }
+    openInstruments.add(row.symbol);
+  }
+
+  return { rows: kept, openInstruments: [...openInstruments].sort() };
 }
