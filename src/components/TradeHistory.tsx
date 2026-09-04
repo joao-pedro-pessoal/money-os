@@ -22,6 +22,8 @@ import {
   byDirection,
   byMonth,
   byHour,
+  byTag,
+  taggedTotals,
   averageSize,
   holdingPeriods,
   holdingSummary,
@@ -85,6 +87,17 @@ export default function TradeHistory({
       holding: holdingSummary(periods),
       tradeCount: trades.length,
       closedCount: trades.filter((r) => r.realizedPnl !== null).length,
+      /**
+       * Result by the labels you put on trades yourself.
+       *
+       * Computed from `filtered` like everything else, so narrowing to one
+       * account or one month narrows this with it. The accessor is passed
+       * rather than read inside `byTag`, because a tag is this app's data and
+       * `stats.ts` describes trades — the same separation that keeps the pure
+       * layer free of anything only this screen knows.
+       */
+      tags: byTag(filtered, (row) => (row as TradeHistoryRow).tags ?? []),
+      tagCoverage: taggedTotals(filtered, (row) => (row as TradeHistoryRow).tags ?? []),
       /** Recomputed over the filtered set, like every other figure here. */
       provenance: realisedProvenance(filtered),
     };
@@ -287,6 +300,8 @@ export default function TradeHistory({
         hours={stats.hours}
         holding={stats.holding}
         averageSize={stats.averageSize}
+        tags={stats.tags}
+        tagCoverage={stats.tagCoverage}
         tradeCount={stats.tradeCount}
         closedCount={stats.closedCount}
         currency={currency}

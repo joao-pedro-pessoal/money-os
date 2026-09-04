@@ -268,6 +268,120 @@ export function byDirection(rows: TradeRow[]): DirectionStats[] {
     .sort((a, b) => b.net - a.net);
 }
 
+export interface TagStats {
+  tag: string;
+  closedTrades: number;
+  wins: number;
+  realized: number;
+  net: number;
+  winRate: number | null;
+  /** Best and worst single result carrying this tag. */
+  best: number;
+  worst: number;
+}
+
+/**
+ * Result split by the labels you put on your own trades.
+ *
+ * The one grouping here that is not a fact about the trade. Symbol, direction,
+ * month and hour are all read off the row; a tag is a claim you made about
+ * *why* you took it — the setup, the thesis, the mistake — and it is the only
+ * axis that can answer whether a way of trading works.
+ *
+ * **A trade with three tags is counted in all three.** These groups overlap by
+ * design, so the columns do not sum to your total and must never be presented
+ * as a breakdown of it: two tags on one winner would otherwise report the
+ * profit twice. `taggedTotals` gives the honest denominator.
+ *
+ * An untagged trade appears in no group rather than under an "unset" heading.
+ * Every other grouping here is exhaustive because the venue always supplies a
+ * value; a tag is absent until you write one, and inventing a bucket for
+ * "nothing said" would put most of your history in it and say nothing.
+ */
+export function byTag(rows: TradeRow[], tagsOf: (row: TradeRow) => readonly string[]): TagStats[] {
+  const groups = new Map<
+    string,
+    { trades: number; wins: number; realized: number; fees: number; best: number; worst: number }
+  >();
+
+  for (const row of rows) {
+    if (!isInstrumentTrade(row)) continue;
+    // Only a closed trade has a result to attribute to a label.
+    if (row.realizedPnl === null) continue;
+
+    for (const tag of new Set(tagsOf(row))) {
+      const g = groups.get(tag) ?? {
+        trades: 0,
+        wins: 0,
+        realized: 0,
+        fees: 0,
+        best: -Infinity,
+        worst: Infinity,
+      };
+      g.trades += 1;
+      g.realized += row.realizedPnl;
+      if (row.fees !== null) g.fees += row.fees;
+      if (row.realizedPnl > 0) g.wins += 1;
+      g.best = Math.max(g.best, row.realizedPnl);
+      g.worst = Math.min(g.worst, row.realizedPnl);
+      groups.set(tag, g);
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([tag, g]) => ({
+      tag,
+      closedTrades: g.trades,
+      wins: g.wins,
+      realized: round2(g.realized),
+      net: round2(g.realized - g.fees),
+      winRate: g.trades === 0 ? null : round2((g.wins / g.trades) * 100),
+      best: round2(g.best),
+      worst: round2(g.worst),
+    }))
+    .sort((a, b) => b.net - a.net);
+}
+
+export interface TaggedTotals {
+  /** Closed trades carrying at least one tag. */
+  tagged: number;
+  /** Closed trades carrying none. */
+  untagged: number;
+  /** Realised across tagged trades, each counted once however many tags it has. */
+  realized: number;
+}
+
+/**
+ * How much of the history the tag table above actually covers.
+ *
+ * Needed because `byTag` overlaps: its columns cannot be added up, so without
+ * this there is no honest way to say "these figures describe 40 of your 130
+ * closed trades". Each trade is counted once here however many labels it
+ * carries, which is what makes this the denominator and that a breakdown.
+ */
+export function taggedTotals(
+  rows: TradeRow[],
+  tagsOf: (row: TradeRow) => readonly string[]
+): TaggedTotals {
+  let tagged = 0;
+  let untagged = 0;
+  let realized = 0;
+
+  for (const row of rows) {
+    if (!isInstrumentTrade(row)) continue;
+    if (row.realizedPnl === null) continue;
+
+    if (tagsOf(row).length > 0) {
+      tagged += 1;
+      realized += row.realizedPnl;
+    } else {
+      untagged += 1;
+    }
+  }
+
+  return { tagged, untagged, realized: round2(realized) };
+}
+
 // ---------------------------------------------------------------------------
 // 3. How often, and when?
 // ---------------------------------------------------------------------------

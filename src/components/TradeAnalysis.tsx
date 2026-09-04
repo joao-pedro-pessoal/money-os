@@ -21,6 +21,8 @@ import type {
   CadencePoint,
   HourBucket,
   HoldingSummary,
+  TagStats,
+  TaggedTotals,
 } from "@/lib/trading/stats";
 
 /**
@@ -76,6 +78,8 @@ export default function TradeAnalysis({
   hours,
   holding,
   averageSize,
+  tags,
+  tagCoverage,
   tradeCount,
   closedCount,
   currency,
@@ -89,6 +93,8 @@ export default function TradeAnalysis({
   hours: HourBucket[];
   holding: HoldingSummary;
   averageSize: number | null;
+  tags: TagStats[];
+  tagCoverage: TaggedTotals;
   tradeCount: number;
   closedCount: number;
   currency: string;
@@ -191,6 +197,79 @@ export default function TradeAnalysis({
               </LineChart>
             </ResponsiveContainer>
           </div>
+        )}
+      </Panel>
+
+      {/* ---- Result by your own labels ---- */}
+      <Panel
+        title="Result by tag"
+        subtitle="The only grouping here that is not a fact about the trade — it is what you said you were doing."
+      >
+        {tags.length === 0 ? (
+          <Empty
+            what={
+              tagCoverage.untagged === 0
+                ? "Nothing closed yet to label."
+                : `None of your ${tagCoverage.untagged} closed trades carry a tag yet. Add one in the table below and this fills in.`
+            }
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="data-table whitespace-nowrap">
+                <thead>
+                  <tr>
+                    <th>Tag</th>
+                    <th className="text-right">Closed</th>
+                    <th className="text-right">Win rate</th>
+                    <th className="text-right">Realized</th>
+                    <th className="text-right">Net after fees</th>
+                    <th className="text-right">Best</th>
+                    <th className="text-right">Worst</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tags.map((t) => (
+                    <tr key={t.tag}>
+                      <td>{t.tag}</td>
+                      <td className="text-right">{t.closedTrades}</td>
+                      <td className="text-right">
+                        {t.winRate === null ? "—" : `${t.winRate.toFixed(0)}%`}
+                      </td>
+                      <td
+                        className={`text-right ${t.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                      >
+                        {money(t.realized)}
+                      </td>
+                      <td
+                        className={`text-right ${t.net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
+                      >
+                        {money(t.net)}
+                      </td>
+                      <td className="text-right text-[var(--green)]">{money(t.best)}</td>
+                      <td className="text-right text-[var(--red)]">{money(t.worst)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/*
+              These rows overlap, and saying so is not a footnote — a trade
+              wearing three tags is counted under all three, so the column adds
+              up to more than the account made. Presenting it as a breakdown of
+              the total would report the same profit twice.
+            */}
+            <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed whitespace-normal max-w-prose">
+              A trade with several tags is counted under each of them, so these rows overlap and
+              do not add up to your total. Together they cover{" "}
+              <span className="text-[var(--foreground)]">
+                {tagCoverage.tagged} of {tagCoverage.tagged + tagCoverage.untagged} closed trades
+              </span>
+              , worth {money(tagCoverage.realized)} counted once each
+              {tagCoverage.untagged > 0 && <> — {tagCoverage.untagged} carry no tag yet</>}.
+            </p>
+          </>
         )}
       </Panel>
 
