@@ -19,6 +19,12 @@ const row = (over: Partial<TradeHistoryRow>): TradeHistoryRow => ({
 });
 
 const CLASSIFIED = {
+  connectionId: "c1",
+  coin: "HYPE",
+  assetTypeAuto: false,
+  apr: null,
+  playlistId: "p1",
+  notes: null,
   assetType: "crypto",
   riskLevel: "medium",
   expectedReturn: "moderate",
@@ -36,13 +42,6 @@ describe("what a trade can be grouped by", () => {
     expect(groupValuesOf(r, "timeHorizon")).toEqual(["medium"]);
     expect(groupValuesOf(r, "liquidity")).toEqual(["high"]);
     expect(groupValuesOf(r, "playlistName")).toEqual(["Div Commodities"]);
-  });
-
-  it("reads the free-form tags off the trade itself", () => {
-    expect(groupValuesOf(row({ tags: ["breakout", "news"] }), "tag")).toEqual([
-      "breakout",
-      "news",
-    ]);
   });
 
   /**
@@ -81,43 +80,32 @@ describe("what a trade can be grouped by", () => {
 });
 
 /**
- * `multi` decides what the screen is allowed to claim about the figures, so it
- * has to match how many values an axis can actually produce.
+ * Every axis is single-valued, which is what lets the screen present these
+ * rows as a breakdown. A free-form tag axis lived here briefly and could not
+ * be: a trade wearing three tags was counted under all three.
  */
-describe("which axes overlap", () => {
-  it("marks only the free-form tag axis as multi-valued", () => {
-    const multi = TRADE_GROUPINGS.filter((g) => g.multi).map((g) => g.key);
-    expect(multi).toEqual(["tag"]);
-  });
-
-  it("never yields more than one value on a single-valued axis", () => {
-    const r = row({ classification: CLASSIFIED, tags: ["a", "b", "c"] });
-    for (const g of TRADE_GROUPINGS.filter((x) => !x.multi)) {
+describe("every axis partitions the classified history", () => {
+  it("never yields more than one value", () => {
+    const r = row({ classification: CLASSIFIED });
+    for (const g of TRADE_GROUPINGS) {
       expect(groupValuesOf(r, g.key).length, g.key).toBeLessThanOrEqual(1);
     }
   });
 
-  /**
-   * Which is what lets a single-valued axis be read as a breakdown: its rows
-   * add up to the classified total, where the tag axis does not.
-   */
-  it("makes a single-valued axis add up, and the tag axis not", () => {
+  it("adds up to the coverage total, so it can honestly be called a breakdown", () => {
     const rows = [
-      row({ id: "1", realizedPnl: 30, classification: CLASSIFIED, tags: ["a", "b"] }),
-      row({ id: "2", realizedPnl: -10, classification: CLASSIFIED, tags: ["a"] }),
+      row({ id: "1", realizedPnl: 30, classification: CLASSIFIED }),
+      row({ id: "2", realizedPnl: -10, classification: { ...CLASSIFIED, riskLevel: "low" } }),
+      // Unclassified: in no row, and in neither total.
+      row({ id: "3", realizedPnl: 999, classification: null }),
     ];
 
     const byRisk = byTag(rows, (r) => groupValuesOf(r as TradeHistoryRow, "riskLevel"));
-    const riskTotal = byRisk.reduce((s, g) => s + g.realized, 0);
-    const coverage = taggedTotals(rows, (r) =>
-      groupValuesOf(r as TradeHistoryRow, "riskLevel")
-    );
-    expect(riskTotal).toBe(coverage.realized);
+    const total = byRisk.reduce((s, g) => s + g.realized, 0);
+    const coverage = taggedTotals(rows, (r) => groupValuesOf(r as TradeHistoryRow, "riskLevel"));
 
-    const byLabel = byTag(rows, (r) => groupValuesOf(r as TradeHistoryRow, "tag"));
-    const labelTotal = byLabel.reduce((s, g) => s + g.realized, 0);
-    // 30 counted under "a" and "b", −10 under "a": 50 against a real 20.
-    expect(labelTotal).toBe(50);
-    expect(labelTotal).not.toBe(coverage.realized);
+    expect(byRisk).toHaveLength(2);
+    expect(total).toBe(coverage.realized);
+    expect(coverage).toEqual({ tagged: 2, untagged: 1, realized: 20 });
   });
 });

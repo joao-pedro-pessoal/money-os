@@ -8,13 +8,22 @@ import { getBaseCurrency } from "@/actions/settings";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import InvestmentActivityImporter from "@/components/InvestmentActivityImporter";
 import TradeHistory from "@/components/TradeHistory";
+import { setPositionTags } from "@/actions/connections";
+import { listPlaylists } from "@/actions/playlists";
+
+/** A form action may not return a value. */
+async function savePositionTags(formData: FormData) {
+  "use server";
+  await setPositionTags(formData);
+}
 
 export default async function InvestmentHistoryPage() {
-  const [accounts, data, baseCurrency, analysis] = await Promise.all([
+  const [accounts, data, baseCurrency, analysis, playlistList] = await Promise.all([
     listAccountsWithState(),
     listInvestmentActivity(),
     getBaseCurrency(),
     getTradeAnalysis(),
+    listPlaylists(),
   ]);
   const investmentAccounts = accounts.filter((account) =>
     ["broker", "exchange", "investment"].includes(account.accountType.toLowerCase())
@@ -46,6 +55,8 @@ export default async function InvestmentHistoryPage() {
           instrument, with nothing on screen saying so. */}
       <TradeHistory
         rows={analysis.rows}
+        playlists={playlistList}
+        saveTags={savePositionTags}
         options={analysis.options}
         held={analysis.held}
         currency={analysis.baseCurrency}

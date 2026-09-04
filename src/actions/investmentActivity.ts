@@ -281,14 +281,7 @@ export async function getTradeAnalysis() {
   const metaBySymbol = new Map(
     metaRows.map((m) => [
       normaliseInstrument(m.coin),
-      {
-        assetType: m.assetType,
-        riskLevel: m.riskLevel,
-        expectedReturn: m.expectedReturn,
-        timeHorizon: m.timeHorizon,
-        liquidity: m.liquidity,
-        playlistId: m.playlistId,
-      },
+      m,
     ])
   );
 
@@ -318,17 +311,33 @@ export async function getTradeAnalysis() {
    * nothing on every axis" are different claims, and only the first is true of
    * an instrument nobody has looked at.
    */
-  const classificationOf = (symbol: string | null) => {
-    if (symbol === null) return null;
+  const classificationOf = (symbol: string | null, connectionId: string | null) => {
+    if (symbol === null || connectionId === null) return null;
     const meta = metaBySymbol.get(normaliseInstrument(symbol));
-    if (meta === undefined) return null;
+
+    /**
+     * The spelling the existing row uses, or the trade's own.
+     *
+     * `position_meta` carries the venue's `IGLAl_EQ` where a statement says
+     * `IGLA`. Writing under the second spelling would create a second row for
+     * one instrument, and the two would drift apart — so an existing row keeps
+     * its key and only a genuinely new instrument gets the trade's.
+     */
+    const coin = meta?.coin ?? symbol;
+
     return {
-      assetType: meta.assetType,
-      riskLevel: meta.riskLevel,
-      expectedReturn: meta.expectedReturn,
-      timeHorizon: meta.timeHorizon,
-      liquidity: meta.liquidity,
-      playlistName: meta.playlistId ? playlistName.get(meta.playlistId) ?? null : null,
+      connectionId,
+      coin,
+      assetType: meta?.assetType ?? null,
+      assetTypeAuto: meta?.assetTypeAuto ?? true,
+      riskLevel: meta?.riskLevel ?? null,
+      expectedReturn: meta?.expectedReturn ?? null,
+      timeHorizon: meta?.timeHorizon ?? null,
+      liquidity: meta?.liquidity ?? null,
+      apr: meta?.apr === null || meta?.apr === undefined ? null : Number(meta.apr),
+      playlistId: meta?.playlistId ?? null,
+      playlistName: meta?.playlistId ? playlistName.get(meta.playlistId) ?? null : null,
+      notes: meta?.notes ?? null,
     };
   };
 
@@ -366,7 +375,7 @@ export async function getTradeAnalysis() {
       currency: row.currency,
       id: row.id,
       tags: (tagsByActivity.get(row.id) ?? []).sort((a, b) => a.localeCompare(b)),
-      classification: classificationOf(row.symbol),
+      classification: classificationOf(row.symbol, row.connectionId),
     });
   }
 
@@ -429,46 +438,6 @@ export async function getTradeAnalysis() {
   };
 }
 
-/**
- * The labels on one event, replaced wholesale.
- *
- * Whole-set rather than add-one/remove-one because the screen edits a set: it
- * sends what the row should end up with, and a half-applied change cannot
- * leave a tag behind that nobody asked for.
- *
- * A tag the vocabulary has never seen is created, so labelling never means a
- * detour to a settings page — but it is matched case-insensitively first, or
- * "Mistake" and "mistake" become two piles of the same idea.
- */
-export async function setActivityTags(activityId: string, names: string[]) {
-  const wanted = [...new Set(names.map((n) => n.trim()).filter((n) => n !== ""))];
-
-  const existing = await db.select().from(tags);
-  const byLower = new Map(existing.map((t) => [t.name.toLowerCase(), t]));
-
-  const ids: string[] = [];
-  for (const name of wanted) {
-    const found = byLower.get(name.toLowerCase());
-    if (found) {
-      ids.push(found.id);
-      continue;
-    }
-    const [created] = await db.insert(tags).values({ name }).returning();
-    byLower.set(name.toLowerCase(), created);
-    ids.push(created.id);
-  }
-
-  await db.delete(investmentActivityTags).where(eq(investmentActivityTags.activityId, activityId));
-  if (ids.length > 0) {
-    await db
-      .insert(investmentActivityTags)
-      .values(ids.map((tagId) => ({ activityId, tagId })))
-      .onConflictDoNothing();
-  }
-
-  revalidatePath("/investments/history");
-  return { tags: wanted };
-}
 
 /** Every tag in the vocabulary, for offering what already exists. */
 export async function listTagNames(): Promise<string[]> {
@@ -476,36 +445,3 @@ export async function listTagNames(): Promise<string[]> {
   return rows.map((t) => t.name).sort((a, b) => a.localeCompare(b));
 }
 
-/**
- * The labels on every event of one instrument, including a closed one.
- *
- * A position you have sold is not in the portfolio any more, so there is no
- * row on any holdings screen to label — but its trades are still in the
- * history, and "that AAVE trade was a mistake" is a thing you mostly want to
- * say *after* closing it.
- *
- * So an instrument is labelled through its events rather than through a second
- * table keyed by symbol. One storage model means the tag filter, the counts and
- * the vocabulary all keep working without knowing this exists — and a symbol
- * with no position and a symbol with one are labelled the same way.
- *
- * Applied to every event of that symbol, which normalises a set that had
- * drifted apart across rows.
- */
-export async function setInstrumentTags(symbol: string, names: string[]) {
-  const rows = await db
-    .select({ id: investmentActivities.id })
-    .from(investmentActivities)
-    .where(eq(investmentActivities.symbol, symbol));
-
-  if (rows.length === 0) {
-    throw new Error(`No events found for ${symbol}, so there is nothing to label.`);
-  }
-
-  for (const row of rows) {
-    await setActivityTags(row.id, names);
-  }
-
-  revalidatePath("/investments/history");
-  return { events: rows.length, tags: names };
-}

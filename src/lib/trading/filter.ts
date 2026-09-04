@@ -31,20 +31,32 @@ export interface TradeHistoryRow extends TradeRow {
    */
   tags: string[];
   /**
-   * How the instrument was classified when it was a position, if it ever was.
+   * How the instrument is classified, and where that is stored.
    *
    * `position_meta` outlives the position: selling out entirely removes the
    * holding but not what you said about it, so a trade closed in June can still
-   * be grouped by the risk you assigned it. Null on every axis nobody set, and
-   * absent altogether for an instrument that was never classified.
+   * be grouped by the risk you assigned it — and still have that risk changed.
+   *
+   * Present whenever the trade came from a connection, even with every axis
+   * unset, because that is what lets the history *set* one. Null only when
+   * there is nowhere to write it: an imported row with no connection behind it
+   * has no `position_meta` key to own.
    */
   classification?: {
+    /** `position_meta` is keyed by these two. */
+    connectionId: string;
+    coin: string;
     assetType: string | null;
+    /** True while the type came from the platform rather than from you. */
+    assetTypeAuto: boolean;
     riskLevel: string | null;
     expectedReturn: string | null;
     timeHorizon: string | null;
     liquidity: string | null;
+    apr: number | null;
+    playlistId: string | null;
     playlistName: string | null;
+    notes: string | null;
   } | null;
 }
 
@@ -184,37 +196,35 @@ export function describeTradeFilters(filters: TradeFilters): string | null {
 /**
  * The ways closed trades can be grouped for a result.
  *
- * Six of the seven come from `position_meta` — what you said the instrument was
- * when you held it — and survive selling out of it entirely. The seventh is the
- * free-form tag you put on the trade itself.
+ * All of them come from `position_meta` — what you said the instrument was when
+ * you held it — and all survive selling out of it entirely.
  *
- * `multi` is the difference that matters when the figures are shown. A trade
- * has exactly one risk level, so those groups partition the history and can be
- * read as a breakdown. It can wear three tags, so those overlap and sum to more
- * than the account made — presenting them the same way would report one profit
- * three times.
+ * Every axis is single-valued, so these groups partition the classified history
+ * and can honestly be read as a breakdown. A free-form tag axis lived here
+ * briefly and was the opposite: a trade could wear three, so the rows summed to
+ * more than the account made. It went when the editor did — the classification
+ * is the thing already filled in, and nobody labels their history twice.
  */
 export const TRADE_GROUPINGS = [
-  { key: "tag", label: "Tag", multi: true },
-  { key: "assetType", label: "Asset type", multi: false },
-  { key: "riskLevel", label: "Risk", multi: false },
-  { key: "expectedReturn", label: "Expected return", multi: false },
-  { key: "timeHorizon", label: "Time horizon", multi: false },
-  { key: "liquidity", label: "Liquidity", multi: false },
-  { key: "playlistName", label: "Playlist", multi: false },
+  { key: "assetType", label: "Asset type" },
+  { key: "riskLevel", label: "Risk" },
+  { key: "expectedReturn", label: "Expected return" },
+  { key: "timeHorizon", label: "Time horizon" },
+  { key: "liquidity", label: "Liquidity" },
+  { key: "playlistName", label: "Playlist" },
 ] as const;
 
 export type TradeGrouping = (typeof TRADE_GROUPINGS)[number]["key"];
 
 /**
- * The values a row carries on one grouping, as a list.
+ * The value a row carries on one grouping, as a list.
  *
- * A list for every axis, even the single-valued ones, so `byTag` needs no
- * second shape — and an unclassified row yields an empty list, which is what
- * keeps it out of every group rather than inventing an "unset" one for it.
+ * A list rather than a value so `byTag` needs no second shape, and because an
+ * unclassified row yields an empty one — which is what keeps it out of every
+ * group rather than inventing an "unset" heading that would hold most of the
+ * history and say nothing.
  */
 export function groupValuesOf(row: TradeHistoryRow, grouping: TradeGrouping): string[] {
-  if (grouping === "tag") return row.tags;
   const value = row.classification?.[grouping] ?? null;
   return value === null ? [] : [value];
 }

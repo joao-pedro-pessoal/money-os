@@ -232,9 +232,7 @@ export default function TradeAnalysis({
             what={
               coverage.untagged === 0
                 ? "Nothing closed yet to group."
-                : grouping === "tag"
-                  ? `None of your ${coverage.untagged} closed trades carry a tag yet. Add one in the table below and this fills in.`
-                  : `None of your ${coverage.untagged} closed trades were classified this way. Set it on the position — it is kept even after you sell out.`
+                : `None of your ${coverage.untagged} closed trades are classified this way yet. Set it in the Tags column below — it is kept after you sell out, and after every re-sync.`
             }
           />
         ) : (
@@ -279,32 +277,22 @@ export default function TradeAnalysis({
             </div>
 
             {/*
-              Two different claims, and which one is true depends on the axis.
-              A trade has exactly one risk level, so those rows partition the
-              classified history and can be read as a breakdown. It can wear
-              three tags, so those overlap and sum to more than the account
-              made — three labels on one winner would report the profit three
-              times. Saying the wrong one is worse than saying neither.
+              Every axis here is single-valued, so these rows really do add up
+              to the classified total — which is why the coverage has to be
+              stated: they are a breakdown of the classified trades, not of all
+              of them, and the difference is 35 trades on this account.
             */}
             <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed whitespace-normal max-w-prose">
-              {TRADE_GROUPINGS.find((g) => g.key === grouping)?.multi && (
-                <>
-                  A trade with several tags is counted under each of them, so these rows overlap
-                  and do not add up to your total.{" "}
-                </>
-              )}
               These cover{" "}
               <span className="text-[var(--foreground)]">
                 {coverage.tagged} of {coverage.tagged + coverage.untagged} closed trades
               </span>
-              , worth {money(coverage.realized)} counted once each
+              , worth {money(coverage.realized)}
               {coverage.untagged > 0 && (
                 <>
                   {" "}
-                  — {coverage.untagged}{" "}
-                  {grouping === "tag"
-                    ? "carry no tag yet"
-                    : "were never classified this way, so they are in no row above"}
+                  — the other {coverage.untagged} are not classified this way, so they are in no
+                  row above
                 </>
               )}
               .
