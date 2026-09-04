@@ -10,6 +10,8 @@ import {
   type TradeFilters,
   type TradeFilterOptions,
   type TradeHistoryRow,
+  groupValuesOf,
+  type TradeGrouping,
 } from "@/lib/trading/filter";
 import {
   pairRealisedWithHeld,
@@ -69,6 +71,9 @@ export default function TradeHistory({
   // row carries survives into every figure below without a cast.
   const filtered = useMemo(() => applyTradeFilters(rows, filters), [rows, filters]);
 
+  /** Which axis the "result by" panel groups on. */
+  const [grouping, setGrouping] = useState<TradeGrouping>("assetType");
+
   /** Every figure, recomputed against what is left. */
   const stats = useMemo(() => {
     const periods = holdingPeriods(filtered);
@@ -96,12 +101,26 @@ export default function TradeHistory({
        * `stats.ts` describes trades — the same separation that keeps the pure
        * layer free of anything only this screen knows.
        */
-      tags: byTag(filtered, (row) => (row as TradeHistoryRow).tags ?? []),
-      tagCoverage: taggedTotals(filtered, (row) => (row as TradeHistoryRow).tags ?? []),
       /** Recomputed over the filtered set, like every other figure here. */
       provenance: realisedProvenance(filtered),
     };
   }, [filtered]);
+
+  /**
+   * Result by whichever axis is selected, computed apart from `stats` so
+   * switching the axis does not recompute every chart on the page.
+   *
+   * The accessor lives here rather than inside `byTag` because a classification
+   * is this app's data and `stats.ts` describes trades — the same separation
+   * that keeps the pure layer free of anything only this screen knows.
+   */
+  const grouped = useMemo(() => {
+    const values = (row: TradeHistoryRow) => groupValuesOf(row, grouping);
+    return {
+      rows: byTag(filtered, (row) => values(row as TradeHistoryRow)),
+      coverage: taggedTotals(filtered, (row) => values(row as TradeHistoryRow)),
+    };
+  }, [filtered, grouping]);
 
   /**
    * The booked result beside the one still riding, per instrument.
@@ -300,8 +319,10 @@ export default function TradeHistory({
         hours={stats.hours}
         holding={stats.holding}
         averageSize={stats.averageSize}
-        tags={stats.tags}
-        tagCoverage={stats.tagCoverage}
+        grouped={grouped.rows}
+        coverage={grouped.coverage}
+        grouping={grouping}
+        onGrouping={setGrouping}
         tradeCount={stats.tradeCount}
         closedCount={stats.closedCount}
         currency={currency}

@@ -566,14 +566,23 @@ export default async function PortfolioAnalysisPage({
                           edge and ended mid-sentence at "where realised resu",
                           readable only by scrolling the table sideways.
                         */}
+                        {/*
+                          This used to claim a sold instrument "keeps no risk or
+                          horizon tag". It does — `position_meta` outlives the
+                          position it describes. What it stops having is a
+                          holding, which is what this table groups. The
+                          classification is still there, and the history now
+                          groups closed trades by it.
+                        */}
                         <p className="text-[10px] text-[var(--muted)] leading-relaxed whitespace-normal max-w-prose">
-                          These are the positions still open in this group. An instrument you have
-                          sold entirely keeps no risk or horizon tag, so its closed trades cannot be
-                          placed in a group — they are on the{" "}
+                          These are the positions still open in this group. Selling out of an
+                          instrument entirely removes the holding, not what you said about it — so
+                          it leaves this table but keeps its classification, and its closed trades
+                          are grouped by that same risk, horizon or asset type on the{" "}
                           <Link href="/investments/history" className="text-[var(--accent)]">
                             history
                           </Link>
-                          , where realised results are listed per instrument.
+                          .
                         </p>
                       </td>
                     </tr>

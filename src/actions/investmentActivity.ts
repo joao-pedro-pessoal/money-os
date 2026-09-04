@@ -9,6 +9,8 @@ import {
   imports,
   investmentActivities,
   investmentActivityTags,
+  playlists,
+  positionMeta,
   tags,
 } from "@/db/schema";
 import {
@@ -16,6 +18,7 @@ import {
   investmentActivityFingerprint,
   type InvestmentActivityInput,
 } from "@/lib/investment-activity";
+import { normaliseInstrument } from "@/lib/trading/holdingMatch";
 import {
   cumulativePnl,
   bySymbol,
@@ -241,7 +244,8 @@ export async function undoInvestmentActivityImport(formData: FormData) {
  * points.
  */
 export async function getTradeAnalysis() {
-  const [rows, accountRows, tagLinks, tagRows, portfolio, rates, base] = await Promise.all([
+  const [rows, accountRows, tagLinks, tagRows, metaRows, playlistRows, portfolio, rates, base] =
+    await Promise.all([
     db
       .select()
       .from(investmentActivities)
@@ -249,12 +253,45 @@ export async function getTradeAnalysis() {
     db.select().from(accounts),
     db.select().from(investmentActivityTags),
     db.select().from(tags),
+    db.select().from(positionMeta),
+    db.select().from(playlists),
     getPortfolioItems(),
     getRates(),
     getBaseCurrency(),
   ]);
 
   const accountNames = new Map(accountRows.map((account) => [account.id, account.name]));
+  /**
+   * How each instrument was classified, keyed on the normalised symbol.
+   *
+   * `position_meta` outlives the position it describes — selling out entirely
+   * removes the holding, not what you said about the thing — so a trade closed
+   * months ago can still be grouped by the risk or the horizon you gave it.
+   * That is what makes statistics by *kind of trade* possible at all.
+   *
+   * Normalised on both sides because the two tables spell the same instrument
+   * differently: `position_meta` carries the venue's `IGLAl_EQ` while an
+   * imported statement says `IGLA`. Pairing them raw would silently classify
+   * nothing.
+   *
+   * Last writer wins on a collision, which is safe here: two spellings of one
+   * instrument are the same instrument, and they carry the same classification
+   * precisely because they are.
+   */
+  const metaBySymbol = new Map(
+    metaRows.map((m) => [
+      normaliseInstrument(m.coin),
+      {
+        assetType: m.assetType,
+        riskLevel: m.riskLevel,
+        expectedReturn: m.expectedReturn,
+        timeHorizon: m.timeHorizon,
+        liquidity: m.liquidity,
+        playlistId: m.playlistId,
+      },
+    ])
+  );
+
 
   /**
    * Your labels, per event.
@@ -271,6 +308,29 @@ export async function getTradeAnalysis() {
     if (name === undefined) continue;
     tagsByActivity.set(link.activityId, [...(tagsByActivity.get(link.activityId) ?? []), name]);
   }
+
+  const playlistName = new Map(playlistRows.map((p) => [p.id, p.name]));
+
+  /**
+   * The classification for a traded symbol, or null when it was never given one.
+   *
+   * Null rather than an object of nulls: "never classified" and "classified as
+   * nothing on every axis" are different claims, and only the first is true of
+   * an instrument nobody has looked at.
+   */
+  const classificationOf = (symbol: string | null) => {
+    if (symbol === null) return null;
+    const meta = metaBySymbol.get(normaliseInstrument(symbol));
+    if (meta === undefined) return null;
+    return {
+      assetType: meta.assetType,
+      riskLevel: meta.riskLevel,
+      expectedReturn: meta.expectedReturn,
+      timeHorizon: meta.timeHorizon,
+      liquidity: meta.liquidity,
+      playlistName: meta.playlistId ? playlistName.get(meta.playlistId) ?? null : null,
+    };
+  };
 
   let unconvertible = 0;
   /**
@@ -306,6 +366,7 @@ export async function getTradeAnalysis() {
       currency: row.currency,
       id: row.id,
       tags: (tagsByActivity.get(row.id) ?? []).sort((a, b) => a.localeCompare(b)),
+      classification: classificationOf(row.symbol),
     });
   }
 

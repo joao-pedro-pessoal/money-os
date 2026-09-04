@@ -24,6 +24,7 @@ import type {
   TagStats,
   TaggedTotals,
 } from "@/lib/trading/stats";
+import { TRADE_GROUPINGS, type TradeGrouping } from "@/lib/trading/filter";
 
 /**
  * Four questions about how you trade, each with its own chart.
@@ -78,8 +79,10 @@ export default function TradeAnalysis({
   hours,
   holding,
   averageSize,
-  tags,
-  tagCoverage,
+  grouped,
+  coverage,
+  grouping,
+  onGrouping,
   tradeCount,
   closedCount,
   currency,
@@ -93,8 +96,10 @@ export default function TradeAnalysis({
   hours: HourBucket[];
   holding: HoldingSummary;
   averageSize: number | null;
-  tags: TagStats[];
-  tagCoverage: TaggedTotals;
+  grouped: TagStats[];
+  coverage: TaggedTotals;
+  grouping: TradeGrouping;
+  onGrouping: (next: TradeGrouping) => void;
   tradeCount: number;
   closedCount: number;
   currency: string;
@@ -200,17 +205,36 @@ export default function TradeAnalysis({
         )}
       </Panel>
 
-      {/* ---- Result by your own labels ---- */}
+      {/* ---- Result by what kind of trade it was ---- */}
       <Panel
-        title="Result by tag"
-        subtitle="The only grouping here that is not a fact about the trade — it is what you said you were doing."
+        title="Result by kind of trade"
+        subtitle="Not what you traded, but what kind of thing it was — the classification you gave the instrument, kept after you sold out of it."
       >
-        {tags.length === 0 ? (
+        <div className="flex gap-2 flex-wrap mb-3">
+          {TRADE_GROUPINGS.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              onClick={() => onGrouping(g.key)}
+              className="badge border text-xs"
+              style={{
+                borderColor: grouping === g.key ? "var(--accent)" : "var(--border)",
+                color: grouping === g.key ? "var(--accent)" : "var(--muted)",
+              }}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+
+        {grouped.length === 0 ? (
           <Empty
             what={
-              tagCoverage.untagged === 0
-                ? "Nothing closed yet to label."
-                : `None of your ${tagCoverage.untagged} closed trades carry a tag yet. Add one in the table below and this fills in.`
+              coverage.untagged === 0
+                ? "Nothing closed yet to group."
+                : grouping === "tag"
+                  ? `None of your ${coverage.untagged} closed trades carry a tag yet. Add one in the table below and this fills in.`
+                  : `None of your ${coverage.untagged} closed trades were classified this way. Set it on the position — it is kept even after you sell out.`
             }
           />
         ) : (
@@ -219,7 +243,7 @@ export default function TradeAnalysis({
               <table className="data-table whitespace-nowrap">
                 <thead>
                   <tr>
-                    <th>Tag</th>
+                    <th>{TRADE_GROUPINGS.find((g) => g.key === grouping)?.label ?? "Group"}</th>
                     <th className="text-right">Closed</th>
                     <th className="text-right">Win rate</th>
                     <th className="text-right">Realized</th>
@@ -229,7 +253,7 @@ export default function TradeAnalysis({
                   </tr>
                 </thead>
                 <tbody>
-                  {tags.map((t) => (
+                  {grouped.map((t) => (
                     <tr key={t.tag}>
                       <td>{t.tag}</td>
                       <td className="text-right">{t.closedTrades}</td>
@@ -255,19 +279,35 @@ export default function TradeAnalysis({
             </div>
 
             {/*
-              These rows overlap, and saying so is not a footnote — a trade
-              wearing three tags is counted under all three, so the column adds
-              up to more than the account made. Presenting it as a breakdown of
-              the total would report the same profit twice.
+              Two different claims, and which one is true depends on the axis.
+              A trade has exactly one risk level, so those rows partition the
+              classified history and can be read as a breakdown. It can wear
+              three tags, so those overlap and sum to more than the account
+              made — three labels on one winner would report the profit three
+              times. Saying the wrong one is worse than saying neither.
             */}
             <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed whitespace-normal max-w-prose">
-              A trade with several tags is counted under each of them, so these rows overlap and
-              do not add up to your total. Together they cover{" "}
+              {TRADE_GROUPINGS.find((g) => g.key === grouping)?.multi && (
+                <>
+                  A trade with several tags is counted under each of them, so these rows overlap
+                  and do not add up to your total.{" "}
+                </>
+              )}
+              These cover{" "}
               <span className="text-[var(--foreground)]">
-                {tagCoverage.tagged} of {tagCoverage.tagged + tagCoverage.untagged} closed trades
+                {coverage.tagged} of {coverage.tagged + coverage.untagged} closed trades
               </span>
-              , worth {money(tagCoverage.realized)} counted once each
-              {tagCoverage.untagged > 0 && <> — {tagCoverage.untagged} carry no tag yet</>}.
+              , worth {money(coverage.realized)} counted once each
+              {coverage.untagged > 0 && (
+                <>
+                  {" "}
+                  — {coverage.untagged}{" "}
+                  {grouping === "tag"
+                    ? "carry no tag yet"
+                    : "were never classified this way, so they are in no row above"}
+                </>
+              )}
+              .
             </p>
           </>
         )}

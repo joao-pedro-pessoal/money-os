@@ -30,6 +30,22 @@ export interface TradeHistoryRow extends TradeRow {
    * labelled, and an unlabelled row is not a row labelled "none".
    */
   tags: string[];
+  /**
+   * How the instrument was classified when it was a position, if it ever was.
+   *
+   * `position_meta` outlives the position: selling out entirely removes the
+   * holding but not what you said about it, so a trade closed in June can still
+   * be grouped by the risk you assigned it. Null on every axis nobody set, and
+   * absent altogether for an instrument that was never classified.
+   */
+  classification?: {
+    assetType: string | null;
+    riskLevel: string | null;
+    expectedReturn: string | null;
+    timeHorizon: string | null;
+    liquidity: string | null;
+    playlistName: string | null;
+  } | null;
 }
 
 export interface TradeFilters {
@@ -163,4 +179,42 @@ export function describeTradeFilters(filters: TradeFilters): string | null {
   else if (filters.to !== null) parts.push(`up to ${filters.to}`);
 
   return parts.length === 0 ? null : parts.join(" · ");
+}
+
+/**
+ * The ways closed trades can be grouped for a result.
+ *
+ * Six of the seven come from `position_meta` — what you said the instrument was
+ * when you held it — and survive selling out of it entirely. The seventh is the
+ * free-form tag you put on the trade itself.
+ *
+ * `multi` is the difference that matters when the figures are shown. A trade
+ * has exactly one risk level, so those groups partition the history and can be
+ * read as a breakdown. It can wear three tags, so those overlap and sum to more
+ * than the account made — presenting them the same way would report one profit
+ * three times.
+ */
+export const TRADE_GROUPINGS = [
+  { key: "tag", label: "Tag", multi: true },
+  { key: "assetType", label: "Asset type", multi: false },
+  { key: "riskLevel", label: "Risk", multi: false },
+  { key: "expectedReturn", label: "Expected return", multi: false },
+  { key: "timeHorizon", label: "Time horizon", multi: false },
+  { key: "liquidity", label: "Liquidity", multi: false },
+  { key: "playlistName", label: "Playlist", multi: false },
+] as const;
+
+export type TradeGrouping = (typeof TRADE_GROUPINGS)[number]["key"];
+
+/**
+ * The values a row carries on one grouping, as a list.
+ *
+ * A list for every axis, even the single-valued ones, so `byTag` needs no
+ * second shape — and an unclassified row yields an empty list, which is what
+ * keeps it out of every group rather than inventing an "unset" one for it.
+ */
+export function groupValuesOf(row: TradeHistoryRow, grouping: TradeGrouping): string[] {
+  if (grouping === "tag") return row.tags;
+  const value = row.classification?.[grouping] ?? null;
+  return value === null ? [] : [value];
 }
