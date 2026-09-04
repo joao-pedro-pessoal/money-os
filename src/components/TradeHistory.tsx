@@ -100,15 +100,6 @@ export default function TradeHistory({
       holding: holdingSummary(periods),
       tradeCount: trades.length,
       closedCount: trades.filter((r) => r.realizedPnl !== null).length,
-      /**
-       * Result by the labels you put on trades yourself.
-       *
-       * Computed from `filtered` like everything else, so narrowing to one
-       * account or one month narrows this with it. The accessor is passed
-       * rather than read inside `byTag`, because a tag is this app's data and
-       * `stats.ts` describes trades — the same separation that keeps the pure
-       * layer free of anything only this screen knows.
-       */
       /** Recomputed over the filtered set, like every other figure here. */
       provenance: realisedProvenance(filtered),
     };
@@ -151,17 +142,6 @@ export default function TradeHistory({
   );
   const unmatched = useMemo(() => unmatchedOpen(instruments), [instruments]);
 
-  /**
-   * The labels an instrument carries, gathered from its events.
-   *
-   * A union rather than an intersection: a label put on one fill is still a
-   * thing said about that instrument. Editing here writes the whole set to
-   * every event of it, which also normalises a set that had drifted apart
-   * across rows.
-   *
-   * Read from the unfiltered rows, so filtering to "tagged mistake" does not
-   * make every other label look as though it had been removed.
-   */
   /**
    * Where each instrument's classification lives, and what it currently says.
    *
@@ -355,7 +335,19 @@ export default function TradeHistory({
             is money you have.
           </p>
 
-          <div className="overflow-auto max-h-96">
+          {/*
+            No height cap here, and it matters more than it looks.
+
+            This was `overflow-auto max-h-96`, a 24rem scroll box — which was
+            fine while the Tags column held a one-line text field. The
+            classification editor is seven stacked controls and stands taller
+            than the box, so opening it showed the first dropdown, Asset type,
+            and clipped the rest: it read as though only the type could be set.
+
+            The list is bounded by how many instruments you have traded, so
+            letting it run is cheaper than capping a column that has to open.
+          */}
+          <div className="overflow-x-auto">
             <table className="data-table whitespace-nowrap text-xs w-full">
               <thead>
                 <tr>
@@ -402,7 +394,12 @@ export default function TradeHistory({
                         position you have sold has no row on any holdings
                         screen, and "that one was a mistake" is mostly a thing
                         you want to say after closing it. */}
-                    <td onClick={(e) => e.stopPropagation()}>
+                    {/* `align-top` so a row whose editor is open keeps its
+                        figures level with the instrument name rather than
+                        floating to the middle of a tall form, and
+                        `whitespace-normal` because the table sets nowrap and
+                        the form's own note would otherwise run off the edge. */}
+                    <td className="align-top whitespace-normal" onClick={(e) => e.stopPropagation()}>
                       {(() => {
                         const c = classificationBySymbol.get(i.symbol);
                         if (c === undefined) {
