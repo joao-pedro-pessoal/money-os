@@ -8,6 +8,7 @@ import {
   auditLog,
   positions,
   positionMeta,
+  platformBalances,
   accountConnections,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -18,15 +19,18 @@ import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 import { getTradeAnalysis } from "./investmentActivity";
+import { spotCostBasis } from "@/lib/portfolio/entryOverride";
+import { isCurrencyCode } from "@/lib/fx";
 import { byTag } from "@/lib/trading/stats";
 
 /** Playlists with the totals of the positions assigned to each one. */
 export async function listPlaylistsWithTotals() {
-  const [lists, allHoldings, syncedPositions, meta, conns, rates, base, trades] =
+  const [lists, allHoldings, syncedPositions, spotBalances, meta, conns, rates, base, trades] =
     await Promise.all([
       db.select().from(playlists),
       db.select().from(holdings),
       db.select().from(positions),
+      db.select().from(platformBalances),
       db.select().from(positionMeta),
       db.select().from(accountConnections),
       getRates(),
@@ -62,6 +66,8 @@ export async function listPlaylistsWithTotals() {
    * adding that to an ETF's market value would make the column meaningless.
    */
   const currencyOf = new Map(conns.map((c) => [c.id, c.reportingCurrency ?? "USD"]));
+  /** Tags for both open positions and spot balances — same key for both. */
+  const metaOf = new Map(meta.map((m) => [`${m.connectionId}:${m.coin}`, m]));
   const playlistOfPosition = new Map(
     meta.filter((m) => m.playlistId).map((m) => [`${m.connectionId}:${m.coin}`, m.playlistId!])
   );
@@ -104,6 +110,47 @@ export async function listPlaylistsWithTotals() {
     }).map((g) => [g.tag, g.realized])
   );
 
+  /**
+   * Coins held on spot, which this page ignored entirely.
+   *
+   * It read manual holdings and open positions and stopped there, so HYPE —
+   * a spot balance assigned to "Sato" and worth 94.56 — put that playlist at
+   * zero positions and a zero result. A coin sitting in a wallet is a position
+   * in the only sense this page means.
+   *
+   * A cash balance is denominated in itself, not in the platform's reporting
+   * currency: 1.75 EUR at a dollar broker is 1.75 euros. Same rule as
+   * `listBalances`, and the reason it is applied again here rather than
+   * assumed away.
+   */
+  const spotByPlaylist = new Map<string, { value: number; pnl: number; cost: number | null }[]>();
+  for (const b of spotBalances) {
+    const m = metaOf.get(`${b.connectionId}:${b.coin}`);
+    if (!m?.playlistId) continue;
+    if (b.usdValue === null) continue;
+
+    const platform = currencyOf.get(b.connectionId) ?? "USD";
+    const denominated = isCurrencyCode(b.coin) ? b.coin.toUpperCase() : platform;
+    const value = toBase(Number(b.usdValue), denominated, rates, base);
+    if (value === null) continue;
+
+    /** Yours where you set one, the venue's otherwise — one definition. */
+    const stated = spotCostBasis(
+      Number(b.total),
+      b.costBasis === null ? null : Number(b.costBasis),
+      m.entryPriceOverride === null || m.entryPriceOverride === undefined
+        ? null
+        : Number(m.entryPriceOverride)
+    );
+    const cost = stated === null ? null : toBase(stated, denominated, rates, base);
+
+    const list = spotByPlaylist.get(m.playlistId) ?? [];
+    // No cost means no gain to report — never `value - 0`, which would call the
+    // whole holding profit.
+    list.push({ value, pnl: cost === null ? 0 : round2(value - cost), cost });
+    spotByPlaylist.set(m.playlistId, list);
+  }
+
   return lists
     .map((p) => {
       const mine = allHoldings
@@ -118,21 +165,31 @@ export async function listPlaylistsWithTotals() {
         }));
 
       const synced = syncedByPlaylist.get(p.id) ?? [];
+      const spot = spotByPlaylist.get(p.id) ?? [];
 
       const value = round2(
         mine.reduce((s, h) => s + inBase(marketValue(h), h.currency), 0) +
-          synced.reduce((s, x) => s + x.value, 0)
+          synced.reduce((s, x) => s + x.value, 0) +
+          spot.reduce((s, x) => s + x.value, 0)
       );
       const pnl = round2(
         mine.reduce((s, h) => s + inBase(unrealizedPnL(h), h.currency), 0) +
-          synced.reduce((s, x) => s + x.pnl, 0)
+          synced.reduce((s, x) => s + x.pnl, 0) +
+          spot.reduce((s, x) => s + x.pnl, 0)
       );
       // What it was worth when it was opened. Derived rather than summed for
       // the synced side, because a perp has no cost basis of its own — the same
       // identity the manual side satisfies, where value − pnl is the cost.
+      /**
+       * A spot balance states its own cost where anyone knows it, so it is used
+       * rather than derived — and where nobody does, `value − pnl` would report
+       * the holding as having cost exactly what it is worth. Excluded instead,
+       * which keeps the cost a sum of what is actually known.
+       */
       const cost = round2(
         mine.reduce((s, h) => s + inBase(costBasis(h), h.currency), 0) +
-          synced.reduce((s, x) => s + (x.value - x.pnl), 0)
+          synced.reduce((s, x) => s + (x.value - x.pnl), 0) +
+          spot.reduce((s, x) => s + (x.cost ?? 0), 0)
       );
       /**
        * What this playlist has actually booked.
@@ -155,7 +212,7 @@ export async function listPlaylistsWithTotals() {
 
       return {
         ...p,
-        count: mine.length + synced.length,
+        count: mine.length + synced.length + spot.length,
         value,
         cost,
         pnl,

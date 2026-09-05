@@ -361,7 +361,17 @@ export async function getPortfolioItems() {
        */
       assetType:
         metaFor.get(`${b.connectionId}:${b.coin}`)?.assetType ?? classifyCoin(b.coin),
-      playlistName: null,
+      /**
+       * A spot balance belongs to a playlist like anything else.
+       *
+       * This was hard-coded null, so a coin held on spot could be assigned to
+       * one on the Positions page and then appear in no grouping by it —
+       * HYPE, tagged "Sato", was worth 94.56 and counted in none of it.
+       */
+      playlistName: (() => {
+        const id = metaFor.get(`${b.connectionId}:${b.coin}`)?.playlistId;
+        return id ? playlistName.get(id) ?? null : null;
+      })(),
       riskLevel: null,
       timeHorizon: null,
       value,
