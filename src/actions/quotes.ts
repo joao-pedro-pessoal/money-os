@@ -17,6 +17,7 @@ import {
   candidateSymbols,
   type FigiListing,
 } from "@/lib/quotes/openfigi";
+import { needsRepricing } from "@/lib/quotes/staleness";
 import {
   yahooUrl,
   parseYahooChart,
@@ -232,9 +233,23 @@ export async function setQuoteSymbol(formData: FormData) {
  * the reason is reported. A missing price is not a price of zero, and this is
  * the boundary where confusing the two would empty a portfolio.
  */
-export async function refreshQuotedPrices() {
+/**
+ * Fetch every quoted price again.
+ *
+ * `olderThanMinutes` skips the ones asked about recently, which is what makes
+ * this safe to put on a fifteen-minute schedule: Stooq and Yahoo are not APIs
+ * anyone contracted, and eleven instruments ninety-six times a day is both
+ * wasteful and rude. Omit it — as the button on the page does — and everything
+ * is asked, because a person clicking "refresh" means now.
+ */
+export async function refreshQuotedPrices(options?: { olderThanMinutes?: number }) {
   const rows = await db.select().from(holdings);
-  const quoted = rows.filter((h) => h.quoteSymbol !== null);
+  const now = new Date();
+  const quoted = rows.filter((h) =>
+    options?.olderThanMinutes === undefined
+      ? h.quoteSymbol !== null
+      : needsRepricing(h, now, options.olderThanMinutes)
+  );
 
   const results: { symbol: string; ok: boolean; note: string }[] = [];
 
