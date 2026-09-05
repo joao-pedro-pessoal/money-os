@@ -130,3 +130,40 @@ export function describePnlSource(source: PnlSource): string | null {
       return "still the platform's result — it holds a currency move between opening and now that today's prices cannot reproduce, so your entry changes what is shown above it and not this";
   }
 }
+
+/**
+ * What a spot balance cost, given what you said and what the venue said.
+ *
+ * The override is stored per unit — the same shape as the one on an open
+ * position, so one field means one thing everywhere — and multiplied out here.
+ *
+ * A spot balance is the easy case, and worth saying why: it has no leverage, no
+ * funding and no entry-date exchange rate hiding inside a figure. Value minus
+ * cost is the whole of its result, so an entry you set restates it exactly.
+ * That is not true of an open position, which is why `applyEntryOverride`
+ * above has to test the venue's arithmetic before trusting its own.
+ *
+ * Null when neither you nor the venue says. Never zero: a cost nobody stated
+ * is not a cost of nothing, and `value − 0` reports the whole holding as
+ * profit.
+ */
+export function spotCostBasis(
+  total: number,
+  venueCostBasis: number | null,
+  override: number | null
+): number | null {
+  if (override !== null) return round2(override * total);
+  return venueCostBasis;
+}
+
+/**
+ * What the venue said each unit cost, from the total it reported.
+ *
+ * Null when it reported none, or when there is nothing held to divide by —
+ * a zero balance has no price per unit, and dividing would be an infinity
+ * rendered as a number.
+ */
+export function venueEntryPerUnit(total: number, venueCostBasis: number | null): number | null {
+  if (venueCostBasis === null || total === 0) return null;
+  return venueCostBasis / total;
+}

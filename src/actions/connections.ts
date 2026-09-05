@@ -37,7 +37,11 @@ import { listAccountUsage } from "./accounts";
 import { writeSnapshot } from "./snapshots";
 import { suggestAssetType, assetTypeOnSync } from "@/lib/portfolio/assetType";
 import { pickReusable, isAbandoned } from "@/lib/accounting/abandoned";
-import { applyEntryOverride } from "@/lib/portfolio/entryOverride";
+import {
+  applyEntryOverride,
+  spotCostBasis,
+  venueEntryPerUnit,
+} from "@/lib/portfolio/entryOverride";
 
 /**
  * An empty account left behind by an earlier attempt at the same platform.
@@ -392,8 +396,38 @@ export async function listBalances() {
     hold: b.hold === null ? 0 : Number(b.hold),
     price: b.price === null ? null : Number(b.price),
     usdValue: b.usdValue === null ? null : Number(b.usdValue),
-    /** What the venue says it cost, or null when it doesn't say. Never zero. */
-    costBasis: b.costBasis === null ? null : Number(b.costBasis),
+    /**
+     * What it cost: yours where you said, the venue's otherwise, null when
+     * neither says. Never zero — a cost nobody stated is not a cost of nothing.
+     *
+     * The override is stored per unit, like the one on an open position, and
+     * multiplied out here. A spot balance has no leverage and no funding, so
+     * unlike an open position there is nothing in its result that the numbers
+     * cannot reproduce: value minus cost is the whole of it, and an entry you
+     * set restates it exactly.
+     */
+    costBasis: spotCostBasis(
+      Number(b.total),
+      b.costBasis === null ? null : Number(b.costBasis),
+      m?.entryPriceOverride === null || m?.entryPriceOverride === undefined
+        ? null
+        : Number(m.entryPriceOverride)
+    ),
+    /** True while the cost above is yours rather than the platform's. */
+    costOverridden:
+      m?.entryPriceOverride !== null && m?.entryPriceOverride !== undefined,
+    /**
+     * What the venue said each unit cost, or null when it said nothing —
+     * shown beside the field so you can see what you are replacing.
+     */
+    venueEntryPrice: venueEntryPerUnit(
+      Number(b.total),
+      b.costBasis === null ? null : Number(b.costBasis)
+    ),
+    entryPriceOverride:
+      m?.entryPriceOverride === null || m?.entryPriceOverride === undefined
+        ? null
+        : Number(m.entryPriceOverride),
     /** What `usdValue`, `price` and `costBasis` are actually denominated in. */
     currency,
     available: Number(b.total) - (b.hold === null ? 0 : Number(b.hold)),

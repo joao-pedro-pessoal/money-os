@@ -3,6 +3,8 @@ import {
   applyEntryOverride,
   venuePnlIsReproducible,
   describePnlSource,
+  spotCostBasis,
+  venueEntryPerUnit,
 } from "../entryOverride";
 
 /** Trading 212's IPRP: price and value in the same currency, exact. */
@@ -136,5 +138,50 @@ describe("an override that agrees with the venue", () => {
     const same = applyEntryOverride(PLAIN, 100);
     expect(same.unrealizedPnl).toBe(PLAIN.unrealizedPnl);
     expect(same.pnlSource).toBe("yours");
+  });
+});
+
+/**
+ * A spot balance is the easy case: no leverage, no funding, no entry-date
+ * exchange rate hidden in a figure. Value minus cost is the whole result, so an
+ * entry you set restates it exactly — which is why this needs none of the
+ * proving that an open position does.
+ */
+describe("what a spot balance cost", () => {
+  it("multiplies your per-unit entry out over what you hold", () => {
+    // HYPE: 1.11598249 units. The venue says 81.74 in total, 73.2449 a unit.
+    expect(spotCostBasis(1.11598249, 81.74, 70)).toBe(78.12);
+  });
+
+  it("uses the venue's total when you have said nothing", () => {
+    expect(spotCostBasis(1.11598249, 81.74, null)).toBe(81.74);
+  });
+
+  /**
+   * A cost nobody stated is not a cost of nothing — `value − 0` reports the
+   * whole holding as profit, which is how a stablecoin balance once showed a
+   * gain equal to itself.
+   */
+  it("reports no cost rather than zero when neither says", () => {
+    expect(spotCostBasis(82.02, null, null)).toBeNull();
+  });
+
+  it("lets your entry answer where the venue would not", () => {
+    expect(spotCostBasis(10, null, 2.5)).toBe(25);
+  });
+});
+
+describe("what the venue said a unit cost", () => {
+  it("divides its total by what is held", () => {
+    expect(venueEntryPerUnit(1.11598249, 81.74)).toBeCloseTo(73.2449, 4);
+  });
+
+  it("has no answer when the venue stated no cost", () => {
+    expect(venueEntryPerUnit(82.02, null)).toBeNull();
+  });
+
+  /** Dividing by an empty balance would render an infinity as a price. */
+  it("has no answer when nothing is held", () => {
+    expect(venueEntryPerUnit(0, 81.74)).toBeNull();
   });
 });

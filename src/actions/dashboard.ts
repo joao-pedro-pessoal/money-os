@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
+import { spotCostBasis } from "@/lib/portfolio/entryOverride";
 import {
   accounts,
   holdings,
@@ -148,6 +149,29 @@ export async function getPortfolioItems() {
   const playlistName = new Map(playlistRows.map((p) => [p.id, p.name]));
   const connOf = new Map(connRows.map((c) => [c.id, c]));
   const metaFor = new Map(metaRows.map((m) => [`${m.connectionId}:${m.coin}`, m]));
+
+  /**
+   * What a spot balance cost: yours where you said so, the venue's otherwise.
+   *
+   * Stored per unit beside the tags, like the entry on an open position, and
+   * multiplied out here. A spot balance has no leverage and no funding, so
+   * unlike an open position there is nothing in its result the numbers cannot
+   * reproduce — value minus cost is the whole of it, and an entry you set
+   * restates it exactly.
+   *
+   * Null when neither says, which is what `costUnknown` reports and what makes
+   * the screen print a dash instead of claiming the holding is flat.
+   */
+  const costOf = (b: { connectionId: string; coin: string; total: unknown; costBasis: unknown }) => {
+    const m = metaFor.get(`${b.connectionId}:${b.coin}`);
+    return spotCostBasis(
+      Number(b.total),
+      b.costBasis === null ? null : Number(b.costBasis),
+      m?.entryPriceOverride === null || m?.entryPriceOverride === undefined
+        ? null
+        : Number(m.entryPriceOverride)
+    );
+  };
   const meaningByAccount = new Map(accountRows.map((a) => [a.id, meaningOf(a.balanceMeaning)]));
 
   const items: PositionItem[] = [];
@@ -352,15 +376,21 @@ export async function getPortfolioItems() {
        * `entryNtl` and it was being discarded at every step.
        */
       pnl: (() => {
-        if (b.costBasis === null) return 0;
-        const cost = toBase(Number(b.costBasis), denominated, rates, base);
+        if (costOf(b) === null) return 0;
+        const cost = toBase(costOf(b)!, denominated, rates, base);
         return cost === null ? 0 : Math.round((value - cost + Number.EPSILON) * 100) / 100;
       })(),
       /**
        * True when nobody said what this cost, so the P&L above is not a
        * measurement and must not be shown as one. The screen prints a dash.
        */
-      costUnknown: b.costBasis === null,
+      /**
+       * Unknown when nothing states a cost — and also when a stated one could
+       * not be converted, because a P&L computed from a cost that failed to
+       * convert is `value − 0`, which is the whole holding reported as profit.
+       */
+      costUnknown:
+        costOf(b) === null || toBase(costOf(b)!, denominated, rates, base) === null,
       source: "balance",
       insideBalance: !b.countsInPortfolio,
       // A stablecoin or currency balance can be earning; the platform doesn't

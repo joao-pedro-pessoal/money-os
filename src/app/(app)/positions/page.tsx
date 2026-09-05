@@ -191,6 +191,8 @@ export default async function PositionsPage() {
                         playlistId={b.playlistId}
                         notes={b.notes}
                         playlists={playlistList}
+                        entryPriceOverride={b.entryPriceOverride}
+                        venueEntryPrice={b.venueEntryPrice}
                       />
                     </td>
                     <td>{b.accountName}</td>
