@@ -274,6 +274,13 @@
       "when": 1788605317160,
       "tag": "0038_kind_moondragon",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1788624558333,
+      "tag": "0039_wild_maria_hill",
+      "breakpoints": true
     }
   ]
 }

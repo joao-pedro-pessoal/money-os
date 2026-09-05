@@ -699,6 +699,60 @@ export const subscriptions = pgTable("subscriptions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ---------- Expected money ----------
+/**
+ * Money that is coming but has not arrived.
+ *
+ * A salary due on the 25th, a tax refund, a friend paying you back, a
+ * withdrawal still in flight. Sporadic or recurring — the difference is only
+ * the cadence, so both live here rather than in two tables that would answer
+ * the same question differently.
+ *
+ * **Nothing here is ever added to Net Worth, to any account balance, or to any
+ * income total.** It has not arrived; it is not yours. The whole value of the
+ * feature is saying "1 240 EUR is coming" *beside* the total rather than
+ * inside it — a figure that inflates what you have is worse than no figure,
+ * because it is acted on. `src/lib/accounting/expected.ts` states the rule and
+ * a test enforces it against `getNetWorth`.
+ *
+ * When it lands it becomes an ordinary transaction, counted there and only
+ * there. `settledAt` records that it did, so a one-off leaves evidence instead
+ * of vanishing.
+ *
+ * Deliberately not `subscriptions`, which is the same machinery pointed the
+ * other way: that table is what you pay, and its screens, totals and wording
+ * all say so. One table for both would make "monthly cost" ambiguous.
+ */
+export const expectedMoney = pgTable("expected_money", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  name: text("name").notNull(),
+  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  /** "once" | "weekly" | "monthly" | "quarterly" | "yearly". */
+  arrival: text("arrival").notNull().default("once"),
+  /**
+   * When it is expected. Null means "no date given", which is honest for a
+   * debt someone owes with no agreed day — the amount still counts as coming,
+   * and nothing pretends to know when.
+   */
+  expectedAt: timestamp("expected_at", { withTimezone: true }),
+  /** Where it will land, when that is known. Null = not decided. */
+  accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
+  categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
+  /**
+   * When it actually arrived, for a one-off.
+   *
+   * Kept rather than deleted: what you were owed and when it came is the
+   * evidence that it did. A recurring one is stopped with `active` instead,
+   * because there is no single arrival to record.
+   */
+  settledAt: timestamp("settled_at", { withTimezone: true }),
+  active: boolean("active").notNull().default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ---------- Budget ----------
 /**
  * A monthly spending limit for one expense category.

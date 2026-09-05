@@ -30,6 +30,9 @@ const groups: { label?: string; links: { href: string; label: string }[] }[] = [
       { href: "/budgets", label: "Budgets" },
       { href: "/buckets", label: "Buckets" },
       { href: "/subscriptions", label: "Subscriptions" },
+      // The other direction. Subscriptions forecast what leaves; this is what
+      // is due to arrive, and neither is counted in a balance.
+      { href: "/expected", label: "Coming in" },
     ],
   },
   {
