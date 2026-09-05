@@ -28,7 +28,8 @@ services:
       DATABASE_URL: postgresql://moneyos:${POSTGRES_PASSWORD:-changeme}@db:5432/moneyos
       APP_PASSWORD: ${APP_PASSWORD:?set APP_PASSWORD in .env}
       APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env}
-      # Required to store API secrets (Bybit). Losing it loses the secrets.
+      # Required to store API secrets for Bybit, Trading 212, Kraken, Binance,
+      # OKX or MEXC. Losing it loses the secrets — keep a copy off the server.
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       # Enables POST /api/sync so the scheduler below can run.
       SYNC_SECRET: ${SYNC_SECRET:-}

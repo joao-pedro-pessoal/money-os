@@ -68,7 +68,7 @@ You need Docker and Docker Compose. A 1 vCPU / 1 GB VPS is enough, or your own
 machine.
 
 ```bash
-git clone <this repo> money-os && cd money-os
+git clone https://github.com/joao-pedro-pessoal/money-os.git && cd money-os
 cp .env.example .env
 ```
 
@@ -106,7 +106,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (1681 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2193 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 
