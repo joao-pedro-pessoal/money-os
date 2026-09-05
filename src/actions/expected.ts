@@ -13,6 +13,7 @@ import {
   allPendingAmounts,
   isArrival,
   unscheduledFixedIncome,
+  anchorFrom,
   type Expected,
 } from "@/lib/accounting/expected";
 
@@ -113,24 +114,48 @@ export async function createExpected(formData: FormData) {
     throw new Error("An amount that isn't a positive number is not money coming in");
   }
 
-  const arrival = String(formData.get("arrival") ?? "once");
-  const dateRaw = String(formData.get("expectedAt") ?? "").trim();
+  const raw2 = String(formData.get("arrival") ?? "once");
+  const arrival = isArrival(raw2) ? raw2 : "once";
   const value = (key: string) => {
     const v = String(formData.get(key) ?? "").trim();
     return v === "" ? null : v;
   };
+  const numberOr = (key: string): number | null => {
+    const v = value(key);
+    if (v === null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  /**
+   * The anchor is built from whichever field the cadence asked for.
+   *
+   * A monthly salary is collected as "the 25th" and a weekly one as "Friday",
+   * because that is what those cadences mean — the year and month are noise you
+   * would have to pick anyway. `anchorFrom` fills the rest in from today,
+   * forwards, so nothing lands in the past the moment it is set up.
+   */
+  const expectedAt = anchorFrom(
+    arrival,
+    {
+      date: value("expectedAt"),
+      dayOfMonth: numberOr("dayOfMonth"),
+      weekday: numberOr("weekday"),
+    },
+    new Date()
+  );
 
   await db.insert(expectedMoney).values({
     name,
     amount: amount.toFixed(2),
     currency: String(formData.get("currency") ?? "EUR").toUpperCase(),
-    arrival: isArrival(arrival) ? arrival : "once",
+    arrival,
     /**
      * No date is allowed and means "no agreed day". A debt someone owes still
      * counts as coming; nothing pretends to know when, and the windows leave
      * it out rather than guessing at one.
      */
-    expectedAt: dateRaw === "" ? null : new Date(dateRaw),
+    expectedAt,
     accountId: value("accountId"),
     categoryId: value("categoryId"),
     notes: value("notes"),

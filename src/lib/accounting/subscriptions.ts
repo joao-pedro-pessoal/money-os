@@ -119,17 +119,26 @@ export function nextCharge(anchor: Date | null, cadence: Cadence, today: Date): 
   // Compare by day, so a charge due today still reads as today.
   const floor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
+  /**
+   * The day the anchor names, kept apart from the date being walked.
+   *
+   * This used to read the day off `next` on every pass, so the first short
+   * month destroyed the intent: a payment on the 31st clamped to 28 February
+   * and then stayed on the 28th for March, April and May, which have a 31st.
+   * Clamping is per month; the day being clamped is a property of the anchor.
+   */
+  const anchorDay = anchor.getDate();
+
   let guard = 0;
   while (next < floor && guard++ < 1000) {
     if (cadence === "weekly") {
       next.setDate(next.getDate() + 7);
     } else {
       const months = cadence === "monthly" ? 1 : cadence === "quarterly" ? 3 : 12;
-      const day = next.getDate();
       next.setDate(1);
       next.setMonth(next.getMonth() + months);
       const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
-      next.setDate(Math.min(day, lastDay));
+      next.setDate(Math.min(anchorDay, lastDay));
     }
   }
   return next;

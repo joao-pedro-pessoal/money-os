@@ -213,3 +213,48 @@ describe("byAnnualCost", () => {
     expect(list.map((s) => s.id)).toEqual(before);
   });
 });
+
+/**
+ * A payment on the 31st clamped to 28 February and then stayed on the 28th for
+ * March, April and May — months that have a 31st. The loop read the day off the
+ * date it was walking, so the first short month destroyed the intent
+ * permanently.
+ *
+ * Found while building "Coming in", which asks for a day of the month directly
+ * and so puts a 31 in front of this far more often than a subscription form did.
+ */
+describe("a day the month may not have", () => {
+  const THIRTY_FIRST = new Date(2026, 0, 31);
+
+  it("clamps to the last day of a month too short for it", () => {
+    const feb = nextCharge(THIRTY_FIRST, "monthly", new Date(2026, 1, 1))!;
+    expect([feb.getMonth() + 1, feb.getDate()]).toEqual([2, 28]);
+  });
+
+  it("goes back to the day it was given in the months that have it", () => {
+    for (const [monthIndex, expected] of [
+      [2, [3, 31]],
+      [3, [4, 30]],
+      [4, [5, 31]],
+    ] as const) {
+      const next = nextCharge(THIRTY_FIRST, "monthly", new Date(2026, monthIndex, 1))!;
+      expect([next.getMonth() + 1, next.getDate()], `month ${monthIndex + 1}`).toEqual([
+        ...expected,
+      ]);
+    }
+  });
+
+  it("does the same on a quarterly cadence", () => {
+    // 31 Jan, quarterly: April has 30 days, so it clamps and recovers in July.
+    const apr = nextCharge(THIRTY_FIRST, "quarterly", new Date(2026, 2, 1))!;
+    expect([apr.getMonth() + 1, apr.getDate()]).toEqual([4, 30]);
+    const jul = nextCharge(THIRTY_FIRST, "quarterly", new Date(2026, 5, 1))!;
+    expect([jul.getMonth() + 1, jul.getDate()]).toEqual([7, 31]);
+  });
+
+  it("leaves a 29 February anchor on the 28th in a common year", () => {
+    const leapDay = new Date(2028, 1, 29);
+    const next = nextCharge(leapDay, "yearly", new Date(2029, 5, 1))!;
+    expect([next.getFullYear(), next.getMonth() + 1, next.getDate()]).toEqual([2030, 2, 28]);
+  });
+});

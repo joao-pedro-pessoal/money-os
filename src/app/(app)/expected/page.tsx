@@ -8,6 +8,7 @@ import {
 } from "@/actions/expected";
 import { Money } from "@/components/PrivacyContext";
 import { ARRIVALS } from "@/lib/accounting/expected";
+import ArrivalFields from "@/components/ArrivalFields";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Link from "next/link";
 
@@ -231,21 +232,11 @@ export default async function ExpectedPage({
 
           {/* Fixed income recurs by definition — that is what the label means
               — so a monthly default is a reading of what you already said
-              rather than a guess. Changeable, like any default. */}
-          <select name="arrival" className="input" defaultValue={filling ? "monthly" : "once"}>
-            {ARRIVALS.map((a) => (
-              <option key={a.value} value={a.value}>
-                {a.label}
-              </option>
-            ))}
-          </select>
+              rather than a guess. Changeable, like any default.
 
-          <label className="text-xs block">
-            <span className="text-[var(--muted)]">
-              When — leave empty if there is no agreed day
-            </span>
-            <input name="expectedAt" type="date" className="input mt-1" />
-          </label>
+              The field under it follows the cadence: a day of the month for
+              monthly, a weekday for weekly, a full date otherwise. */}
+          <ArrivalFields defaultArrival={filling ? "monthly" : "once"} />
 
           {options.accounts.length > 0 && (
             <select name="accountId" className="input" defaultValue="">

@@ -176,3 +176,83 @@ export function unscheduledFixedIncome(
     .filter((c) => c.kind === "income" && c.fixed && !scheduled.has(c.id))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
+
+export const WEEKDAYS = [
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+  { value: 0, label: "Sunday" },
+] as const;
+
+/**
+ * What a cadence actually needs to be pinned down.
+ *
+ * A monthly salary needs a day of the month, not a date — asking for
+ * "25 September 2026" to mean "the 25th" makes you pick a year you do not care
+ * about and reads as a one-off. A weekly one needs a weekday. Quarterly and
+ * yearly need a month as well, so they take a full date, and so does a one-off.
+ */
+export function anchorInputFor(arrival: Arrival): "date" | "dayOfMonth" | "weekday" {
+  if (arrival === "monthly") return "dayOfMonth";
+  if (arrival === "weekly") return "weekday";
+  return "date";
+}
+
+/**
+ * The anchor date a cadence walks from, built from what was actually asked.
+ *
+ * `nextCharge` needs a real date. What the form collects is smaller than that —
+ * a day, or a weekday — so the missing parts are filled from today, forwards:
+ * the next time that day comes round. Anchoring backwards would be equally
+ * valid arithmetic and would put a date in the past on screen the moment
+ * something was set up, which reads as already late.
+ *
+ * A day of the month past the end of a short month is not clamped here. The
+ * anchor keeps the day you named — the 31st — and `nextCharge` clamps per month
+ * as it walks, which is what makes February the 28th and March the 31st again.
+ * Clamping at this end would lose the 31 permanently.
+ */
+export function anchorFrom(
+  arrival: Arrival,
+  input: { date?: string | null; dayOfMonth?: number | null; weekday?: number | null },
+  today: Date
+): Date | null {
+  const kind = anchorInputFor(arrival);
+
+  if (kind === "date") {
+    if (!input.date) return null;
+    const parsed = new Date(input.date);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  if (kind === "dayOfMonth") {
+    const day = input.dayOfMonth;
+    if (day === null || day === undefined || day < 1 || day > 31) return null;
+
+    // This month if the day is still to come, otherwise next month. A month
+    // too short for it is skipped rather than clamped, so the 31st stays the
+    // 31st instead of becoming that month's last day for good.
+    const candidate = new Date(today.getFullYear(), today.getMonth(), day);
+    if (candidate.getDate() === day && candidate >= startOfDay(today)) return candidate;
+
+    for (let ahead = 1; ahead <= 12; ahead++) {
+      const candidateAhead: Date = new Date(today.getFullYear(), today.getMonth() + ahead, day);
+      if (candidateAhead.getDate() === day) return candidateAhead;
+    }
+    return null;
+  }
+
+  const weekday = input.weekday;
+  if (weekday === null || weekday === undefined || weekday < 0 || weekday > 6) return null;
+
+  const start = startOfDay(today);
+  const ahead = (weekday - start.getDay() + 7) % 7;
+  return new Date(start.getFullYear(), start.getMonth(), start.getDate() + ahead);
+}
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}

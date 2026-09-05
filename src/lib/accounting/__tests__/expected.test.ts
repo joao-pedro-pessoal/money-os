@@ -8,6 +8,8 @@ import {
   arrivingWithin,
   allPendingAmounts,
   unscheduledFixedIncome,
+  anchorFrom,
+  anchorInputFor,
   type Expected,
 } from "../expected";
 
@@ -269,5 +271,87 @@ describe("fixed income named but not scheduled", () => {
 
   it("is not confused by a scheduled row with no category", () => {
     expect(unscheduledFixedIncome(cats, [scheduled(null)]).map((c) => c.name)).toEqual(["Salary"]);
+  });
+});
+
+/**
+ * A monthly salary needs a day of the month, not a date. Asking for
+ * "25 September 2026" to mean "the 25th" makes you pick a year you do not care
+ * about, and a calendar showing one square reads as a one-off.
+ */
+describe("what a cadence needs to be pinned down", () => {
+  it("asks for a day of the month, a weekday, or a date", () => {
+    expect(anchorInputFor("monthly")).toBe("dayOfMonth");
+    expect(anchorInputFor("weekly")).toBe("weekday");
+    expect(anchorInputFor("once")).toBe("date");
+    // A month matters to these, so a bare day would not pin them down.
+    expect(anchorInputFor("quarterly")).toBe("date");
+    expect(anchorInputFor("yearly")).toBe("date");
+  });
+});
+
+describe("building the anchor from what was asked", () => {
+  // A Saturday, so the weekday arithmetic is not accidentally symmetric.
+  const TODAY_SAT = new Date(2026, 8, 5);
+
+  it("takes a one-off date as given", () => {
+    const a = anchorFrom("once", { date: "2026-12-24" }, TODAY_SAT)!;
+    expect([a.getFullYear(), a.getMonth() + 1, a.getDate()]).toEqual([2026, 12, 24]);
+  });
+
+  it("uses this month when the day is still to come", () => {
+    const a = anchorFrom("monthly", { dayOfMonth: 25 }, TODAY_SAT)!;
+    expect([a.getMonth() + 1, a.getDate()]).toEqual([9, 25]);
+  });
+
+  /**
+   * Forwards, never backwards. Anchoring to a day already past would put a date
+   * in the past on screen the moment something was set up, which reads as
+   * already late.
+   */
+  it("rolls to next month when the day has gone", () => {
+    const a = anchorFrom("monthly", { dayOfMonth: 2 }, TODAY_SAT)!;
+    expect([a.getMonth() + 1, a.getDate()]).toEqual([10, 2]);
+  });
+
+  it("counts today as still to come", () => {
+    const a = anchorFrom("monthly", { dayOfMonth: 5 }, TODAY_SAT)!;
+    expect([a.getMonth() + 1, a.getDate()]).toEqual([9, 5]);
+  });
+
+  /**
+   * The 31st stays the 31st. Clamping here would lose it permanently; skipping
+   * to a month that has one keeps the day, and `nextCharge` clamps per month as
+   * it walks — February the 28th, March the 31st again.
+   */
+  it("skips a month too short rather than clamping the day away", () => {
+    // From September, the next 31st is October's.
+    const a = anchorFrom("monthly", { dayOfMonth: 31 }, TODAY_SAT)!;
+    expect([a.getMonth() + 1, a.getDate()]).toEqual([10, 31]);
+  });
+
+  it("finds the next occurrence of a weekday", () => {
+    // Saturday is 6; the next Monday is the 7th.
+    const a = anchorFrom("weekly", { weekday: 1 }, TODAY_SAT)!;
+    expect([a.getMonth() + 1, a.getDate(), a.getDay()]).toEqual([9, 7, 1]);
+  });
+
+  it("treats today's weekday as today", () => {
+    const a = anchorFrom("weekly", { weekday: 6 }, TODAY_SAT)!;
+    expect(a.getDate()).toBe(5);
+  });
+
+  /** No date is a real answer, and stays one. */
+  it("has no anchor when nothing was given", () => {
+    expect(anchorFrom("once", { date: null }, TODAY_SAT)).toBeNull();
+    expect(anchorFrom("monthly", { dayOfMonth: null }, TODAY_SAT)).toBeNull();
+    expect(anchorFrom("weekly", { weekday: null }, TODAY_SAT)).toBeNull();
+  });
+
+  it("refuses a day that is not one", () => {
+    expect(anchorFrom("monthly", { dayOfMonth: 0 }, TODAY_SAT)).toBeNull();
+    expect(anchorFrom("monthly", { dayOfMonth: 32 }, TODAY_SAT)).toBeNull();
+    expect(anchorFrom("weekly", { weekday: 7 }, TODAY_SAT)).toBeNull();
+    expect(anchorFrom("once", { date: "not a date" }, TODAY_SAT)).toBeNull();
   });
 });
