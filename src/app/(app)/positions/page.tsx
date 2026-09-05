@@ -13,6 +13,7 @@ import RefreshPrices from "@/components/RefreshPrices";
 import PositionTagsForm from "@/components/PositionTagsForm";
 import AutoSync from "@/components/AutoSync";
 import { Money, Bare } from "@/components/PrivacyContext";
+import { describePnlSource } from "@/lib/portfolio/entryOverride";
 import PageTabs from "@/components/PageTabs";
 import { INVESTMENT_TABS } from "@/lib/navigation";
 import Link from "next/link";
@@ -425,6 +426,8 @@ export default async function PositionsPage() {
                           playlistId={p.playlistId}
                           notes={p.notes}
                           playlists={playlistList}
+                          entryPriceOverride={p.entryPriceOverride}
+                          venueEntryPrice={p.venueEntryPrice}
                         />
                       </td>
                       <td>
@@ -454,6 +457,18 @@ export default async function PositionsPage() {
                           and on every position of a dollar-reporting platform. */}
                       <td className="text-right">
                         {p.entryPrice === null ? "—" : <Bare value={p.entryPrice} />}
+                        {p.entryOverridden && (
+                          <div
+                            className="text-[10px] text-[var(--accent)]"
+                            title={
+                              p.venueEntryPrice === null
+                                ? "The platform states no entry price"
+                                : `The platform says ${p.venueEntryPrice}`
+                            }
+                          >
+                            yours
+                          </div>
+                        )}
                       </td>
                       <td className="text-right">
                         {p.markPrice === null ? "—" : <Bare value={p.markPrice} />}
@@ -483,6 +498,18 @@ export default async function PositionsPage() {
                           "—"
                         ) : (
                           <Money value={p.unrealizedPnl} currency={p.currency} />
+                        )}
+                        {/* Whose number this is. A result worked out from an
+                            entry you set is not the platform's, and one it
+                            could not restate is still theirs — saying which
+                            keeps the two from being read as one. */}
+                        {describePnlSource(p.pnlSource) && (
+                          <div
+                            className="text-[10px] text-[var(--muted)] whitespace-normal max-w-[16rem] ml-auto"
+                            title={describePnlSource(p.pnlSource) ?? undefined}
+                          >
+                            {p.pnlSource === "yours" ? "your entry" : "platform's result"}
+                          </div>
                         )}
                         {p.returnOnEquity !== null && (
                           <div className="text-xs">{(p.returnOnEquity * 100).toFixed(2)}%</div>

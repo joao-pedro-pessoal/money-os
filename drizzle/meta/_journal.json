@@ -267,6 +267,13 @@
       "when": 1788427477973,
       "tag": "0037_flowery_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1788605317160,
+      "tag": "0038_kind_moondragon",
+      "breakpoints": true
     }
   ]
 }

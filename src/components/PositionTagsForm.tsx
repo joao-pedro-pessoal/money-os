@@ -31,6 +31,8 @@ export default function PositionTagsForm({
   playlistId,
   notes,
   playlists,
+  entryPriceOverride,
+  venueEntryPrice,
 }: {
   action: (formData: FormData) => Promise<void>;
   connectionId: string;
@@ -46,6 +48,10 @@ export default function PositionTagsForm({
   playlistId: string | null;
   notes: string | null;
   playlists: { id: string; name: string }[];
+  /** What you said this cost per unit, or null to use the platform's. */
+  entryPriceOverride?: number | null;
+  /** The platform's own average, shown so you can see what you are replacing. */
+  venueEntryPrice?: number | null;
 }) {
   const [open, setOpen] = useState(false);
   // Controlled so the rate field can be named after the type as you change it.
@@ -182,6 +188,38 @@ export default function PositionTagsForm({
         placeholder="Notes (e.g. strategy)"
         className="input py-1 text-xs"
       />
+
+      {/*
+        What it really cost you, when the platform's average is not the one you
+        mean — coins moved in from elsewhere arrive carrying the venue's basis,
+        and a position rebuilt from a statement carries the statement's.
+
+        In whatever currency the venue quotes the instrument in, which is what
+        its own screen shows. Empty puts the platform's figure back.
+      */}
+      {venueEntryPrice !== undefined && (
+        <label className="text-xs block">
+          <span className="text-[var(--muted)]">
+            Entry price, if the platform&apos;s is not what you paid
+          </span>
+          <input
+            name="entryPriceOverride"
+            type="number"
+            step="any"
+            min="0"
+            defaultValue={entryPriceOverride ?? ""}
+            placeholder={
+              venueEntryPrice === null
+                ? "the platform states none"
+                : `platform says ${venueEntryPrice}`
+            }
+            className="input py-1 text-xs mt-1"
+          />
+          <span className="text-[10px] text-[var(--muted)]">
+            In the currency the platform quotes it in. Empty uses theirs.
+          </span>
+        </label>
+      )}
 
       <div className="flex gap-2">
         <button type="submit" className="btn py-1 px-3 text-xs">

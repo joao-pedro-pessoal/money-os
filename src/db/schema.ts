@@ -640,6 +640,19 @@ export const positionMeta = pgTable(
     assetTypeAuto: boolean("asset_type_auto").notNull().default(false),
     playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
     notes: text("notes"),
+    /**
+     * What you say the position actually cost, per unit.
+     *
+     * A venue's average entry is not always the one you mean: coins moved in
+     * from elsewhere arrive with the venue's own basis, a rebuilt position
+     * carries whatever the statement said, and some venues exclude fees. This
+     * lives here, beside the tags, because `positions` is replaced wholesale on
+     * every sync and anything written there is gone by the next one.
+     *
+     * In the same currency the venue quotes the instrument in, which is the
+     * number you see on its own screen. Null means "use theirs".
+     */
+    entryPriceOverride: numeric("entry_price_override", { precision: 20, scale: 8 }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [primaryKey({ columns: [t.connectionId, t.coin] })]

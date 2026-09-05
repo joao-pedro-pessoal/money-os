@@ -37,6 +37,7 @@ import { listAccountUsage } from "./accounts";
 import { writeSnapshot } from "./snapshots";
 import { suggestAssetType, assetTypeOnSync } from "@/lib/portfolio/assetType";
 import { pickReusable, isAbandoned } from "@/lib/accounting/abandoned";
+import { applyEntryOverride } from "@/lib/portfolio/entryOverride";
 
 /**
  * An empty account left behind by an earlier attempt at the same platform.
@@ -196,8 +197,39 @@ export async function listAllPositions() {
 
   return rows.map((r) => {
     const m = metaFor.get(`${r.connectionId}:${r.coin}`);
+    const parsed = parsePositionRow(r);
+
+    /**
+     * What you said this cost, where you said anything.
+     *
+     * The venue's result is kept unless the override's arithmetic can be proven
+     * against it first — see `entryOverride.ts`. Applied here rather than on the
+     * page so every reader gets the same answer.
+     */
+    const override =
+      m?.entryPriceOverride === null || m?.entryPriceOverride === undefined
+        ? null
+        : Number(m.entryPriceOverride);
+    const effective = applyEntryOverride(
+      {
+        size: parsed.size,
+        entryPrice: parsed.entryPrice,
+        markPrice: parsed.markPrice,
+        unrealizedPnl: parsed.unrealizedPnl,
+        side: parsed.side,
+      },
+      override
+    );
+
     return {
-      ...parsePositionRow(r),
+      ...parsed,
+      entryPrice: effective.entryPrice,
+      unrealizedPnl: effective.unrealizedPnl,
+      pnlSource: effective.pnlSource,
+      entryOverridden: effective.overridden,
+      /** The platform's own entry, kept so the screen can show what changed. */
+      venueEntryPrice: parsed.entryPrice,
+      entryPriceOverride: override,
       accountName: accountName.get(r.accountId) ?? "—",
       platform: platformOf.get(r.connectionId) ?? "—",
       currency: currencyOf.get(r.connectionId) ?? "USD",
@@ -260,6 +292,16 @@ export async function setPositionTags(formData: FormData) {
     assetTypeAuto: assetType === null,
     playlistId: value("playlistId"),
     notes: value("notes"),
+    /**
+     * Empty clears it, so there is a way back to the platform's own figure.
+     * A zero entry is not a price and is rejected the same way.
+     */
+    entryPriceOverride: (() => {
+      const raw = String(formData.get("entryPriceOverride") ?? "").trim().replace(",", ".");
+      if (raw === "") return null;
+      const n = Number(raw);
+      return Number.isFinite(n) && n > 0 ? String(n) : null;
+    })(),
     updatedAt: new Date(),
   };
 
