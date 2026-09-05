@@ -12,7 +12,12 @@ import QuoteSymbolField from "@/components/QuoteSymbolField";
 import RefreshPrices from "@/components/RefreshPrices";
 import PositionTagsForm from "@/components/PositionTagsForm";
 import AutoSync from "@/components/AutoSync";
+import { Fragment } from "react";
 import { Money, Bare } from "@/components/PrivacyContext";
+import {
+  groupBalancesByCoin,
+  explainMissingTotal,
+} from "@/lib/portfolio/groupBalances";
 import { describePnlSource } from "@/lib/portfolio/entryOverride";
 import PageTabs from "@/components/PageTabs";
 import { INVESTMENT_TABS } from "@/lib/navigation";
@@ -26,6 +31,17 @@ import { displaySymbol } from "@/lib/quotes/symbolSource";
 async function saveHoldingTags(formData: FormData) {
   "use server";
   await setHoldingTags(formData);
+}
+
+/**
+ * Units, without the trailing zeros a fixed precision would add.
+ *
+ * A coin's quantity is not money: 1.11598249 HYPE is exact and 36.13 USDT is
+ * too, and rounding either to two places would report a different amount held.
+ * Eight places is the most any balance here carries.
+ */
+function round8(n: number): number {
+  return Math.round((n + Number.EPSILON) * 1e8) / 1e8;
 }
 
 export default async function PositionsPage() {
@@ -169,51 +185,125 @@ export default async function PositionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {balances.map((b) => (
-                  <tr key={b.id}>
-                    <td className="font-medium">{b.coin}</td>
-                    {/* A coin held on spot is taggable exactly like an open
-                        trade, and until now it wasn't — so a HYPE balance had
-                        no route to an asset type at all, while the Investments
-                        table sent you here to set one. */}
-                    <td className="whitespace-normal">
-                      <PositionTagsForm
-                        action={setPositionTags}
-                        connectionId={b.connectionId}
-                        coin={b.coin}
-                        riskLevel={b.riskLevel}
-                        expectedReturn={b.expectedReturn}
-                        timeHorizon={b.timeHorizon}
-                        liquidity={b.liquidity}
-                        assetType={b.assetType}
-                        assetTypeAuto={b.assetTypeAuto}
-                        apr={b.apr}
-                        playlistId={b.playlistId}
-                        notes={b.notes}
-                        playlists={playlistList}
-                        entryPriceOverride={b.entryPriceOverride}
-                        venueEntryPrice={b.venueEntryPrice}
-                      />
-                    </td>
-                    <td>{b.accountName}</td>
-                    <td className="text-right">{b.total}</td>
-                    <td className="text-right">
-                      {b.available}
-                      {b.hold > 0 && (
-                        <div className="text-xs text-[var(--muted)]">{b.hold} on hold</div>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      {b.price === null ? (
-                        <span className="text-[var(--muted)]">unpriced</span>
-                      ) : (
-                        <Money value={b.price} currency={b.currency} />
-                      )}
-                    </td>
-                    <td className="text-right">
-                      {b.usdValue === null ? "—" : <Money value={b.usdValue} currency={b.currency} />}
-                    </td>
-                  </tr>
+                {groupBalancesByCoin(balances).map((g) => (
+                  <Fragment key={g.coin}>
+                    {/* The coin once, then where it is. A row per
+                        (coin, account) answered "where" and hid "how much" —
+                        two EUR rows and two USDT rows, added by eye. */}
+                    <tr>
+                      <td className="font-medium">
+                        {g.coin}
+                        {g.parts.length > 1 && (
+                          <div className="text-[10px] text-[var(--muted)]">
+                            across {g.parts.length} accounts
+                          </div>
+                        )}
+                      </td>
+                      <td className="whitespace-normal">
+                        {/* Tags live per (connection, coin), so a coin held in
+                            two places is two sets. Edited on its own line
+                            below; the group row shows what the first says
+                            rather than inventing a combined answer. */}
+                        {g.parts.length === 1 ? (
+                          <PositionTagsForm
+                            action={setPositionTags}
+                            connectionId={g.parts[0].connectionId}
+                            coin={g.parts[0].coin}
+                            riskLevel={g.parts[0].riskLevel}
+                            expectedReturn={g.parts[0].expectedReturn}
+                            timeHorizon={g.parts[0].timeHorizon}
+                            liquidity={g.parts[0].liquidity}
+                            assetType={g.parts[0].assetType}
+                            assetTypeAuto={g.parts[0].assetTypeAuto}
+                            apr={g.parts[0].apr}
+                            playlistId={g.parts[0].playlistId}
+                            notes={g.parts[0].notes}
+                            playlists={playlistList}
+                            entryPriceOverride={g.parts[0].entryPriceOverride}
+                            venueEntryPrice={g.parts[0].venueEntryPrice}
+                          />
+                        ) : (
+                          <span className="text-[10px] text-[var(--muted)]">
+                            tagged per account, below
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-[var(--muted)]">
+                        {g.parts.length === 1 ? g.parts[0].accountName : "—"}
+                      </td>
+                      <td className="text-right font-medium">{round8(g.total)}</td>
+                      <td className="text-right">{round8(g.available)}</td>
+                      <td className="text-right text-[var(--muted)]">
+                        {g.parts.length === 1 && g.parts[0].price !== null ? (
+                          <Money value={g.parts[0].price} currency={g.parts[0].currency} />
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="text-right font-medium">
+                        {g.value === null ? (
+                          <span
+                            className="text-[var(--muted)]"
+                            title={explainMissingTotal(g) ?? undefined}
+                          >
+                            —
+                          </span>
+                        ) : (
+                          <Money value={g.value} currency={g.currency ?? base} />
+                        )}
+                      </td>
+                    </tr>
+
+                    {/* Where each part is. Only when there is more than one —
+                        a coin held in a single account has already said it. */}
+                    {g.parts.length > 1 &&
+                      g.parts.map((b) => (
+                        <tr key={b.id} style={{ background: "var(--surface-2)" }}>
+                          <td className="pl-8 text-[var(--muted)]">↳</td>
+                          <td className="whitespace-normal">
+                            <PositionTagsForm
+                              action={setPositionTags}
+                              connectionId={b.connectionId}
+                              coin={b.coin}
+                              riskLevel={b.riskLevel}
+                              expectedReturn={b.expectedReturn}
+                              timeHorizon={b.timeHorizon}
+                              liquidity={b.liquidity}
+                              assetType={b.assetType}
+                              assetTypeAuto={b.assetTypeAuto}
+                              apr={b.apr}
+                              playlistId={b.playlistId}
+                              notes={b.notes}
+                              playlists={playlistList}
+                              entryPriceOverride={b.entryPriceOverride}
+                              venueEntryPrice={b.venueEntryPrice}
+                            />
+                          </td>
+                          <td>{b.accountName}</td>
+                          <td className="text-right">{b.total}</td>
+                          <td className="text-right">
+                            {b.available}
+                            {b.hold > 0 && (
+                              <div className="text-xs text-[var(--muted)]">{b.hold} on hold</div>
+                            )}
+                          </td>
+                          <td className="text-right">
+                            {b.price === null ? (
+                              <span className="text-[var(--muted)]">unpriced</span>
+                            ) : (
+                              <Money value={b.price} currency={b.currency} />
+                            )}
+                          </td>
+                          <td className="text-right">
+                            {b.usdValue === null ? (
+                              "—"
+                            ) : (
+                              <Money value={b.usdValue} currency={b.currency} />
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
