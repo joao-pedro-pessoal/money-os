@@ -3,12 +3,14 @@ import { listAccountsWithState } from "@/actions/accounts";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Link from "next/link";
+import { getDefaultAccountId } from "@/actions/settings";
 
 export default async function TransactionsPage() {
-  const [txs, accounts, categories] = await Promise.all([
+  const [txs, accounts, categories, defaultAccountId] = await Promise.all([
     listTransactions(200),
     listAccountsWithState(),
     listCategories(),
+    getDefaultAccountId(),
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -28,7 +30,16 @@ export default async function TransactionsPage() {
         <div className="card p-4">
           <div className="text-sm font-medium mb-3">Add income / expense</div>
           <form action={createTransaction} className="space-y-3">
-            <select name="accountId" className="input" required>
+            {/* Starts on the account you said you use most — physical cash,
+                usually, since that is the one no connector fills in. Picking it
+                from a list every time is friction on the one screen where
+                friction decides whether the app gets used. */}
+            <select
+              name="accountId"
+              className="input"
+              required
+              defaultValue={defaultAccountId ?? ""}
+            >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}

@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { appSettings } from "@/db/schema";
+import { accounts, appSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { DEFAULT_BASE_CURRENCY, SUPPORTED_CURRENCIES } from "@/lib/fx";
@@ -121,4 +121,57 @@ export async function setDashboardCurrency(formData: FormData) {
 
   revalidatePath("/settings");
   revalidatePath("/");
+}
+
+const DEFAULT_ACCOUNT_KEY = "defaultAccountId";
+
+/**
+ * The account a new transaction starts on.
+ *
+ * Almost every hand-entered transaction comes from the same place — physical
+ * cash, usually, since that is the one account no connector fills in for you.
+ * Picking it from a list of six every time is friction on the one screen where
+ * friction decides whether the app gets used at all.
+ *
+ * Null when nothing is set, or when what was set has since been archived or
+ * deleted. Checked rather than trusted: a form defaulting to an account that no
+ * longer exists would fail on submit with an error about a foreign key, which
+ * says nothing to anybody.
+ */
+export async function getDefaultAccountId(): Promise<string | null> {
+  const [row] = await db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, DEFAULT_ACCOUNT_KEY));
+  const saved = row?.value?.trim() ?? "";
+  if (saved === "") return null;
+
+  const [account] = await db.select().from(accounts).where(eq(accounts.id, saved));
+  return account && account.active ? account.id : null;
+}
+
+export async function setDefaultAccountId(formData: FormData) {
+  const raw = String(formData.get("defaultAccountId") ?? "").trim();
+
+  /**
+   * Empty means "no default", which is the state before anyone chooses one and
+   * a legitimate thing to go back to. An id that names nothing is stored as
+   * empty rather than kept, so a deleted account cannot linger as a setting.
+   */
+  let value = "";
+  if (raw !== "") {
+    const [account] = await db.select().from(accounts).where(eq(accounts.id, raw));
+    if (account && account.active) value = account.id;
+  }
+
+  await db
+    .insert(appSettings)
+    .values({ key: DEFAULT_ACCOUNT_KEY, value, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: appSettings.key,
+      set: { value, updatedAt: new Date() },
+    });
+
+  revalidatePath("/settings");
+  revalidatePath("/transactions");
 }

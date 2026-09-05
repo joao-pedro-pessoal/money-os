@@ -5,7 +5,10 @@ import {
   setFavouriteCurrencies,
   getDashboardCurrency,
   setDashboardCurrency,
+  getDefaultAccountId,
+  setDefaultAccountId,
 } from "@/actions/settings";
+import { listAccountsWithState } from "@/actions/accounts";
 import { SUPPORTED_CURRENCIES } from "@/lib/fx";
 import ThemePicker from "@/components/ThemePicker";
 import SettingRow from "@/components/SettingRow";
@@ -15,6 +18,10 @@ export default async function SettingsGeneralPage() {
   const baseCurrency = await getBaseCurrency();
   const favourites = await getFavouriteCurrencies();
   const dashboardCurrency = await getDashboardCurrency();
+  const [defaultAccountId, activeAccounts] = await Promise.all([
+    getDefaultAccountId(),
+    listAccountsWithState(),
+  ]);
 
   return (
     <>
@@ -92,6 +99,29 @@ export default async function SettingsGeneralPage() {
                     {c}
                   </option>
                 ))}
+            </select>
+            <button type="submit" className="btn whitespace-nowrap">
+              Save
+            </button>
+          </form>
+        </SettingRow>
+
+        <SettingRow
+          title="Default account"
+          description="Where a new transaction starts. Almost every hand-entered one comes from the same place — cash, usually, since that is the account no connector fills in for you."
+        >
+          <form action={setDefaultAccountId} className="flex gap-2">
+            <select
+              name="defaultAccountId"
+              className="input"
+              defaultValue={defaultAccountId ?? ""}
+            >
+              <option value="">No default — pick every time</option>
+              {activeAccounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
             </select>
             <button type="submit" className="btn whitespace-nowrap">
               Save
