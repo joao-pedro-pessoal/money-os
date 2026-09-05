@@ -140,3 +140,39 @@ export function allPendingAmounts(
 ): { amount: number; currency: string }[] {
   return rows.map((r) => ({ amount: r.amount, currency: r.currency }));
 }
+
+export interface FixedIncomeCategory {
+  id: string;
+  name: string;
+  kind: string;
+  fixed: boolean;
+}
+
+/**
+ * Fixed income you have named but not scheduled.
+ *
+ * Marking a category "fixed" says money of this kind arrives whether you act or
+ * not. It does not say how much, or when — a category is a label, not a
+ * commitment, and inventing an amount and a date from one would put two numbers
+ * on screen that nobody supplied.
+ *
+ * So the page asks instead. This is what it asks about: the categories whose
+ * whole point is that they recur, with nothing recurring set up against them.
+ * "Salary, marked fixed, nothing scheduled" is a question worth putting in
+ * front of someone; a blank form is not.
+ *
+ * Settled and stopped rows do not count as scheduled — a salary that arrived
+ * once and was marked received is not a standing arrangement.
+ */
+export function unscheduledFixedIncome(
+  categories: readonly FixedIncomeCategory[],
+  expected: readonly (Expected & { categoryId: string | null })[]
+): FixedIncomeCategory[] {
+  const scheduled = new Set(
+    expected.filter(isPending).map((e) => e.categoryId).filter((id): id is string => id !== null)
+  );
+
+  return categories
+    .filter((c) => c.kind === "income" && c.fixed && !scheduled.has(c.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

@@ -7,6 +7,7 @@ import {
   pendingRows,
   arrivingWithin,
   allPendingAmounts,
+  unscheduledFixedIncome,
   type Expected,
 } from "../expected";
 
@@ -215,5 +216,58 @@ describe("the vocabulary", () => {
   it("rejects anything else", () => {
     expect(isArrival("daily")).toBe(false);
     expect(isArrival("")).toBe(false);
+  });
+});
+
+/**
+ * Marking a category "fixed" says money of this kind arrives whether you act or
+ * not. It says nothing about how much, or when — so the page asks rather than
+ * inventing two numbers nobody supplied.
+ */
+describe("fixed income named but not scheduled", () => {
+  const cats = [
+    { id: "sal", name: "Salary", kind: "income", fixed: true },
+    { id: "free", name: "Freelance", kind: "income", fixed: false },
+    { id: "subs", name: "Subscriptions", kind: "expense", fixed: true },
+  ];
+  const scheduled = (categoryId: string | null) => ({
+    ...item({ id: "x" }),
+    categoryId,
+  });
+
+  it("asks about a fixed income category with nothing set up", () => {
+    expect(unscheduledFixedIncome(cats, []).map((c) => c.name)).toEqual(["Salary"]);
+  });
+
+  it("stops asking once something is scheduled against it", () => {
+    expect(unscheduledFixedIncome(cats, [scheduled("sal")])).toEqual([]);
+  });
+
+  /** A variable income category is not a standing arrangement. */
+  it("never asks about a variable one", () => {
+    expect(unscheduledFixedIncome(cats, []).map((c) => c.id)).not.toContain("free");
+  });
+
+  /** A fixed *expense* is a subscription, and belongs to that feature. */
+  it("never asks about an expense, fixed or not", () => {
+    expect(unscheduledFixedIncome(cats, []).map((c) => c.id)).not.toContain("subs");
+  });
+
+  /**
+   * A salary that arrived once and was marked received is not a standing
+   * arrangement, so the question comes back.
+   */
+  it("asks again once the scheduled one has been settled", () => {
+    const settled = { ...scheduled("sal"), settledAt: new Date() };
+    expect(unscheduledFixedIncome(cats, [settled]).map((c) => c.name)).toEqual(["Salary"]);
+  });
+
+  it("asks again once it has been stopped", () => {
+    const stopped = { ...scheduled("sal"), active: false };
+    expect(unscheduledFixedIncome(cats, [stopped]).map((c) => c.name)).toEqual(["Salary"]);
+  });
+
+  it("is not confused by a scheduled row with no category", () => {
+    expect(unscheduledFixedIncome(cats, [scheduled(null)]).map((c) => c.name)).toEqual(["Salary"]);
   });
 });

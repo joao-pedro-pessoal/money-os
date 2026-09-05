@@ -12,6 +12,7 @@ import {
   arrivingWithin,
   allPendingAmounts,
   isArrival,
+  unscheduledFixedIncome,
   type Expected,
 } from "@/lib/accounting/expected";
 
@@ -34,7 +35,11 @@ export async function listExpected() {
   const accountName = new Map(accountRows.map((a) => [a.id, a.name]));
   const categoryName = new Map(categoryRows.map((c) => [c.id, c.name]));
 
-  const shaped: (Expected & { accountName: string | null; categoryName: string | null })[] =
+  const shaped: (Expected & {
+    accountName: string | null;
+    categoryName: string | null;
+    categoryId: string | null;
+  })[] =
     rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -46,6 +51,7 @@ export async function listExpected() {
       active: r.active,
       accountName: r.accountId ? accountName.get(r.accountId) ?? null : null,
       categoryName: r.categoryId ? categoryName.get(r.categoryId) ?? null : null,
+      categoryId: r.categoryId,
     }));
 
   const pending = pendingRows(shaped, new Date());
@@ -64,6 +70,14 @@ export async function listExpected() {
 
   return {
     rows: withRow,
+    /**
+     * Fixed income named but never scheduled.
+     *
+     * A category marked "fixed" says this kind of money arrives whether you act
+     * or not — and says nothing about how much or when. Rather than invent
+     * both, the page asks, with the one thing it does know filled in.
+     */
+    unscheduled: unscheduledFixedIncome(categoryRows, shaped),
     /** Dated inside the next 30 days. */
     within30: soon.total,
     /** Everything still coming, dated or not. */
