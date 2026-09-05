@@ -40,7 +40,7 @@ export default async function DashboardPage({
   const [{ currency: requestedCurrency }, favouriteCurrencies, savedDashboardCurrency] =
     await Promise.all([searchParams, getFavouriteCurrencies(), getDashboardCurrency()]);
   const accounts = await listAccountsWithState();
-  const recentTx = await listTransactions(8);
+  const recentTx = (await listTransactions(8)).rows;
   // Every money total on this page comes from one place — see
   // src/lib/accounting/networth.ts for why.
   const nw = await getNetWorth();

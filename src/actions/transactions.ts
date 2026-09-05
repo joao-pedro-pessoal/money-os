@@ -4,24 +4,76 @@ import { db } from "@/db/client";
 import { transactions, transfers, accounts, categories, interestPayments } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { toBase } from "@/lib/fx";
+import { getRates } from "./fx";
+import { getBaseCurrency } from "./settings";
+import type { TransactionRow } from "@/lib/money/transactionFilter";
 
+/**
+ * The transaction list, converted once so the table can add it up.
+ *
+ * `currency` was not selected at all before, so every amount rendered with the
+ * base currency's symbol whatever it was recorded in — the same mistake the
+ * positions table made with its prices. Both are carried now: the converted
+ * figure for totals and filters, and the original currency for the row.
+ *
+ * Converted here rather than in the component, because this is the layer with
+ * rates. A row with no rate is left out of the list and counted in
+ * `unconverted`, never silently valued at zero.
+ */
 export async function listTransactions(limit = 100) {
-  return db
-    .select({
-      id: transactions.id,
-      date: transactions.date,
-      amount: transactions.amount,
-      type: transactions.type,
-      description: transactions.description,
-      merchant: transactions.merchant,
-      accountName: accounts.name,
-      categoryName: categories.name,
-    })
-    .from(transactions)
-    .leftJoin(accounts, eq(transactions.accountId, accounts.id))
-    .leftJoin(categories, eq(transactions.categoryId, categories.id))
-    .orderBy(desc(transactions.date))
-    .limit(limit);
+  const [rows, rates, base] = await Promise.all([
+    db
+      .select({
+        id: transactions.id,
+        date: transactions.date,
+        amount: transactions.amount,
+        currency: transactions.currency,
+        type: transactions.type,
+        description: transactions.description,
+        merchant: transactions.merchant,
+        accountName: accounts.name,
+        categoryName: categories.name,
+      })
+      .from(transactions)
+      .leftJoin(accounts, eq(transactions.accountId, accounts.id))
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
+      .orderBy(desc(transactions.date))
+      .limit(limit),
+    getRates(),
+    getBaseCurrency(),
+  ]);
+
+  const converted: TransactionRow[] = [];
+  const unconverted: { amount: number; currency: string }[] = [];
+
+  for (const row of rows) {
+    const amount = toBase(Number(row.amount), row.currency, rates, base);
+    if (amount === null) {
+      unconverted.push({ amount: Number(row.amount), currency: row.currency });
+      continue;
+    }
+    converted.push({
+      id: row.id,
+      date: new Date(row.date).toISOString(),
+      type: row.type,
+      amount,
+      currency: row.currency,
+      accountName: row.accountName,
+      categoryName: row.categoryName,
+      description: row.description,
+      merchant: row.merchant,
+    });
+  }
+
+  return {
+    rows: converted,
+    /** Left out for want of a rate, and said rather than counted as nothing. */
+    unconverted,
+    /** True while any row needed converting, so the table can say "approximate". */
+    approximate: rows.some((r) => r.currency !== base),
+    baseCurrency: base,
+  };
 }
 
 /** Income or expense transaction. Also adjusts the account balance. */
@@ -89,14 +141,27 @@ export async function createTransfer(formData: FormData) {
 
   if (fromAccountId === toAccountId) throw new Error("Cannot transfer to the same account");
 
+  /**
+   * Each leg in its own account's currency.
+   *
+   * Both rows were stamped with the column's EUR default, so a transfer out of
+   * a dollar account was recorded as euros leaving it. The amount typed is in
+   * the currency of the account it is typed against, which is the only reading
+   * the form supports — and the two legs of a cross-currency transfer are
+   * genuinely different amounts, which is exactly why each needs its own label.
+   */
+  const [from] = await db.select().from(accounts).where(eq(accounts.id, fromAccountId));
+  const [to] = await db.select().from(accounts).where(eq(accounts.id, toAccountId));
+  if (!from || !to) throw new Error("Account not found");
+
   const [fromTx] = await db
     .insert(transactions)
-    .values({ accountId: fromAccountId, type: "transfer", amount: String(-amount), date, description, source: "manual" })
+    .values({ accountId: fromAccountId, type: "transfer", amount: String(-amount), currency: from.currency, date, description, source: "manual" })
     .returning();
 
   const [toTx] = await db
     .insert(transactions)
-    .values({ accountId: toAccountId, type: "transfer", amount: String(amount), date, description, source: "manual" })
+    .values({ accountId: toAccountId, type: "transfer", amount: String(amount), currency: to.currency, date, description, source: "manual" })
     .returning();
 
   await db.insert(transfers).values({ fromTransactionId: fromTx.id, toTransactionId: toTx.id });
@@ -127,10 +192,14 @@ export async function createInterestPayment(formData: FormData) {
 
   const [interestCategory] = await db.select().from(categories).where(eq(categories.name, "Interest"));
 
+  /** In the account's currency, not the column's default. */
+  const [earning] = await db.select().from(accounts).where(eq(accounts.id, accountId));
+
   await db.insert(transactions).values({
     accountId,
     type: "income",
     amount: String(amount),
+    currency: earning?.currency ?? "EUR",
     date,
     categoryId: interestCategory?.id ?? null,
     description: "Interest",

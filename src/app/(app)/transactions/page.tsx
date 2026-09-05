@@ -1,12 +1,11 @@
 import { listTransactions, createTransaction, createTransfer, listCategories, deleteTransaction } from "@/actions/transactions";
 import { listAccountsWithState } from "@/actions/accounts";
-import { Money } from "@/components/PrivacyContext";
-import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import TransactionList from "@/components/TransactionList";
 import Link from "next/link";
 import { getDefaultAccountId } from "@/actions/settings";
 
 export default async function TransactionsPage() {
-  const [txs, accounts, categories, defaultAccountId] = await Promise.all([
+  const [txData, accounts, categories, defaultAccountId] = await Promise.all([
     listTransactions(200),
     listAccountsWithState(),
     listCategories(),
@@ -98,52 +97,13 @@ export default async function TransactionsPage() {
         </div>
       </div>
 
-      <div className="card p-4">
-        <div className="text-sm font-medium mb-3">Transactions</div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Account</th>
-              <th>Category</th>
-              <th>Description</th>
-              <th>Amount</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {txs.map((t) => (
-              <tr key={t.id}>
-                <td>{new Date(t.date).toLocaleDateString("pt-PT")}</td>
-                <td>{t.accountName}</td>
-                <td>{t.categoryName ?? t.type}</td>
-                <td>{t.description || t.merchant}</td>
-                <td>
-                  <Money value={Number(t.amount)} />
-                </td>
-                <td className="whitespace-nowrap">
-                  {t.type !== "transfer" && (
-                    <Link href={`/transactions/${t.id}/edit`} className="text-xs text-[var(--accent)] hover:underline mr-3">
-                      Edit
-                    </Link>
-                  )}
-                  <form action={deleteTransaction} className="inline">
-                    <input type="hidden" name="id" value={t.id} />
-                    <ConfirmSubmitButton
-                      label="Delete"
-                      confirmMessage={
-                        t.type === "transfer"
-                          ? "Delete this transfer? Both legs will be removed and both account balances reversed."
-                          : "Delete this transaction? The account balance will be adjusted back."
-                      }
-                    />
-                  </form>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <TransactionList
+        rows={txData.rows}
+        currency={txData.baseCurrency}
+        approximate={txData.approximate}
+        unconverted={txData.unconverted}
+        deleteAction={deleteTransaction}
+      />
     </div>
   );
 }
