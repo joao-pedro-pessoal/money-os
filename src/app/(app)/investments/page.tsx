@@ -13,6 +13,9 @@ import { Money } from "@/components/PrivacyContext";
 import { fmt } from "@/lib/format";
 import TimeSeriesCard from "@/components/TimeSeriesCard";
 import Section from "@/components/Section";
+import AutoSync from "@/components/AutoSync";
+import { autoRefreshPricesAction, lastQuoteRefreshAt } from "@/actions/quotes";
+import { REPRICE_AFTER_MINUTES } from "@/lib/quotes/staleness";
 import HoldingFormFields from "@/components/HoldingFormFields";
 import Link from "next/link";
 import StatementHistory from "@/components/StatementHistory";
@@ -42,11 +45,13 @@ export default async function InvestmentsPage() {
     valueSeries,
     accountList,
     playlistList,
+    lastPricedAt,
   ] = await Promise.all([
     listHoldingsWithPnL(),
     getPortfolioValueOverTime(),
     listAccountsForHoldings(),
     listPlaylists(),
+    lastQuoteRefreshAt(),
   ]);
   const contribution = await getPortfolioContribution();
   // Manual holdings, open trades and coin balances in one shape, so one table
@@ -98,6 +103,23 @@ export default async function InvestmentsPage() {
             Everything you hold, synced and manual, in one place. Account
             balances hold your idle cash; positions add on top.
           </p>
+          {/*
+            Keeps quoted prices current while this page is open.
+
+            The scheduled route does the same, but it lives in the
+            docker-compose scheduler and needs SYNC_SECRET — someone running
+            `npm run dev` has neither, which is how eleven prices sat fifteen
+            days old while the machinery to refresh them worked perfectly. This
+            needs nothing configured and stops when the tab is not visible.
+          */}
+          <div className="mt-1">
+            <AutoSync
+              syncAction={autoRefreshPricesAction}
+              lastSyncAt={lastPricedAt}
+              staleMinutes={REPRICE_AFTER_MINUTES}
+              intervalMinutes={REPRICE_AFTER_MINUTES}
+            />
+          </div>
         </div>
         <div className="flex gap-2">
           <Link href="/investments/playlists" className="btn whitespace-nowrap">

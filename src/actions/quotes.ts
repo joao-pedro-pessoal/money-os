@@ -17,7 +17,7 @@ import {
   candidateSymbols,
   type FigiListing,
 } from "@/lib/quotes/openfigi";
-import { needsRepricing } from "@/lib/quotes/staleness";
+import { needsRepricing, REPRICE_AFTER_MINUTES } from "@/lib/quotes/staleness";
 import {
   yahooUrl,
   parseYahooChart,
@@ -853,4 +853,31 @@ export async function forgetFoundPrices() {
   revalidatePath("/investments");
   revalidatePath("/positions");
   return { cleared: automatic.length };
+}
+
+/**
+ * The price refresh `AutoSync` calls while the app is open.
+ *
+ * A form action may not return a value, and the component only needs to know
+ * that it ran — so the counts are dropped here rather than threaded through a
+ * client component that has nothing to do with them.
+ *
+ * This exists because the scheduled route is not the only way prices get
+ * updated, and on most setups it is not the way at all: it lives in the
+ * docker-compose scheduler and needs `SYNC_SECRET`. Someone running
+ * `npm run dev` has neither, which is how eleven prices sat fifteen days old
+ * while the machinery to refresh them worked perfectly.
+ */
+export async function autoRefreshPricesAction(): Promise<void> {
+  "use server";
+  await refreshQuotedPrices({ olderThanMinutes: REPRICE_AFTER_MINUTES });
+}
+
+/** When any quoted price was last fetched, for `AutoSync` to judge staleness. */
+export async function lastQuoteRefreshAt(): Promise<string | null> {
+  const rows = await db.select().from(holdings);
+  const dates = rows
+    .filter((h) => h.quoteSymbol !== null && h.lastPriceUpdate !== null)
+    .map((h) => h.lastPriceUpdate!.getTime());
+  return dates.length === 0 ? null : new Date(Math.max(...dates)).toISOString();
 }
