@@ -1,7 +1,7 @@
 # Money OS — o que faz e o que falta
 
-Estado a 2 de setembro de 2026. 1966 testes em 103 ficheiros, 38 migrations,
-41 tabelas, 93 módulos de lógica, 30 módulos de acesso a dados, 33 páginas.
+Estado a 5 de setembro de 2026. 2202 testes em 119 ficheiros, 40 migrations,
+43 tabelas, 105 módulos de lógica, 32 módulos de acesso a dados, 34 páginas.
 
 Este documento é para ti, não para mostrar a ninguém. Inclui as limitações e as
 coisas que estão mal, porque a lista do que falta só é útil se for honesta.
@@ -939,6 +939,82 @@ foi criada antes de a plataforma dizer em que moeda reporta.
 
 ---
 
+## Construído entre 2 e 5 de setembro
+
+Um bloco à parte porque foi muito de uma vez, e porque quase tudo aqui nasceu
+de olhares para um ecrã e dizer *"isto está mal"* — não de testes, que
+estiveram verdes o tempo todo.
+
+**MEXC, spot e futuros.** A oitava plataforma, e a primeira em que o dinheiro
+estava nos futuros: a carteira spot tinha 2,4 nano-USDT e a app mostrava 0,00
+com uma ligação verde ao lado. Os futuros são outro host, outra assinatura e
+outro envelope — e quatro factos que produzem números plausíveis quando
+assumidos: `equity` já contém o `unrealized`, os volumes são contratos e não
+moedas (BTC_USDT tem contractSize 0,0001), há quatro moedas de liquidação, e o
+`realised` numa posição aberta é o resultado flutuante. As posições fechadas
+viram histórico de trades. Detalhes no CLAUDE.md.
+
+**Dinheiro a caminho.** Salário, reembolso, alguém que te deve — pontual ou
+recorrente, a diferença é só a cadência. **Nada disto entra no património**, e
+há um teste que falha se a tabela for lida por qualquer árbitro de um número
+real. O campo da data segue a frequência: dia do mês para mensal, dia da semana
+para semanal. Uma categoria de rendimento marcada como fixa sem nada agendado
+é apontada na página, com o formulário pré-preenchido — porque uma categoria diz
+*o quê*, não *quanto* nem *quando*.
+
+**Conta por omissão.** Onde uma transação nova começa, guardada no
+`app_settings`. Criada a conta "Dinheiro vivo" como padrão: é a única que
+connector nenhum preenche, e escolher de uma lista de sete todas as vezes é
+atrito no ecrã onde o atrito decide se a app é usada.
+
+**Preço de entrada editável.** Em posições abertas e em saldos spot, guardado no
+`position_meta` para sobreviver às sincronizações. A regra: **o número do venue
+ganha a menos que a aritmética se prove contra ele primeiro**. Oito das dez
+posições reproduzem ao cêntimo; IGLA e MVOL não, porque o P&L delas inclui o
+movimento cambial desde a abertura — essas aceitam a entrada nova e mantêm o
+resultado da plataforma, e o ecrã diz de quem é o número.
+
+**Saldos spot agrupados por moeda**, com as contas por baixo. O total só é
+afirmado numa moeda que todas as partes partilhem.
+
+**Filtros nas transações**, com entrada e saída distinguidas por cor e sinal, e
+totais separados — In, Out e Net. Um mês com 3 000 a entrar e 2 900 a sair não
+é o mesmo que um com 100 a entrar e nada a sair.
+
+**Histórico de trades só com posições fechadas.** Nove instrumentos só
+comprados saíram: são holdings, não histórico. As conversões cambiais ficam,
+porque a página já as explica separadamente e removê-las apagaria a explicação.
+E o agrupamento por tipo de trade usa a classificação da posição, que sobrevive
+ao fecho — 21 das 56 trades fechadas já vêm classificadas.
+
+### Erros corrigidos, e o que tinham em comum
+
+Quase todos eram **um zero a fazer-se passar por medição**, ou **um símbolo de
+moeda afirmado sem base**:
+
+- **Free cash tinha quatro definições**, três erradas. A página de buckets
+  oferecia 736,28 € para atribuir a objetivos quando só 440,69 € estavam
+  livres.
+- **Preços de posições mostrados em euros** quando estavam em dólares — em
+  todas as posições da Hyperliquid, IBKR e MEXC, e em duas do Trading 212.
+- **A coluna Realized das playlists** só conseguia mostrar zero: lia o
+  `realizedPnl` do holding, que só é escrito por uma venda feita à mão.
+- **`?? 0` no realizado por instrumento**, que punha `0,00` ao lado de um
+  vermelho e se lia como uma perda fechada.
+- **Transações sem moeda** — `createTransfer` e `createInterestPayment`
+  carimbavam tudo a EUR; 100 EUR foram somados a uma conta USD sem conversão.
+- **Uma cobrança no dia 31** cortava para 28 de fevereiro e ficava presa no 28
+  para sempre. Isto afetava as subscrições, não a funcionalidade nova.
+- **Os preços nunca eram atualizados sozinhos.** Onze cotações com quinze dias,
+  passado o `MAX_PRICE_AGE_DAYS` da própria app. A busca existia; faltava o
+  agendamento, e o agendador vive no docker-compose que não estava a correr.
+- **Um número de conta real da IBKR** estava num teste, num repositório
+  público. Removido, com uma guarda que falha se voltar.
+
+**Filtros deixaram de saltar para o topo** da página, e o formulário de
+agrupamento deixou de descartar parâmetros que não estavam nos campos
+escondidos.
+
 # PARTE 2 — O que falta
 
 Ordenado por quanto acho que te faria falta, não por dificuldade.
@@ -1166,3 +1242,141 @@ como nunca criada e tinha 107 linhas reais lá dentro. O `drizzle-kit migrate`
 recusou-se com `42P07` em vez de fazer alguma coisa destrutiva, e foi só por
 isso que se apanhou antes dos dados. Confirma sempre contra a base de dados, não
 contra o histórico de ficheiros.
+
+---
+
+# PARTE 4 — Publicar
+
+Escrito a 5 de setembro de 2026, depois de uma conversa longa sobre lojas,
+licenças e agregadores. Está aqui para não voltarmos a discutir do zero, e
+sobretudo para não repetirmos as conclusões erradas a que se chega quando se
+pergunta a quem não abriu o código.
+
+## A pergunta que decide tudo, e ainda não tem resposta
+
+**Ninguém além do autor alguma vez usou esta app.**
+
+Todos os caminhos abaixo custam semanas ou meses, e todos assumem que alguém a
+quer. Isso não está demonstrado. O passo mais barato que produz informação a
+sério é pôr cinco pessoas com o mesmo problema — várias corretoras, cripto,
+multi-moeda — a chegar sozinhas a um ecrã com os seus números.
+
+Onde travarem é o que há a construir. Se ninguém perguntar *"tens uma versão
+que não precise de instalar?"*, isso também é uma resposta, e poupa meses.
+
+## Já é publicável hoje, num sentido
+
+O repositório é público e AGPL. Qualquer pessoa faz `git clone`, preenche
+quatro segredos e corre `docker compose up -d --build` — migrations e seed
+correm no arranque. Funcionalidades todas, connectors incluídos, na máquina
+dela. **Zero responsabilidade legal de quem publicou.**
+
+Falta divulgação, não código: descrição e *topics* no GitHub, capturas de ecrã
+no README, e mostrá-lo onde essas pessoas estão.
+
+## Os três caminhos
+
+**1. Local + CSV, sem credenciais.** Responsabilidade mínima, lojas fáceis, e
+perde a sincronização automática — que é a parte mais trabalhosa e mais
+distintiva do que existe.
+
+**2. Servidor com sincronização (o que existe).** Guarda chaves de API de
+contas reais. Exige empresa, segurança a sério e seguro. Maior valor, e o risco
+é assimétrico: o lado bom é uma subscrição, o lado mau é perder credenciais de
+contas de investimento de outras pessoas.
+
+**3. Open source, cada um aloja a sua.** Zero responsabilidade, funcionalidades
+todas, sem receita direta. É o estado atual.
+
+Um **meio-termo** — grátis local, Open Banking no premium — foi considerado e é
+o pior dos dois mundos: tem a responsabilidade legal do caminho 2 **com** as
+funcionalidades cortadas do caminho 1. E os dados de Open Banking são mais
+sensíveis do que os saldos de exchange, não menos: são o extrato bancário
+completo de uma pessoa.
+
+## O plano escolhido: lojas sem licenças
+
+Posições à mão, preços públicos, sem credenciais guardadas. É bom porque **sem
+chaves de API o pior caso de uma falha deixa de ser catastrófico**: alguém vê
+que tens 12 000 € em ETFs, em vez de ter acesso à tua conta da Binance.
+
+Por ordem, e o caminho crítico são os dois primeiros:
+
+**1. Interruptor dos connectors** — meio dia. Uma variável de ambiente que
+esconde as ligações, para a mesma base de código servir a instância completa e
+a versão das lojas sem fork. É o que permite usar a app durante uma semana como
+um utilizador das lojas a teria, e responder à pergunta que decide o resto:
+*ainda vale a pena sem sincronização?*
+
+**2. Preços de cripto sem credenciais** — um dia. A CoinGecko tem API pública
+com termos. Sem isto, quem puser 0,5 BTC à mão não o vê valorizado: as fontes
+atuais cobrem ações e ETFs bem, cripto por acaso.
+
+**3. Multi-utilizador** — semanas, e o trabalho mais perigoso que este código
+pode receber. 43 tabelas sem dono, 229 consultas sem filtro; um filtro esquecido
+mostra as finanças de uma pessoa a outra. Ver também a Parte 2, onde já estava
+listado.
+
+**4. Autenticação a sério** — registo, recuperação, sessões revogáveis, limite
+de tentativas. Hoje é uma palavra-passe com tentativas infinitas e um cookie de
+30 dias que não se consegue revogar.
+
+**5. Site com política de privacidade** — pequeno, e **requisito de submissão**
+nas duas lojas. Sem URL de política de privacidade não se submete.
+
+**6. Invólucros** — Play aceita a PWA via TWA, caminho curto. A Apple exige
+Capacitor e rejeita o que pareça só um site.
+
+**7. Contas de programador** — Google paga-se uma vez, Apple é anual, e a Apple
+exige entidade legal para várias categorias financeiras.
+
+Já feito: a PWA está pronta para loja (manifest completo, ícones nos três
+tamanhos incluindo maskable, atalhos), os preços automáticos funcionam sem
+credenciais, e o README leva um estranho do clone à app a correr.
+
+## Alternativas avaliadas e postas de lado
+
+**TradingView como fonte de preços.** Não serve, e não é por esforço: não tem
+API de preços pública. Os widgets desenham um gráfico dentro de um iframe e o
+número **não se consegue ler** para dentro da app; a Charting Library é só o
+desenho e exige que sejas tu a fornecer os dados. Serve como decoração ao lado
+do teu número, nunca como fonte dele — e nesse caso tem de dizer de onde vem o
+preço dele, ou os dois vão discordar.
+
+**Agregadores (Tink, TrueLayer, Yapily, Salt Edge).** Alugam-te a licença AISP
+que não tens. Resolvem bancos e **não** corretoras nem cripto, que é onde está
+a maior parte do dinheiro. Metem um custo por utilizador por mês — um piso nas
+contas antes de haver clientes — e fazem os dados bancários atravessar um
+terceiro, o que é incompatível com prometer privacidade. Boa decisão quando já
+há utilizadores a pagar e a entrada de dados é o que os faz desistir; má
+decisão como forma de os conseguir.
+
+**Duas apps, iniciante e avançada.** Duplica exatamente aquilo em que este
+projeto falha mais — o mesmo número calculado em dois sítios, treze vezes até
+hoje — e "iniciante" e "avançado" não são pessoas: são estados da mesma pessoa
+em assuntos diferentes. O que varia é quanto já foi configurado, e a app já
+revela conforme os dados. O problema real são 17 entradas de menu com o mesmo
+peso, e a solução é esconder o que não tem dados, não uma segunda base de
+código.
+
+## Como se ganha dinheiro com isto
+
+Sem ilusões, e nenhuma destas dispensa a validação acima.
+
+**Versão alojada** é a única com receita a sério: corres tu para quem não quer
+instalar, o código continua aberto, vendes conveniência. Custa todo o trabalho
+dos pontos 3 e 4.
+
+**Licenciamento duplo** é real — a AGPL obriga quem ofereça isto como serviço a
+abrir as alterações, e vende-se licença comercial a quem não queira. Depende de
+aparecer alguém com interesse comercial.
+
+**Patrocínios** dão dezenas de euros por mês com tração real. Não é rendimento.
+
+**Instalação e suporte pagos** são receita imediata sem guardares dados de
+ninguém. Mercado pequeno.
+
+E uma coisa desconfortável: **a melhor característica desta app é difícil de
+vender.** "Recusa-se a dizer um número que não consegue justificar" é um
+argumento de qualidade, não uma funcionalidade atrás de um paywall. O que se
+cobra é conveniência — alojamento, sincronização, mais integrações.
