@@ -1,0 +1,1 @@
+ALTER TABLE "broker_events" ADD COLUMN "isin" text;

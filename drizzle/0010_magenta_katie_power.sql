@@ -1,0 +1,1 @@
+ALTER TABLE "platform_balances" ADD COLUMN "counts_in_portfolio" boolean DEFAULT true NOT NULL;

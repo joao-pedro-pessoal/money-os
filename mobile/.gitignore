@@ -1,0 +1,11 @@
+node_modules/
+.expo/
+dist/
+android/
+ios/
+*.tsbuildinfo
+*.moneyos
+*.db
+*.db-*
+.env*
+.checks/

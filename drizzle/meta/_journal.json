@@ -1,0 +1,300 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786117932684,
+      "tag": "0000_chunky_newton_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786123382438,
+      "tag": "0001_eminent_kinsey_walden",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786124866571,
+      "tag": "0002_glorious_galactus",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786125901757,
+      "tag": "0003_boring_krista_starr",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786127786397,
+      "tag": "0004_light_bastion",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786128951187,
+      "tag": "0005_swift_marauders",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786130152948,
+      "tag": "0006_typical_triton",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786131691859,
+      "tag": "0007_dashing_felicia_hardy",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786132537976,
+      "tag": "0008_cultured_lockheed",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786141763654,
+      "tag": "0009_absent_master_chief",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786145824489,
+      "tag": "0010_magenta_katie_power",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786201181811,
+      "tag": "0011_brief_zaran",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786718999218,
+      "tag": "0012_whole_firelord",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786722981576,
+      "tag": "0013_abandoned_war_machine",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786723892865,
+      "tag": "0014_powerful_juggernaut",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1786727667673,
+      "tag": "0015_woozy_big_bertha",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1786728702534,
+      "tag": "0016_custom_budgets",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786728727263,
+      "tag": "0017_drop_old_budget_shape",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786729978687,
+      "tag": "0018_drop_bucket_plan",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786731380322,
+      "tag": "0019_position_asset_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1786798487780,
+      "tag": "0020_position_apr",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1786809817395,
+      "tag": "0021_knowledge_library",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1786811804902,
+      "tag": "0022_bible_editorial_position",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1786812468289,
+      "tag": "0023_library_favourites",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786822867861,
+      "tag": "0024_course_video_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786912960927,
+      "tag": "0025_dividends_and_realized_pnl",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786917100077,
+      "tag": "0026_broker_statement_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1786969676789,
+      "tag": "0027_portfolio_cash_share",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786977719173,
+      "tag": "0028_connector_reporting_currency",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786981431241,
+      "tag": "0029_wandering_dexter_bennett",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1786984080257,
+      "tag": "0030_normal_madame_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1787252203341,
+      "tag": "0031_harsh_namor",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787398888088,
+      "tag": "0032_overconfident_chameleon",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1787405729905,
+      "tag": "0033_lowly_red_ghost",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1788085011189,
+      "tag": "0034_omniscient_warstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1788188887660,
+      "tag": "0035_confused_forge",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1788339144402,
+      "tag": "0036_broad_drax",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1788427477973,
+      "tag": "0037_flowery_sentinels",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1788605317160,
+      "tag": "0038_kind_moondragon",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1788624558333,
+      "tag": "0039_wild_maria_hill",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1789049962772,
+      "tag": "0040_sticky_wendell_vaughn",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1789053338420,
+      "tag": "0041_burly_havok",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,498 @@
+@import "tailwindcss";
+
+:root,
+[data-accent="gold"][data-mode="dark"] {
+  --background: #141210;
+  --surface: #1c1912;
+  --surface-2: #201c14;
+  --border: #2a241a;
+  --foreground: #f2ead9;
+  --muted: #8a8375;
+  --accent: #c9a86a;
+  --accent-contrast: #241d0f;
+  --green: #34d399;
+  --red: #f87171;
+  --amber: #fbbf24;
+  /* Used for hover borders. Defined here so every theme has one rather than
+     only the two that declare it explicitly. */
+  --border-strong: #3f3729;
+  --font-heading: Georgia, "Times New Roman", serif;
+  /* Categorical series: donut slices and anything else that needs to tell
+     one group from another rather than say good or bad. A token used
+     anywhere must exist in every theme, which is what --border-strong
+     taught this file the hard way. */
+  --chart-1: #7aa2f7;
+  --chart-2: #bb9af7;
+  --chart-3: #7dcfff;
+  --chart-4: #e0af68;
+}
+
+/* --border-strong is a divider that has to read as deliberate: chart baselines,
+   the Explain block, a card's hover edge. It existed in three of the eight
+   themes, so in the other five those borders fell back to currentColor and a
+   reference line drew in the text colour. Every theme defines it now — a token
+   used anywhere must exist everywhere. */
+[data-accent="gold"][data-mode="light"] {
+  --background: #faf6ee;
+  --surface: #ffffff;
+  --surface-2: #f2ead9;
+  --border: #e6ddc8;
+  --border-strong: #cdbc9b;
+  --foreground: #2b2416;
+  --muted: #8a8067;
+  --accent: #c9862a;
+  --accent-contrast: #ffffff;
+  --green: #15803d;
+  --red: #b91c1c;
+  --amber: #92400e;
+  --font-heading: Georgia, "Times New Roman", serif;
+  /* Categorical series: donut slices and anything else that needs to tell
+     one group from another rather than say good or bad. A token used
+     anywhere must exist in every theme, which is what --border-strong
+     taught this file the hard way. */
+  --chart-1: #3b6fd4;
+  --chart-2: #7c53c9;
+  --chart-3: #2b7f9e;
+  --chart-4: #a8761f;
+}
+
+[data-accent="emerald"][data-mode="dark"] {
+  --background: #0e1613;
+  --surface: #121e19;
+  --surface-2: #16241d;
+  --border: #1c2a24;
+  --border-strong: #2d3f37;
+  --foreground: #e6f2ec;
+  --muted: #7c9186;
+  --accent: #1d9e75;
+  --accent-contrast: #04342c;
+  --green: #34d399;
+  --red: #f87171;
+  --amber: #fbbf24;
+  --font-heading: Georgia, "Times New Roman", serif;
+  /* Categorical series: donut slices and anything else that needs to tell
+     one group from another rather than say good or bad. A token used
+     anywhere must exist in every theme, which is what --border-strong
+     taught this file the hard way. */
+  --chart-1: #7aa2f7;
+  --chart-2: #bb9af7;
+  --chart-3: #7dcfff;
+  --chart-4: #e0af68;
+}
+
+[data-accent="emerald"][data-mode="light"] {
+  --background: #f3faf6;
+  --surface: #ffffff;
+  --surface-2: #e3f3ea;
+  --border: #cfe6d9;
+  --border-strong: #a9ccb8;
+  --foreground: #0f2620;
+  --muted: #5f7a6e;
+  --accent: #0f6e56;
+  --accent-contrast: #ffffff;
+  --green: #15803d;
+  --red: #b91c1c;
+  --amber: #92400e;
+  --font-heading: Georgia, "Times New Roman", serif;
+  /* Categorical series: donut slices and anything else that needs to tell
+     one group from another rather than say good or bad. A token used
+     anywhere must exist in every theme, which is what --border-strong
+     taught this file the hard way. */
+  --chart-1: #3b6fd4;
+  --chart-2: #7c53c9;
+  --chart-3: #2b7f9e;
+  --chart-4: #a8761f;
+}
+
+[data-accent="indigo"][data-mode="dark"] {
+  --background: #0b0d12;
+  --surface: #12151b;
+  --surface-2: #171b22;
+  --border: #23272f;
+  --border-strong: #383d48;
+  --foreground: #e8e9ec;
+  --muted: #8a8f98;
+  --accent: #6366f1;
+  --accent-contrast: #ffffff;
+  --green: #34d399;
+  --red: #f87171;
+  --amber: #fbbf24;
+  --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Categorical series: donut slices and anything else that needs to tell
+     one group from another rather than say good or bad. A token used
+     anywhere must exist in every theme, which is what --border-strong
+     taught this file the hard way. */
+  --chart-1: #7aa2f7;
+  --chart-2: #bb9af7;
+  --chart-3: #7dcfff;
+  --chart-4: #e0af68;
+}
+
+[data-accent="indigo"][data-mode="light"] {
+  --background: #f7f7fb;
+  --surface: #ffffff;
+  --surface-2: #ececf7;
+  --border: #e1e3ec;
+  --border-strong: #c3c7d8;
+  --foreground: #14151a;
+  --muted: #6b6f7d;
+  --accent: #4f46e5;
+  --accent-contrast: #ffffff;
+  --green: #15803d;
+  --red: #b91c1c;
+  --amber: #92400e;
+  --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Categorical series: donut slices and anything else that needs to tell
+     one group from another rather than say good or bad. A token used
+     anywhere must exist in every theme, which is what --border-strong
+     taught this file the hard way. */
+  --chart-1: #3b6fd4;
+  --chart-2: #7c53c9;
+  --chart-3: #2b7f9e;
+  --chart-4: #a8761f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+h1 {
+  font-family: var(--font-heading);
+}
+
+/*
+ * Installed on a phone, the app runs without browser chrome and the top bar
+ * would otherwise sit under the notch and the bottom under the home indicator.
+ * `viewport-fit=cover` in the layout is what makes these variables resolve to
+ * anything; in a browser tab they are all zero and this changes nothing.
+ */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.btn {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  width: 100%;
+}
+
+/*
+ * `.input` sets width:100%, which beats Tailwind's `w-20` — same specificity,
+ * and this file wins the cascade. A narrow input written as `class="input w-20"`
+ * stretched to fill its row and squeezed the label beside it to nothing.
+ *
+ * So narrow inputs use this instead of a width utility. An attribute selector
+ * like [class*="w-"] would have been tidier and also wrong: `overflow-x-auto`
+ * contains "w-".
+ */
+.input-narrow {
+  width: auto;
+  min-width: 0;
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+/* A hairline between columns. Enough to follow a row across, not enough to
+   turn the table into a grid. */
+table.data-table th:not(:last-child),
+table.data-table td:not(:last-child) {
+  border-right: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+table.data-table th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* A numeric heading belongs over its own numbers.
+   Every table here already asks for this with `text-right` on the header cell,
+   and none of them got it: `@import "tailwindcss"` puts utilities in a layer,
+   the rules in this file are unlayered, and unlayered styles win over layered
+   ones whatever their specificity. So "Value" sat at the left of a column of
+   right-aligned figures, in every data table in the app, and the class saying
+   otherwise looked like it was working. */
+table.data-table th.text-right {
+  text-align: right;
+}
+
+table.data-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.icon-btn:hover {
+  color: var(--foreground);
+  border-color: var(--muted);
+}
+
+.explain-popover {
+  min-width: 16rem;
+}
+
+.quick-entry {
+  margin: auto;
+  width: min(28rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  color: var(--foreground);
+  background: var(--surface);
+}
+.quick-entry::backdrop { background: rgb(0 0 0 / 65%); }
+.quick-entry .input { font-size: 16px; min-height: 44px; min-width: 0; }
+.quick-entry .btn, .quick-entry summary { min-height: 44px; }
+.quick-entry button:disabled { opacity: 0.6; cursor: wait; }
+.quick-kind { min-height: 44px; border: 1px solid var(--border); border-radius: 8px; }
+.quick-kind[aria-pressed="true"] { background: var(--accent); color: var(--accent-contrast); }
+
+/* Keep semantic tables intact and scroll only their data, including on keyboard. */
+.table-scroll {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.table-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+main .grid > * { min-width: 0; }
+
+@media (max-width: 639px) {
+  /* Paired amount/price and account/currency fields need their own rows. */
+  main form .flex:has(> .input ~ .input) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 767px) {
+  main .input {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  main .btn, main .icon-btn, main summary {
+    min-height: 44px;
+  }
+  main button.badge, main a.badge {
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+  }
+  main .icon-btn { min-width: 44px; }
+  main .btn { white-space: normal; }
+  main h1, main h2, main p { overflow-wrap: anywhere; }
+  .page-tabs { max-width: 100%; }
+  .page-tabs a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .table-scroll table { min-width: max-content; }
+  .table-scroll td { max-width: 24rem; }
+}
+
+/* These unlayered rules override icon-btn only in the mobile shell. */
+@media (max-width: 767px) {
+  .explain-popover {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* A tooltip can retain its old position during a responsive resize. Keep
+     that transient position from widening the whole document. */
+  .dashboard-chart {
+    overflow: clip;
+  }
+
+  .app-topbar .icon-btn,
+  .app-nav .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .app-nav {
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+    overscroll-behavior: contain;
+  }
+
+  .app-nav a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+
+/**
+ * Monochrome.
+ *
+ * Predominantly black in the dark mode and predominantly white in the light
+ * one, with no hue anywhere in the surfaces — the other themes tint their
+ * greys, which is what stops them reading as truly black or white.
+ *
+ * Green, red and amber survive as greys here rather than being dropped. A
+ * profit and a loss must stay distinguishable, so they carry different
+ * *lightness* instead of different hue: on a black background a gain is near
+ * white and a loss is mid grey, which still reads at a glance and survives
+ * being printed or seen by someone who can't separate red from green.
+ */
+[data-accent="mono"][data-mode="dark"] {
+  --background: #000000;
+  --surface: #0b0b0b;
+  --surface-2: #141414;
+  --border: #262626;
+  --border-strong: #3d3d3d;
+  --foreground: #f5f5f5;
+  --muted: #8a8a8a;
+  --accent: #ffffff;
+  --accent-contrast: #000000;
+  /* Lightness, not hue: a gain is brighter than the text, a loss dimmer. */
+  --green: #ffffff;
+  --red: #9e9e9e;
+  --amber: #c7c7c7;
+  --font-heading: Georgia, "Times New Roman", serif;
+  /* Categorical series: donut slices and anything else that needs to tell
+     one group from another rather than say good or bad. A token used
+     anywhere must exist in every theme, which is what --border-strong
+     taught this file the hard way. */
+  --chart-1: #d4d4d4;
+  --chart-2: #a3a3a3;
+  --chart-3: #7a7a7a;
+  --chart-4: #565656;
+}
+
+[data-accent="mono"][data-mode="light"] {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f4f4f4;
+  --border: #e0e0e0;
+  --border-strong: #bdbdbd;
+  --foreground: #0a0a0a;
+  --muted: #6b6b6b;
+  --accent: #0a0a0a;
+  --accent-contrast: #ffffff;
+  /* Inverted for a white page: the gain is the darkest thing on it. */
+  --green: #000000;
+  --red: #757575;
+  --amber: #4a4a4a;
+  --font-heading: Georgia, "Times New Roman", serif;
+  /* Categorical series: donut slices and anything else that needs to tell
+     one group from another rather than say good or bad. A token used
+     anywhere must exist in every theme, which is what --border-strong
+     taught this file the hard way. */
+  --chart-1: #1f1f1f;
+  --chart-2: #4f4f4f;
+  --chart-3: #7a7a7a;
+  --chart-4: #a8a8a8;
+}
+
+/**
+ * Monochrome, with the colour that carries meaning let back in.
+ *
+ * The monochrome themes above drop hue everywhere, including from a gain and a
+ * loss — those separate by lightness instead, which survives being printed and
+ * read by someone who cannot tell red from green. That is the right default and
+ * it is also, for some people, a page that has thrown away the fastest signal
+ * on it: red and green are read before any number is.
+ *
+ * So this is a third axis rather than two more themes. `data-signal="colour"`
+ * puts back exactly two things — the good/bad pair, and the categorical palette
+ * that tells one asset from another — and touches nothing else. The page stays
+ * black and white; the parts that mean something are the only parts with hue,
+ * which is arguably what a chart should have looked like all along.
+ *
+ * Three attributes beat the two-attribute blocks above on specificity, so these
+ * win wherever they apply regardless of order. It has no effect on the gold,
+ * emerald and indigo themes: their signals are already in colour, and there is
+ * nothing for this to restore.
+ */
+[data-accent="mono"][data-mode="dark"][data-signal="colour"] {
+  --green: #34d399;
+  --red: #f87171;
+  --amber: #fbbf24;
+  --chart-1: #7aa2f7;
+  --chart-2: #bb9af7;
+  --chart-3: #7dcfff;
+  --chart-4: #e0af68;
+}
+
+[data-accent="mono"][data-mode="light"][data-signal="colour"] {
+  /* Darker than the dark theme's pair: #34d399 on white is about 1.7:1 and
+     unreadable as text, and these are used as text on every P&L figure. */
+  --green: #047857;
+  --red: #b91c1c;
+  --amber: #a16207;
+  --chart-1: #3b6fd4;
+  --chart-2: #7c53c9;
+  --chart-3: #2b7f9e;
+  --chart-4: #a8761f;
+}

@@ -1,0 +1,20 @@
+# Build from the full repository checkout so ../src/lib is available.
+node_modules
+**/node_modules
+.git
+.checks
+**/.checks
+.expo
+**/.expo
+dist
+**/dist
+android
+ios
+**/.env
+**/.env.*
+**/*.db
+**/*.db-*
+**/*.moneyos
+**/*.csv
+**/*.sqlite
+**/*.sqlite-*

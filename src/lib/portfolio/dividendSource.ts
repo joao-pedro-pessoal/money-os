@@ -1,0 +1,182 @@
+/**
+ * Which record of a dividend counts, when three tables hold the same fact.
+ *
+ * Distributions reach this app three ways, and each writes to its own table:
+ *
+ *  - a connector's `getDividends()`      → `dividend_payments`
+ *  - a broker statement import           → `broker_events`, kind DIVIDEND
+ *  - the investment-activity CSV import  → `investment_activities`, type DIVIDEND
+ *
+ * The dividends page read the first and only the first, so thirteen real
+ * Trade Republic payments — imported from a statement, sitting in the second
+ * table — were invisible while the page reported a confident total.
+ *
+ * **Unioning the three would have been worse.** On a live account the same
+ * three Trading 212 payments exist in `dividend_payments` and in
+ * `investment_activities`, on identical dates, differing only in how the
+ * symbol is spelled: `EUN3d_EQ` from the API against `EUN3` from the
+ * statement. Adding them together triples nothing and doubles those three —
+ * the recurring bug of this codebase, in a table it had not reached yet.
+ *
+ * So this is `holdingSource.ts` again, for distributions: **one authoritative
+ * source per account, exactly one feeds the totals, and the others are
+ * returned separately as cross-checks.** Adding the wrong array has to be
+ * deliberate.
+ *
+ * The choice is made per account **and per kind**, which the same live account
+ * forced. Trading 212's connector reports three dividends and no interest,
+ * while the import of the same account reports those three dividends *and*
+ * sixty-five interest payments. Choosing one source for the whole account
+ * therefore loses sixty-five real payments — trading one hole for another. The
+ * sources are not rivals describing the same thing; they cover different
+ * subsets, and the unit of choice has to be small enough to see that.
+ *
+ * Pure — no DB, no I/O.
+ */
+
+/** Where a record of a payment came from. Ordered by how much it is trusted. */
+export type DividendSource = "connector" | "statement" | "import";
+
+/**
+ * Precedence, and the reasoning.
+ *
+ * A connector's answer is the venue's own statement of what it paid, and it
+ * carries the quantity and the gross per share that neither import does. A
+ * broker statement is the same claim written down at the time. A CSV import is
+ * whatever the file said, which may have been transformed on the way in.
+ *
+ * Applied per account, never globally: an account whose only record is a
+ * statement is fully served by that statement, and would be silenced by a rule
+ * that preferred connectors everywhere.
+ */
+const PRECEDENCE: DividendSource[] = ["connector", "statement", "import"];
+
+export interface DividendRecord {
+  accountId: string;
+  accountName: string;
+  source: DividendSource;
+  /**
+   * Interest on cash, or a distribution from an instrument.
+   *
+   * Decided by the caller with the app's one `isInterest`, not re-derived
+   * here. It is the second half of the key this partitions on: a source that
+   * reports dividends and not interest must not silence a source that reports
+   * the interest.
+   */
+  kind: "distribution" | "interest";
+  /**
+   * What identifies the instrument. A ticker where the source has one, the
+   * ISIN where it does not — a statement's dividend rows routinely carry only
+   * the ISIN, with the name on the purchase rows of the same file.
+   */
+  instrument: string;
+  /** A readable name, where anything knows one. Never invented. */
+  name: string | null;
+  /** ISO day. */
+  paidOn: string;
+  amount: number;
+  currency: string;
+  /** The venue's own word: ORDINARY, INTEREST, CAPITAL_GAINS… */
+  type: string | null;
+  quantity: number | null;
+  grossPerShare: number | null;
+}
+
+export interface PartitionedDividends {
+  /** The records that feed every total. One source per account. */
+  counted: DividendRecord[];
+  /**
+   * Records from an account's other sources. Never added to a total — they
+   * exist so a screen can say "the statement also lists these" and so a
+   * disagreement is visible rather than silently resolved.
+   */
+  crossCheckOnly: DividendRecord[];
+  /** Which source won, per account and kind, so a page can say where a figure came from. */
+  chosenBy: {
+    accountId: string;
+    accountName: string;
+    kind: "distribution" | "interest";
+    source: DividendSource;
+    others: DividendSource[];
+  }[];
+}
+
+/**
+ * Splits every record into what counts and what only cross-checks.
+ *
+ * The choice is per account **and kind**, by `PRECEDENCE`. A group with one
+ * source keeps all of it — which is both the Trade Republic case and Trading
+ * 212's interest, and the whole point.
+ */
+export function partitionDividends(records: readonly DividendRecord[]): PartitionedDividends {
+  const groups = new Map<string, DividendRecord[]>();
+  for (const record of records) {
+    // A separator neither half can contain: account ids are cuid2, all
+    // lowercase alphanumerics, and a kind is one of two lowercase words.
+    // So the two can never run together into a different group.
+    //
+    // This was briefly a literal NUL byte, which worked and made git and
+    // grep treat the whole file as binary — no diffs, no search. An
+    // invisible character in source is the wrong kind of clever.
+    const key = `${record.accountId}|${record.kind}`;
+    groups.set(key, [...(groups.get(key) ?? []), record]);
+  }
+
+  const counted: DividendRecord[] = [];
+  const crossCheckOnly: DividendRecord[] = [];
+  const chosenBy: PartitionedDividends["chosenBy"] = [];
+
+  for (const rows of groups.values()) {
+    const present = PRECEDENCE.filter((s) => rows.some((r) => r.source === s));
+    if (present.length === 0) continue;
+
+    const winner = present[0];
+    for (const row of rows) {
+      if (row.source === winner) counted.push(row);
+      else crossCheckOnly.push(row);
+    }
+
+    chosenBy.push({
+      accountId: rows[0].accountId,
+      accountName: rows[0].accountName,
+      kind: rows[0].kind,
+      source: winner,
+      others: present.slice(1),
+    });
+  }
+
+  const byDate = (a: DividendRecord, b: DividendRecord) => b.paidOn.localeCompare(a.paidOn);
+  return {
+    counted: counted.sort(byDate),
+    crossCheckOnly: crossCheckOnly.sort(byDate),
+    chosenBy: chosenBy.sort(
+      (a, b) => a.accountName.localeCompare(b.accountName) || a.kind.localeCompare(b.kind)
+    ),
+  };
+}
+
+/**
+ * A name for an instrument, from what the same import already knows about it.
+ *
+ * A statement's dividend rows carry the ISIN and nothing else — "Cash Dividend
+ * for ISIN CA67077M1086" — while the purchase rows of that same file name it
+ * "NUTRIEN LTD". Joining them on the ISIN recovers the name from the user's own
+ * file rather than inventing one, which is the only acceptable source for it.
+ *
+ * Returns null when nothing in the file names it. The screen then shows the
+ * ISIN, which is a true identifier and not a guess.
+ */
+export function nameByInstrument(
+  rows: readonly { isin: string | null; symbol: string | null }[]
+): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const row of rows) {
+    if (row.isin === null || row.symbol === null) continue;
+    const symbol = row.symbol.trim();
+    if (symbol === "") continue;
+    // First name wins: a later row disagreeing is not a reason to overwrite a
+    // name that already matched, and both come from the same file anyway.
+    if (!names.has(row.isin)) names.set(row.isin, symbol);
+  }
+  return names;
+}

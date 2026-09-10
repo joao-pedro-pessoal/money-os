@@ -1,0 +1,1 @@
+ALTER TABLE "position_meta" ADD COLUMN "apr" numeric(6, 3);

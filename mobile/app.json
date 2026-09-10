@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Money OS",
+    "slug": "money-os-local",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "platforms": ["ios", "android"],
+    "updates": { "enabled": false },
+    "ios": {
+      "bundleIdentifier": "com.joaonovais.moneyos",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Desbloquear os teus dados financeiros neste dispositivo.",
+        "UIFileSharingEnabled": false,
+        "LSSupportsOpeningDocumentsInPlace": false
+      }
+    },
+    "android": {
+      "package": "com.joaonovais.moneyos",
+      "allowBackup": false,
+      "blockedPermissions": ["android.permission.RECORD_AUDIO", "android.permission.SYSTEM_ALERT_WINDOW"]
+    },
+    "plugins": [
+      ["expo-sqlite", { "useSQLCipher": true }],
+      ["expo-secure-store", { "configureAndroidBackup": false }],
+      "expo-local-authentication",
+      "./plugins/with-private-storage.js"
+    ]
+  }
+}

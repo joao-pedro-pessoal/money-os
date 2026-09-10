@@ -1,0 +1,2213 @@
+{
+  "schemaVersion": "1.0",
+  "generatedOn": "2026-08-15",
+  "language": "en",
+  "collection": {
+    "name": "Money OS Knowledge Library — Foundational 50",
+    "resourceType": "BOOK",
+    "resourceCount": 50,
+    "descriptionPolicy": "Original editorial summaries. No publisher copy, page counts, edition years, or unverified ISBNs.",
+    "coverPolicy": "Fifty cover image files are included under public/covers. Source pages are recorded in cover-sources.json; a rights review is required before public release."
+  },
+  "resources": [
+    {
+      "id": "book-001",
+      "slug": "the-holy-bible",
+      "editorialRank": 1,
+      "type": "BOOK",
+      "title": "The Holy Bible",
+      "creator": "Various Authors",
+      "description": "The central collection of Christian Scripture traces creation, covenant, failure, redemption, and hope through history, poetry, prophecy, wisdom, Gospel, and letters. It is the indispensable starting point for understanding Christian theology and one of the deepest sources of Western language, ethics, art, and political thought.",
+      "whyLearn": "Read it first to understand the theological and cultural foundations that many other books in this library assume.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Theology",
+        "Philosophy",
+        "History",
+        "Literature",
+        "Personal Development"
+      ],
+      "subtags": {
+        "Theology": [
+          "Christianity",
+          "Scripture",
+          "Salvation",
+          "Covenant"
+        ],
+        "Philosophy": [
+          "Meaning",
+          "Ethics",
+          "Human Nature"
+        ],
+        "History": [
+          "Ancient Near East",
+          "Early Christianity"
+        ],
+        "Literature": [
+          "Narrative",
+          "Poetry",
+          "Wisdom Literature"
+        ],
+        "Personal Development": [
+          "Faith",
+          "Character",
+          "Spiritual Formation"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": true,
+      "protectedEditorialPlacement": true,
+      "specialBadge": "#1 — The Greatest Book of All Time",
+      "specialDescription": "The foundational book of the Christian faith and the most influential work in human history.",
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-holy-bible",
+      "cover": {
+        "localPath": "public/covers/the-holy-bible.jpg",
+        "publicUrl": "/covers/the-holy-bible.jpg",
+        "source": "Westminster Bookstore",
+        "sourcePage": "https://www.wtsbooks.com/products/esv-church-bible-hardcover-black-9798874903398",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-002",
+      "slug": "mere-christianity",
+      "editorialRank": 2,
+      "type": "BOOK",
+      "title": "Mere Christianity",
+      "creator": "C. S. Lewis",
+      "description": "Lewis builds a clear, nontechnical case for core Christian belief, beginning with moral experience and moving toward God, freedom, sin, and transformation. It is especially useful for readers who want to examine Christianity without first entering denominational disputes.",
+      "whyLearn": "Use it as an accessible bridge between everyday moral reasoning and classical Christian doctrine.",
+      "level": "BEGINNER",
+      "categories": [
+        "Theology",
+        "Philosophy"
+      ],
+      "subtags": {
+        "Theology": [
+          "Christianity",
+          "Apologetics",
+          "Doctrine"
+        ],
+        "Philosophy": [
+          "Moral Argument",
+          "Free Will",
+          "Human Nature"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "mere-christianity",
+      "cover": {
+        "localPath": "public/covers/mere-christianity.jpg",
+        "publicUrl": "/covers/mere-christianity.jpg",
+        "source": "CUM Books",
+        "sourcePage": "https://cumbooks.co.za/products/mere-christianity-paperback",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-003",
+      "slug": "confessions",
+      "editorialRank": 3,
+      "type": "BOOK",
+      "title": "Confessions",
+      "creator": "Augustine of Hippo",
+      "description": "Augustine turns autobiography into an inquiry about desire, memory, time, wrongdoing, grace, and the restless search for God. Readers interested in theology, psychology, or the history of the self will find a remarkably modern interior portrait in an ancient work.",
+      "whyLearn": "It shows how intellectual conviction, moral struggle, and personal conversion can belong to one coherent story.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Theology",
+        "Philosophy",
+        "Psychology",
+        "Literature"
+      ],
+      "subtags": {
+        "Theology": [
+          "Grace",
+          "Conversion",
+          "Sin"
+        ],
+        "Philosophy": [
+          "Time",
+          "Memory",
+          "Free Will"
+        ],
+        "Psychology": [
+          "Desire",
+          "Identity",
+          "Introspection"
+        ],
+        "Literature": [
+          "Autobiography",
+          "Spiritual Memoir"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "confessions",
+      "cover": {
+        "localPath": "public/covers/confessions.jpg",
+        "publicUrl": "/covers/confessions.jpg",
+        "source": "Reading Length",
+        "sourcePage": "https://www.readinglength.com/book/BgMbbWr",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-004",
+      "slug": "introduction-to-christianity",
+      "editorialRank": 4,
+      "type": "BOOK",
+      "title": "Introduction to Christianity",
+      "creator": "Joseph Ratzinger",
+      "description": "Ratzinger explains the Christian Creed as a demanding response to modern doubt rather than a collection of inherited formulas. The book suits readers ready for a deeper account of faith, reason, Christ, the Church, and the meaning of belief.",
+      "whyLearn": "It offers an intellectually serious map of Christianity for readers living in a skeptical age.",
+      "level": "ADVANCED",
+      "categories": [
+        "Theology",
+        "Philosophy"
+      ],
+      "subtags": {
+        "Theology": [
+          "Creed",
+          "Christology",
+          "Ecclesiology",
+          "Faith"
+        ],
+        "Philosophy": [
+          "Reason",
+          "Doubt",
+          "Truth"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "introduction-to-christianity",
+      "cover": {
+        "localPath": "public/covers/introduction-to-christianity.jpg",
+        "publicUrl": "/covers/introduction-to-christianity.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Introduction_to_Christianity",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-005",
+      "slug": "the-cost-of-discipleship",
+      "editorialRank": 5,
+      "type": "BOOK",
+      "title": "The Cost of Discipleship",
+      "creator": "Dietrich Bonhoeffer",
+      "description": "Bonhoeffer contrasts costly grace, which changes the whole life, with a comfortable faith that asks nothing of the believer. Written under the shadow of political and ecclesial compromise, it challenges Christians who want practice to match confession.",
+      "whyLearn": "It tests whether belief has become action, sacrifice, and disciplined character.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Theology",
+        "Personal Development"
+      ],
+      "subtags": {
+        "Theology": [
+          "Discipleship",
+          "Grace",
+          "Ethics"
+        ],
+        "Personal Development": [
+          "Courage",
+          "Discipline",
+          "Integrity"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-cost-of-discipleship",
+      "cover": {
+        "localPath": "public/covers/the-cost-of-discipleship.jpg",
+        "publicUrl": "/covers/the-cost-of-discipleship.jpg",
+        "source": "Ubuy",
+        "sourcePage": "https://www.u-buy.com.ng/product/1N0EJLV4-the-cost-of-discipleship-paperback",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-006",
+      "slug": "the-orthodox-way",
+      "editorialRank": 6,
+      "type": "BOOK",
+      "title": "The Orthodox Way",
+      "creator": "Kallistos Ware",
+      "description": "Ware presents Eastern Christian theology through the mystery of God, the human person, prayer, suffering, and union with the divine. It is a concise invitation to see theology not merely as explanation but as a lived path of transformation.",
+      "whyLearn": "It broadens a Christian library with the contemplative and sacramental vision of Eastern Orthodoxy.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Theology",
+        "Philosophy"
+      ],
+      "subtags": {
+        "Theology": [
+          "Eastern Orthodoxy",
+          "Prayer",
+          "Theosis",
+          "Trinity"
+        ],
+        "Philosophy": [
+          "Personhood",
+          "Mystery",
+          "Suffering"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-orthodox-way",
+      "cover": {
+        "localPath": "public/covers/the-orthodox-way.jpg",
+        "publicUrl": "/covers/the-orthodox-way.jpg",
+        "source": "HVC Bookstore",
+        "sourcePage": "https://hvcbookstore.com/The-Orthodox-Way",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-007",
+      "slug": "meditations",
+      "editorialRank": 7,
+      "type": "BOOK",
+      "title": "Meditations",
+      "creator": "Marcus Aurelius",
+      "description": "These private reflections show a Roman emperor training his attention toward duty, self-command, mortality, and acceptance of what lies beyond his control. The fragments reward slow reading by turning Stoic ideas into practical exercises for daily conduct.",
+      "whyLearn": "It is a durable manual for responding to pressure without surrendering judgment or character.",
+      "level": "BEGINNER",
+      "categories": [
+        "Philosophy",
+        "Personal Development"
+      ],
+      "subtags": {
+        "Philosophy": [
+          "Stoicism",
+          "Virtue Ethics",
+          "Mortality"
+        ],
+        "Personal Development": [
+          "Resilience",
+          "Self-Control",
+          "Reflection"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "meditations",
+      "cover": {
+        "localPath": "public/covers/meditations.jpg",
+        "publicUrl": "/covers/meditations.jpg",
+        "source": "Walmart",
+        "sourcePage": "https://www.walmart.com/ip/40974917",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-008",
+      "slug": "the-republic",
+      "editorialRank": 8,
+      "type": "BOOK",
+      "title": "The Republic",
+      "creator": "Plato",
+      "description": "Plato uses a conversation about justice to investigate education, political order, the soul, truth, and the corruptions of power. Its ideal city is less a ready-made constitution than a device for asking what makes a person and a society well ordered.",
+      "whyLearn": "It supplies many of the questions that later political philosophy continues to debate.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Philosophy",
+        "Politics"
+      ],
+      "subtags": {
+        "Philosophy": [
+          "Justice",
+          "Epistemology",
+          "Virtue",
+          "The Good"
+        ],
+        "Politics": [
+          "Political Order",
+          "Education",
+          "Power"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-republic",
+      "cover": {
+        "localPath": "public/covers/the-republic.jpg",
+        "publicUrl": "/covers/the-republic.jpg",
+        "source": "Books Garden",
+        "sourcePage": "https://booksgardenbd.com/products/the-republic-by-plato",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-009",
+      "slug": "nicomachean-ethics",
+      "editorialRank": 9,
+      "type": "BOOK",
+      "title": "Nicomachean Ethics",
+      "creator": "Aristotle",
+      "description": "Aristotle asks what human flourishing consists of and argues that good character is formed through practiced habits, practical wisdom, friendship, and rightly ordered pleasure. The book is foundational for anyone who wants an ethics built around becoming good rather than merely following rules.",
+      "whyLearn": "It gives a precise framework for connecting repeated action, character, and a flourishing life.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Philosophy",
+        "Personal Development"
+      ],
+      "subtags": {
+        "Philosophy": [
+          "Virtue Ethics",
+          "Flourishing",
+          "Practical Wisdom"
+        ],
+        "Personal Development": [
+          "Habits",
+          "Character",
+          "Friendship"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "nicomachean-ethics",
+      "cover": {
+        "localPath": "public/covers/nicomachean-ethics.jpg",
+        "publicUrl": "/covers/nicomachean-ethics.jpg",
+        "source": "Barnes & Noble",
+        "sourcePage": "https://www.barnesandnoble.com/w/the-nicomachean-ethics-aristotle/1116752807",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-010",
+      "slug": "the-consolation-of-philosophy",
+      "editorialRank": 10,
+      "type": "BOOK",
+      "title": "The Consolation of Philosophy",
+      "creator": "Boethius",
+      "description": "Awaiting execution, Boethius stages a dialogue with Lady Philosophy about fortune, happiness, providence, freedom, and apparent injustice. The work helps readers confront loss by distinguishing unstable external goods from goods that circumstance cannot easily remove.",
+      "whyLearn": "It shows philosophy functioning as moral therapy when status, wealth, and security collapse.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Philosophy",
+        "Theology",
+        "Literature"
+      ],
+      "subtags": {
+        "Philosophy": [
+          "Fortune",
+          "Happiness",
+          "Free Will"
+        ],
+        "Theology": [
+          "Providence",
+          "Evil"
+        ],
+        "Literature": [
+          "Dialogue",
+          "Prison Literature"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-consolation-of-philosophy",
+      "cover": {
+        "localPath": "public/covers/the-consolation-of-philosophy.jpg",
+        "publicUrl": "/covers/the-consolation-of-philosophy.jpg",
+        "source": "Walmart",
+        "sourcePage": "https://business.walmart.com/ip/The-Consolation-of-Philosophy-Paperback-9781614270454/53272424",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-011",
+      "slug": "justice-whats-the-right-thing-to-do",
+      "editorialRank": 11,
+      "type": "BOOK",
+      "title": "Justice: What’s the Right Thing to Do?",
+      "creator": "Michael Sandel",
+      "description": "Sandel introduces competing ideas of justice through vivid moral and political cases involving markets, rights, equality, merit, and the common good. It is designed for readers who want to understand why reasonable people reach sharply different conclusions about public life.",
+      "whyLearn": "It provides a usable vocabulary for examining political disagreements beneath slogans and party labels.",
+      "level": "BEGINNER",
+      "categories": [
+        "Philosophy",
+        "Politics"
+      ],
+      "subtags": {
+        "Philosophy": [
+          "Justice",
+          "Ethics",
+          "Common Good"
+        ],
+        "Politics": [
+          "Rights",
+          "Equality",
+          "Public Reason"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "justice-whats-the-right-thing-to-do",
+      "cover": {
+        "localPath": "public/covers/justice-whats-the-right-thing-to-do.jpg",
+        "publicUrl": "/covers/justice-whats-the-right-thing-to-do.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Justice%3A_What's_the_Right_Thing_to_Do%3F",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-012",
+      "slug": "existentialism-is-a-humanism",
+      "editorialRank": 12,
+      "type": "BOOK",
+      "title": "Existentialism Is a Humanism",
+      "creator": "Jean-Paul Sartre",
+      "description": "Sartre defends existentialism against charges of despair and moral chaos by arguing that human beings create themselves through choices made without guaranteed foundations. The lecture is a concise entry into freedom, responsibility, authenticity, and the anxiety that accompanies them.",
+      "whyLearn": "It makes the existentialist account of radical responsibility accessible in a short, direct form.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Philosophy"
+      ],
+      "subtags": {
+        "Philosophy": [
+          "Existentialism",
+          "Freedom",
+          "Responsibility",
+          "Authenticity"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "existentialism-is-a-humanism",
+      "cover": {
+        "localPath": "public/covers/existentialism-is-a-humanism.jpg",
+        "publicUrl": "/covers/existentialism-is-a-humanism.jpg",
+        "source": "Apple Books",
+        "sourcePage": "https://books.apple.com/us/book/existentialism-is-a-humanism/id1530278687",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-013",
+      "slug": "summa-theologica-selected-questions",
+      "editorialRank": 13,
+      "type": "BOOK",
+      "title": "Summa Theologica: Selected Questions",
+      "creator": "Thomas Aquinas",
+      "description": "In carefully structured questions, Aquinas examines God, creation, human action, virtue, law, grace, and the relationship between faith and reason. A selected edition gives serious readers access to the architecture of medieval Christian thought without requiring the complete multi-volume work.",
+      "whyLearn": "It trains the reader to state objections fairly, distinguish concepts, and reason toward a theological conclusion.",
+      "level": "ADVANCED",
+      "categories": [
+        "Theology",
+        "Philosophy"
+      ],
+      "subtags": {
+        "Theology": [
+          "Scholasticism",
+          "God",
+          "Grace",
+          "Natural Law"
+        ],
+        "Philosophy": [
+          "Metaphysics",
+          "Ethics",
+          "Faith and Reason"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "summa-theologica-selected-questions",
+      "cover": {
+        "localPath": "public/covers/summa-theologica-selected-questions.jpg",
+        "publicUrl": "/covers/summa-theologica-selected-questions.jpg",
+        "source": "AbeBooks",
+        "sourcePage": "https://www.abebooks.com/9780558123840/Summa-Theologica-Thomas-Aquinas-2nd-0558123848/plp",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-014",
+      "slug": "the-brothers-karamazov",
+      "editorialRank": 14,
+      "type": "BOOK",
+      "title": "The Brothers Karamazov",
+      "creator": "Fyodor Dostoevsky",
+      "description": "A family crisis becomes a vast investigation of faith, rebellion, guilt, freedom, love, and responsibility. The novel is demanding but unusually rewarding for readers who want philosophical and theological questions embodied in unforgettable, morally complicated people.",
+      "whyLearn": "It forces abstract arguments about God and morality to answer to lived suffering and human relationships.",
+      "level": "ADVANCED",
+      "categories": [
+        "Literature",
+        "Philosophy",
+        "Theology",
+        "Psychology"
+      ],
+      "subtags": {
+        "Literature": [
+          "Russian Literature",
+          "Family Drama",
+          "Novel of Ideas"
+        ],
+        "Philosophy": [
+          "Freedom",
+          "Moral Responsibility",
+          "Suffering"
+        ],
+        "Theology": [
+          "Faith",
+          "Doubt",
+          "Evil"
+        ],
+        "Psychology": [
+          "Guilt",
+          "Desire",
+          "Conflict"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-brothers-karamazov",
+      "cover": {
+        "localPath": "public/covers/the-brothers-karamazov.jpg",
+        "publicUrl": "/covers/the-brothers-karamazov.jpg",
+        "source": "Medium",
+        "sourcePage": "https://brandonmonk.medium.com/a-way-to-read-the-brothers-karamazov-800d0cf9ac9f",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-015",
+      "slug": "crime-and-punishment",
+      "editorialRank": 15,
+      "type": "BOOK",
+      "title": "Crime and Punishment",
+      "creator": "Fyodor Dostoevsky",
+      "description": "After committing murder to test a theory of exceptional men, Raskolnikov discovers that an idea cannot isolate him from conscience, suffering, and other people. The novel examines rationalization, guilt, poverty, pride, repentance, and the possibility of moral renewal.",
+      "whyLearn": "It is a powerful study of how intelligent arguments can become shields against reality and conscience.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Literature",
+        "Psychology",
+        "Philosophy",
+        "Theology"
+      ],
+      "subtags": {
+        "Literature": [
+          "Russian Literature",
+          "Psychological Novel"
+        ],
+        "Psychology": [
+          "Guilt",
+          "Rationalization",
+          "Isolation"
+        ],
+        "Philosophy": [
+          "Moral Responsibility",
+          "Nihilism"
+        ],
+        "Theology": [
+          "Repentance",
+          "Redemption"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "crime-and-punishment",
+      "cover": {
+        "localPath": "public/covers/crime-and-punishment.jpg",
+        "publicUrl": "/covers/crime-and-punishment.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Crime_and_Punishment",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-016",
+      "slug": "notes-from-underground",
+      "editorialRank": 16,
+      "type": "BOOK",
+      "title": "Notes from Underground",
+      "creator": "Fyodor Dostoevsky",
+      "description": "An embittered narrator attacks optimistic theories that reduce people to rational self-interest and predictable social engineering. His contradictions expose pride, resentment, self-sabotage, and the strange ways people may choose suffering simply to prove they remain free.",
+      "whyLearn": "It is a compact warning against theories of human behavior that leave no room for irrational freedom.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Literature",
+        "Philosophy",
+        "Psychology"
+      ],
+      "subtags": {
+        "Literature": [
+          "Russian Literature",
+          "Unreliable Narrator"
+        ],
+        "Philosophy": [
+          "Existentialism",
+          "Freedom",
+          "Rationalism"
+        ],
+        "Psychology": [
+          "Resentment",
+          "Self-Sabotage",
+          "Alienation"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "notes-from-underground",
+      "cover": {
+        "localPath": "public/covers/notes-from-underground.jpg",
+        "publicUrl": "/covers/notes-from-underground.jpg",
+        "source": "Public Books",
+        "sourcePage": "https://www.public.gr/product/books/english/literature/classical-literature/notes-from-underground-other-stories/1198913",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-017",
+      "slug": "the-death-of-ivan-ilyich",
+      "editorialRank": 17,
+      "type": "BOOK",
+      "title": "The Death of Ivan Ilyich",
+      "creator": "Leo Tolstoy",
+      "description": "A respected official confronts terminal illness and gradually sees the emptiness of the socially approved life he pursued. Tolstoy’s short novel is a severe but compassionate reflection on mortality, authenticity, compassion, and what makes a life truthful.",
+      "whyLearn": "It uses death to clarify the difference between outward success and inwardly meaningful living.",
+      "level": "BEGINNER",
+      "categories": [
+        "Literature",
+        "Philosophy",
+        "Theology"
+      ],
+      "subtags": {
+        "Literature": [
+          "Russian Literature",
+          "Novella"
+        ],
+        "Philosophy": [
+          "Mortality",
+          "Authenticity",
+          "Meaning"
+        ],
+        "Theology": [
+          "Suffering",
+          "Conversion"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-death-of-ivan-ilyich",
+      "cover": {
+        "localPath": "public/covers/the-death-of-ivan-ilyich.jpg",
+        "publicUrl": "/covers/the-death-of-ivan-ilyich.jpg",
+        "source": "Veritas Press",
+        "sourcePage": "https://store.veritaspress.com/death-of-ivan-ilyich.html",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-018",
+      "slug": "1984",
+      "editorialRank": 18,
+      "type": "BOOK",
+      "title": "1984",
+      "creator": "George Orwell",
+      "description": "Orwell imagines a regime that controls not only behavior but language, memory, evidence, and the boundaries of thinkable thought. The novel remains essential for recognizing propaganda, surveillance, historical revision, and the psychological destruction produced by total power.",
+      "whyLearn": "It gives precise concepts for noticing when political language is being used to make truth itself unstable.",
+      "level": "BEGINNER",
+      "categories": [
+        "Literature",
+        "Politics",
+        "Society"
+      ],
+      "subtags": {
+        "Literature": [
+          "Dystopia",
+          "Political Fiction"
+        ],
+        "Politics": [
+          "Totalitarianism",
+          "Propaganda",
+          "Surveillance"
+        ],
+        "Society": [
+          "Language",
+          "Truth",
+          "Social Control"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "1984",
+      "cover": {
+        "localPath": "public/covers/1984.jpg",
+        "publicUrl": "/covers/1984.jpg",
+        "source": "eBay",
+        "sourcePage": "https://www.ebay.com/itm/204295320740",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-019",
+      "slug": "brave-new-world",
+      "editorialRank": 19,
+      "type": "BOOK",
+      "title": "Brave New World",
+      "creator": "Aldous Huxley",
+      "description": "Huxley pictures a stable society maintained through engineered birth, conditioning, entertainment, consumption, and easy pleasure rather than open terror. It asks whether freedom can disappear because people are satisfied, distracted, and protected from every source of depth.",
+      "whyLearn": "It complements 1984 by showing how control may operate through comfort and appetite rather than fear alone.",
+      "level": "BEGINNER",
+      "categories": [
+        "Literature",
+        "Politics",
+        "Technology",
+        "Society"
+      ],
+      "subtags": {
+        "Literature": [
+          "Dystopia",
+          "Science Fiction"
+        ],
+        "Politics": [
+          "Technocracy",
+          "Social Control"
+        ],
+        "Technology": [
+          "Biotechnology",
+          "Conditioning"
+        ],
+        "Society": [
+          "Consumerism",
+          "Pleasure",
+          "Conformity"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "brave-new-world",
+      "cover": {
+        "localPath": "public/covers/brave-new-world.jpg",
+        "publicUrl": "/covers/brave-new-world.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Brave_New_World",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-020",
+      "slug": "the-divine-comedy",
+      "editorialRank": 20,
+      "type": "BOOK",
+      "title": "The Divine Comedy",
+      "creator": "Dante Alighieri",
+      "description": "Dante’s journey through Hell, Purgatory, and Paradise joins poetry, theology, politics, love, and a complete moral vision of the cosmos. It rewards readers who want literature that treats personal failure, justice, purification, and ultimate happiness on the grandest possible scale.",
+      "whyLearn": "It reveals how a civilization’s philosophy and theology can be transformed into imaginative experience.",
+      "level": "ADVANCED",
+      "categories": [
+        "Literature",
+        "Theology",
+        "Philosophy"
+      ],
+      "subtags": {
+        "Literature": [
+          "Epic Poetry",
+          "Italian Literature",
+          "Allegory"
+        ],
+        "Theology": [
+          "Afterlife",
+          "Sin",
+          "Salvation"
+        ],
+        "Philosophy": [
+          "Justice",
+          "Love",
+          "Human Destiny"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-divine-comedy",
+      "cover": {
+        "localPath": "public/covers/the-divine-comedy.jpg",
+        "publicUrl": "/covers/the-divine-comedy.jpg",
+        "source": "Amazon image CDN",
+        "sourcePage": "https://www.amazon.com/s?k=The+Divine+Comedy+Dante+Alighieri",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-021",
+      "slug": "mans-search-for-meaning",
+      "editorialRank": 21,
+      "type": "BOOK",
+      "title": "Man’s Search for Meaning",
+      "creator": "Viktor E. Frankl",
+      "description": "Frankl combines testimony from the concentration camps with an introduction to logotherapy, his view that human beings are fundamentally oriented toward meaning. The book does not romanticize suffering; it asks how freedom and responsibility can survive when circumstances become radically constrained.",
+      "whyLearn": "It offers a sober framework for finding purpose without pretending that pain is easy or deserved.",
+      "level": "BEGINNER",
+      "categories": [
+        "Psychology",
+        "Philosophy",
+        "Personal Development"
+      ],
+      "subtags": {
+        "Psychology": [
+          "Logotherapy",
+          "Trauma",
+          "Meaning"
+        ],
+        "Philosophy": [
+          "Freedom",
+          "Responsibility",
+          "Suffering"
+        ],
+        "Personal Development": [
+          "Resilience",
+          "Purpose"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "mans-search-for-meaning",
+      "cover": {
+        "localPath": "public/covers/mans-search-for-meaning.jpg",
+        "publicUrl": "/covers/mans-search-for-meaning.jpg",
+        "source": "Alibaba image CDN",
+        "sourcePage": "https://tao.hooos.com/goods_JPe5PkBTRtqMnvABorsXXGCvta-2RmPPyFOJPBOom5tO.html",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-022",
+      "slug": "atomic-habits",
+      "editorialRank": 22,
+      "type": "BOOK",
+      "title": "Atomic Habits",
+      "creator": "James Clear",
+      "description": "Clear explains behavior change as the cumulative result of small systems involving cues, cravings, responses, and rewards. The practical emphasis is on shaping identity and environment so that useful actions become easier and harmful ones harder.",
+      "whyLearn": "It turns vague self-improvement goals into repeatable systems that can be measured and adjusted.",
+      "level": "BEGINNER",
+      "categories": [
+        "Personal Development",
+        "Psychology"
+      ],
+      "subtags": {
+        "Personal Development": [
+          "Habits",
+          "Systems",
+          "Identity"
+        ],
+        "Psychology": [
+          "Behavior Change",
+          "Motivation",
+          "Environment Design"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "atomic-habits",
+      "cover": {
+        "localPath": "public/covers/atomic-habits.jpg",
+        "publicUrl": "/covers/atomic-habits.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Atomic_Habits",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-023",
+      "slug": "deep-work",
+      "editorialRank": 23,
+      "type": "BOOK",
+      "title": "Deep Work",
+      "creator": "Cal Newport",
+      "description": "Newport argues that sustained, distraction-free concentration is increasingly rare and increasingly valuable in knowledge work. He combines that claim with routines for protecting attention, reducing shallow obligations, and building the capacity to work deeply.",
+      "whyLearn": "It helps convert attention from a constantly interrupted resource into a deliberate professional advantage.",
+      "level": "BEGINNER",
+      "categories": [
+        "Personal Development",
+        "Psychology",
+        "Technology"
+      ],
+      "subtags": {
+        "Personal Development": [
+          "Focus",
+          "Productivity",
+          "Time Management"
+        ],
+        "Psychology": [
+          "Attention",
+          "Distraction"
+        ],
+        "Technology": [
+          "Digital Minimalism",
+          "Knowledge Work"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "deep-work",
+      "cover": {
+        "localPath": "public/covers/deep-work.jpg",
+        "publicUrl": "/covers/deep-work.jpg",
+        "source": "Walmart",
+        "sourcePage": "https://www.walmart.com/ip/832680591",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-024",
+      "slug": "thinking-fast-and-slow",
+      "editorialRank": 24,
+      "type": "BOOK",
+      "title": "Thinking, Fast and Slow",
+      "creator": "Daniel Kahneman",
+      "description": "Kahneman surveys decades of research on intuitive and deliberate thinking, showing how heuristics can produce both efficient judgments and predictable mistakes. Readers gain a vocabulary for biases in estimation, risk, memory, forecasting, and economic choice.",
+      "whyLearn": "It makes recurring errors in judgment easier to identify in decisions about money, work, and public policy.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Psychology",
+        "Economics"
+      ],
+      "subtags": {
+        "Psychology": [
+          "Cognitive Biases",
+          "Decision-Making",
+          "Judgment"
+        ],
+        "Economics": [
+          "Behavioral Economics",
+          "Risk",
+          "Prospect Theory"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "thinking-fast-and-slow",
+      "cover": {
+        "localPath": "public/covers/thinking-fast-and-slow.jpg",
+        "publicUrl": "/covers/thinking-fast-and-slow.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Thinking%2C_Fast_and_Slow",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-025",
+      "slug": "the-righteous-mind",
+      "editorialRank": 25,
+      "type": "BOOK",
+      "title": "The Righteous Mind",
+      "creator": "Jonathan Haidt",
+      "description": "Haidt argues that moral judgment usually begins with intuition and is later defended by reasoning, while different communities emphasize different moral foundations. The book helps explain political polarization without assuming that one side has morality and the other merely has ignorance.",
+      "whyLearn": "It improves the ability to understand moral disagreement before trying to persuade across it.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Psychology",
+        "Politics",
+        "Philosophy"
+      ],
+      "subtags": {
+        "Psychology": [
+          "Moral Psychology",
+          "Intuition",
+          "Group Identity"
+        ],
+        "Politics": [
+          "Polarization",
+          "Ideology"
+        ],
+        "Philosophy": [
+          "Morality",
+          "Reason"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-righteous-mind",
+      "cover": {
+        "localPath": "public/covers/the-righteous-mind.jpg",
+        "publicUrl": "/covers/the-righteous-mind.jpg",
+        "source": "Popular Online",
+        "sourcePage": "https://www.popularonline.com.my/default/catalog/product/view/_ignore_category/1/id/121875/",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-026",
+      "slug": "how-to-win-friends-and-influence-people",
+      "editorialRank": 26,
+      "type": "BOOK",
+      "title": "How to Win Friends and Influence People",
+      "creator": "Dale Carnegie",
+      "description": "Carnegie organizes practical principles for listening, handling disagreement, offering criticism, and helping others feel respected. Some examples are dated, but the central discipline of genuine attention remains useful in leadership, sales, friendship, and negotiation.",
+      "whyLearn": "It teaches interpersonal habits that reduce defensiveness and make cooperation more likely.",
+      "level": "BEGINNER",
+      "categories": [
+        "Communication",
+        "Business",
+        "Personal Development"
+      ],
+      "subtags": {
+        "Communication": [
+          "Listening",
+          "Persuasion",
+          "Conflict"
+        ],
+        "Business": [
+          "Leadership",
+          "Relationships"
+        ],
+        "Personal Development": [
+          "Empathy",
+          "Social Skills"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "how-to-win-friends-and-influence-people",
+      "cover": {
+        "localPath": "public/covers/how-to-win-friends-and-influence-people.jpg",
+        "publicUrl": "/covers/how-to-win-friends-and-influence-people.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/How_to_Win_Friends_and_Influence_People",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-027",
+      "slug": "the-psychology-of-money",
+      "editorialRank": 27,
+      "type": "BOOK",
+      "title": "The Psychology of Money",
+      "creator": "Morgan Housel",
+      "description": "Housel explains why financial outcomes depend as much on behavior, patience, expectations, and personal history as on technical knowledge. Short essays explore compounding, risk, luck, wealth, enoughness, and the value of room for error.",
+      "whyLearn": "It helps build a financial philosophy that can survive emotion, uncertainty, and changing markets.",
+      "level": "BEGINNER",
+      "categories": [
+        "Finance",
+        "Psychology",
+        "Investing"
+      ],
+      "subtags": {
+        "Finance": [
+          "Personal Finance",
+          "Wealth",
+          "Compounding"
+        ],
+        "Psychology": [
+          "Behavior",
+          "Risk Perception",
+          "Expectations"
+        ],
+        "Investing": [
+          "Long-Term Thinking",
+          "Margin of Safety"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-psychology-of-money",
+      "cover": {
+        "localPath": "public/covers/the-psychology-of-money.jpg",
+        "publicUrl": "/covers/the-psychology-of-money.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/The_Psychology_of_Money",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-028",
+      "slug": "the-little-book-of-common-sense-investing",
+      "editorialRank": 28,
+      "type": "BOOK",
+      "title": "The Little Book of Common Sense Investing",
+      "creator": "John C. Bogle",
+      "description": "Bogle argues that most investors are best served by owning the broad market through low-cost index funds and holding them for the long term. His case focuses on arithmetic: fees, turnover, and failed attempts to outperform quietly reduce the return investors keep.",
+      "whyLearn": "It provides the simplest strong baseline against which any more complicated investment strategy should be judged.",
+      "level": "BEGINNER",
+      "categories": [
+        "Finance",
+        "Investing"
+      ],
+      "subtags": {
+        "Finance": [
+          "Fees",
+          "Compounding",
+          "Personal Finance"
+        ],
+        "Investing": [
+          "Index Funds",
+          "Passive Investing",
+          "Diversification"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-little-book-of-common-sense-investing",
+      "cover": {
+        "localPath": "public/covers/the-little-book-of-common-sense-investing.jpg",
+        "publicUrl": "/covers/the-little-book-of-common-sense-investing.jpg",
+        "source": "TCDC Resource Center",
+        "sourcePage": "https://library.tcdc.or.th/record/view/b00050643",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-029",
+      "slug": "a-random-walk-down-wall-street",
+      "editorialRank": 29,
+      "type": "BOOK",
+      "title": "A Random Walk Down Wall Street",
+      "creator": "Burton G. Malkiel",
+      "description": "Malkiel explains why prices are difficult to predict consistently and compares speculation, fundamental analysis, technical analysis, and diversified long-term investing. The book gives ordinary investors a broad tour of market theory while repeatedly returning to cost, discipline, and diversification.",
+      "whyLearn": "It connects the case for passive investing to the evidence and institutions of real capital markets.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Finance",
+        "Investing",
+        "Economics"
+      ],
+      "subtags": {
+        "Finance": [
+          "Capital Markets",
+          "Risk"
+        ],
+        "Investing": [
+          "Efficient Markets",
+          "Diversification",
+          "Asset Allocation"
+        ],
+        "Economics": [
+          "Market Prices",
+          "Information"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "a-random-walk-down-wall-street",
+      "cover": {
+        "localPath": "public/covers/a-random-walk-down-wall-street.jpg",
+        "publicUrl": "/covers/a-random-walk-down-wall-street.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/A_Random_Walk_Down_Wall_Street",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-030",
+      "slug": "the-intelligent-investor",
+      "editorialRank": 30,
+      "type": "BOOK",
+      "title": "The Intelligent Investor",
+      "creator": "Benjamin Graham",
+      "description": "Graham presents investing as the disciplined purchase of securities with a margin of safety, sharply separated from speculation. His Mr. Market metaphor and emphasis on temperament remain valuable even where specific instruments and examples have aged.",
+      "whyLearn": "It teaches that investment success depends on price, process, and emotional discipline—not merely on finding good companies.",
+      "level": "ADVANCED",
+      "categories": [
+        "Finance",
+        "Investing"
+      ],
+      "subtags": {
+        "Finance": [
+          "Valuation",
+          "Financial Statements"
+        ],
+        "Investing": [
+          "Value Investing",
+          "Margin of Safety",
+          "Investor Psychology"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-intelligent-investor",
+      "cover": {
+        "localPath": "public/covers/the-intelligent-investor.jpg",
+        "publicUrl": "/covers/the-intelligent-investor.jpg",
+        "source": "D S Book Depot",
+        "sourcePage": "https://www.dsbookdepot.in/product/30344605/The-Intelligent-Investor--English--Paperback",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-031",
+      "slug": "against-the-gods",
+      "editorialRank": 31,
+      "type": "BOOK",
+      "title": "Against the Gods",
+      "creator": "Peter L. Bernstein",
+      "description": "Bernstein tells the intellectual history of risk, from probability and insurance to statistics, portfolio theory, and modern finance. The narrative shows how quantifying uncertainty changed commerce and decision-making while never eliminating surprise or human judgment.",
+      "whyLearn": "It places today’s financial risk tools inside the history of the ideas that made them possible.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Finance",
+        "History",
+        "Science"
+      ],
+      "subtags": {
+        "Finance": [
+          "Risk Management",
+          "Portfolio Theory"
+        ],
+        "History": [
+          "History of Ideas",
+          "Financial History"
+        ],
+        "Science": [
+          "Probability",
+          "Statistics",
+          "Uncertainty"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "against-the-gods",
+      "cover": {
+        "localPath": "public/covers/against-the-gods.jpg",
+        "publicUrl": "/covers/against-the-gods.jpg",
+        "source": "Thalia",
+        "sourcePage": "https://www.thalia.de/shop/home/artikeldetails/A1000108468",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-032",
+      "slug": "the-missing-billionaires",
+      "editorialRank": 32,
+      "type": "BOOK",
+      "title": "The Missing Billionaires",
+      "creator": "Victor Haghani and James White",
+      "description": "Haghani and White ask why fortunes that should have compounded into enormous dynastic wealth so often disappeared. They use the question to develop a practical framework for sizing risk, spending, diversification, and decision-making under uncertainty.",
+      "whyLearn": "It links portfolio choices to survival, consumption, and the real objectives of a household rather than return alone.",
+      "level": "ADVANCED",
+      "categories": [
+        "Finance",
+        "Investing",
+        "Psychology"
+      ],
+      "subtags": {
+        "Finance": [
+          "Wealth Preservation",
+          "Spending",
+          "Risk Capacity"
+        ],
+        "Investing": [
+          "Position Sizing",
+          "Diversification",
+          "Expected Utility"
+        ],
+        "Psychology": [
+          "Decision-Making",
+          "Overconfidence"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-missing-billionaires",
+      "cover": {
+        "localPath": "public/covers/the-missing-billionaires.jpg",
+        "publicUrl": "/covers/the-missing-billionaires.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/The_Missing_Billionaires",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-033",
+      "slug": "the-personal-mba",
+      "editorialRank": 33,
+      "type": "BOOK",
+      "title": "The Personal MBA",
+      "creator": "Josh Kaufman",
+      "description": "Kaufman gives a broad, concept-driven introduction to value creation, marketing, sales, delivery, finance, systems, and human behavior in organizations. It is best used as a map that helps founders and self-directed learners see how the main functions of a business connect.",
+      "whyLearn": "It supplies a practical business vocabulary before deeper specialization in any one function.",
+      "level": "BEGINNER",
+      "categories": [
+        "Business",
+        "Personal Development"
+      ],
+      "subtags": {
+        "Business": [
+          "Value Creation",
+          "Sales",
+          "Operations",
+          "Finance"
+        ],
+        "Personal Development": [
+          "Self-Education",
+          "Mental Models"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-personal-mba",
+      "cover": {
+        "localPath": "public/covers/the-personal-mba.jpg",
+        "publicUrl": "/covers/the-personal-mba.jpg",
+        "source": "Apple Books",
+        "sourcePage": "https://books.apple.com/gb/book/the-personal-mba/id414789255",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-034",
+      "slug": "the-lean-startup",
+      "editorialRank": 34,
+      "type": "BOOK",
+      "title": "The Lean Startup",
+      "creator": "Eric Ries",
+      "description": "Ries applies experimentation to entrepreneurship through the build-measure-learn loop, validated learning, and careful choice of metrics. The approach challenges teams to test risky assumptions early instead of perfecting products that customers may not want.",
+      "whyLearn": "It offers a disciplined method for reducing uncertainty before committing large amounts of time and capital.",
+      "level": "BEGINNER",
+      "categories": [
+        "Business",
+        "Technology"
+      ],
+      "subtags": {
+        "Business": [
+          "Startups",
+          "Experimentation",
+          "Product Strategy"
+        ],
+        "Technology": [
+          "Product Development",
+          "Metrics",
+          "Iteration"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-lean-startup",
+      "cover": {
+        "localPath": "public/covers/the-lean-startup.jpg",
+        "publicUrl": "/covers/the-lean-startup.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/The_Lean_Startup",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-035",
+      "slug": "the-mom-test",
+      "editorialRank": 35,
+      "type": "BOOK",
+      "title": "The Mom Test",
+      "creator": "Rob Fitzpatrick",
+      "description": "Fitzpatrick explains how to talk with potential customers without inviting polite compliments or pitching them into agreement. The method emphasizes past behavior, concrete problems, commitments, and evidence that can actually change a product decision.",
+      "whyLearn": "It turns customer conversations from vague validation into reliable learning.",
+      "level": "BEGINNER",
+      "categories": [
+        "Business",
+        "Communication"
+      ],
+      "subtags": {
+        "Business": [
+          "Customer Discovery",
+          "Startups",
+          "Product Research"
+        ],
+        "Communication": [
+          "Interviewing",
+          "Questions",
+          "Listening"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-mom-test",
+      "cover": {
+        "localPath": "public/covers/the-mom-test.jpg",
+        "publicUrl": "/covers/the-mom-test.jpg",
+        "source": "Apple Books",
+        "sourcePage": "https://books.apple.com/us/book/the-mom-test-how-to-talk-to-customers-learn-if-your/id1450865735",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-036",
+      "slug": "influence",
+      "editorialRank": 36,
+      "type": "BOOK",
+      "title": "Influence",
+      "creator": "Robert B. Cialdini",
+      "description": "Cialdini explains recurring principles that make requests persuasive, including reciprocity, consistency, social proof, liking, authority, scarcity, and unity. The examples help readers use these mechanisms ethically and recognize when marketers, institutions, or other people are using them.",
+      "whyLearn": "It provides a practical defense against manipulation as well as a framework for responsible persuasion.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Psychology",
+        "Business",
+        "Communication"
+      ],
+      "subtags": {
+        "Psychology": [
+          "Persuasion",
+          "Social Proof",
+          "Compliance"
+        ],
+        "Business": [
+          "Marketing",
+          "Sales"
+        ],
+        "Communication": [
+          "Influence",
+          "Ethics"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "influence",
+      "cover": {
+        "localPath": "public/covers/influence.jpg",
+        "publicUrl": "/covers/influence.jpg",
+        "source": "Urdu Kutub Khaana",
+        "sourcePage": "https://urdukutubkhaana.com/products/influence-the-psychology-of-persuasion",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-037",
+      "slug": "never-split-the-difference",
+      "editorialRank": 37,
+      "type": "BOOK",
+      "title": "Never Split the Difference",
+      "creator": "Chris Voss",
+      "description": "Voss adapts hostage-negotiation techniques to ordinary conflicts, emphasizing tactical empathy, calibrated questions, labeling emotions, and discovering hidden constraints. The advice is useful when agreement depends less on formal logic than on making the other person feel accurately understood.",
+      "whyLearn": "It gives concrete language for slowing conflict down and uncovering the real structure of a negotiation.",
+      "level": "BEGINNER",
+      "categories": [
+        "Business",
+        "Communication"
+      ],
+      "subtags": {
+        "Business": [
+          "Negotiation",
+          "Decision-Making"
+        ],
+        "Communication": [
+          "Tactical Empathy",
+          "Questions",
+          "Conflict"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "never-split-the-difference",
+      "cover": {
+        "localPath": "public/covers/never-split-the-difference.jpg",
+        "publicUrl": "/covers/never-split-the-difference.jpg",
+        "source": "Lowplex Books",
+        "sourcePage": "https://www.lowplexbooks.com/products/never-split-the-difference-negotiating-as-if-your-life-depended-on-it",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-038",
+      "slug": "good-strategy-bad-strategy",
+      "editorialRank": 38,
+      "type": "BOOK",
+      "title": "Good Strategy/Bad Strategy",
+      "creator": "Richard Rumelt",
+      "description": "Rumelt distinguishes strategy from slogans, ambition, financial targets, and long lists of initiatives. Good strategy diagnoses the central challenge, chooses a guiding approach, and coordinates actions that concentrate strength where it matters.",
+      "whyLearn": "It helps leaders replace vague aspiration with a coherent response to a specific obstacle.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Business"
+      ],
+      "subtags": {
+        "Business": [
+          "Strategy",
+          "Leadership",
+          "Competitive Advantage",
+          "Execution"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "good-strategy-bad-strategy",
+      "cover": {
+        "localPath": "public/covers/good-strategy-bad-strategy.jpg",
+        "publicUrl": "/covers/good-strategy-bad-strategy.jpg",
+        "source": "Apple Books",
+        "sourcePage": "https://books.apple.com/us/book/good-strategy-bad-strategy/id422539860",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-039",
+      "slug": "why-nations-fail",
+      "editorialRank": 39,
+      "type": "BOOK",
+      "title": "Why Nations Fail",
+      "creator": "Daron Acemoglu and James A. Robinson",
+      "description": "Acemoglu and Robinson argue that long-run prosperity depends heavily on whether political and economic institutions distribute opportunity broadly or concentrate power and extraction. Wide-ranging historical cases make the thesis accessible while inviting debate about geography, culture, state capacity, and contingency.",
+      "whyLearn": "It gives a strong institutional framework for comparing development across countries and centuries.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Economics",
+        "Politics",
+        "History"
+      ],
+      "subtags": {
+        "Economics": [
+          "Development",
+          "Institutions",
+          "Prosperity"
+        ],
+        "Politics": [
+          "State Power",
+          "Inclusive Institutions",
+          "Elites"
+        ],
+        "History": [
+          "Comparative History",
+          "Colonialism"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "why-nations-fail",
+      "cover": {
+        "localPath": "public/covers/why-nations-fail.jpg",
+        "publicUrl": "/covers/why-nations-fail.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Why_Nations_Fail",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-040",
+      "slug": "the-undercover-economist",
+      "editorialRank": 40,
+      "type": "BOOK",
+      "title": "The Undercover Economist",
+      "creator": "Tim Harford",
+      "description": "Harford uses coffee shops, supermarkets, traffic, housing, globalization, and development to reveal the incentives and trade-offs hidden inside everyday life. The book is an approachable introduction to economic reasoning without requiring formal mathematics.",
+      "whyLearn": "It trains the reader to look past prices and ask what incentives, scarcity, and market power produced them.",
+      "level": "BEGINNER",
+      "categories": [
+        "Economics",
+        "Finance",
+        "Society"
+      ],
+      "subtags": {
+        "Economics": [
+          "Incentives",
+          "Scarcity",
+          "Markets"
+        ],
+        "Finance": [
+          "Prices",
+          "Household Decisions"
+        ],
+        "Society": [
+          "Globalization",
+          "Public Policy"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-undercover-economist",
+      "cover": {
+        "localPath": "public/covers/the-undercover-economist.jpg",
+        "publicUrl": "/covers/the-undercover-economist.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/The_Undercover_Economist",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-041",
+      "slug": "on-liberty",
+      "editorialRank": 41,
+      "type": "BOOK",
+      "title": "On Liberty",
+      "creator": "John Stuart Mill",
+      "description": "Mill defends individual freedom against both state coercion and the social pressure of the majority, proposing harm to others as the main limit of liberty. His case for open debate remains central to arguments about free speech, individuality, paternalism, and democratic culture.",
+      "whyLearn": "It provides one of the clearest foundations for modern debates over freedom and legitimate interference.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Politics",
+        "Philosophy"
+      ],
+      "subtags": {
+        "Politics": [
+          "Liberalism",
+          "Free Speech",
+          "Majority Rule"
+        ],
+        "Philosophy": [
+          "Liberty",
+          "Harm Principle",
+          "Individuality"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "on-liberty",
+      "cover": {
+        "localPath": "public/covers/on-liberty.jpg",
+        "publicUrl": "/covers/on-liberty.jpg",
+        "source": "Walmart",
+        "sourcePage": "https://www.walmart.com/ip/377244747",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-042",
+      "slug": "the-prince",
+      "editorialRank": 42,
+      "type": "BOOK",
+      "title": "The Prince",
+      "creator": "Niccolò Machiavelli",
+      "description": "Machiavelli analyzes how rulers acquire, preserve, and lose power in a world shaped by conflict, fortune, fear, reputation, and imperfect loyalty. Whether read as advice, diagnosis, or provocation, the work separates political effectiveness from conventional moral appearance.",
+      "whyLearn": "It sharpens the ability to analyze power as it operates, not only as leaders claim it operates.",
+      "level": "BEGINNER",
+      "categories": [
+        "Politics",
+        "Philosophy",
+        "History"
+      ],
+      "subtags": {
+        "Politics": [
+          "Power",
+          "Statecraft",
+          "Leadership"
+        ],
+        "Philosophy": [
+          "Political Realism",
+          "Virtue and Fortune"
+        ],
+        "History": [
+          "Renaissance Italy"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-prince",
+      "cover": {
+        "localPath": "public/covers/the-prince.jpg",
+        "publicUrl": "/covers/the-prince.jpg",
+        "source": "Daraz",
+        "sourcePage": "https://www.daraz.com.np/products/the-prince-penguin-classics-by-niccolo-machiavelli-i128128371.html",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-043",
+      "slug": "the-road-to-serfdom",
+      "editorialRank": 43,
+      "type": "BOOK",
+      "title": "The Road to Serfdom",
+      "creator": "Friedrich A. Hayek",
+      "description": "Hayek warns that comprehensive economic planning can concentrate discretionary power and gradually undermine political freedom, even when planners begin with humane intentions. Readers should engage it as a major liberal argument about knowledge, coordination, coercion, and the limits of government design.",
+      "whyLearn": "It presents the classic case that economic control and political liberty cannot be considered separately.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Politics",
+        "Economics"
+      ],
+      "subtags": {
+        "Politics": [
+          "Classical Liberalism",
+          "Coercion",
+          "Central Planning"
+        ],
+        "Economics": [
+          "Knowledge Problem",
+          "Markets",
+          "Socialism"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-road-to-serfdom",
+      "cover": {
+        "localPath": "public/covers/the-road-to-serfdom.jpg",
+        "publicUrl": "/covers/the-road-to-serfdom.jpg",
+        "source": "Goodreads",
+        "sourcePage": "https://www.goodreads.com/book/show/224706.The_Road_To_Serfdom",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-044",
+      "slug": "the-communist-manifesto",
+      "editorialRank": 44,
+      "type": "BOOK",
+      "title": "The Communist Manifesto",
+      "creator": "Karl Marx and Friedrich Engels",
+      "description": "Marx and Engels interpret history through class conflict and describe capitalism as a revolutionary system that transforms production, social relations, and the world market. The pamphlet is essential for understanding socialist politics and should be read alongside both its historical influence and the record of movements formed in its name.",
+      "whyLearn": "It gives direct access to ideas that reshaped labor, revolution, political parties, and the twentieth century.",
+      "level": "BEGINNER",
+      "categories": [
+        "Politics",
+        "Economics",
+        "History"
+      ],
+      "subtags": {
+        "Politics": [
+          "Communism",
+          "Class Conflict",
+          "Revolution"
+        ],
+        "Economics": [
+          "Capitalism",
+          "Labor",
+          "Political Economy"
+        ],
+        "History": [
+          "Industrialization",
+          "Socialist Movements"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-communist-manifesto",
+      "cover": {
+        "localPath": "public/covers/the-communist-manifesto.jpg",
+        "publicUrl": "/covers/the-communist-manifesto.jpg",
+        "source": "Walmart",
+        "sourcePage": "https://business.walmart.com/ip/The-Communist-Manifesto-A-Road-Map-to-History-s-Most-Important-Political-Document-illustrated-edition-Paperback-9798745577109/745023547",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-045",
+      "slug": "the-origins-of-totalitarianism",
+      "editorialRank": 45,
+      "type": "BOOK",
+      "title": "The Origins of Totalitarianism",
+      "creator": "Hannah Arendt",
+      "description": "Arendt investigates antisemitism, imperialism, statelessness, ideology, terror, and mass society to understand the emergence of Nazi and Stalinist totalitarianism. The book resists simple causal stories and asks what is historically new about domination that seeks to make human beings entirely superfluous.",
+      "whyLearn": "It offers a demanding framework for distinguishing totalitarian rule from ordinary dictatorship or authoritarianism.",
+      "level": "ADVANCED",
+      "categories": [
+        "Politics",
+        "Philosophy",
+        "History"
+      ],
+      "subtags": {
+        "Politics": [
+          "Totalitarianism",
+          "Ideology",
+          "Terror"
+        ],
+        "Philosophy": [
+          "Human Rights",
+          "Political Evil"
+        ],
+        "History": [
+          "Antisemitism",
+          "Imperialism",
+          "Twentieth Century"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-origins-of-totalitarianism",
+      "cover": {
+        "localPath": "public/covers/the-origins-of-totalitarianism.jpg",
+        "publicUrl": "/covers/the-origins-of-totalitarianism.jpg",
+        "source": "Bibliopolis",
+        "sourcePage": "https://bibliopolis.com.ua/en/the-origins-of-totalitarianism-1339-en",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-046",
+      "slug": "prisoners-of-geography",
+      "editorialRank": 46,
+      "type": "BOOK",
+      "title": "Prisoners of Geography",
+      "creator": "Tim Marshall",
+      "description": "Marshall explains how mountains, rivers, plains, climate, resources, borders, and access to the sea constrain the choices of states. The book is a readable introduction to geopolitical thinking, provided geography is treated as a powerful constraint rather than a complete destiny.",
+      "whyLearn": "It adds physical terrain to explanations that otherwise rely only on leaders, ideology, or economics.",
+      "level": "BEGINNER",
+      "categories": [
+        "Geopolitics",
+        "History"
+      ],
+      "subtags": {
+        "Geopolitics": [
+          "Geography",
+          "Borders",
+          "State Strategy"
+        ],
+        "History": [
+          "Great Powers",
+          "Regional Conflict"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "prisoners-of-geography",
+      "cover": {
+        "localPath": "public/covers/prisoners-of-geography.jpg",
+        "publicUrl": "/covers/prisoners-of-geography.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Prisoners_of_Geography",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-047",
+      "slug": "a-little-history-of-the-world",
+      "editorialRank": 47,
+      "type": "BOOK",
+      "title": "A Little History of the World",
+      "creator": "E. H. Gombrich",
+      "description": "Gombrich narrates world history as a connected human story, moving from ancient civilizations through empires, religions, revolutions, and modernity. Its simplicity makes it a strong first map, to be supplemented later by more detailed and geographically diverse histories.",
+      "whyLearn": "It gives beginners a chronological frame on which later historical knowledge can be placed.",
+      "level": "BEGINNER",
+      "categories": [
+        "History",
+        "Society"
+      ],
+      "subtags": {
+        "History": [
+          "World History",
+          "Civilizations",
+          "Chronology"
+        ],
+        "Society": [
+          "Culture",
+          "Institutions",
+          "Social Change"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "a-little-history-of-the-world",
+      "cover": {
+        "localPath": "public/covers/a-little-history-of-the-world.jpg",
+        "publicUrl": "/covers/a-little-history-of-the-world.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/A_Little_History_of_the_World",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-048",
+      "slug": "the-demon-haunted-world",
+      "editorialRank": 48,
+      "type": "BOOK",
+      "title": "The Demon-Haunted World",
+      "creator": "Carl Sagan",
+      "description": "Sagan defends scientific skepticism as a public habit of asking for evidence, testing explanations, and recognizing how easily people can deceive themselves. He also argues that science must be taught with wonder and humility if it is to compete with superstition and confident misinformation.",
+      "whyLearn": "It equips readers with an accessible toolkit for evaluating extraordinary claims without losing curiosity.",
+      "level": "BEGINNER",
+      "categories": [
+        "Science",
+        "Philosophy"
+      ],
+      "subtags": {
+        "Science": [
+          "Scientific Method",
+          "Skepticism",
+          "Evidence"
+        ],
+        "Philosophy": [
+          "Critical Thinking",
+          "Epistemology",
+          "Pseudoscience"
+        ]
+      },
+      "featured": true,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "the-demon-haunted-world",
+      "cover": {
+        "localPath": "public/covers/the-demon-haunted-world.jpg",
+        "publicUrl": "/covers/the-demon-haunted-world.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/The_Demon-Haunted_World",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-049",
+      "slug": "code",
+      "editorialRank": 49,
+      "type": "BOOK",
+      "title": "Code",
+      "creator": "Charles Petzold",
+      "description": "Petzold builds computing from simple signals and switches toward binary arithmetic, logic gates, memory, processors, software, and modern computer architecture. The explanations are designed for curious readers who want to understand what sits beneath interfaces without beginning from advanced mathematics.",
+      "whyLearn": "It replaces the mystery of computers with a layered mental model of how information becomes computation.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Technology",
+        "Science"
+      ],
+      "subtags": {
+        "Technology": [
+          "Computer Architecture",
+          "Software",
+          "Digital Systems"
+        ],
+        "Science": [
+          "Logic",
+          "Binary",
+          "Electronics"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "code",
+      "cover": {
+        "localPath": "public/covers/code.jpg",
+        "publicUrl": "/covers/code.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Code%3A_The_Hidden_Language_of_Computer_Hardware_and_Software",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    },
+    {
+      "id": "book-050",
+      "slug": "chip-war",
+      "editorialRank": 50,
+      "type": "BOOK",
+      "title": "Chip War",
+      "creator": "Chris Miller",
+      "description": "Miller traces how semiconductors became essential to economic power, military capability, digital technology, and the rivalry among the United States, China, Taiwan, Japan, Korea, and Europe. The book connects technical supply chains to industrial policy and geopolitical risk without requiring an engineering background.",
+      "whyLearn": "It explains why a tiny manufactured component now sits at the center of global strategy and economic security.",
+      "level": "INTERMEDIATE",
+      "categories": [
+        "Technology",
+        "Geopolitics",
+        "Economics",
+        "History"
+      ],
+      "subtags": {
+        "Technology": [
+          "Semiconductors",
+          "Supply Chains",
+          "Manufacturing"
+        ],
+        "Geopolitics": [
+          "United States and China",
+          "Taiwan",
+          "Strategic Competition"
+        ],
+        "Economics": [
+          "Industrial Policy",
+          "Trade",
+          "Economic Security"
+        ],
+        "History": [
+          "Technology History",
+          "Cold War"
+        ]
+      },
+      "featured": false,
+      "heroFeatured": false,
+      "status": "SAVED",
+      "progress": 0,
+      "progressUnit": "PERCENTAGE",
+      "coverKey": "chip-war",
+      "cover": {
+        "localPath": "public/covers/chip-war.jpg",
+        "publicUrl": "/covers/chip-war.jpg",
+        "source": "Wikipedia",
+        "sourcePage": "https://en.wikipedia.org/wiki/Chip_War",
+        "status": "VERIFIED_TITLE_AND_AUTHOR",
+        "rightsReviewRequiredForPublicRelease": true
+      }
+    }
+  ]
+}

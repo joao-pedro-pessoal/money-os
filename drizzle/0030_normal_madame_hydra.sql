@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "invested_value" numeric(18, 2);

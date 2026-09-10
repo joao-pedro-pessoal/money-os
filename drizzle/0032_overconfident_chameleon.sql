@@ -1,0 +1,1 @@
+ALTER TABLE "platform_balances" ADD COLUMN "cost_basis" numeric(20, 4);
