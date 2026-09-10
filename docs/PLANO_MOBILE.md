@@ -29,6 +29,343 @@ A escolha do invólucro nativo fica para uma prova técnica posterior. Reaprovei
 
 Google/Apple, isolamento entre utilizadores e sincronização são a nova direção, ainda não implementada. Login sozinho não torna a base single-user segura para várias pessoas. Encriptação ponta a ponta é proposta: definir acesso do PC, posse das chaves, ligação/revogação de dispositivos e recuperação antes de a prometer. Não enviar chaves das corretoras para um proxy central.
 
+## Fronteira entre credenciais e dados — decidido
+
+As chaves de API ficam no dispositivo e nunca saem dele. Os dados financeiros
+derivados — saldos, posições, P&L, movimentos — sincronizam através do servidor
+para que a mesma conta funcione em vários dispositivos. Ao mudar de dispositivo,
+a pessoa reintroduz as chaves; o histórico financeiro chega pela sincronização.
+
+| Fica no dispositivo | Atravessa o servidor |
+| --- | --- |
+| Chave, segredo, passphrase, endereço | Saldos e posições |
+| Chave da base local | P&L realizado e não realizado |
+| Código de recuperação | Movimentos, categorias, buckets |
+
+O que isto resolve: um servidor comprometido não expõe nenhuma credencial de
+corretora, porque nenhuma lá esteve. É a aplicação do que o checklist legal já
+exigia — chaves apenas em Keychain/Keystore/SecureStore, sem proxy central.
+
+As chaves são por dispositivo. Qualquer dispositivo onde sejam introduzidas passa
+a ler as corretoras; um telemóvel e um computador podem ambos ter as suas. Não
+são sincronizadas entre dispositivos em nenhuma circunstância — é o que as
+mantém fora do servidor.
+
+**Uma chave distinta por dispositivo, não a mesma chave copiada.** As corretoras
+permitem emitir várias chaves de leitura para a mesma conta. Com uma chave por
+dispositivo, perder o computador significa revogar na corretora apenas a chave
+desse computador, e o telemóvel continua a funcionar. Com a mesma chave em ambos,
+revogar por causa de um aparelho perdido desliga todos os outros ao mesmo tempo,
+e no pior momento possível. O ecrã de ligação deve identificar a que dispositivo
+pertence cada chave e a data da última leitura bem-sucedida, para que a pessoa
+saiba qual revogar.
+
+O que isto não resolve, e não deve ser apresentado como resolvido:
+
+- As chaves continuam a passar pelo código da aplicação. Mantê-las fora de
+  logs, relatórios de erro, exportações, cópias de segurança do sistema
+  operativo e capturas de ecrã continua a ser obrigação da implementação.
+- Guardar no dispositivo não protege contra malware, phishing, roubo do
+  aparelho nem contra o comprometimento da própria corretora.
+- Saldos e movimentos são dados pessoais. A partir do momento em que saem do
+  dispositivo, aplicam-se integralmente as obrigações de RGPD do checklist:
+  aviso de privacidade, base legal, prazos de retenção, direito a apagar e a
+  exportar, e plano de resposta a violação de dados.
+
+### Só os dispositivos decifram — decidido
+
+O servidor guarda os dados financeiros cifrados e **não consegue lê-los**. A
+chave de decifragem existe apenas nos dispositivos do utilizador. Não há
+recuperação pelo operador: ninguém com acesso ao servidor consegue abrir os
+dados de ninguém, nem por pedido do próprio utilizador, nem por pedido de
+terceiros.
+
+Foi a alternativa escolhida contra a outra possível — servidor capaz de
+decifrar, com recuperação por email ou palavra-passe. Essa devolveria ao
+operador a leitura de todas as contas, que é exatamente a responsabilidade que
+esta arquitetura existe para não ter. A capacidade de recuperar os dados de
+alguém é a mesma capacidade de os ler; não existe terceira via.
+
+O login Google/Apple não altera nada disto. Prova identidade; não entrega uma
+chave. Entrar na conta num dispositivo novo dá acesso à conta, não aos dados.
+
+### Recuperação
+
+Dois caminhos, por esta ordem de uso esperado.
+
+**1. Outro dispositivo já ligado autoriza o novo.** É o caminho principal e
+cobre o caso realista — trocar de telemóvel tendo ainda o computador. Enquanto
+existir um dispositivo ligado, não é preciso mais nada.
+
+**2. Seed de doze palavras, mostrada uma única vez na configuração.** O mesmo
+formato das carteiras de criptomoeda: doze palavras de uma lista fechada, com
+verificação embutida que deteta uma palavra mal escrita. Doze palavras dão 128
+bits de entropia e escrevem-se num papel sem ambiguidade — doze *caracteres*
+não serviriam, e a distinção tem de estar clara no ecrã.
+
+A chave de cifragem deriva da seed; a seed nunca sai do dispositivo e nunca
+chega ao servidor. Guardada pelo utilizador onde entender: gestor de
+palavras-passe, papel, cofre. Serve para a perda total e simultânea de todos os
+dispositivos, e é também o que se escreve no site do PC para abrir uma sessão.
+
+Revogar um dispositivo gera uma seed nova, pelo que a anterior deixa de abrir
+seja o que for.
+
+O ecrã de configuração tem de dizer, de forma legível e não em letra pequena,
+que perder todos os dispositivos e o código significa perder os dados. É
+verdade, não tem volta, e uma pessoa que descubra isto depois foi enganada.
+
+**O código de recuperação nunca é enviado por email**, nem por mensagem, nem
+por qualquer canal que passe pelo servidor. Duas razões independentes, e cada
+uma chega:
+
+- O email é habitualmente também a forma de recuperar a palavra-passe da conta.
+  Com o código lá dentro, uma única invasão da caixa de correio dá as duas
+  metades — entrada na conta e decifragem dos dados.
+- Para o servidor enviar o código, teria de o ver. A partir desse momento a
+  afirmação de que não consegue ler os dados deixa de ser verdadeira, e a
+  decisão acima fica desfeita.
+
+### Identidade: login por email
+
+A conta identifica-se por email. Prova quem a pessoa é e nada mais: entrar na
+conta num dispositivo novo dá acesso à conta, não aos dados. Sem a seed, o que
+vem do servidor continua fechado. Quem comprometer o email entra na conta e não
+vê nada — que é a propriedade que torna esta separação útil.
+
+### O site do PC passa a decifrar no browser
+
+Consequência estrutural da decisão B, e a que mais trabalho implica.
+
+Hoje o servidor Next.js lê o PostgreSQL, calcula os totais e envia HTML pronto.
+Isso pressupõe um servidor capaz de ler os dados, o que deixa de ser verdade. O
+site passa a descarregar o bloco cifrado, decifrá-lo no browser com a seed, e
+calcular do lado do cliente — o modelo das versões web do Bitwarden e do Proton.
+
+O que sobrevive sem alterações: **`src/lib/**` inteiro.** A regra que obriga
+esses módulos a serem funções puras, sem base de dados, sem React e sem rede, é
+exatamente o que os torna executáveis no browser. Os arbitradores todos —
+`networth.ts`, `positionView.ts`, `unallocated.ts`, `holdingSource.ts` — correm
+lá tal como estão. A regra de pureza deixa de ser disciplina de testes e passa a
+ser o que viabiliza o produto.
+
+O que não sobrevive: os módulos de `src/actions/**`, que existem para falar com
+a base de dados, e as páginas que dependem deles.
+
+Um browser guarda uma chave pior do que um telemóvel guarda. O site deve pedir a
+seed a cada sessão em vez de manter o utilizador ligado indefinidamente, e essa
+diferença de comportamento entre o site e a aplicação é deliberada.
+
+### O que sincroniza
+
+Tudo excepto as chaves de API: movimentos, contas, posições, P&L,
+classificações por trade, buckets, orçamentos, watchlist, biblioteca e
+preferências. As credenciais das corretoras não sincronizam em circunstância
+nenhuma — é o que define a fronteira.
+
+### Conflitos entre dispositivos
+
+Fundir por omissão; mostrar conflito só quando o mesmo registo foi editado nos
+dois lados. Isto depende de uma condição que não pode falhar: **cada registo
+precisa de um identificador próprio e estável**, criado no dispositivo que o
+origina. É o identificador que faz o mesmo movimento, chegado por dois
+caminhos, ser reconhecido como um só.
+
+Sem isso, a fusão soma-o duas vezes e quebra a regra que o resto deste projeto
+existe para proteger: um movimento só pode afetar o saldo uma vez.
+
+### Antes de lhe chamar cifragem ponta a ponta
+
+O checklist exige demonstrar que o servidor não consegue decifrar, e documentar
+ligação, revogação e recuperação de dispositivos. Enquanto isso não estiver
+demonstrado, a funcionalidade descreve-se pelo que faz e não com essa etiqueta.
+
+### Revogar um dispositivo perdido
+
+A partir de um dispositivo de confiança: terminar a sessão do dispositivo
+perdido e gerar uma chave nova. A operação tem quatro partes e nenhuma é
+opcional.
+
+1. O servidor deixa de aceitar aquele dispositivo. Ele não recebe mais dados.
+2. Gera-se uma chave de cifragem nova e os dados no servidor são cifrados de
+   novo com ela, feito pelo dispositivo de confiança, que é quem tem a chave
+   antiga.
+3. Os restantes dispositivos ligados recebem a chave nova pelo mesmo mecanismo
+   que autoriza um dispositivo novo.
+4. **Mostra-se um código de recuperação novo.** O anterior abre a chave antiga
+   e deixa de servir. Se a pessoa guardar o antigo e deitar fora o novo, fica
+   sem recuperação sem saber.
+
+**O que isto não faz, e tem de ser dito ao utilizador:** os dados que já estavam
+no dispositivo perdido continuam lá. Revogar limita o acesso futuro, não apaga o
+passado, e um aparelho mantido offline nunca recebe a ordem de terminar sessão.
+O que protege o que já lá está é o bloqueio do próprio dispositivo — biometria
+ou código — e é por isso que a aplicação recusa guardar dados financeiros num
+telemóvel sem bloqueio configurado.
+
+Duas ações que o ecrã de revogação tem de indicar ao mesmo tempo:
+
+- **Revogar na corretora a chave de API daquele dispositivo.** É aqui que a
+  decisão de emitir uma chave por dispositivo compensa: revoga-se aquela e as
+  restantes continuam a funcionar.
+- Se o dispositivo foi roubado e não apenas perdido, tratar as credenciais como
+  comprometidas, independentemente do bloqueio.
+
+### Apagar a conta
+
+Os dados no servidor são apagados. Três consequências a resolver antes de
+anunciar a funcionalidade:
+
+- **Cópias de segurança.** Se o servidor tiver backups, os dados sobrevivem
+  neles depois de apagados da base. O checklist exige regras declaradas de
+  expiração de cópias; sem elas, "apagado" é falso durante o tempo que a cópia
+  durar. Definir o prazo e dizê-lo no aviso de privacidade.
+- **Cópias locais.** O que está nos dispositivos não desaparece por se apagar a
+  conta. Ou a aplicação limpa o cofre local ao detetar a conta apagada, ou o
+  ecrã diz que é preciso desinstalar — nunca deixar a pessoa a supor.
+- **Exportar antes de apagar.** O RGPD dá direito à portabilidade, e apagar sem
+  oferecer exportação transforma um direito no exercício de outro. A exportação
+  tem de existir antes de a eliminação ser oferecida.
+
+### Consequências que a fronteira cria
+
+**Só um dispositivo com chaves consegue ler a corretora.** O servidor não pode
+atualizar saldos por iniciativa própria, porque não tem credenciais. Um
+dispositivo sem chaves — ou com a aplicação fechada — não produz leituras novas.
+
+**A leitura acontece à entrada na aplicação.** Ao abrir, um dispositivo que
+tenha chaves lê as corretoras e envia o resultado para o servidor; um dispositivo
+sem chaves apenas recebe o que o servidor já tem. Não há leitura agendada no
+servidor, porque isso exigiria lá guardar credenciais. Quatro pontos que a
+implementação tem de resolver:
+
+- **Intervalo mínimo entre leituras.** Abrir a aplicação cinco vezes seguidas não
+  pode produzir cinco chamadas à corretora. As corretoras limitam a frequência de
+  pedidos e uma aplicação que os esgota fica bloqueada.
+- **Estado durante a leitura.** Entre abrir e a resposta chegar existe um intervalo
+  em que os números no ecrã ainda são os anteriores. Têm de aparecer como
+  anteriores durante esse período, não como recém-lidos.
+- **Falha não apaga a última leitura boa.** Rede indisponível, chave revogada ou
+  corretora em baixo devem deixar o valor anterior no lugar, identificado com a
+  data em que foi lido e com o erro visível. É a regra já aplicada ao conector
+  MEXC: uma sincronização que falha alto preserva o saldo anterior, uma que
+  termina vazia sobrepõe-se a ele.
+- **Escrita por dispositivo.** Dois dispositivos com as mesmas chaves podem ler em
+  simultâneo. A leitura mais recente por conta e corretora ganha; nenhum saldo
+  pode ser somado duas vezes por ter chegado por dois caminhos.
+
+**Num dispositivo novo, os dados sincronizados são antigos.** Antes de as chaves
+serem reintroduzidas, o ecrã mostra a última leitura feita noutro aparelho. Isso
+é uma leitura antiga e tem de aparecer como tal, com data e origem, pela mesma
+regra que `assessStaleness` já aplica às reconstruções. Um saldo antigo
+apresentado como atual é a falha que o resto deste projeto existe para evitar.
+
+## Novo conector: BloFin — viável, por construir
+
+O nome escreve-se **BloFin**, com "l" minúsculo, não "BioFin". O logótipo e boa
+parte da imprensa usam uma letra que se lê como "i" maiúsculo, e a grafia errada
+domina os resultados de pesquisa. Registado aqui porque procurar por "BioFin"
+devolve a corretora errada ou nada.
+
+Corretora de perpétuos e futuros, sediada nas Ilhas Caimão. Tem API REST pública
+e documentada em <https://docs.blofin.com>, com chaves de permissão `READ`
+separadas de `TRADE` e `TRANSFER`. É ligável e cumpre a exigência do checklist de
+usar credenciais só de leitura. Seria o nono conector.
+
+### O que a documentação diz
+
+Base: `https://openapi.blofin.com`. Existe ambiente de demonstração em
+`https://demo-trading-openapi.blofin.com`, útil para construir sem expor a conta
+real. Limites: 500 pedidos por minuto por IP, com suspensão de cinco minutos ao
+exceder.
+
+**Credenciais iguais às da OKX**: chave, segredo e passphrase, as três em cada
+pedido. Isto significa que o esquema já suporta a plataforma sem alterações — a
+coluna `encrypted_passphrase` e o `PLATFORM_SETUP.needsPassphrase` existem desde
+a OKX e não é preciso migração nenhuma.
+
+**Forma do erro também igual à da OKX**: `code` em texto, `"0"` é sucesso, texto
+em `msg`. Aplica-se a mesma armadilha já documentada — `"0"` é *truthy*, portanto
+um teste de veracidade dá a resposta errada nos dois sentidos, e a resposta
+errada é uma conta cheia que aparece vazia.
+
+### Onde não é a OKX, e é aqui que se perde tempo
+
+Parecer a OKX é precisamente o que torna este conector perigoso de escrever. A
+MEXC copiou a API da Binance endpoint a endpoint e inverteu o sinal dos códigos
+de erro; a lição foi que a forma de uma venue nunca se assume portável.
+
+**A assinatura é diferente e não pode ser reaproveitada da OKX.** Três diferenças,
+qualquer uma delas produzindo uma assinatura inválida que se lê exatamente como
+uma chave errada:
+
+- **Ordem do prehash**: `path + method + timestamp + nonce + body`. A OKX assina
+  `timestamp + method + path + body`.
+- **Existe um nonce**, enviado em `ACCESS-NONCE`. A OKX não tem.
+- **A codificação tem um passo a mais.** HMAC-SHA256, depois o digest em
+  hexadecimal, depois esse *texto hexadecimal* convertido em bytes, e só então
+  Base64. A documentação avisa explicitamente que não é `hex2bytes` mas
+  `string2bytes`. A implementação óbvia — hex direto para Base64 — dá uma
+  assinatura errada.
+
+Cabeçalhos: `ACCESS-KEY`, `ACCESS-SIGN`, `ACCESS-TIMESTAMP`, `ACCESS-NONCE`,
+`ACCESS-PASSPHRASE`. A passphrase viaja em cabeçalho e não entra na assinatura.
+
+**Seis tipos de conta, um pedido por cada.** `GET /api/v1/asset/balances` exige o
+parâmetro `accountType`, e existem `funding`, `futures`, `spot`, `earn`,
+`copy_trading` e `inverse_contract`. Ler só um e apresentar o resultado como o
+total da conta é a falha mais repetida deste projeto. Ou se leem vários e se diz
+quais, ou o âmbito fica declarado em `readsOnly` — nunca em silêncio. Posições em
+`GET /api/v1/trade/positions`.
+
+### Por confirmar contra uma chave real
+
+A documentação foi lida através de um resumo automático, não linha a linha, e
+nenhum destes pontos foi ainda visto numa resposta verdadeira. Antes de a
+plataforma aparecer no seletor:
+
+- Uma assinatura válida, construída pelo passo `string2bytes` descrito acima.
+- A resposta a uma chave deliberadamente inválida, para confirmar que o erro
+  chega em `code`/`msg` e não noutro campo — foi assim que se apanhou o
+  `message` do contrato da MEXC.
+- Que campos traz o saldo (`balance`, `available`, `frozen`, `bonus`) e em que
+  moeda, para decidir a `reportingCurrency` da ligação.
+- Se as posições declaram P&L realizado por operação. Se declararem, o número da
+  venue ganha e nada é derivado para esse símbolo.
+- Se os símbolos se compõem de base + quote, ou se só se podem partir.
+
+O ambiente de demonstração permite fazer isto sem pôr a conta real em risco.
+
+### Situação regulatória, para decidires
+
+A BloFin **não é autorizada ao abrigo do MiCA** e não consta do registo da ESMA.
+O período de transição terminou a 1 de julho de 2026, e a partir daí só
+prestadores registados podem servir clientes europeus. A BloFin continua a
+aceitar utilizadores da UE como plataforma *offshore*, ou seja, fora desse
+regime e não sob ele. Nenhum país da UE consta da sua lista de restrições; os
+Estados Unidos, Canadá, Singapura e mais de quarenta países constam.
+
+Isto não impede a ligação técnica — ao contrário da bybit.eu, que emite chaves
+impossíveis de autenticar a partir da máquina do utilizador. É informação
+factual porque o checklist exige verificar o estatuto regulatório de cada
+corretora, e porque quem tem lá o dinheiro decide com ela.
+
+### Onde o código toca
+
+Acrescentar uma plataforma mexe em quatro sítios, e três em quatro é pior do que
+nenhum — a plataforma aparece no formulário, é aceite e guardada, e só rebenta na
+primeira sincronização com "No connector for platform". Faltar `NEEDS_SECRET` é
+pior ainda: o segredo fica guardado sem cifra, em silêncio.
+
+- `PLATFORM_LABELS` em `src/lib/connectors/constants.ts` — põe-na no seletor
+- `PLATFORM_SETUP` no mesmo ficheiro — o que pede ao utilizador, os passos, os avisos e o `readsOnly`
+- `NEEDS_SECRET` — decide se a credencial é cifrada
+- o `switch` em `src/actions/connections.ts` — constrói o conector
+
+`src/lib/connectors/__tests__/wiring.test.ts` falha se algum destes ficar por
+fazer. No mobile, o conector tem de usar o transporte nativo injetado e a sua
+allowlist exata, sem seguir redirecionamentos com cabeçalhos de autenticação.
+
 ## Inventário de paridade a validar
 
 Inventário das rotas e componentes existentes; não equivale a testes funcionais concluídos.

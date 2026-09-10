@@ -22,6 +22,16 @@ Não é seguro escolher automaticamente. A alteração da moeda também exige
 decidir se o saldo da conta deve ser corrigido ou se a linha representa uma
 entrada histórica que já está refletida no saldo.
 
+**Resolvido em 10 de setembro de 2026: a linha foi apagada pelo utilizador.**
+A causa já não existe no código — `createTransaction` lê a conta e carimba a
+moeda dela, e a auditoria falha se alguma transação discordar da sua conta.
+
+Fica por confirmar uma consequência separada: o saldo guardado da Interactive
+Brokers estava 100 acima do que o conector reporta, e esse desvio foi criado
+por esta mesma linha. Apagar a transação só corrige o saldo se a eliminação
+tiver revertido a soma feita na criação. Correr `npm run audit` responde a
+isto; enquanto não for corrido, o desvio deve considerar-se em aberto.
+
 ## 2. Contas arquivadas com saldo
 
 As quatro contas abaixo estão inativas e não têm movimentos, posições nem
