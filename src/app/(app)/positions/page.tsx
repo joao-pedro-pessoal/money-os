@@ -12,6 +12,7 @@ import QuoteSymbolField from "@/components/QuoteSymbolField";
 import RefreshPrices from "@/components/RefreshPrices";
 import PositionTagsForm from "@/components/PositionTagsForm";
 import AutoSync from "@/components/AutoSync";
+import Section from "@/components/Section";
 import { Fragment } from "react";
 import { Money, Bare } from "@/components/PrivacyContext";
 import {
@@ -169,8 +170,12 @@ export default async function PositionsPage() {
       )}
 
       {balances.length > 0 && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Spot balances</div>
+        <Section
+          title="Spot balances"
+          defaultOpen
+          persistKey="positions:spot"
+          summary={`${balances.length} ${balances.length === 1 ? "coin" : "coins"}`}
+        >
           <div className="overflow-x-auto">
             <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
               <thead>
@@ -308,27 +313,29 @@ export default async function PositionsPage() {
               </tbody>
             </table></div>
           </div>
-        </div>
+        </Section>
       )}
 
       {/* Positions you keep yourself — typed in, or rebuilt from a statement.
           They were absent from this page entirely, which meant a broker with no
           API had nothing here at all and no way to tag anything. */}
       {manual.holdings.length > 0 && (
-        <div className="card p-4">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
-            <div className="text-sm font-medium">Your own positions</div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-[var(--muted)]">
-                tag them here — no need to open each one
-              </span>
-              <RefreshPrices />
-            </div>
+        <Section
+          title="Your own positions"
+          defaultOpen
+          persistKey="positions:manual"
+          summary={`${manual.holdings.length} ${manual.holdings.length === 1 ? "holding" : "holdings"}`}
+        >
+          {/* RefreshPrices sits in the body rather than beside the title: the
+              Section header is itself a button, and nesting one inside it is
+              invalid markup that swallows the click. */}
+          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
+            <p className="text-xs text-[var(--muted)] max-w-prose">
+              Kept by you rather than by a platform. Anything rebuilt from an imported statement
+              starts here, at the price you actually paid — tag them here, no need to open each one.
+            </p>
+            <RefreshPrices />
           </div>
-          <p className="text-xs text-[var(--muted)] mb-3">
-            Kept by you rather than by a platform. Anything rebuilt from an imported statement starts
-            here, at the price you actually paid.
-          </p>
 
           <div className="overflow-x-auto">
             <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
@@ -427,7 +434,7 @@ export default async function PositionsPage() {
             measured yet, rather than nothing having happened. Open a position to set its current
             price.
           </p>
-        </div>
+        </Section>
       )}
 
       <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
@@ -475,7 +482,12 @@ export default async function PositionsPage() {
             </div>
           </div>
 
-          <div className="card p-4">
+          <Section
+            title="Position detail"
+            defaultOpen
+            persistKey="positions:open"
+            summary={`${positions.length} open`}
+          >
             <div className="overflow-x-auto">
               <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
                 <thead>
@@ -614,7 +626,7 @@ export default async function PositionsPage() {
                 </tbody>
               </table></div>
             </div>
-          </div>
+          </Section>
         </>
       )}
     </div>
