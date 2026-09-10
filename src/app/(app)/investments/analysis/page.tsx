@@ -531,7 +531,7 @@ export default async function PortfolioAnalysisPage({
                       <tr key={m.id ?? m.symbol} style={{ background: "var(--surface-2)" }}>
                         {/* Indented, so a member is visibly subordinate to the
                             group above it now that both are in one table. */}
-                        <td className="max-w-64 truncate pl-8">{m.symbol}<div className="text-xs text-[var(--muted)]">{m.accountName} ? {m.status}{m.date ? ` ? ${m.date}` : ""}</div></td>
+                        <td className="max-w-64 truncate pl-8">{m.symbol}<div className="text-xs text-[var(--muted)]">{m.accountName} · {m.status}{m.date ? ` · ${m.date}` : ""}</div></td>
                         <td className="text-right">{m.shareOfGroup.toFixed(1)}%</td>
                         <td className="text-right">
                           {m.status === "closed" ? "N/A" : <Money value={m.value} />}

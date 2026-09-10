@@ -79,7 +79,7 @@ export function externalAssetLinks(assetType: string | null | undefined, symbol:
       return [
         { label: "justETF", url: isIsin ? `https://www.justetf.com/en/etf-profile.html?isin=${encode(original)}` : `https://www.justetf.com/en/search.html?search=ETFS&query=${encode(shortEtfName)}` },
         { label: "Trackinsight", url: `https://www.google.com/search?q=${encodeURIComponent("site:trackinsight.com " + shortEtfName)}` },
-        { label: sp500 ? "TradingView ? S&P 500 index" : "TradingView", url: tradingView },
+        { label: sp500 ? "TradingView — S&P 500 index" : "TradingView", url: tradingView },
       ];
     case "bond":
       return [
