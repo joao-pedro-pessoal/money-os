@@ -18,12 +18,15 @@ export default function Section({
   defaultOpen = false,
   children,
   persistKey,
+  className,
 }: {
   title: string;
   summary?: React.ReactNode;
   defaultOpen?: boolean;
   children: React.ReactNode;
   persistKey?: string;
+  /** Extra classes on the card, for callers that constrained their own width. */
+  className?: string;
 }) {
   // Every section remembers its collapsed state, so minimising a window is a
   // preference rather than something lost on the next navigation.
@@ -45,7 +48,7 @@ export default function Section({
   };
 
   return (
-    <div className="card">
+    <div className={className ? `card ${className}` : "card"}>
       <button
         type="button"
         onClick={toggle}

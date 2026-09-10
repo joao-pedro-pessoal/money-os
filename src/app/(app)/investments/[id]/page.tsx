@@ -11,6 +11,7 @@ import {
 } from "@/actions/investments";
 import HoldingTags from "@/components/HoldingTags";
 import HoldingPurposes from "@/components/HoldingPurposes";
+import Section from "@/components/Section";
 import { RISK_LEVELS, EXPECTED_RETURNS, TIME_HORIZONS, LIQUIDITY_LEVELS, tagLabel } from "@/lib/portfolio/tags";
 import HoldingFormFields from "@/components/HoldingFormFields";
 import { listPlaylists } from "@/actions/playlists";
@@ -98,8 +99,12 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
       <Link href={`/investments/asset/${encodeURIComponent(holding.symbol)}?type=${encodeURIComponent(holding.assetType ?? "")}&name=${encodeURIComponent(holding.name ?? "")}`} className="btn">View asset information</Link>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Update price</div>
+        <Section
+          title="Update price"
+          defaultOpen
+          persistKey="holding:price"
+          summary={holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleDateString("pt-PT") : "never updated"}
+        >
           <form action={updateHoldingPrice} className="space-y-3">
             <input type="hidden" name="id" value={holding.id} />
             <input
@@ -119,10 +124,14 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
               update is recorded so the value-over-time chart fills in.
             </p>
           </form>
-        </div>
+        </Section>
 
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Price history</div>
+        <Section
+          title="Price history"
+          defaultOpen
+          persistKey="holding:history"
+          summary={snapshots.length === 0 ? "none yet" : `${snapshots.length} ${snapshots.length === 1 ? "reading" : "readings"}`}
+        >
           {snapshots.length === 0 ? (
             <div className="text-sm text-[var(--muted)] py-4 text-center">No history yet</div>
           ) : (
@@ -149,12 +158,11 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
               </tbody>
             </table></div>
           )}
-        </div>
+        </Section>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Buy more (reinforce)</div>
+        <Section title="Buy more (reinforce)" defaultOpen persistKey="holding:buy">
           <form action={reinforceHolding} className="space-y-3">
             <input type="hidden" name="id" value={holding.id} />
             <div className="flex gap-2">
@@ -168,10 +176,9 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
               The average entry price is recalculated as a weighted average of what you already held and this new lot.
             </p>
           </form>
-        </div>
+        </Section>
 
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Sell (partial or full)</div>
+        <Section title="Sell (partial or full)" defaultOpen persistKey="holding:sell">
           <form action={sellHolding} className="space-y-3">
             <input type="hidden" name="id" value={holding.id} />
             <div className="flex gap-2">
@@ -196,11 +203,10 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
               . The average entry price stays put — only the quantity drops.
             </p>
           </form>
-        </div>
+        </Section>
       </div>
 
-      <div className="card p-4 max-w-lg">
-        <div className="text-sm font-medium mb-3">Staking / rewards</div>
+      <Section title="Staking / rewards" defaultOpen persistKey="holding:staking" className="max-w-lg">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div>
             <div className="text-xs text-[var(--muted)] mb-1">APR</div>
@@ -241,10 +247,9 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           &quot;Projected / year&quot; is an estimate from the APR. &quot;Rewards received&quot; is what actually
           landed — the two are kept apart on purpose.
         </p>
-      </div>
+      </Section>
 
-      <div className="card p-4 max-w-lg">
-        <div className="text-sm font-medium mb-3">Edit position</div>
+      <Section title="Edit position" defaultOpen persistKey="holding:edit" className="max-w-lg">
         <form action={updateHolding} className="space-y-3">
           <input type="hidden" name="id" value={holding.id} />
           <input name="symbol" defaultValue={holding.symbol} className="input" required />
@@ -328,7 +333,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             Save changes
           </button>
         </form>
-      </div>
+      </Section>
     </div>
   );
 }
