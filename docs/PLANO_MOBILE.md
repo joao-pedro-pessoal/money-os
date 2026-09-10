@@ -387,9 +387,21 @@ Inventário das rotas e componentes existentes; não equivale a testes funcionai
 
 ## Etapas de implementação
 
-### Ideia registada: página de cada ativo e ligações externas
+### Página de cada ativo e ligações externas — implementado
 
-Pedido do utilizador em 9 de setembro de 2026. Estado: planeado, ainda não implementado.
+Pedido do utilizador em 9 de setembro de 2026. **Implementado; esta entrada
+esteve marcada como pendente até 10 de setembro e quase levou a reconstruir o
+que já existia.** A página vive em `src/app/(app)/investments/asset/[symbol]`
+e as ligações em `src/lib/portfolio/externalLinks.ts`, com testes ao lado.
+
+Foi além do critério mínimo: cada tipo de ativo recebe o seu próprio conjunto
+de serviços — TradingView, CoinGecko e CoinMarketCap para crypto; justETF e
+Trackinsight para ETFs; Stock Analysis e OpenInsider para ações; DeFiLlama para
+stablecoins e staking; Investing.com e Trading Economics para obrigações,
+matérias-primas e índices. Continua em aberto apenas indicar outros serviços a
+acrescentar.
+
+O que segue era o pedido original, mantido como registo do critério.
 
 - Em todos os locais onde aparece um ativo — incluindo posições abertas e
   watchlist — clicar no nome ou símbolo deve abrir a respetiva página de detalhes.

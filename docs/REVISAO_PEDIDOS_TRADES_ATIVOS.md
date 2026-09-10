@@ -32,24 +32,24 @@
 - Auditoria local sem invariantes quebradas; quatro notas financeiras preexistentes para revisão.
 
 
-## Corre??o de classifica??o e P&L ? 2026-09-10
+## Correção de classificação e P&L — 2026-09-10
 
-- A an?lise combina posi??es abertas e execu??es realizadas pelas classifica??es pr?prias de cada registo. N?o associa resultados pelo ticker; inclui ativos totalmente vendidos.
-- Todas as dimens?es partilhadas s?o preservadas: tipo, risco, retorno esperado, horizonte, liquidez e playlist. Os saldos spot deixam de perder risco e horizonte.
-- O detalhe distingue posi??es abertas e trades fechados e identifica conta/data. Capital e P&L n?o realizado pertencem ?s posi??es abertas; resultados realizados pertencem aos trades.
-- Holdings, an?lise e playlists usam a mesma fonte de posi??es e o mesmo c?lculo de P&L, incluindo o pre?o de entrada personalizado quando aplic?vel.
-- Guardar classifica??es atualiza a an?lise e as restantes p?ginas de investimentos. Registos sem classifica??o continuam em Unset; n?o recebem tags de outra opera??o do mesmo ativo.
-- Valida??o: 2237 testes, TypeScript e ESLint passaram. Teste no navegador guardou classifica??es em duas execu??es do mesmo ticker, confirmou persist?ncia e presen?a individual na an?lise por horizonte. Fixtures removidas no final.
+- A análise combina posições abertas e execuções realizadas pelas classificações próprias de cada registo. Não associa resultados pelo ticker; inclui ativos totalmente vendidos.
+- Todas as dimensões partilhadas são preservadas: tipo, risco, retorno esperado, horizonte, liquidez e playlist. Os saldos spot deixam de perder risco e horizonte.
+- O detalhe distingue posições abertas e trades fechados e identifica conta/data. Capital e P&L não realizado pertencem às posições abertas; resultados realizados pertencem aos trades.
+- Holdings, análise e playlists usam a mesma fonte de posições e o mesmo cálculo de P&L, incluindo o preço de entrada personalizado quando aplicável.
+- Guardar classificações atualiza a análise e as restantes páginas de investimentos. Registos sem classificação continuam em Unset; não recebem tags de outra operação do mesmo ativo.
+- Validação: 2237 testes, TypeScript e ESLint passaram. Teste no navegador guardou classificações em duas execuções do mesmo ticker, confirmou persistência e presença individual na análise por horizonte. Fixtures removidas no final.
 
-Plano ainda pendente: pesquisa autom?tica de ativos; minimizar todos os pain?is; reconciliar diferen?as de classifica??o do patrim?nio; autentica??o Google/Apple e isolamento de utilizadores; sincroniza??o encriptada PC/mobile e offline; liga??o/revoga??o/recupera??o de dispositivos; revis?o de seguran?a, privacidade e obriga??es legais; instala??o, widgets e notifica??es; testes em dispositivos reais e distribui??o.
+Plano ainda pendente: pesquisa automática de ativos; minimizar todos os painéis; reconciliar diferenças de classificação do património; autenticação Google/Apple e isolamento de utilizadores; sincronização encriptada PC/mobile e offline; ligação/revogação/recuperação de dispositivos; revisão de segurança, privacidade e obrigações legais; instalação, widgets e notificações; testes em dispositivos reais e distribuição.
 
 
-## Associa??o por posi??o do broker ? conclu?da em 2026-09-10
+## Associação por posição do broker — concluída em 2026-09-10
 
-- O hist?rico guarda separadamente o ID da posi??o, a data de cria??o e a indica??o de resumo de posi??o. Um ID de ordem ou execu??o n?o ? tratado como ID comum de abertura/fecho.
-- O matching respeita conta, liga??o, moeda, instrumento, dire??o e ID de posi??o. Fechos parciais consomem apenas a quantidade dispon?vel, sem reutilizar aberturas nem misturar IDs. Sem ID, a associa??o continua identificada como estimativa FIFO.
-- A MEXC fornece um resumo por posi??o encerrada. O detalhe mostra ID e data de cria??o quando dispon?veis; n?o s?o criadas execu??es fict?cias de abertura. Refer?ncia: [API oficial MEXC, hist?rico de posi??es](https://mexcdevelop.github.io/apidocs/contract_v1_en/#get-the-user-s-history-position-information).
-- Migra??o 0041 gerada pelo Drizzle e aplicada ? base local; segunda gera??o sem altera??es. Backups incluem os novos campos na tabela de atividades.
-- Sincroniza??o local MEXC atualizou 14 posi??es hist?ricas com ID e preservou as classifica??es existentes.
-- Valida??o: 2245 testes; TypeScript e ESLint; navegador confirmou sele??o da abertura pelo ID em vez da mais antiga de outro ID, e apresenta??o do resumo com data. Fixtures removidas no final.
-- Limite: a associa??o exata entre execu??es depende de o feed fornecer um ID comum de posi??o. Os feeds que fornecem apenas IDs de ordens/execu??es mant?m FIFO identificado como estimativa. A data de cria??o de um resumo n?o substitui detalhes individuais que o broker n?o fornece.
+- O histórico guarda separadamente o ID da posição, a data de criação e a indicação de resumo de posição. Um ID de ordem ou execução não é tratado como ID comum de abertura/fecho.
+- O matching respeita conta, ligação, moeda, instrumento, direção e ID de posição. Fechos parciais consomem apenas a quantidade disponível, sem reutilizar aberturas nem misturar IDs. Sem ID, a associação continua identificada como estimativa FIFO.
+- A MEXC fornece um resumo por posição encerrada. O detalhe mostra ID e data de criação quando disponíveis; não são criadas execuções fictícias de abertura. Referência: [API oficial MEXC, histórico de posições](https://mexcdevelop.github.io/apidocs/contract_v1_en/#get-the-user-s-history-position-information).
+- Migração 0041 gerada pelo Drizzle e aplicada à base local; segunda geração sem alterações. Backups incluem os novos campos na tabela de atividades.
+- Sincronização local MEXC atualizou 14 posições históricas com ID e preservou as classificações existentes.
+- Validação: 2245 testes; TypeScript e ESLint; navegador confirmou seleção da abertura pelo ID em vez da mais antiga de outro ID, e apresentação do resumo com data. Fixtures removidas no final.
+- Limite: a associação exata entre execuções depende de o feed fornecer um ID comum de posição. Os feeds que fornecem apenas IDs de ordens/execuções mantêm FIFO identificado como estimativa. A data de criação de um resumo não substitui detalhes individuais que o broker não fornece.
