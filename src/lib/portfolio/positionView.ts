@@ -15,6 +15,15 @@ export interface PositionItem {
   id: string;
   symbol: string;
   side: "long" | "short" | null;
+  /**
+   * The account this sits in, or null when nothing links it to one.
+   *
+   * The name alone was enough for the table and not for net worth, which caps
+   * reclassification per account: two accounts may share a display name, and a
+   * per-account cap keyed by name would let one account's balance absorb the
+   * other's coins.
+   */
+  accountId: string | null;
   accountName: string;
   platform: string;
   assetType: string | null;
@@ -81,6 +90,40 @@ const NO_PNL_TYPES = ["cash", "stablecoin"];
 
 export function hasPnl(item: PositionItem): boolean {
   return !(item.assetType !== null && NO_PNL_TYPES.includes(item.assetType));
+}
+
+/**
+ * Market-exposed coin balances that sit inside an account's own balance, per
+ * account, in the base currency.
+ *
+ * Hyperliquid moved to a unified account, so its spot coins are a breakdown of
+ * the perps equity and are stored `countsInPortfolio: false` — correctly, or
+ * net worth would add them to a balance that already contains them. But the
+ * reclassification that files investments-inside-a-balance under investments
+ * knew only open positions and declared investments, and a coin balance is
+ * neither. So HYPE was market-exposed on the Investments page and
+ * capital-guaranteed in net worth: 75.76 EUR of the same coins, called two
+ * different things on the same refresh.
+ *
+ * Read from the same items and the same `hasPnl` the Investments page uses, so
+ * the two cannot disagree about which coins move. Only `balance` rows: open
+ * positions and a bank-and-broker account's declared investments are
+ * reclassified by their own route, and counting them here as well would move
+ * the same money out of cash twice. A balance's `value` already has an open
+ * trade's collateral taken off, so margin is not reclassified a second time
+ * either.
+ *
+ * A row with no account is skipped rather than guessed: the cap that consumes
+ * this is per account, and an unattributed coin has no balance to be capped by.
+ */
+export function marketExposedInsideBalances(items: PositionItem[]): Map<string, number> {
+  const byAccount = new Map<string, number>();
+  for (const i of items) {
+    if (i.source !== "balance" || !i.insideBalance || i.accountId === null) continue;
+    if (!hasPnl(i) || i.value <= 0) continue;
+    byAccount.set(i.accountId, round2((byAccount.get(i.accountId) ?? 0) + i.value));
+  }
+  return byAccount;
 }
 
 /** What this earns in a year at its rate, or null when it doesn't earn. */

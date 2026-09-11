@@ -5,6 +5,7 @@ const item = (over: Partial<PositionItem>): PositionItem => ({
   id: Math.random().toString(),
   symbol: "X",
   side: "long",
+  accountId: null,
   accountName: "A",
   platform: "trading212",
   assetType: "etf",

@@ -3,7 +3,7 @@ import { classifiedPerformance } from '../classifiedPerformance';
 import type { PositionItem } from '../positionView';
 import type { TradeHistoryRow } from '../../trading/filter';
 
-const open: PositionItem = { id: 'p1', symbol: 'BTC', side: 'short', accountName: 'A', platform: 'test',
+const open: PositionItem = { id: 'p1', symbol: 'BTC', side: 'short', accountId: null, accountName: 'A', platform: 'test',
   assetType: 'crypto', playlistName: 'Strategy', riskLevel: 'low', expectedReturn: 'moderate',
   timeHorizon: 'short', liquidity: 'high', value: 120, notional: 120, leverage: null,
   pnl: 20, source: 'synced', insideBalance: true, apr: null };

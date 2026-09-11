@@ -112,6 +112,25 @@ describe("investments inside balances, account by account", () => {
     expect(r.floating).toBe(88);
     expect(r.guaranteed).toBe(100);
   });
+
+  it("files a volatile coin inside an equity as invested, without changing the total", () => {
+    // Hyperliquid's unified account as the audit found it: HYPE is part of the
+    // equity, so it arrives in `cash`. Supplied as invested for that account, it
+    // moves to the market-exposed side and the total stays where it was — which
+    // is what makes net worth and the Investments page agree about those coins.
+    const r = computeNetWorth({
+      ...base,
+      cash: 250,
+      insideBalances: [
+        { cash: 150, invested: 75.76 },
+        { cash: 100, invested: 0 },
+      ],
+    });
+
+    expect(r.total).toBe(250);
+    expect(r.floating).toBe(75.76);
+    expect(r.guaranteed).toBe(174.24);
+  });
 });
 
 describe("an account that is a bank and a broker", () => {

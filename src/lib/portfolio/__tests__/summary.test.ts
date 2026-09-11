@@ -4,6 +4,7 @@ import { portfolioSummary, hasPnl, yearlyYield, type PositionItem } from "../pos
 const p = (o: Partial<PositionItem> & { id: string }): PositionItem => ({
   symbol: o.id,
   side: "long",
+  accountId: null,
   accountName: "acc",
   platform: "x",
   assetType: "stock",

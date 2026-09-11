@@ -14,6 +14,7 @@ import {
 const p = (o: Partial<PositionItem> & { id: string }): PositionItem => ({
   symbol: o.id,
   side: "long",
+  accountId: null,
   accountName: "Interactive Brokers",
   platform: "ibkr",
   assetType: "stock",
@@ -213,6 +214,7 @@ describe("portfolioSummary with an unstated cost", () => {
     id: "1",
     symbol: "X",
     side: null,
+    accountId: null,
     accountName: "A",
     platform: "p",
     assetType: "crypto",

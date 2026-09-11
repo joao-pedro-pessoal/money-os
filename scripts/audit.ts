@@ -26,7 +26,7 @@ import { getPortfolioItems } from "../src/actions/dashboard";
 import { getDividendOverview } from "../src/actions/dividends";
 import { getTradeAnalysis } from "../src/actions/investmentActivity";
 import { getSpendingAnalysis } from "../src/actions/spending";
-import { portfolioSummary } from "../src/lib/portfolio/positionView";
+import { marketExposedInsideBalances, portfolioSummary } from "../src/lib/portfolio/positionView";
 import { STABLE_ASSET_TYPES } from "../src/lib/portfolio/tags";
 import { realisedProvenance } from "../src/lib/trading/realised";
 import { listAccountsWithState } from "../src/actions/accounts";
@@ -193,29 +193,34 @@ async function main() {
   /**
    * The difference, attributed.
    *
-   * Two causes, and naming them is the point — this note has stood at roughly
-   * 60 EUR for weeks saying only that a gap exists.
+   * Two causes used to be printed here. One is now fixed at its source, and
+   * what remains of this section exists to notice if it comes back.
    *
    * **A market-exposed balance inside an account's equity.** Hyperliquid moved
    * to a unified account, so its spot coins sit inside the perps equity and are
-   * stored `countsInPortfolio: false` — correctly, or they would be added to a
-   * balance that already contains them. But nothing then reclassifies them:
-   * `reclassifiable` moves *positions* and *declared* investments out of cash,
-   * and a coin balance is neither. So HYPE is market-exposed on the Investments
-   * page and capital-guaranteed in net worth, which is the larger half of this.
+   * stored `countsInPortfolio: false`. Nothing reclassified them, so HYPE was
+   * market-exposed on the Investments page and capital-guaranteed in net worth
+   * — 75.76 EUR of the gap on the day it was attributed. `getNetWorth` now
+   * feeds them into the per-account reclassification through
+   * `marketExposedInsideBalances`, and this reads the same function, so the
+   * audit and the arbiter cannot disagree about which coins those are.
    *
    * **The reclassification cap.** An account cannot have more invested than its
-   * balance holds, so anything above it stays cash.
+   * balance holds, so anything above it stays cash. This is the part that may
+   * legitimately remain.
    *
-   * Printed, not asserted. A check here would have to rebuild the per-account
-   * split `getNetWorth` makes internally, and that is the second definition this
-   * file exists to avoid — the first draft of this section did exactly that and
-   * reported a −646 EUR residual on a healthy account.
+   * Printed, not asserted, for the reason this section has always had: a check
+   * would have to rebuild the per-account split `getNetWorth` makes internally,
+   * and that is the second definition this file exists to avoid — the first
+   * draft of this section did exactly that and reported a −646 EUR residual on
+   * a healthy account.
+   *
+   * What is noted is a gap at least as large as those coins. The cap can absorb
+   * part of them; all of them still missing from net worth points at the
+   * reclassification no longer reaching them rather than at the cap.
    */
   const floatingInsideEquity = round2(
-    assets
-      .filter((i) => i.source === "balance" && !isStable(i.assetType))
-      .reduce((s, i) => s + i.value, 0)
+    [...marketExposedInsideBalances(items.items).values()].reduce((s, v) => s + v, 0)
   );
   const gap = round2(summary.floating - nw.floating);
 
@@ -225,19 +230,18 @@ async function main() {
       `
   market-exposed counted in net worth  : ${money(nw.floating, c)}` +
       `
-  difference                           : ${money(gap, c)}` +
+  difference                           : ${money(gap, c)}  (the per-account cap, and rounding)` +
       `
-    coin balances inside an equity     : ${money(floatingInsideEquity, c)}  (market-exposed on Investments, cash in net worth)` +
-      `
-    the rest                           : ${money(round2(gap - floatingInsideEquity), c)}  (the per-account cap, and rounding)`
+  coins inside an equity, reclassified : ${money(floatingInsideEquity, c)}  (market-exposed in both)`
   );
 
-  if (floatingInsideEquity > CENT) {
+  if (floatingInsideEquity > CENT && gap >= floatingInsideEquity - CENT) {
     note(
-      "a market-exposed balance is counted as guaranteed",
-      `${money(floatingInsideEquity, c)} of coin balances sit inside an account's equity, so they ` +
-        `are market-exposed on the Investments page and capital-guaranteed in net worth. ` +
-        `Both figures are defensible on their own; they cannot both be right about the same coins.`
+      "coin balances inside an equity may not be reclassified",
+      `${money(floatingInsideEquity, c)} of market-exposed coins sit inside an account's equity, and the ` +
+        `gap between the two market-exposed figures is ${money(gap, c)} — at least as large as those coins. ` +
+        `The per-account cap can absorb part of them; all of them missing from net worth points at the ` +
+        `reclassification rather than at the cap.`
     );
   }
 

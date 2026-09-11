@@ -6,9 +6,11 @@ import { eq } from "drizzle-orm";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 import { getPortfolioContribution } from "./investments";
+import { getPortfolioItems } from "./dashboard";
 import { sumInBase, toBase } from "@/lib/fx";
 import { computeNetWorth, type NetWorthResult } from "@/lib/accounting/networth";
 import { capitalAtRisk } from "@/lib/connectors/margin";
+import { marketExposedInsideBalances } from "@/lib/portfolio/positionView";
 
 /**
  * The single source of truth for "how much do I have".
@@ -18,12 +20,13 @@ import { capitalAtRisk } from "@/lib/connectors/margin";
  * if a screen needs a patrimony number, it calls this.
  */
 export async function getNetWorth(): Promise<NetWorthResult & { baseCurrency: string }> {
-  const [allAccounts, openPositions, rates, base, portfolio] = await Promise.all([
+  const [allAccounts, openPositions, rates, base, portfolio, portfolioItems] = await Promise.all([
     db.select().from(accounts).where(eq(accounts.active, true)),
     db.select().from(positions),
     getRates(),
     getBaseCurrency(),
     getPortfolioContribution(),
+    getPortfolioItems(),
   ]);
 
   const { total: cash, unconverted: cashUnconverted } = sumInBase(
@@ -101,6 +104,18 @@ export async function getNetWorth(): Promise<NetWorthResult & { baseCurrency: st
     positionValueByAccount.set(p.accountId, (positionValueByAccount.get(p.accountId) ?? 0) + value);
   }
 
+  /**
+   * Coins that are a breakdown of an account's equity, and can move.
+   *
+   * The third thing already inside a balance that is not cash, beside open
+   * positions and declared investments. Without it a unified Hyperliquid
+   * account's HYPE was cash here and market-exposed on the Investments page —
+   * the same coins called two things on one refresh. Read from the items that
+   * page lists, so there is a single answer to which coins move; already in the
+   * base currency, like everything else summed into `invested` below.
+   */
+  const coinsInsideBalances = marketExposedInsideBalances(portfolioItems.items);
+
   const insideBalances = allAccounts.map((a) => {
     const declared =
       a.balanceMeaning === "bank_and_broker"
@@ -110,7 +125,9 @@ export async function getNetWorth(): Promise<NetWorthResult & { baseCurrency: st
     return {
       cash: toBase(Number(a.balance), a.currency, rates, base) ?? 0,
       invested:
-        (positionValueByAccount.get(a.id) ?? 0) + (toBase(declared, a.currency, rates, base) ?? 0),
+        (positionValueByAccount.get(a.id) ?? 0) +
+        (toBase(declared, a.currency, rates, base) ?? 0) +
+        (coinsInsideBalances.get(a.id) ?? 0),
     };
   });
 
