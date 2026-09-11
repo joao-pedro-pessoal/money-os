@@ -19,16 +19,22 @@ export default function AssetSearch({ navigate = false }: { navigate?: boolean }
   useEffect(() => {
     const generation = ++sequence.current;
     if (!expanded || query.trim().length < 2 || selected) return;
+    // A flag per run rather than bumping the shared counter in cleanup: the
+    // counter still lets choose() invalidate a search in flight, and this covers
+    // unmount and a changed query without the cleanup reading a ref that may
+    // have moved on by the time it runs.
+    let cancelled = false;
+    const stale = () => cancelled || generation !== sequence.current;
     const timer = setTimeout(async () => {
       setMessage('Searching…');
       try {
         const response = await searchAssets(query);
-        if (generation !== sequence.current) return;
+        if (stale()) return;
         setResults(response.results); setActive(-1);
         setMessage(response.warning ?? (response.results.length ? '' : 'No matches. You can type the ticker manually.'));
-      } catch { if (generation === sequence.current) setMessage('Search unavailable. You can type the ticker manually.'); }
+      } catch { if (!stale()) setMessage('Search unavailable. You can type the ticker manually.'); }
     }, 350);
-    return () => { clearTimeout(timer); sequence.current++; };
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [query, expanded, selected]);
   function choose(asset: AssetSuggestion) {
     sequence.current++; setSelected(asset); setQuery(asset.symbol); setName(asset.name); setExpanded(false); setResults([]); setMessage('');
