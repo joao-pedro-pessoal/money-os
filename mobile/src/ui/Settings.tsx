@@ -8,11 +8,12 @@ import { MobileSession } from '../services/session';
 import { PLATFORM_DETAILS } from '../services/network-policy';
 import { readUserFile, shareEncryptedBackup } from '../services/files';
 import { Button, Card, Choices, Field, Note, Page, styles, type External, type Run } from './kit';
+import { SyncSettings } from './SyncSettings';
 
 export function Settings({ state, session, run, busy, external, lock }: {
   state: LocalState; session: MobileSession; run: Run; busy: boolean; external: External; lock: () => void;
 }) {
-  const [section, setSection] = useState<'connections' | 'data' | 'privacy'>('connections');
+  const [section, setSection] = useState<'connections' | 'sync' | 'data' | 'privacy'>('connections');
   const [platform, setPlatform] = useState<PlatformId>('trading212');
   const [name, setName] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -34,7 +35,7 @@ export function Settings({ state, session, run, busy, external, lock }: {
   const selectedAccount = state.accounts.find(a => a.id === importAccount) ?? state.accounts[0];
   function clearKeys() { setApiKey(''); setApiSecret(''); setPassphrase(''); setAddress(''); setReadOnly(false); }
   return <Page title="As tuas definições" subtitle="Ligações diretas. Dados sob o teu controlo.">
-    <Choices value={section} values={[{ value: 'connections', label: 'Ligações' }, { value: 'data', label: 'Dados' }, { value: 'privacy', label: 'Privacidade' }]} onChange={setSection} />
+    <Choices value={section} values={[{ value: 'connections', label: 'Ligações' }, { value: 'sync', label: 'Sincronização' }, { value: 'data', label: 'Dados' }, { value: 'privacy', label: 'Privacidade' }]} onChange={setSection} />
     {notice ? <Card><Note>{notice}</Note></Card> : null}
     {section === 'connections' ? <>
       {state.accounts.filter(a => a.platform).map(account => <Card key={account.id} title={account.name}>
@@ -65,6 +66,7 @@ export function Settings({ state, session, run, busy, external, lock }: {
       </Card>
       <Card title="Outras plataformas"><Note>Trade Republic e plataformas sem API compatível: importa o extrato. O conector IBKR atual depende de um gateway num computador e não é oferecido como ligação direta nesta app.</Note></Card>
     </> : null}
+    {section === 'sync' ? <SyncSettings session={session} run={run} busy={busy} /> : null}
     {section === 'data' ? <>
       <Card title="Importar um extrato CSV">
         {selectedAccount ? <>
@@ -110,10 +112,11 @@ export function Settings({ state, session, run, busy, external, lock }: {
     </> : null}
     {section === 'privacy' ? <>
       <Card title="Os dados ficam contigo">
-        <Note>A base financeira é cifrada neste telemóvel. As credenciais são guardadas no Keychain/Keystore do dispositivo. Não existe conta Money OS, servidor de dados financeiros, publicidade ou análise de utilização nesta versão.</Note>
-        <Note>Ao sincronizar, o teu dispositivo contacta a corretora escolhida. Essa corretora recebe os pedidos e o endereço IP, segundo a sua política de privacidade.</Note>
+        <Note>A base financeira é cifrada neste telemóvel. As credenciais das corretoras ficam no Keychain/Keystore do dispositivo e nunca saem dele. Não há publicidade nem análise de utilização.</Note>
+        <Note>Se ativares a sincronização, o cofre é cifrado neste telemóvel com a tua seed antes de ser enviado. O servidor guarda-o sem o conseguir ler, e fica a saber o teu email, o nome de cada dispositivo e quando foi usado pela última vez.</Note>
+        <Note>Ao ler uma corretora, o teu dispositivo contacta-a diretamente. Essa corretora recebe os pedidos e o endereço IP, segundo a sua política de privacidade.</Note>
         <Note>Os backups automáticos do sistema estão desativados para os dados da app. Um backup manual só sai do dispositivo para o destino que escolheres no menu de partilha.</Note>
-        <Note>Se perderes o dispositivo sem um backup manual, os dados não podem ser recuperados pelo Money OS. A sincronização permanente em segundo plano não está ativa.</Note>
+        <Note>Sem sincronização nem backup manual, perder o dispositivo é perder os dados. Com sincronização, recuperas noutro dispositivo com a seed; sem a seed, ninguém os consegue recuperar. Não há sincronização automática em segundo plano.</Note>
         <Button title="Bloquear agora" secondary onPress={lock} />
       </Card>
       <Card title="Apagar os dados locais">

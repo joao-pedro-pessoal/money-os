@@ -118,9 +118,9 @@ export default function App() {
     {session ? <Unlocked session={session} external={external} lock={lock} /> : <View style={{ flex: 1, padding: 30, justifyContent: 'center', gap: 24 }}>
       <Text style={{ color: colors.accent, fontSize: 14, fontWeight: '800', letterSpacing: 4 }}>MONEY OS</Text>
       <Text style={{ color: colors.ink, fontSize: 40, fontWeight: '700', letterSpacing: -1.5 }}>O teu dinheiro.{'\n'}Só contigo.</Text>
-      <Note>Contas, investimentos e planos num cofre cifrado no teu telemóvel. Sem criar conta. Sem enviar o teu património para um servidor Money OS.</Note>
+      <Note>Contas, investimentos e planos num cofre cifrado no teu telemóvel. A conta e a sincronização são opcionais: o que sai daqui vai cifrado, e o servidor não o consegue ler.</Note>
       <Button title={opening ? 'A abrir o cofre…' : 'Desbloquear com o dispositivo'} disabled={opening} onPress={() => void unlock()} />
-      <Note>Ao continuar, proteges o acesso com a biometria ou o código do teu dispositivo. Para recuperar os dados noutro telemóvel, cria um backup manual nas definições.</Note>
+      <Note>Ao continuar, proteges o acesso com a biometria ou o código do teu dispositivo. Para teres os dados noutro dispositivo, usa a sincronização ou um backup manual nas definições.</Note>
     </View>}
     {covered ? <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }]}>
       <Text style={{ color: colors.accent, fontSize: 20, letterSpacing: 3 }}>MONEY OS</Text><Note>Dados protegidos</Note>
