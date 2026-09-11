@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Section from "@/components/Section";
+import PanelFrame from "@/components/PanelFrame";
 
 /**
  * How to use this app, inside the app.
@@ -101,7 +103,12 @@ function Part({
         <h2 className="text-lg font-semibold">{title}</h2>
         <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{lede}</p>
       </div>
-      <div className="card p-5 space-y-8">{children}</div>
+      {/* PanelFrame without a title: the h2 above already names this part, and
+          the individual entries keep their own h3 so the manual's heading
+          structure and its contents anchors survive folding. */}
+      <PanelFrame persistKey={`manual:${title}`} className="card p-5 space-y-8">
+        {children}
+      </PanelFrame>
     </div>
   );
 }
@@ -180,8 +187,7 @@ export default function ManualPage() {
       </div>
 
       {/* ---- Contents ---- */}
-      <div className="card p-5">
-        <div className="text-sm font-medium mb-4">Contents</div>
+      <Section title="Contents" defaultOpen persistKey="manual:contents">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
           {CONTENTS.map((group) => (
             <div key={group.label}>
@@ -204,10 +210,10 @@ export default function ManualPage() {
             </div>
           ))}
         </div>
-      </div>
+      </Section>
 
       {/* ---- Getting started ---- */}
-      <div className="card p-5 space-y-8">
+      <Section title="Getting started" defaultOpen persistKey="manual:getting-started" className="space-y-8">
         <Entry id="setup" title="Setting up, in order" where="The order matters — each step needs the one before it">
           <ol className="list-decimal pl-5 space-y-2">
             <li>
@@ -246,7 +252,7 @@ export default function ManualPage() {
             do anything.
           </p>
         </Entry>
-      </div>
+      </Section>
 
       {/* ============ PART 1 ============ */}
       <Part
@@ -634,7 +640,7 @@ export default function ManualPage() {
       </Part>
 
       {/* ============ THE REST ============ */}
-      <div className="card p-5 space-y-8">
+      <Section title="Settings and the rest" defaultOpen persistKey="manual:the-rest" className="space-y-8">
         <Entry id="settings" title="Settings" where="Sidebar, at the bottom → Settings">
           <ul className="list-disc pl-5 space-y-1">
             <li><strong className="text-[var(--foreground)]">Base currency</strong> — the currency of every total. Change it and the whole app reconverts.</li>
@@ -678,7 +684,7 @@ export default function ManualPage() {
             </p>
           </Note>
         </Entry>
-      </div>
+      </Section>
 
       {/*
         AGPL-3.0 §13: anyone interacting with this over a network must be able
@@ -687,8 +693,7 @@ export default function ManualPage() {
         makes the licence easy to honour for anyone who runs a copy for someone
         else, and it costs one line.
       */}
-      <div className="card p-4 text-xs text-[var(--muted)]">
-        <div className="text-[var(--foreground)] font-medium mb-1">Your data, your copy</div>
+      <Section title="Your data, your copy" persistKey="manual:your-data" className="text-xs text-[var(--muted)]">
         <p>
           This is your own instance. There is no shared database and no operator
           with access to it — nobody else can see these figures, including
@@ -708,7 +713,7 @@ export default function ManualPage() {
           other people over a network, you have to share your changes under the
           same licence.
         </p>
-      </div>
+      </Section>
 
       <div className="text-xs text-[var(--muted)]">
         <Link href="/" style={{ color: "var(--accent)" }}>
