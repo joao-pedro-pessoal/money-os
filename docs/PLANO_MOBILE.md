@@ -187,6 +187,45 @@ caminhos, ser reconhecido como um só.
 Sem isso, a fusão soma-o duas vezes e quebra a regra que o resto deste projeto
 existe para proteger: um movimento só pode afetar o saldo uma vez.
 
+### Construção criptográfica do cofre sincronizado
+
+Vive em `src/lib/vault/`, partilhado pelo site e pela aplicação — a aplicação já
+importa `src/lib` da raiz, e duas implementações de cifra seriam a segunda
+definição mais perigosa que este projeto poderia ter.
+
+**Bibliotecas.** `@noble/ciphers`, `@noble/hashes` e `@scure/bip39`, versão exata
+2.4.0, as mesmas que a aplicação já usa para os backups. Auditadas, do mesmo autor, e
+nenhuma lista de palavras escrita à mão: uma lista com uma palavra errada gera seeds
+que nenhuma outra implementação reconhece, sem erro nenhum.
+
+**Seed.** BIP39, lista inglesa, doze palavras, 128 bits de entropia. A soma de
+verificação embutida recusa uma palavra mal escrita antes de se tentar decifrar.
+
+**Chave.** HKDF-SHA256 sobre a entropia da seed, com a etiqueta
+`money-os-sync-vault:v1`, produzindo 32 bytes. Não PBKDF2: uma função lenta protege
+palavras-passe fracas, e 128 bits aleatórios não precisam dela — 600 000 iterações
+em cada abertura de sessão no PC seriam custo sem benefício. A etiqueta é diferente
+da do backup, pelo que uma chave de um nunca abre o outro.
+
+**Cifra.** AES-256-GCM, com um nonce aleatório de 12 bytes por versão.
+
+**Dados autenticados.** O formato, o identificador do utilizador e o número da versão
+entram na cifra como dados autenticados, sem serem cifrados. É o que impede um
+servidor não confiável de duas coisas que de outro modo passariam despercebidas:
+entregar o cofre de uma pessoa a outra, e servir uma versão antiga como se fosse a
+atual. A segunda só é apanhada se o cliente se lembrar da versão mais alta que já
+viu e recusar uma inferior — requisito da camada de sincronização, não da cifra.
+
+**Envelope.** Validado de forma estrita e com tamanhos limitados antes de qualquer
+derivação de chave, como o backup já faz. Chave e texto decifrado são apagados da
+memória depois de usados.
+
+**Revogação.** Uma seed nova é uma chave nova, e o estado atual é cifrado outra vez
+com ela.
+
+Nada disto foi revisto por terceiros. O checklist exige uma revisão de segurança
+independente antes de guardar dados de outras pessoas.
+
 ### Antes de lhe chamar cifragem ponta a ponta
 
 O checklist exige demonstrar que o servidor não consegue decifrar, e documentar
