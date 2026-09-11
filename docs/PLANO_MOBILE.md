@@ -187,6 +187,38 @@ caminhos, ser reconhecido como um só.
 Sem isso, a fusão soma-o duas vezes e quebra a regra que o resto deste projeto
 existe para proteger: um movimento só pode afetar o saldo uma vez.
 
+**Implementado em `mobile/src/domain/merge.ts`**, junto ao modelo de que depende.
+Quando o site do PC começar a ler o cofre, modelo, dinheiro e fusão passam juntos
+para a raiz — nunca uma cópia de um deles.
+
+Regras, cada uma forçada pelo modelo existente:
+
+- **A três vias, contra a última versão sincronizada.** Nenhum registo tem data de
+  alteração: uma conta sabe quando foi criada, um movimento a data a que se refere,
+  um objetivo nada. A base, que cada dispositivo já tem porque a decifrou, diz qual
+  dos lados mudou sem depender de dois relógios concordarem.
+- **O saldo de uma conta manual recalcula-se, não se funde.** Só registar, transferir
+  e apagar movimentos o alteram. O saldo fundido é o da base, mais os movimentos
+  manuais que o conjunto fundido ganhou, menos os que perdeu — contados sobre o
+  conjunto fundido, onde cada id existe uma vez. Um saldo que mudou mais do que os
+  seus movimentos explicam é reportado como conflito, não absorvido.
+- **Movimentos sincronizados e importados identificam-se pela origem.** Cada
+  dispositivo cria o seu próprio id ao ler uma corretora ou importar um ficheiro,
+  por isso o mesmo movimento chega com dois ids. Juntam-se por conta e `externalId`
+  — a referência da corretora ou o hash da linha importada.
+- **A leitura de uma corretora é uma medição.** Fica a de `syncedAt` mais recente,
+  venha de que lado vier; não é um conflito.
+- **A referência à chave é de cada dispositivo.** O `credentialRef` do dispositivo
+  local mantém-se e nunca é copiado do outro, tal como o backup já o retira.
+- **Removido de um lado e alterado do outro fica alterado**, e é reportado. Uma
+  remoção repete-se; uma edição perdida não se recupera.
+- **O resultado é validado** contra o mesmo schema de qualquer cofre guardado. Uma
+  fusão que produziria um estado inválido devolve os problemas e nenhum estado.
+
+Testado com um caso por regra e 200 rondas geradas de registos, transferências e
+remoções aleatórias nos dois lados de uma base partilhada: cada saldo é o valor de
+abertura mais os movimentos fundidos, e fundir na ordem inversa dá os mesmos saldos.
+
 ### Construção criptográfica do cofre sincronizado
 
 Vive em `src/lib/vault/`, partilhado pelo site e pela aplicação — a aplicação já
