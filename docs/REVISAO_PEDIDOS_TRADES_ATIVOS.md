@@ -63,3 +63,42 @@ Implementado e documentado em [Filtro de estado de performance](FILTRO_ESTADO_PE
 ## Daily P&L calendar (2026-09-11)
 
 Implementado no Trade History e documentado em [Calendario de P&L](CALENDARIO_PNL.md).
+
+
+## Estado das tarefas — 2026-09-11
+
+Substitui as listas de pendentes acima, que ficaram desatualizadas.
+
+### Concluído
+
+- **Minimizar painéis em toda a aplicação.** Todas as páginas usam `PanelFrame`, com
+  "Minimize panels" / "Expand panels" no topo. Ficam por dobrar, de propósito, as
+  caixas de um só número, os avisos, os estados vazios e as linhas de listas. Na
+  `manual` dobram os painéis e não as 21 secções, para o índice continuar a funcionar.
+  Falta confirmar o aspeto no browser.
+- **Pesquisa de ativos**, com identificação da bolsa. Sem testes próprios.
+- **Desvio do saldo da Interactive Brokers.** A transação de 100 EUR foi apagada e a
+  auditoria confirma que o saldo e o dinheiro livre batem certo.
+- **Collateral crypto no património.** As moedas voláteis dentro da equity de uma
+  exchange (o HYPE da Hyperliquid) passaram a contar como expostas ao mercado no
+  património, como já contavam na página Investments. Diferença entre as duas
+  páginas: de 83,50 € para 7,74 €, sem alterar o total.
+
+### Por decidir pelo utilizador
+
+- **Os 7,74 € restantes são da Trade Republic.** A conta declara 450,83 € investidos e
+  os ETFs listados valem 458,57 €; o saldo (451,41 €) também foi introduzido à mão.
+  Ambos são anteriores aos preços atuais. Atualizar saldo e valor investido a partir
+  da app da corretora fecha a diferença. A auditoria passa a nomear esta conta.
+- **Sobreposição de preferências de painéis.** As Definições guardam no servidor e o
+  `PanelFrame` guarda no browser; o segundo pode anular o primeiro.
+
+### Pendente
+
+1. Login por email, Google ou Apple, e isolamento de utilizadores.
+2. Sincronização encriptada, offline e gestão de dispositivos.
+3. Revisão de segurança, privacidade e obrigações legais.
+4. Instalação, widgets, notificações e testes em dispositivos reais.
+
+O desenho dos pontos 1 e 2 está decidido em [PLANO_MOBILE.md](PLANO_MOBILE.md). Antes
+de qualquer merge com `main`: este branch não partilha histórico com ele.

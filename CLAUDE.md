@@ -53,10 +53,16 @@ Two things orient faster than reading the rest of this file.
 
 Run `npm run audit`. It checks the invariants below against the real database
 and reports what is currently wrong with the **data** — as opposed to the code —
-so open issues announce themselves instead of living in a stale list here. At
-the time of writing it reports two, both the user's to decide: a 100 transaction
-stamped EUR on a USD account, and an IBKR stored balance that has drifted 100
-above what the connector says.
+so open issues announce themselves instead of living in a stale list here.
+
+This paragraph used to name the two issues it reported. Both were resolved
+before anyone read it again, and the list went on describing them — the stale
+list the sentence above says to avoid. Run the audit instead of trusting any
+summary of it, including this one.
+
+In the local-mobile checkout there is no `.env`; the isolated database is
+reached through `node .local-checkpoints/run-local.mjs run --import tsx
+scripts/audit.ts`, which loads its credentials without printing them.
 
 Check `git branch`. Work has been happening on `fix/secrets-and-unconverted-sums`,
 which is a long way ahead of `main` and has never been merged. Starting from

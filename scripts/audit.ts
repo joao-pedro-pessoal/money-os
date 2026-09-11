@@ -246,6 +246,48 @@ async function main() {
   }
 
   /**
+   * The cap, attributed to an account.
+   *
+   * "The per-account cap, and rounding" was all the line above could say about
+   * what remained, and on the day the coins were fixed it was 7.74 EUR —
+   * exactly the distance between what Trade Republic declared as invested and
+   * what its itemised holdings were listed at. Not rounding: a figure typed into
+   * a form, older than the prices beside it.
+   *
+   * Read from the items the Investments page lists and the account's own
+   * declaration, so nothing here decides how much of a balance is invested — it
+   * only puts the two statements side by side. An account not held in the base
+   * currency is named and skipped: its declaration and the listed values are in
+   * different money, and nothing in this script converts them.
+   */
+  const accountRowsForCap = await db.select().from(accounts);
+  const listedInside = new Map<string, number>();
+  for (const i of items.items) {
+    if (!i.insideBalance || i.accountId === null) continue;
+    if (i.source !== "manual" && i.source !== "statement") continue;
+    listedInside.set(i.accountId, round2((listedInside.get(i.accountId) ?? 0) + i.value));
+  }
+  for (const a of accountRowsForCap) {
+    if (!a.active || a.balanceMeaning !== "bank_and_broker" || a.investedValue === null) continue;
+    const listed = listedInside.get(a.id);
+    if (listed === undefined) continue;
+    if (a.currency !== c) {
+      console.log(`        ${a.name}: declared in ${a.currency}, listed in ${c} — not compared`);
+      continue;
+    }
+    const declared = Number(a.investedValue);
+    if (Math.abs(listed - declared) > CENT) {
+      note(
+        `${a.name} declares a different invested figure from the holdings it lists`,
+        `declared ${money(declared, c)}, listed ${money(listed, c)}, a difference of ` +
+          `${money(round2(listed - declared), c)}. Net worth reclassifies the declared figure and the ` +
+          `Investments page shows the holdings, so this much of the gap above is the declaration being ` +
+          `older than the prices. Update the account's balance and invested value from the broker.`
+      );
+    }
+  }
+
+  /**
    * A position priced in a currency that is not the one it reports in.
    *
    * `positionValue / (size × markPrice)` is 1.00 when the price and the value
