@@ -7,6 +7,7 @@ import {
   pgEnum,
   primaryKey,
   unique,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -1274,3 +1275,88 @@ export const tradeClassifications = pgTable("trade_classifications", {
   notes: text("notes"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// ---------- Encrypted sync server ----------
+/**
+ * Accounts on the encrypted sync server.
+ *
+ * Deliberately unconnected to every table above. Those hold one person's finances
+ * in plaintext behind the site's single password; these hold other people's
+ * identities and ciphertext the server cannot read. No foreign key crosses
+ * between the two, so no join added later can reach one from the other.
+ */
+export const syncUsers = pgTable("sync_users", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  /** Trimmed and lowercased before it arrives; unique, so one address is one account. */
+  email: text("email").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * The ways into an account: a password now; Google, Apple or an email link later.
+ *
+ * Separate from the account because the plan requires every method to reach the
+ * same one. `subject` is what a method identifies someone by — the address for a
+ * password, the provider's stable id otherwise — and a new method is linked from
+ * inside a signed-in account, never matched by address, because Apple can hide
+ * the real one.
+ */
+export const syncLoginMethods = pgTable(
+  "sync_login_methods",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // "password" | "google" | "apple" | "email_link"
+    subject: text("subject").notNull(),
+    /** scrypt with its parameters; null for a method that keeps no secret here. */
+    secretHash: text("secret_hash"),
+    failedLogins: integer("failed_logins").notNull().default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique("sync_login_methods_kind_subject").on(t.kind, t.subject)]
+);
+
+export const syncDevices = pgTable("sync_devices", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+  /** Set once and never cleared: a revoked device that signs in again is a new device. */
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});
+
+/** Only a SHA-256 of each token is stored, so a copy of this table cannot be replayed as logins. */
+export const syncSessions = pgTable("sync_sessions", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
+  deviceId: text("device_id").notNull().references(() => syncDevices.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});
+
+/**
+ * Every stored version of every account's vault, as ciphertext.
+ *
+ * The primary key on (account, version) is what makes a stale send fail instead
+ * of overwriting: two devices writing the same next version race for one row, and
+ * the loser gets a unique violation the server answers with 409.
+ *
+ * Kept rather than replaced, for now. Old versions are still that person's data:
+ * the cascade removes them with the account, and pruning them sooner is recorded
+ * as pending in docs/PLANO_MOBILE.md.
+ */
+export const syncVaultVersions = pgTable(
+  "sync_vault_versions",
+  {
+    userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    deviceId: text("device_id").references(() => syncDevices.id, { onDelete: "set null" }),
+    envelope: text("envelope").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.version] })]
+);

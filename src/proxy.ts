@@ -9,6 +9,13 @@ export async function proxy(req: NextRequest) {
    * /api/sync is called by a scheduler rather than a browser and enforces its
    * own shared-secret check.
    *
+   * /api/vault is the encrypted-sync server. Devices authenticate with their own
+   * bearer tokens, per account, and every handler checks one before touching a
+   * row. The site's cookie would be the wrong credential there: it proves someone
+   * knows the single-user password and names no account. Nothing under it reads
+   * the single-user tables — an account made there can store and fetch its own
+   * ciphertext and nothing else.
+   *
    * The rest is what an installed app needs before anyone has logged in. The
    * browser fetches the manifest and registers the service worker outside any
    * page's session, and the offline page is served precisely when nothing can
@@ -23,6 +30,8 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/public") ||
     pathname.startsWith("/api/sync") ||
+    pathname === "/api/vault" ||
+    pathname.startsWith("/api/vault/") ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/sw.js" ||
     pathname === "/offline.html" ||

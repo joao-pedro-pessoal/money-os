@@ -178,16 +178,7 @@ export function decryptVault(input: {
   if (!Number.isSafeInteger(input.minVaultVersion) || input.minVaultVersion < 0) {
     throw new Error("The last accepted vault version is a whole number from 0 upwards.");
   }
-  if (input.text.length > MAX_ENVELOPE_CHARS) {
-    throw new VaultError("format", "This vault is larger than this version supports.");
-  }
-
-  let env: z.infer<typeof Envelope>;
-  try {
-    env = Envelope.parse(JSON.parse(input.text));
-  } catch {
-    throw new VaultError("format", "This is not a Money OS sync vault this version can read.");
-  }
+  const env = parseEnvelope(input.text);
   if (env.userId !== input.userId) {
     throw new VaultError("other-account", "This vault belongs to a different account.");
   }
@@ -197,12 +188,10 @@ export function decryptVault(input: {
       `The server returned version ${env.vaultVersion}, older than the version ${input.minVaultVersion} this device already has.`
     );
   }
-  const nonce = strictHex(env.nonce, "nonce", NONCE_BYTES);
-  const ciphertext = strictHex(env.ciphertext, "ciphertext");
 
   const key = deriveVaultKey(input.entropy);
   try {
-    const plaintext = gcm(key, nonce, authenticated(input.userId, env.vaultVersion)).decrypt(ciphertext);
+    const plaintext = gcm(key, env.nonce, authenticated(input.userId, env.vaultVersion)).decrypt(env.ciphertext);
     return { plaintext, vaultVersion: env.vaultVersion };
   } catch {
     throw new VaultError(
@@ -212,4 +201,48 @@ export function decryptVault(input: {
   } finally {
     key.fill(0);
   }
+}
+
+/**
+ * The envelope checked for size, shape and canonical encoding, not decrypted.
+ *
+ * One reader for both ends of the wire: the device before decrypting and the
+ * server before storing. A server validating envelopes by rules of its own would
+ * accept vaults the devices then refuse, and nobody would find out until a phone
+ * could not open its own data.
+ */
+function parseEnvelope(text: string): {
+  userId: string;
+  vaultVersion: number;
+  nonce: Uint8Array;
+  ciphertext: Uint8Array;
+} {
+  if (text.length > MAX_ENVELOPE_CHARS) {
+    throw new VaultError("format", "This vault is larger than this version supports.");
+  }
+  let env: z.infer<typeof Envelope>;
+  try {
+    env = Envelope.parse(JSON.parse(text));
+  } catch {
+    throw new VaultError("format", "This is not a Money OS sync vault this version can read.");
+  }
+  return {
+    userId: env.userId,
+    vaultVersion: env.vaultVersion,
+    nonce: strictHex(env.nonce, "nonce", NONCE_BYTES),
+    ciphertext: strictHex(env.ciphertext, "ciphertext"),
+  };
+}
+
+/**
+ * Whose vault this claims to be and which version it claims to be: everything a
+ * server can check without the seed.
+ *
+ * Claims, not facts — only decryption proves them. What checking them buys a
+ * server is refusing to store a vault labelled for another account or another
+ * version, which would otherwise sit there until a device failed to open it.
+ */
+export function readVaultHeader(text: string): { userId: string; vaultVersion: number } {
+  const { userId, vaultVersion } = parseEnvelope(text);
+  return { userId, vaultVersion };
 }
