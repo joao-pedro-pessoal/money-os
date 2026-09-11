@@ -263,19 +263,45 @@ que andou para trás, um que apresenta um cofre antigo como novo, um cofre de ou
 seed, uma fusão inválida, uma transferência entre rondas, e referências às chaves
 do lado que envia e do lado que recebe.
 
-Por fazer, e porque ainda não está feito:
+### Sincronização ligada à aplicação
 
-- **Onde o telemóvel guarda a base e a versão.** Não dentro do cofre, que é validado
-  de forma estrita e ficaria com uma segunda cópia de si próprio; pertence a um
-  registo SQLCipher separado. Toca na camada nativa de armazenamento e só se prova
-  num dispositivo.
-- **Ecrãs da seed, ligação de dispositivos e conflitos.** Só se verificam num
-  emulador ou telemóvel. Há um emulador Android nesta máquina (Pixel 10 Pro XL) e
-  um APK de desenvolvimento já compilado.
-- **O empacotamento.** O Metro resolve pacotes apenas a partir de
-  `mobile/node_modules`, e foi por isso que `@scure/bip39` foi acrescentado lá. Só
-  `npm run export`, com a sincronização ligada à aplicação, prova que o cofre
-  empacota.
+Em `mobile/src/storage` (base e versão), `mobile/src/services/session.ts` e
+`mobile/src/ui/SyncSettings.tsx`:
+
+- **A base vive num registo SQLCipher próprio** (`sync_base`), escrito na mesma
+  transação que o cofre sempre que um resultado é aplicado. Uma falha entre as duas
+  escritas deixaria uma base que já não corresponde ao estado, e a fusão seguinte
+  leria a diferença como edições que ninguém fez.
+- **Um resultado só é aplicado se o estado não mudou durante a ronda.** Se mudou, é
+  posto de lado sem perda: o servidor já tem o que foi enviado, e a ronda seguinte
+  junta-o às edições novas.
+- **Restaurar um backup ou apagar o dispositivo esquece a base na mesma escrita.**
+  Contra a base antiga, um backup restaurado seria lido como a remoção de tudo o que
+  lhe falta, em todos os dispositivos da conta.
+- **Conta, sessão e entropia da seed são segredos do dispositivo**, no SecureStore. As
+  12 palavras de uma conta nova só ficam disponíveis até serem confirmadas como
+  escritas, e a sincronização é recusada antes disso.
+- **Deixar de sincronizar esquece a base antes da sessão**, para uma entrada posterior
+  noutra conta nunca fundir contra a base da anterior.
+- **Os textos da aplicação dizem o que ela faz.** Privacidade dizia que não havia
+  conta nem servidor de dados financeiros; agora diz que a sincronização é opcional,
+  que o que sai vai cifrado, e o que o servidor fica a saber.
+
+Verificado com SQLite real (base atómica, resultado posto de lado, falha de disco
+que não escreve nada, restauro, ordem ao parar), verificação de tipos, e
+`expo export` para Android e iOS — o Metro empacota a seed e a cifra a partir de
+`mobile/node_modules`, onde `@scure/bip39` teve de ser acrescentado.
+
+Por fazer:
+
+- **Ver os ecrãs num dispositivo.** A aplicação exige o bloqueio do dispositivo antes
+  de abrir o cofre; configurar e introduzir esse código no emulador fica para o dono
+  do projeto.
+- **Sincronizar ao abrir a aplicação**, como decidido. Hoje é só manual, e o ecrã diz.
+- **Rodar a seed ao revogar um dispositivo**, como decidido. Hoje revogar só corta a
+  sessão desse dispositivo no servidor, e o ecrã não promete mais do que isso.
+- **Terminar a sessão no servidor ao deixar de sincronizar.** O token é apagado do
+  dispositivo mas continua válido no servidor até expirar.
 
 ### Servidor de sincronização
 
