@@ -38,6 +38,19 @@ export async function openVault(): Promise<LocalVault> {
       async write(json) {
         await db.runAsync('INSERT INTO vault_state (id, payload) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET payload = excluded.payload', json);
       },
+      async readSyncBase() {
+        const row = await db.getFirstAsync<{ version: number; payload: string }>('SELECT version, payload FROM sync_base WHERE id = 1');
+        return row ? { version: row.version, json: row.payload } : null;
+      },
+      async writeWithSyncBase(json, base) {
+        // The non-exclusive transaction stays on this connection, which holds the
+        // key PRAGMA. LocalVault queues every write, so nothing interleaves with it.
+        await db.withTransactionAsync(async () => {
+          await db.runAsync('INSERT INTO vault_state (id, payload) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET payload = excluded.payload', json);
+          if (base === null) await db.runAsync('DELETE FROM sync_base WHERE id = 1');
+          else await db.runAsync('INSERT INTO sync_base (id, version, payload) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET version = excluded.version, payload = excluded.payload', base.version, base.json);
+        });
+      },
       async close() { await db.closeAsync(); },
     });
   } catch (error) {

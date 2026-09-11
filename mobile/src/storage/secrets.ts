@@ -59,3 +59,31 @@ export async function deleteCredentials(ref: string): Promise<void> {
 export async function pruneUnusedCredentials(keep: string[]): Promise<void> {
   for (const ref of await registeredRefs()) if (!keep.includes(ref)) await deleteCredentials(ref);
 }
+/**
+ * This device's sync account: the server, the session and the seed's entropy.
+ *
+ * Device secrets for the same reason broker keys are. The token lets anyone fetch
+ * the account's ciphertext and the entropy lets them read it, so neither goes into
+ * the vault, a backup or the sync payload.
+ */
+export const SyncSecretsSchema = z.object({
+  server: z.string().max(300).pipe(z.url()),
+  userId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
+  deviceId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  token: z.string().regex(/^[0-9a-f]{64}$/),
+  entropy: z.string().regex(/^[0-9a-f]{32}$/),
+  /** False until the person confirms the twelve words are written down. */
+  seedConfirmed: z.boolean(),
+}).strict();
+export type SyncSecrets = z.infer<typeof SyncSecretsSchema>;
+const SYNC_KEY = 'sync.account';
+export async function saveSyncSecrets(value: SyncSecrets): Promise<void> {
+  await SecureStore.setItemAsync(SYNC_KEY, JSON.stringify(SyncSecretsSchema.parse(value)), options);
+}
+export async function loadSyncSecrets(): Promise<SyncSecrets | null> {
+  const raw = await SecureStore.getItemAsync(SYNC_KEY, options);
+  return raw ? SyncSecretsSchema.parse(JSON.parse(raw)) : null;
+}
+export async function deleteSyncSecrets(): Promise<void> {
+  await SecureStore.deleteItemAsync(SYNC_KEY, options);
+}

@@ -71,6 +71,25 @@ export function isValidSeed(input: string): boolean {
 }
 
 /**
+ * Which rule a typed seed broke, as data a screen can put into its own language.
+ *
+ * The message stays English like the rest of `src/lib`; the app shows people
+ * Portuguese. Translating by matching the English text would be a lookup keyed on
+ * prose, which breaks the day a message is reworded.
+ */
+export class SeedError extends Error {
+  constructor(
+    readonly problem: "count" | "unknown-word" | "checksum",
+    message: string,
+    readonly count?: number,
+    readonly word?: string
+  ) {
+    super(message);
+    this.name = "SeedError";
+  }
+}
+
+/**
  * The entropy behind a seed, or a refusal naming the rule it broke.
  *
  * Three different failures, told apart on purpose: a missing word, a word that is
@@ -82,16 +101,20 @@ export function isValidSeed(input: string): boolean {
 export function seedEntropy(input: string): Uint8Array {
   const words = wordsOf(input);
   if (words.length !== SEED_WORDS) {
-    throw new Error(`A recovery seed has ${SEED_WORDS} words; this has ${words.length}.`);
+    throw new SeedError(
+      "count", `A recovery seed has ${SEED_WORDS} words; this has ${words.length}.`, words.length
+    );
   }
   const unknown = words.find((w) => !WORDS.has(w));
   if (unknown !== undefined) {
-    throw new Error(`"${unknown}" is not one of the words a recovery seed is made from.`);
+    throw new SeedError(
+      "unknown-word", `"${unknown}" is not one of the words a recovery seed is made from.`, undefined, unknown
+    );
   }
   const phrase = words.join(" ");
   if (!validateMnemonic(phrase, wordlist)) {
-    throw new Error(
-      "Every word is valid but the checksum does not match: one is wrong or in the wrong place."
+    throw new SeedError(
+      "checksum", "Every word is valid but the checksum does not match: one is wrong or in the wrong place."
     );
   }
   return mnemonicToEntropy(phrase, wordlist);
