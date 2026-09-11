@@ -4,23 +4,30 @@ import type { TradeHistoryRow } from '../trading/filter';
 import { directionOf } from '../trading/stats';
 import { isRealisedTrade } from '../trading/tradeMatches';
 
+export const PERFORMANCE_STATUS_OPTIONS = [
+  { value: "both", label: "Open and closed" },
+  { value: "open", label: "Open positions" },
+  { value: "closed", label: "Closed trades" },
+] as const;
+export type PerformanceStatus = (typeof PERFORMANCE_STATUS_OPTIONS)[number]["value"];
+
 const round = (n: number) => Math.round(n * 100) / 100;
 
 /** Inputs are already converted to the same base currency. Never join by ticker:
  * each open position and closed execution belongs to its own classification. */
-export function classifiedPerformance(items: PositionItem[], trades: TradeHistoryRow[], key: GroupByKey): GroupPerformance[] {
+export function classifiedPerformance(items: PositionItem[], trades: TradeHistoryRow[], key: GroupByKey, status: PerformanceStatus = "both"): GroupPerformance[] {
   const groups = new Map<string, { open: PositionItem[]; closed: TradeHistoryRow[] }>();
   const group = (name: string | null | undefined) => {
     const label = name || 'Unset';
     if (!groups.has(label)) groups.set(label, { open: [], closed: [] });
     return groups.get(label)!;
   };
-  for (const p of new Map(items.map(p => [p.id, p])).values()) {
+  for (const p of new Map((status === "closed" ? [] : items).map(p => [p.id, p])).values()) {
     const name = key === 'playlist' ? p.playlistName : key === 'account' ? p.accountName
       : key === 'direction' ? p.side : p[key];
     group(name).open.push(p);
   }
-  for (const t of new Map(trades.map(t => [t.id, t])).values()) {
+  for (const t of new Map((status === "open" ? [] : trades).map(t => [t.id, t])).values()) {
     if (!isRealisedTrade(t)) continue;
     const name = key === 'playlist' ? t.classification?.playlistName : key === 'account' ? t.accountName
       : key === 'direction' ? directionOf(t) : key === 'symbol' ? t.symbol : t.classification?.[key];

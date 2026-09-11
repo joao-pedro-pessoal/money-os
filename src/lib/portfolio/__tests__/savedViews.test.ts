@@ -28,6 +28,12 @@ describe("serialiseView", () => {
 });
 
 describe("parseView", () => {
+  it('preserves the status filter in saved views and ignores invalid values', () => {
+    for (const status of ['both', 'open', 'closed']) {
+      expect(parseView(serialiseView({ status }), allowed)).toEqual({ status });
+    }
+    expect(parseView('status=invalid', allowed)).toEqual({});
+  });
   it("keeps values the screen accepts", () => {
     const c = parseView("groupBy=riskLevel&sort=pnlPercent&dir=asc&synced=off", allowed);
     expect(c).toEqual({ groupBy: "riskLevel", sort: "pnlPercent", dir: "asc", synced: "off" });

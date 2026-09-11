@@ -53,7 +53,7 @@ import { getBaseCurrency } from "./settings";
 // what the portfolio contains.
 import { getPortfolioItems } from "./dashboard";
 import { getTradeAnalysis } from "./investmentActivity";
-import { classifiedPerformance } from "@/lib/portfolio/classifiedPerformance";
+import { classifiedPerformance, type PerformanceStatus } from "@/lib/portfolio/classifiedPerformance";
 import { portfolioSummary } from "@/lib/portfolio/positionView";
 import {
   breakdownBy,
@@ -655,13 +655,14 @@ export async function getGroupedPerformance(
   groupBy: GroupByKey,
   sortKey: SortKey,
   direction: "asc" | "desc",
-  includeStable = true
+  includeStable = true,
+  status: PerformanceStatus = "both"
 ) {
   const [{ items }, trades] = await Promise.all([getPortfolioItems(), getTradeAnalysis()]);
   return sortPerformance(classifiedPerformance(
     items.filter(i => includeStable || !isStableAsset(i.symbol, i.assetType)),
     trades.rows.filter(t => includeStable || !isStableAsset(t.symbol ?? '', t.classification?.assetType ?? null)),
-    groupBy), sortKey, direction);
+    groupBy, status), sortKey, direction);
 }
 
 /**

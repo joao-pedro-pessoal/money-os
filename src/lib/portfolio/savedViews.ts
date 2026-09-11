@@ -14,13 +14,14 @@
 export const VIEW_SCOPE_ANALYSIS = "investments-analysis";
 
 /** Keys the analysis screen understands. Anything else is dropped. */
-const ALLOWED_KEYS = ["groupBy", "sort", "dir", "synced"] as const;
+const ALLOWED_KEYS = ["groupBy", "sort", "dir", "synced", "status"] as const;
 
 export interface ViewConfig {
   groupBy?: string;
   sort?: string;
   dir?: string;
   synced?: string;
+  status?: string;
 }
 
 /**
@@ -61,6 +62,8 @@ export function parseView(
   if (dir === "asc" || dir === "desc") config.dir = dir;
   if (synced === "on" || synced === "off") config.synced = synced;
 
+  const status = params.get("status");
+  if (status === "open" || status === "closed" || status === "both") config.status = status;
   return config;
 }
 
@@ -86,6 +89,8 @@ export function suggestName(
     parts.push(`${direction} ${(labels.sort[config.sort] ?? config.sort).toLowerCase()}`);
   }
   if (config.synced === "off") parts.push("manual only");
+  if (config.status === "open") parts.push("open positions");
+  if (config.status === "closed") parts.push("closed trades");
   return parts.join(", ") || "Saved view";
 }
 

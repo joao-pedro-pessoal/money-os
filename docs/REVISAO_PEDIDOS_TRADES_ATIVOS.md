@@ -53,3 +53,13 @@ Plano ainda pendente: pesquisa automática de ativos; minimizar todos os painéi
 - Sincronização local MEXC atualizou 14 posições históricas com ID e preservou as classificações existentes.
 - Validação: 2245 testes; TypeScript e ESLint; navegador confirmou seleção da abertura pelo ID em vez da mais antiga de outro ID, e apresentação do resumo com data. Fixtures removidas no final.
 - Limite: a associação exata entre execuções depende de o feed fornecer um ID comum de posição. Os feeds que fornecem apenas IDs de ordens/execuções mantêm FIFO identificado como estimativa. A data de criação de um resumo não substitui detalhes individuais que o broker não fornece.
+
+
+## Performance by: open / closed / both (2026-09-11)
+
+Implementado e documentado em [Filtro de estado de performance](FILTRO_ESTADO_PERFORMANCE.md).
+
+
+## Daily P&L calendar (2026-09-11)
+
+Implementado no Trade History e documentado em [Calendario de P&L](CALENDARIO_PNL.md).

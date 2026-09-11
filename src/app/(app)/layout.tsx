@@ -1,3 +1,4 @@
+import PanelControls from "@/components/PanelControls";
 import { PrivacyProvider } from "@/components/PrivacyContext";
 import { ThemeProvider } from "@/components/ThemeContext";
 import Nav from "@/components/Nav";
@@ -32,7 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             */}
             <div id="app-content" className="flex-1 min-w-0 flex flex-col">
               <TopBar alerts={alerts} quickEntry={<QuickEntry {...quickEntry} />} />
-              <main className="flex-1 p-4 md:p-8 max-w-5xl">{children}</main>
+              <main className="flex-1 p-4 md:p-8 max-w-5xl"><PanelControls />{children}</main>
             </div>
           </div>
         </NavProvider>

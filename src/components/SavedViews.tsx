@@ -30,7 +30,7 @@ export default function SavedViews({
   suggestedName: string;
   saveAction: (formData: FormData) => void;
   deleteAction: (formData: FormData) => void;
-  currentConfig: { groupBy: string; sort: string; dir: string; synced: string };
+  currentConfig: { groupBy: string; sort: string; dir: string; synced: string; status?: string };
 }) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(suggestedName);
@@ -76,6 +76,7 @@ export default function SavedViews({
           <input type="hidden" name="sort" value={currentConfig.sort} />
           <input type="hidden" name="dir" value={currentConfig.dir} />
           <input type="hidden" name="synced" value={currentConfig.synced} />
+          <input type="hidden" name="status" value={currentConfig.status ?? "both"} />
           <input
             name="name"
             value={name}

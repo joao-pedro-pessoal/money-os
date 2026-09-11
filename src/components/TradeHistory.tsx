@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import TradeAnalysis from "./TradeAnalysis";
+import TradeEvolutionChart from "./TradeEvolutionChart";
+import type { AccountEvolution } from "@/lib/trading/accountEvolution";
+import TradePnlCalendar from "./TradePnlCalendar";
 import {
   applyTradeFilters,
   hasActiveTradeFilters,
@@ -49,12 +52,14 @@ import TradeRowTags from "./TradeRowTags";
 export default function TradeHistory({
   rows,
   playlists,
+  accountHistory = [],
   options,
   currency,
   approximate,
   unconvertible,
 }: {
   rows: (TradeHistoryRow & Derivable)[];
+  accountHistory?: AccountEvolution[];
   playlists: { id: string; name: string }[];
   options: TradeFilterOptions;
   currency: string;
@@ -280,6 +285,11 @@ export default function TradeHistory({
           </p>
         )}
       </section>
+
+      <TradeEvolutionChart pnl={stats.pnl} currency={currency} accounts={accountHistory} accountName={filters.accountName}
+        from={filters.from} to={filters.to} onAccount={name => set("accountName", name)} />
+
+      <TradePnlCalendar rows={filtered} currency={currency} />
 
       <TradeAnalysis
         pnl={stats.pnl}

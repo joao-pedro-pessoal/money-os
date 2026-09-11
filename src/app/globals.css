@@ -496,3 +496,10 @@ main .grid > * { min-width: 0; }
   --chart-3: #2b7f9e;
   --chart-4: #a8761f;
 }
+
+/* Collapse controls stay outside content, preserving form state and grid layouts. */
+.panel-frame { position: relative; }
+.panel-toggle { position: absolute; top: 4px; right: 4px; z-index: 2; width: 24px; height: 24px; border-radius: 6px; color: var(--muted); background: var(--surface); }
+.panel-toggle:hover, .panel-toggle:focus-visible { color: var(--accent); outline: 1px solid var(--accent); }
+.panel-frame[data-panel-collapsed="true"] { display: block !important; height: auto !important; min-height: 40px !important; }
+.panel-heading { min-height: 20px; }

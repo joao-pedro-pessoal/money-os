@@ -3,6 +3,7 @@ import {
   getGroupedPerformance,
   getPortfolioReturns,
 } from "@/actions/investments";
+import { PERFORMANCE_STATUS_OPTIONS } from "@/lib/portfolio/classifiedPerformance";
 import PortfolioReturns from "@/components/PortfolioReturns";
 import { Money } from "@/components/PrivacyContext";
 import DonutChart from "@/components/DonutChart";
@@ -37,9 +38,11 @@ export default async function PortfolioAnalysisPage({
     dir?: string;
     synced?: string;
     open?: string;
+    status?: string;
   }>;
 }) {
   const sp = await searchParams;
+  const status = PERFORMANCE_STATUS_OPTIONS.find(o => o.value === sp.status)?.value ?? "both";
   const groupBy = (GROUP_BY_OPTIONS.find((o) => o.value === sp.groupBy)?.value ?? "playlist") as GroupByKey;
   const sort = (SORT_COLUMNS.find((c) => c.key === sp.sort)?.key ?? "value") as SortKey;
   const dir: "asc" | "desc" = sp.dir === "asc" ? "asc" : "desc";
@@ -59,7 +62,7 @@ export default async function PortfolioAnalysisPage({
   const a = await getPortfolioAnalysis(includeSynced);
   const returns = await getPortfolioReturns();
   const windowPreferences = await getDashboardWindowPreferences();
-  const grouped = await getGroupedPerformance(groupBy, sort, dir, includeSynced);
+  const grouped = await getGroupedPerformance(groupBy, sort, dir, includeSynced, status);
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
   const best = [...grouped].filter((g) => g.cost > 0).sort((x, y) => y.pnlPercent - x.pnlPercent)[0];
   const translateKeys = groupBy !== "playlist" && groupBy !== "account" && groupBy !== "symbol";
@@ -91,12 +94,13 @@ export default async function PortfolioAnalysisPage({
       sort,
       dir,
       synced: includeSynced ? "on" : "off",
+      status,
       ...(openGroup === null ? {} : { open: openGroup }),
       ...over,
     }).toString();
   const pnlColor = a.totals.totalPnL >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
 
-  const currentConfig = { groupBy, sort, dir, synced: includeSynced ? "on" : "off" };
+  const currentConfig = { groupBy, sort, dir, synced: includeSynced ? "on" : "off", status };
   const savedViewList = await listAnalysisViews();
   // Same builder as the chips use, so "already saved" compares like with like.
   const currentQuery = new URLSearchParams(currentConfig).toString();
@@ -116,7 +120,7 @@ export default async function PortfolioAnalysisPage({
    * So the empty state stays for the part that is genuinely empty, and the rest
    * of the page renders regardless.
    */
-  if (a.holdings.length === 0 && grouped.length === 0) {
+  if (a.holdings.length === 0 && grouped.length === 0 && status === "both") {
     return (
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -427,7 +431,9 @@ export default async function PortfolioAnalysisPage({
               it. The form this replaces listed `sort` and `dir` as hidden
               inputs and stopped there, so changing the grouping dropped
               `synced` — whose absence reads as on — and closed the open group. */}
-          <div className="flex gap-2 text-xs">
+          <div className="flex flex-wrap gap-2 text-xs">
+            <FilterSelect label="Position status" value={status}
+              options={PERFORMANCE_STATUS_OPTIONS.map(o => ({ value: o.value, label: o.label, href: qs({ status: o.value }) }))} />
             <FilterSelect
               label="Group by"
               value={groupBy}
@@ -440,7 +446,8 @@ export default async function PortfolioAnalysisPage({
           </div>
         </div>
 
-        <DonutChart data={grouped.filter((g) => g.value > 0).map((g) => ({ name: label(g.key), value: g.value }))} />
+        <p className="text-xs text-[var(--muted)] mt-2">This filter applies to this performance breakdown and its details.</p>
+        {status !== "closed" && <DonutChart data={grouped.filter((g) => g.value > 0).map((g) => ({ name: label(g.key), value: g.value }))} />}
 
         <div className="overflow-x-auto mt-4">
           <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
@@ -460,6 +467,7 @@ export default async function PortfolioAnalysisPage({
               </tr>
             </thead>
             <tbody>
+              {grouped.length === 0 && <tr><td colSpan={7}>No {status === "open" ? "open positions" : status === "closed" ? "closed trades" : "positions or trades"} match this selection.</td></tr>}
               {grouped.map((g) => (
                 <Fragment key={g.key}>
                 <tr>
@@ -474,23 +482,23 @@ export default async function PortfolioAnalysisPage({
                       {openGroup === g.key ? "▾ " : "▸ "}
                       {label(g.key)}
                     </FilterLink>
-                    <div className="text-xs text-[var(--muted)]">{g.percent.toFixed(1)}% do portefólio</div>
+                    {status !== "closed" && <div className="text-xs text-[var(--muted)]">{g.percent.toFixed(1)}% do portefólio</div>}
                   </td>
                   <td className="text-right">{g.openCount ?? g.count} open / {g.closedCount ?? 0} closed</td>
                   <td className="text-right">
-                    <Money value={g.value} />
+                    {status === "closed" ? "N/A" : <Money value={g.value} />}
                   </td>
                   <td className="text-right">
-                    <Money value={g.cost} />
+                    {status === "closed" ? "N/A" : <Money value={g.cost} />}
                   </td>
                   <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    <Money value={g.pnl} />
+                    {status === "closed" ? "N/A" : <Money value={g.pnl} />}
                   </td>
                   <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    {g.pnlPercent.toFixed(1)}%
+                    {status === "closed" ? "N/A" : `${g.pnlPercent.toFixed(1)}%`}
                   </td>
                   <td className={`text-right ${g.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    <Money value={g.realized} />
+                    {status === "open" ? "N/A" : <Money value={g.realized} />}
                   </td>
                 </tr>
 

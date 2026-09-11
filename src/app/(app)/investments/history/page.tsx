@@ -1,5 +1,6 @@
 import { listPlaylists } from "@/actions/playlists";
-import { listAccountsWithState } from "@/actions/accounts";
+import { accountBalanceHistory } from "@/lib/trading/accountEvolution";
+import { getAccountSnapshots, listAccountsWithState } from "@/actions/accounts";
 import {
   listInvestmentActivity,
   undoInvestmentActivityImport,
@@ -21,6 +22,13 @@ export default async function InvestmentHistoryPage() {
     ["broker", "exchange", "investment"].includes(account.accountType.toLowerCase())
   );
   const selectableAccounts = investmentAccounts.length > 0 ? investmentAccounts : accounts;
+
+  const accountHistory = await Promise.all(selectableAccounts.map(async account => ({
+    id: account.id, name: account.name, currency: account.currency,
+    ...accountBalanceHistory(account.currency, (await getAccountSnapshots(account.id)).map(s => ({
+      timestamp: s.timestamp.toISOString(), balance: Number(s.balance), currency: s.currency,
+    }))),
+  })));
 
   const byCurrency = new Map<string, number>();
   for (const row of data.activity) {
@@ -46,6 +54,7 @@ export default async function InvestmentHistoryPage() {
           a figure about the whole account sit beside rows about one
           instrument, with nothing on screen saying so. */}
       <TradeHistory
+        accountHistory={accountHistory}
         rows={analysis.rows}
         playlists={playlists}
         options={analysis.options}

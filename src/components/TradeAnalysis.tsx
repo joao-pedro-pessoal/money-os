@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -73,7 +71,6 @@ function duration(hours: number | null): string {
 }
 
 export default function TradeAnalysis({
-  pnl,
   symbols,
   directions,
   months,
@@ -118,7 +115,6 @@ export default function TradeAnalysis({
     );
   }
 
-  const last = pnl[pnl.length - 1];
   const money = (v: number) => fmt(v, currency);
   // Ten is enough to see the pattern; a long tail of one-off trades buries it.
   const topSymbols = [...symbols].filter((s) => s.closedTrades > 0).slice(0, 10);
@@ -133,81 +129,6 @@ export default function TradeAnalysis({
             `${unconvertible} row${unconvertible === 1 ? "" : "s"} left out: no exchange rate available.`}
         </div>
       )}
-
-      {/* ---- 1. Am I winning or losing? ---- */}
-      <Panel
-        title="Realised result over time"
-        subtitle="What closed trades made, what they cost in fees, and what is left. Only the last line is money you keep."
-      >
-        {last && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-            <div>
-              <div className="text-[10px] text-[var(--muted)]">Closed trades made</div>
-              <div
-                className="text-lg font-semibold"
-                style={{ color: last.realized >= 0 ? GREEN : RED }}
-              >
-                {money(last.realized)}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] text-[var(--muted)]">Fees paid</div>
-              <div className="text-lg font-semibold" style={{ color: AMBER }}>
-                {money(last.fees)}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] text-[var(--muted)]">Net</div>
-              <div
-                className="text-lg font-semibold"
-                style={{ color: last.net >= 0 ? GREEN : RED }}
-              >
-                {money(last.net)}
-              </div>
-            </div>
-          </div>
-        )}
-        {pnl.length < 2 ? (
-          <Empty what="One day of trades so far — a line needs two." />
-        ) : (
-          <div style={{ width: "100%", height: 220 }}>
-            <ResponsiveContainer>
-              <LineChart data={pnl} margin={{ top: 5, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: MUTED }} minTickGap={40} />
-                <YAxis tick={{ fontSize: 10, fill: MUTED }} width={48} />
-                {/* Where the account is neither up nor down. */}
-                <ReferenceLine y={0} stroke="var(--border-strong)" />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    fontSize: 11,
-                  }}
-                  formatter={(v, name) => [money(Number(v ?? 0)), String(name ?? "")]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="realized"
-                  name="Trading result"
-                  stroke={MUTED}
-                  strokeDasharray="4 3"
-                  dot={false}
-                />
-                <Line type="monotone" dataKey="fees" name="Fees" stroke={AMBER} dot={false} />
-                <Line
-                  type="monotone"
-                  dataKey="net"
-                  name="Net"
-                  stroke={last && last.net >= 0 ? GREEN : RED}
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </Panel>
 
       {/* ---- Result by what kind of trade it was ---- */}
       <Panel

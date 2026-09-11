@@ -14,6 +14,16 @@ const trade: TradeHistoryRow = { id: 't1', symbol: 'BTC', accountName: 'B', curr
     timeHorizon: 'short', liquidity: 'high', apr: null, notes: null } };
 
 describe('classified performance', () => {
+  it('filters both totals and members to open positions or closed trades', () => {
+    const [opened] = classifiedPerformance([open], [trade], 'timeHorizon', 'open');
+    expect(opened).toMatchObject({ count: 1, pnl: 20, realized: 0, value: 120 });
+    expect(opened.members.map(m => m.status)).toEqual(['open']);
+    const [closed] = classifiedPerformance([open], [trade], 'timeHorizon', 'closed');
+    expect(closed).toMatchObject({ count: 1, pnl: 0, realized: 5, value: 0 });
+    expect(closed.members.map(m => m.status)).toEqual(['closed']);
+    expect(classifiedPerformance([], [trade], 'timeHorizon', 'open')).toEqual([]);
+    expect(classifiedPerformance([open], [], 'timeHorizon', 'closed')).toEqual([]);
+  });
   it.each(['timeHorizon', 'riskLevel', 'expectedReturn', 'liquidity', 'assetType', 'playlist', 'direction'] as const)(
     'combines matching open positions and historical executions by %s', key => {
       const [group] = classifiedPerformance([open], [trade], key);

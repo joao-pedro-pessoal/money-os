@@ -1,3 +1,4 @@
+import AssetSearch from "@/components/AssetSearch";
 import {
   listHoldingsWithPnL,
   createHolding,
@@ -134,6 +135,8 @@ export default async function InvestmentsPage() {
         </div>
       </div>
 
+      <Section title="Search assets" defaultOpen persistKey="asset-search"><AssetSearch navigate /></Section>
+
       {/* Computed from the same items the table shows. These used to come from
           manual holdings alone, so with everything synced they read zero while
           the table below reported a real loss. Two numbers for one question is
@@ -263,13 +266,7 @@ export default async function InvestmentsPage() {
 
       <Section title="Add a position by hand" summary="for anything not synced">
         <form action={createHolding} className="space-y-3 max-w-2xl">
-          <input
-            name="symbol"
-            placeholder="Symbol (e.g. VWCE, AAPL, USDC)"
-            className="input"
-            required
-          />
-          <input name="name" placeholder="Name (optional)" className="input" />
+          <AssetSearch />
           <select name="accountId" className="input" required defaultValue="">
             <option value="">Account holding this position…</option>
             {accountList.map((a) => (

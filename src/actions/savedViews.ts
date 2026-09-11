@@ -48,6 +48,7 @@ export async function saveAnalysisView(formData: FormData) {
     sort: String(formData.get("sort") ?? "") || undefined,
     dir: String(formData.get("dir") ?? "") || undefined,
     synced: String(formData.get("synced") ?? "") || undefined,
+    status: String(formData.get("status") ?? "") || undefined,
   };
 
   const serialised = serialiseView(parseView(serialiseView(config), allowed()));

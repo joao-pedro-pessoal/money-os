@@ -1,3 +1,4 @@
+import AssetSearch from "@/components/AssetSearch";
 import { listWatchlist, addWatchlistItem, deleteWatchlistItem, listPlaylists } from "@/actions/playlists";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
@@ -90,8 +91,7 @@ export default async function WatchlistPage() {
       <div className="card p-4 max-w-md">
         <div className="text-sm font-medium mb-3">Add to watchlist</div>
         <form action={addWatchlistItem} className="space-y-3">
-          <input name="symbol" placeholder="Symbol (e.g. VWCE, NVDA)" className="input" required />
-          <input name="name" placeholder="Name (optional)" className="input" />
+          <AssetSearch />
           <div className="flex gap-2">
             <select name="assetType" className="input" defaultValue="">
               <option value="">Asset type — unset</option>
