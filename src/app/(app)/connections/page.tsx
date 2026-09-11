@@ -19,6 +19,7 @@ import { emptyReadScope } from "@/lib/connectors/scope";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
+import Section from "@/components/Section";
 
 export default async function ConnectionsPage() {
   const [connections, accountList, secretsAvailable] = await Promise.all([
@@ -249,8 +250,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
         </div>
       )}
 
-      <div className="card p-4 max-w-lg">
-        <div className="text-sm font-medium mb-3">Add connection</div>
+      <Section title="Add connection" defaultOpen className="max-w-lg">
         <ConnectionForm
           action={createConnection}
           accounts={accountList}
@@ -260,7 +260,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
           secretsAvailable={secretsAvailable}
           labels={PLATFORM_LABELS}
         />
-      </div>
+      </Section>
     </div>
   );
 }

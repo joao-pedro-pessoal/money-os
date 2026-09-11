@@ -3,6 +3,7 @@ import { listAccountsWithState } from "@/actions/accounts";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { notFound } from "next/navigation";
+import Section from "@/components/Section";
 
 export default async function BucketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,8 +34,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Edit bucket</div>
+        <Section title="Edit bucket" defaultOpen>
           <form action={updateBucket} className="space-y-3">
             <input type="hidden" name="id" value={bucket.id} />
             <input name="name" defaultValue={bucket.name} className="input" required />
@@ -53,10 +53,9 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
               Save
             </button>
           </form>
-        </div>
+        </Section>
 
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Allocations by account</div>
+        <Section title="Allocations by account" defaultOpen>
           <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table mb-4">
             <thead>
               <tr>
@@ -89,7 +88,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
               Set exact total
             </button>
           </form>
-        </div>
+        </Section>
       </div>
     </div>
   );

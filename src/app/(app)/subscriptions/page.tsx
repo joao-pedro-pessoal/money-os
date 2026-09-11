@@ -12,6 +12,7 @@ import { SUPPORTED_CURRENCIES } from "@/lib/fx";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { fmt } from "@/lib/format";
+import Section from "@/components/Section";
 
 export default async function SubscriptionsPage() {
   const [subs, totals, accounts, categories] = await Promise.all([
@@ -72,8 +73,11 @@ export default async function SubscriptionsPage() {
         </div>
       )}
 
-      <div className="card p-4">
-        <div className="text-sm font-medium mb-3">Active</div>
+      <Section
+        title="Active"
+        defaultOpen
+        summary={`${active.length} ${active.length === 1 ? "subscription" : "subscriptions"}`}
+      >
         {active.length === 0 ? (
           <div className="text-sm text-[var(--muted)] py-6 text-center">
             Nothing here yet. Add the ones you already pay — streaming, storage, software, gym.
@@ -143,11 +147,10 @@ export default async function SubscriptionsPage() {
             </table></div>
           </div>
         )}
-      </div>
+      </Section>
 
       {cancelled.length > 0 && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-1 text-[var(--muted)]">Cancelled</div>
+        <Section title="Cancelled" summary={`${cancelled.length} stopped`}>
           <p className="text-xs text-[var(--muted)] mb-3">
             Kept on purpose: this is the record of what you stopped paying, and it&apos;s worth
             re-checking your statement in a month to confirm the charges really stopped.
@@ -181,11 +184,10 @@ export default async function SubscriptionsPage() {
               ))}
             </tbody>
           </table></div>
-        </div>
+        </Section>
       )}
 
-      <div className="card p-4 max-w-2xl">
-        <div className="text-sm font-medium mb-3">Add a subscription</div>
+      <Section title="Add a subscription" defaultOpen className="max-w-2xl">
         <form action={createSubscription} className="space-y-3">
           <input name="name" placeholder="Name (e.g. Netflix)" className="input" required />
 
@@ -245,7 +247,7 @@ export default async function SubscriptionsPage() {
             it once — leave it blank if you don&apos;t know and the cost still counts.
           </p>
         </form>
-      </div>
+      </Section>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
 import { Money } from "@/components/PrivacyContext";
 import Distributor from "@/components/Distributor";
 import Link from "next/link";
+import Section from "@/components/Section";
 
 export default async function BucketsPage() {
   const [buckets, accounts, withInvestments, ranked, defaultShares] = await Promise.all([
@@ -36,19 +37,17 @@ export default async function BucketsPage() {
       <h1 className="text-lg font-semibold">Buckets</h1>
 
       {/* The hierarchy, and the thing that makes it worth having. */}
-      <div className="card p-4">
-        <div className="text-sm font-medium mb-1">Distribute money</div>
+      <Section title="Distribute money" defaultOpen>
         <Distributor
           available={distributable}
           currency={base}
           defaultShares={defaultShares}
           applyAction={applyDistribution}
         />
-      </div>
+      </Section>
 
       {ranked.length > 1 && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-1">Priority</div>
+        <Section title="Priority" defaultOpen summary={`${ranked.length} buckets`}>
           <p className="text-xs text-[var(--muted)] mb-3">
             Money is shared out in this order, with the higher ranks getting more. Two goals on the
             same rank get the same share — set them to the same number to say &quot;these matter
@@ -134,14 +133,13 @@ export default async function BucketsPage() {
               );
             })}
           </ul>
-        </div>
+        </Section>
       )}
 
       {/* A goal made of cash AND investments. The two progress figures exist
           because "100% funded" by an ETF and by cash are not the same claim. */}
       {withInvestments.purposes.some((p) => p.totals.invested > 0) && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-1">Including investments</div>
+        <Section title="Including investments" defaultOpen>
           <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">
             Positions you&apos;ve assigned to a goal, counted at their current market value. The
             conservative figure ignores everything exposed to the market, so you can see how much of
@@ -206,11 +204,10 @@ export default async function BucketsPage() {
               </tbody>
             </table></div>
           </div>
-        </div>
+        </Section>
       )}
 
-      <div className="card p-4 max-w-lg">
-        <div className="text-sm font-medium mb-1">Add money to a bucket</div>
+      <Section title="Add money to a bucket" defaultOpen className="max-w-lg">
         <p className="text-xs text-[var(--muted)] mb-3">
           Move some of an account&apos;s free cash into a bucket. This doesn&apos;t move real money — it just marks it as
           reserved for that purpose.
@@ -242,7 +239,7 @@ export default async function BucketsPage() {
 
           </form>
         )}
-      </div>
+      </Section>
 
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -310,8 +307,7 @@ export default async function BucketsPage() {
         })}
       </div>
 
-      <div className="card p-4 max-w-md">
-        <div className="text-sm font-medium mb-3">Create bucket</div>
+      <Section title="Create bucket" defaultOpen className="max-w-md">
         <form action={createBucket} className="space-y-3">
           <input name="name" placeholder="Name (e.g. Emergency Fund)" className="input" required />
           <input name="description" placeholder="Description" className="input" />
@@ -324,7 +320,7 @@ export default async function BucketsPage() {
             override the split when you distribute.
           </p>
         </form>
-      </div>
+      </Section>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { getBaseCurrency } from "@/actions/settings";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import InvestmentActivityImporter from "@/components/InvestmentActivityImporter";
 import TradeHistory from "@/components/TradeHistory";
+import Section from "@/components/Section";
 export default async function InvestmentHistoryPage() {
   const [accounts, data, baseCurrency, analysis, playlists] = await Promise.all([
     listAccountsWithState(),
@@ -77,13 +78,16 @@ export default async function InvestmentHistoryPage() {
       />
 
       {data.imports.length > 0 ? (
-        <section className="card p-4">
-          <h2 className="text-sm font-medium">Import history</h2>
+        <Section
+          title="Import history"
+          defaultOpen
+          summary={`${data.imports.length} ${data.imports.length === 1 ? "file" : "files"}`}
+        >
           <p className="text-xs text-[var(--muted)] mt-1">Undo removes only the historical events created by that file.</p>
           <div className="overflow-x-auto mt-3"><div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap text-xs"><thead><tr><th>When</th><th>File</th><th>Account</th><th className="text-right">Imported</th><th className="text-right">Duplicates</th><th /></tr></thead><tbody>
             {data.imports.map((row) => <tr key={row.id}><td>{new Date(row.createdAt).toLocaleString("pt-PT")}</td><td className="max-w-64 truncate">{row.fileName}</td><td>{row.accountName}</td><td className="text-right">{row.rowsImported}</td><td className="text-right">{row.rowsDuplicated}</td><td className="text-right"><form action={undoInvestmentActivityImport}><input type="hidden" name="importId" value={row.id} /><ConfirmSubmitButton label="Undo" confirmMessage={`Remove ${row.rowsImported} events imported from “${row.fileName}”?`} /></form></td></tr>)}
           </tbody></table></div></div>
-        </section>
+        </Section>
       ) : null}
     </div>
   );

@@ -11,6 +11,7 @@ import { ARRIVALS } from "@/lib/accounting/expected";
 import ArrivalFields from "@/components/ArrivalFields";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Link from "next/link";
+import Section from "@/components/Section";
 
 /**
  * Money that is coming but has not arrived.
@@ -94,8 +95,11 @@ export default async function ExpectedPage({
         leaving a blank form and rather than inventing them.
       */}
       {data.unscheduled.length > 0 && (
-        <div className="card p-4">
-          <div className="text-sm font-medium">Fixed income you have not scheduled</div>
+        <Section
+          title="Fixed income you have not scheduled"
+          defaultOpen
+          summary={`${data.unscheduled.length} missing`}
+        >
           <p className="text-xs text-[var(--muted)] mt-1 mb-3 max-w-prose leading-relaxed">
             {data.unscheduled.map((c) => c.name).join(", ")}{" "}
             {data.unscheduled.length === 1 ? "is marked" : "are marked"} fixed — money that
@@ -117,12 +121,15 @@ export default async function ExpectedPage({
               </Link>
             ))}
           </div>
-        </div>
+        </Section>
       )}
 
       {data.rows.length > 0 && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Still coming</div>
+        <Section
+          title="Still coming"
+          defaultOpen
+          summary={`${data.rows.length} ${data.rows.length === 1 ? "entry" : "entries"}`}
+        >
           <div className="overflow-x-auto">
             <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
               <thead>
@@ -201,13 +208,15 @@ export default async function ExpectedPage({
               </tbody>
             </table></div>
           </div>
-        </div>
+        </Section>
       )}
 
-      <div className="card p-4 max-w-md">
-        <div className="text-sm font-medium mb-3">
-          {filling ? `Schedule ${filling.name}` : "Add something coming in"}
-        </div>
+      <Section
+        title={filling ? `Schedule ${filling.name}` : "Add something coming in"}
+        defaultOpen
+        persistKey="expected:add"
+        className="max-w-md"
+      >
         <form action={createExpected} className="space-y-3" key={filling?.id ?? "blank"}>
           <input
             name="name"
@@ -266,7 +275,7 @@ export default async function ExpectedPage({
             Add
           </button>
         </form>
-      </div>
+      </Section>
     </div>
   );
 }

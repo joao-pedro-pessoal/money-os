@@ -16,6 +16,7 @@ import PageTabs from "@/components/PageTabs";
 import { ACCOUNTS_TABS } from "@/lib/navigation";
 import BalanceMeaningField from "@/components/BalanceMeaningField";
 import Link from "next/link";
+import Section from "@/components/Section";
 
 const STATE_COLOR: Record<string, string> = {
   RECONCILED: "text-[var(--green)]",
@@ -55,7 +56,7 @@ export default async function AccountsPage() {
         action={removeEmptyAccounts}
       />
 
-      <div className="card p-4">
+      <Section title="Accounts" defaultOpen summary={`${accounts.length} active`}>
         <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
           <thead>
             <tr>
@@ -117,11 +118,10 @@ export default async function AccountsPage() {
             ))}
           </tbody>
         </table></div>
-      </div>
+      </Section>
 
       <ConnectablePlatforms options={options}>
-        <div className="card p-4 max-w-md">
-          <div className="text-sm font-medium mb-3">Add account by hand</div>
+        <Section title="Add account by hand" defaultOpen className="max-w-md">
           <form action={createAccount} className="space-y-3">
             <input
               name="institution"
@@ -164,14 +164,11 @@ export default async function AccountsPage() {
               Add
             </button>
           </form>
-        </div>
+        </Section>
       </ConnectablePlatforms>
 
       {archived.length > 0 && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3 text-[var(--muted)]">
-            Archived accounts
-          </div>
+        <Section title="Archived accounts" summary={`${archived.length} archived`}>
           <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
             <thead>
               <tr>
@@ -204,7 +201,7 @@ export default async function AccountsPage() {
               ))}
             </tbody>
           </table></div>
-        </div>
+        </Section>
       )}
     </div>
   );

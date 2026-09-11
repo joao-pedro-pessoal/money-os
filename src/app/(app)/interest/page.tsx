@@ -12,6 +12,7 @@ import { ACCOUNTS_TABS } from "@/lib/navigation";
 import { getRates } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
 import { toBase } from "@/lib/fx";
+import Section from "@/components/Section";
 
 export default async function InterestPage() {
   const payments = await db
@@ -122,8 +123,11 @@ export default async function InterestPage() {
       {/* What the rates say should have arrived by now. This is the part that
           turns a list of payments into something that can catch a mistake. */}
       {outlook.length > 0 && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-1">Accruing right now</div>
+        <Section
+          title="Accruing right now"
+          defaultOpen
+          summary={`${outlook.length} ${outlook.length === 1 ? "account" : "accounts"}`}
+        >
           <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">
             Worked out from each account&apos;s rate and the days since it was last paid. Simple
             accrual on the current balance — if the balance moved during the period, the real figure
@@ -175,21 +179,19 @@ export default async function InterestPage() {
               </tbody>
             </table></div>
           </div>
-        </div>
+        </Section>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Record interest payment</div>
+        <Section title="Record interest payment" defaultOpen>
           <InterestForm
             accounts={rateAccounts}
             action={createInterestPayment}
             today={today}
           />
-        </div>
+        </Section>
 
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-1">Set an account&apos;s rate</div>
+        <Section title="Set an account's rate" defaultOpen>
           <p className="text-xs text-[var(--muted)] mb-3">
             With a rate set, the amount above fills itself in and you can tell whether what arrived
             matches what was owed.
@@ -247,7 +249,7 @@ export default async function InterestPage() {
               ACT/360: it pays about 1.4% more for the same rate.
             </p>
           </form>
-        </div>
+        </Section>
       </div>
 
       {unconvertible > 0 && (
@@ -258,7 +260,7 @@ export default async function InterestPage() {
         </div>
       )}
 
-      <div className="card p-4">
+      <Section title="Payments received" defaultOpen>
         <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
           <thead>
             <tr>
@@ -279,7 +281,7 @@ export default async function InterestPage() {
             ))}
           </tbody>
         </table></div>
-      </div>
+      </Section>
     </div>
   );
 }
