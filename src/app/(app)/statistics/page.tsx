@@ -3,6 +3,7 @@ import { Money } from "@/components/PrivacyContext";
 import PageTabs from "@/components/PageTabs";
 import { ANALYTICS_TABS } from "@/lib/navigation";
 import BenchmarkCard from "@/components/BenchmarkCard";
+import Section from "@/components/Section";
 
 export default async function StatisticsPage() {
   const s = await getStatistics();
@@ -31,8 +32,7 @@ export default async function StatisticsPage() {
       )}
 
       {/* ---- Returns by period ---- */}
-      <div className="card p-4">
-        <div className="text-sm font-medium mb-3">How the money has moved</div>
+      <Section title="How the money has moved" defaultOpen>
         {s.historyPoints < 2 ? (
           <div className="text-sm text-[var(--muted)] py-6 text-center">
             Not enough history yet. This fills in as balances change — each update adds a point.
@@ -66,15 +66,18 @@ export default async function StatisticsPage() {
             ))}
           </div>
         )}
-      </div>
+      </Section>
 
       {/* ---- Against the market ---- */}
       <BenchmarkCard />
 
       {/* ---- Drawdown ---- */}
       {s.drawdown.maxDrawdown > 0 && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Worst fall so far</div>
+        <Section
+          title="Worst fall so far"
+          defaultOpen
+          summary={`${s.drawdown.maxDrawdownPercent.toFixed(1)}% from peak`}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Stat
               label="Biggest drop"
@@ -109,12 +112,15 @@ export default async function StatisticsPage() {
               }
             />
           </div>
-        </div>
+        </Section>
       )}
 
       {/* ---- Savings & cash flow ---- */}
-      <div className="card p-4">
-        <div className="text-sm font-medium mb-3">Saving &amp; spending</div>
+      <Section
+        title="Saving & spending"
+        defaultOpen
+        summary={s.avgSavingsRate === null ? undefined : `${s.avgSavingsRate.toFixed(1)}% saved`}
+      >
         {s.flows.length === 0 ? (
           <div className="text-sm text-[var(--muted)] py-6 text-center">
             No income or expenses recorded yet — add transactions or import a statement.
@@ -173,7 +179,7 @@ export default async function StatisticsPage() {
             </div>
           </>
         )}
-      </div>
+      </Section>
 
       {/* ---- Concentration ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -190,8 +196,7 @@ export default async function StatisticsPage() {
       </div>
 
       {/* ---- Projections ---- */}
-      <div className="card p-4">
-        <div className="text-sm font-medium mb-1">If nothing changes</div>
+      <Section title="If nothing changes" defaultOpen>
         <p className="text-xs text-[var(--muted)] mb-3">
           Arithmetic on two assumptions: that you keep saving{" "}
           <Money value={s.avgMonthlySaving} currency={c} /> a month, and a steady annual return. Real markets
@@ -221,12 +226,15 @@ export default async function StatisticsPage() {
             </tbody>
           </table></div>
         </div>
-      </div>
+      </Section>
 
       {/* ---- Bucket goals ---- */}
       {s.bucketProgress.length > 0 && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">When each goal arrives</div>
+        <Section
+          title="When each goal arrives"
+          defaultOpen
+          summary={`${s.bucketProgress.length} ${s.bucketProgress.length === 1 ? "goal" : "goals"}`}
+        >
           <div className="space-y-3">
             {s.bucketProgress.map((b) => (
               <div key={b.id}>
@@ -255,7 +263,7 @@ export default async function StatisticsPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Section>
       )}
     </div>
   );
@@ -294,12 +302,13 @@ function ConcentrationCard({
   data: { index: number; largestShare: number; largestName: string | null; effectiveCount: number };
   what: string;
 }) {
+  // Each instance is titled differently, so Section's default persistKey keeps
+  // "Across accounts" and "Across positions" folding independently.
   if (data.largestName === null) {
     return (
-      <div className="card p-4">
-        <div className="text-sm font-medium mb-3">{title}</div>
+      <Section title={title} defaultOpen summary="nothing yet">
         <div className="text-sm text-[var(--muted)] py-4 text-center">Nothing to measure yet.</div>
-      </div>
+      </Section>
     );
   }
 
@@ -307,8 +316,7 @@ function ConcentrationCard({
   const risky = data.largestShare > 25;
 
   return (
-    <div className="card p-4">
-      <div className="text-sm font-medium mb-3">{title}</div>
+    <Section title={title} defaultOpen summary={`${data.largestShare.toFixed(1)}% largest`}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <div className="text-xs text-[var(--muted)] mb-1">Biggest {what}</div>
@@ -330,6 +338,6 @@ function ConcentrationCard({
           {data.largestShare.toFixed(0)}% sits in {data.largestName}. Worth knowing if that one fails.
         </div>
       )}
-    </div>
+    </Section>
   );
 }

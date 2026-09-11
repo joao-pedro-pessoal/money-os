@@ -9,6 +9,7 @@ import { getAccountPlatformTotals } from "@/actions/platformTotals";
 import BalanceMeaningField from "@/components/BalanceMeaningField";
 import { meaningOf } from "@/lib/accounting/balanceScope";
 import { eligibleCash } from "@/lib/accounting";
+import Section from "@/components/Section";
 
 export default async function AccountDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -169,9 +170,10 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
       {/* Growth over the windows the history can actually support. A window
           longer than the data returns nothing rather than a flattering number. */}
       {series.length >= 2 && (
-        <div className="card p-4">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-            <div className="text-sm font-medium">How this account has moved</div>
+        <Section title="How this account has moved" defaultOpen>
+          {/* The per-window growth stays in the body rather than in the folded
+              summary: it is four figures wide and would crowd the heading. */}
+          <div className="flex items-baseline justify-end gap-3 flex-wrap mb-3">
             <div className="flex gap-4 text-xs">
               {windows.map((w) => (
                 <span key={w.label}>
@@ -201,12 +203,11 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             Change in balance, not investment return — a deposit shows here as growth because from
             the account&apos;s point of view that&apos;s exactly what it is.
           </p>
-        </div>
+        </Section>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Update balance (reconciliation)</div>
+        <Section title="Update balance (reconciliation)" defaultOpen>
           <form action={updateAccountBalance} className="space-y-3">
             <input type="hidden" name="accountId" value={account.id} />
             <label className="block text-xs">
@@ -240,10 +241,9 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               Correction/Other, which just fixes the number without affecting cash flow).
             </p>
           </form>
-        </div>
+        </Section>
 
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Bucket allocations</div>
+        <Section title="Bucket allocations" defaultOpen>
           <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table mb-4">
             <thead>
               <tr>
@@ -276,11 +276,10 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               Set exact total
             </button>
           </form>
-        </div>
+        </Section>
       </div>
 
-      <div className="card p-4 max-w-lg">
-        <div className="text-sm font-medium mb-1">Account details</div>
+      <Section title="Account details" defaultOpen className="max-w-lg">
         <p className="text-xs text-[var(--muted)] mb-3">
           Naming and currency. Changing the currency does not convert anything already
           recorded — it only changes how new figures are read.
@@ -365,7 +364,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             Save changes
           </button>
         </form>
-      </div>
+      </Section>
     </div>
   );
 }

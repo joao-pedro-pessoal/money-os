@@ -9,6 +9,7 @@ import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { describeMonths, liabilityLabel } from "@/lib/accounting/liabilities";
 import { fmt } from "@/lib/format";
+import Section from "@/components/Section";
 
 /**
  * What you owe.
@@ -94,7 +95,11 @@ export default async function LiabilitiesPage() {
           nothing to do here.
         </div>
       ) : (
-        <div className="card p-4">
+        <Section
+          title="Debts"
+          defaultOpen
+          summary={`${data.items.length} ${data.items.length === 1 ? "debt" : "debts"}`}
+        >
           <div className="overflow-x-auto">
             <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table" style={{ minWidth: 720 }}>
               <thead>
@@ -202,12 +207,11 @@ export default async function LiabilitiesPage() {
               </tbody>
             </table></div>
           </div>
-        </div>
+        </Section>
       )}
 
       {/* ---- Adding one ---- */}
-      <div className="card p-4 max-w-lg">
-        <div className="text-sm font-medium mb-1">Record a debt</div>
+      <Section title="Record a debt" defaultOpen className="max-w-lg">
         <p className="text-xs text-[var(--muted)] mb-4">
           The rate and monthly payment are optional, but without them the app
           cannot tell you what the debt costs or when it ends.
@@ -287,20 +291,21 @@ export default async function LiabilitiesPage() {
             Record it
           </button>
         </form>
-      </div>
+      </Section>
 
-      <div className="card p-4 max-w-lg text-xs text-[var(--muted)]">
-        <div className="text-[var(--foreground)] font-medium mb-1">
-          Why a debt can be entered twice, and how this stops it
-        </div>
-        <p>
+      <Section
+        title="Why a debt can be entered twice, and how this stops it"
+        persistKey="liabilities:double-counting"
+        className="max-w-lg"
+      >
+        <p className="text-xs text-[var(--muted)]">
           Accounts here may go negative, because credit cards and overdrafts
           genuinely do. When they do, that balance has already come off your net
           worth. Recording the same debt again would take it off twice — so a
           debt that lives on an account is marked as such, shown in this list,
           and subtracted only once.
         </p>
-      </div>
+      </Section>
     </div>
   );
 }
