@@ -126,12 +126,25 @@ uma chega:
   afirmação de que não consegue ler os dados deixa de ser verdadeira, e a
   decisão acima fica desfeita.
 
-### Identidade: login por email
+### Identidade: email, Google ou Apple
 
-A conta identifica-se por email. Prova quem a pessoa é e nada mais: entrar na
-conta num dispositivo novo dá acesso à conta, não aos dados. Sem a seed, o que
-vem do servidor continua fechado. Quem comprometer o email entra na conta e não
-vê nada — que é a propriedade que torna esta separação útil.
+Três formas de entrar na mesma conta: email, conta Google ou conta Apple.
+Qualquer delas prova quem a pessoa é e nada mais: entrar num dispositivo novo dá
+acesso à conta, não aos dados. Sem a seed, o que vem do servidor continua
+fechado. Quem comprometer o email, a conta Google ou a conta Apple entra na
+conta e não vê nada — que é a propriedade que torna esta separação útil.
+
+Duas consequências de ter três entradas em vez de uma:
+
+- **As três têm de levar à mesma conta.** Quem se regista por email e mais tarde
+  entra com o Google do mesmo endereço não pode acabar com duas contas vazias e
+  os dados divididos entre elas. A associação de um método novo a uma conta
+  existente exige estar autenticado nessa conta, nunca apenas coincidir no
+  endereço.
+- **O Apple pode esconder o endereço.** Com "Ocultar o meu email", a Apple
+  entrega um endereço de reencaminhamento diferente do verdadeiro. Uma regra que
+  junte contas por email falha aqui em silêncio, e é mais uma razão para a
+  associação ser feita de dentro da conta e não inferida.
 
 ### O site do PC passa a decifrar no browser
 
