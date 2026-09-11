@@ -219,6 +219,65 @@ Testado com um caso por regra e 200 rondas geradas de registos, transferências 
 remoções aleatórias nos dois lados de uma base partilhada: cada saldo é o valor de
 abertura mais os movimentos fundidos, e fundir na ordem inversa dá os mesmos saldos.
 
+### Protocolo de sincronização
+
+**Implementado em `mobile/src/domain/sync.ts`.** Uma ronda lê a versão mais recente
+do servidor e decide a partir da versão que este dispositivo sincronizou por último
+(a base):
+
+| Servidor | Este dispositivo | Ação |
+| --- | --- | --- |
+| Mais antigo do que a base | — | Recusar: o servidor perdeu dados ou está a mentir |
+| Igual à base | Sem alterações | Nada a fazer |
+| Igual à base | Com alterações | Enviar base + 1 |
+| Mais recente do que a base | Sem alterações | Receber |
+| Mais recente do que a base | Com alterações | Fundir e enviar servidor + 1 |
+
+Regras:
+
+- **Um envio indica a versão que espera substituir**, e só é aceite se essa ainda
+  for a mais recente. Se outro dispositivo escreveu entretanto, o envio falha em vez
+  de sobrescrever, e a ronda recomeça a partir da leitura — até três vezes, e depois
+  para sem perder nada.
+- **Nunca se escreve por cima de um servidor que andou para trás.** Base + 1 sobre
+  ele pareceria progresso e apagaria o que as versões em falta continham.
+- **A versão que o servidor anuncia tem de coincidir com a autenticada dentro do
+  cofre.** Um cofre antigo decifra perfeitamente; só esta comparação impede que seja
+  apresentado como novo.
+- **As referências às chaves nunca saem do dispositivo**, nem cifradas, e ao receber
+  um cofre são repostas por conta. Mudar só uma referência não é uma alteração a
+  enviar.
+- **Uma fusão inválida não é enviada**, e o estado local fica como estava.
+- **A ronda não escreve nada.** Devolve o estado a aplicar com `LocalVault.replace`
+  e a base e versão a guardar, para as alterações sincronizadas seguirem o mesmo
+  caminho validado que as outras.
+
+**O contrato que o servidor tem de cumprir** é só este: devolver o cofre mais
+recente de uma conta, e guardar um novo apenas se a versão esperada ainda for a mais
+recente, numa escrita condicional e atómica. É tudo o que o servidor tem de saber
+fazer com os dados financeiros, e não precisa de os ler para isso.
+
+Testado contra um servidor em memória: dois telemóveis a registar ao mesmo tempo,
+uma escrita entre a leitura e o envio, um servidor que escreve sempre primeiro, um
+que andou para trás, um que apresenta um cofre antigo como novo, um cofre de outra
+seed, uma fusão inválida, uma transferência entre rondas, e referências às chaves
+do lado que envia e do lado que recebe.
+
+Por fazer, e porque ainda não está feito:
+
+- **Onde o telemóvel guarda a base e a versão.** Não dentro do cofre, que é validado
+  de forma estrita e ficaria com uma segunda cópia de si próprio; pertence a um
+  registo SQLCipher separado. Toca na camada nativa de armazenamento e só se prova
+  num dispositivo.
+- **O servidor e a API.** Depende da escolha do login por email (palavra-passe ou
+  link) e acrescenta rotas HTTP a uma aplicação que hoje só tem `/api/sync`.
+- **Ecrãs da seed, ligação de dispositivos e conflitos.** Só se verificam num
+  emulador ou telemóvel.
+- **O empacotamento.** O Metro resolve pacotes apenas a partir de
+  `mobile/node_modules`, e foi por isso que `@scure/bip39` foi acrescentado lá. Só
+  `npm run export`, com a sincronização ligada à aplicação, prova que o cofre
+  empacota.
+
 ### Construção criptográfica do cofre sincronizado
 
 Vive em `src/lib/vault/`, partilhado pelo site e pela aplicação — a aplicação já
