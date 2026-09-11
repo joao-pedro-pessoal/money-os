@@ -269,14 +269,71 @@ Por fazer, e porque ainda não está feito:
   de forma estrita e ficaria com uma segunda cópia de si próprio; pertence a um
   registo SQLCipher separado. Toca na camada nativa de armazenamento e só se prova
   num dispositivo.
-- **O servidor e a API.** Depende da escolha do login por email (palavra-passe ou
-  link) e acrescenta rotas HTTP a uma aplicação que hoje só tem `/api/sync`.
 - **Ecrãs da seed, ligação de dispositivos e conflitos.** Só se verificam num
-  emulador ou telemóvel.
+  emulador ou telemóvel. Há um emulador Android nesta máquina (Pixel 10 Pro XL) e
+  um APK de desenvolvimento já compilado.
 - **O empacotamento.** O Metro resolve pacotes apenas a partir de
   `mobile/node_modules`, e foi por isso que `@scure/bip39` foi acrescentado lá. Só
   `npm run export`, com a sincronização ligada à aplicação, prova que o cofre
   empacota.
+
+### Servidor de sincronização
+
+**Implementado em `/api/vault`**, na mesma aplicação Next.js e separado de tudo o
+resto:
+
+- **Tabelas próprias** — `sync_users`, `sync_login_methods`, `sync_devices`,
+  `sync_sessions`, `sync_vault_versions` — sem nenhuma chave estrangeira para as
+  tabelas do utilizador único. Uma conta criada aqui guarda e lê apenas a sua cifra,
+  e nenhum join acrescentado mais tarde chega às finanças em texto claro.
+- **Fora do cookie do site.** O `proxy.ts` deixa passar `/api/vault`, como já fazia
+  com `/api/sync`, porque cada pedido traz o seu próprio token. O cookie prova que
+  alguém sabe a palavra-passe única e não identifica conta nenhuma.
+- **Email e palavra-passe, por decisão provisória.** Foi pedido email, Google ou
+  Apple, sem escolha entre palavra-passe e link. A palavra-passe foi feita por não
+  depender de nenhum serviço externo; os métodos de login têm tabela própria para o
+  link e as contas Google e Apple chegarem à mesma conta mais tarde.
+- **Palavra-passe:** scrypt N=2¹⁵, r=8, p=3, com os parâmetros guardados junto do
+  hash, normalizada em NFKC para um acento escrito no telemóvel e no PC dar o mesmo
+  resultado. Um endereço desconhecido faz o mesmo trabalho que um conhecido, para o
+  tempo de resposta não revelar quem tem conta.
+- **Bloqueio:** dez tentativas erradas bloqueiam o método durante quinze minutos,
+  contadas com um incremento atómico em SQL — contar a partir da linha lida deixaria
+  passar rajadas paralelas. Custo conhecido: quem sabe um endereço consegue bloquear
+  o dono durante esse tempo.
+- **Sessões:** token aleatório de 256 bits, guardado só como SHA-256, válido 90 dias
+  e revogável por dispositivo. As ações autenticam-se sozinhas, porque uma exportação
+  `"use server"` pode ser chamada sem passar por nenhuma rota.
+- **Escrita condicional:** a chave primária (conta, versão) é a garantia atómica.
+  Dois dispositivos a enviar a mesma versão disputam uma linha, e o que perde recebe
+  409.
+- **O servidor lê o envelope com o mesmo leitor do telemóvel** (`readVaultHeader`),
+  sem o decifrar: recusa um cofre selado para outra conta (403) ou etiquetado com
+  outra versão (400).
+
+**Cliente** em `mobile/src/services/vault-client.ts`, com as regras de destino em
+`network-policy.ts`, ao lado das das corretoras: rotas e métodos exatos, HTTPS
+obrigatório exceto em `127.0.0.1`, `localhost` e `10.0.2.2` (o endereço com que o
+emulador Android chega ao computador), sem redirecionamentos nem cookies.
+
+**Verificado ponta a ponta** com `npx tsx mobile/scripts/verify-vault-server.ts`,
+contra o servidor e a base local reais, com o cliente, a seed, a cifra e a ronda de
+sincronização verdadeiros: 23 verificações sobre contas, sincronização entre dois
+telemóveis, recusas, dispositivos e bloqueio. A primeira execução encontrou um
+defeito real — a resposta "ainda sem cofre" (204) rebentava com 500, porque
+`NextResponse.json(null)` escreve um corpo que um 204 não pode ter — e duas
+verificações do próprio teste que estavam erradas.
+
+Por fazer no servidor:
+
+- **Atualizar o Next.js para 16.3.4 antes de qualquer publicação.** A 16.3.0
+  instalada tem uma vulnerabilidade crítica de execução remota de código em
+  servidores Windows.
+- **Limitar a criação de contas.** O registo está aberto e só guarda cifra, mas sem
+  limite serve para ocupar espaço.
+- **Apagar versões antigas do cofre.** Hoje ficam todas até a conta ser apagada.
+- **Link por email e contas Google e Apple.** Precisam de credenciais do dono do
+  projeto junto de cada fornecedor.
 
 ### Construção criptográfica do cofre sincronizado
 
