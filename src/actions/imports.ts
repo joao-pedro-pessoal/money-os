@@ -118,6 +118,7 @@ export async function commitImport(
   });
 
   revalidatePath("/transactions");
+  revalidatePath("/savings");
   revalidatePath("/accounts");
   revalidatePath("/");
 
@@ -190,6 +191,7 @@ export async function undoImport(formData: FormData) {
   });
 
   revalidatePath("/transactions");
+  revalidatePath("/savings");
   revalidatePath("/accounts");
   revalidatePath("/");
 }

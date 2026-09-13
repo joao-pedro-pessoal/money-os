@@ -5,6 +5,8 @@
  * version and is validated before anything is deleted.
  */
 
+import { validateSavingsRecords } from '../money/savings';
+
 export const BACKUP_VERSION = 1;
 
 /** Every table that must be in a complete backup, in dependency order. */
@@ -125,6 +127,11 @@ export function validateBackup(raw: unknown): ValidationResult {
   );
   for (const t of unknownTables) {
     warnings.push(`Unknown table "${t}" — it will be ignored.`);
+  }
+  const transactionRows = (backup.data as Record<string, unknown>).transactions;
+  if (Array.isArray(transactionRows)) {
+    try { validateSavingsRecords(transactionRows); }
+    catch { errors.push('Invalid purchase savings or cashback associations.'); }
   }
 
   return { ok: errors.length === 0, errors, warnings, counts };

@@ -1,5 +1,7 @@
 import { getTransaction, updateTransaction, listCategories } from "@/actions/transactions";
 import { notFound, redirect } from "next/navigation";
+import PurchaseSavingsFields from '@/components/PurchaseSavingsFields';
+import Link from 'next/link';
 
 export default async function EditTransactionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -42,6 +44,8 @@ export default async function EditTransactionPage({ params }: { params: Promise<
             required
           />
           <input name="description" defaultValue={tx.description ?? ""} placeholder="Description" className="input" />
+          {tx.type === 'expense' && !tx.cashbackForId && <PurchaseSavingsFields discountAmount={tx.discountAmount} cashbackExpected={tx.cashbackExpected} />}
+          <Link href={`/savings?purchase=${encodeURIComponent(tx.cashbackForId ?? tx.id)}`} className="text-sm underline">View savings and cashback</Link>
           <button type="submit" className="btn w-full">
             Save
           </button>

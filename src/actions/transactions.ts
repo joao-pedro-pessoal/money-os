@@ -12,6 +12,7 @@ import { cookies } from "next/headers";
 import { expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { manualAmount, manualDate, isQuickEntryId } from "@/lib/money/manualEntry";
 import { getDefaultAccountId } from "./settings";
+import { assertCashbackLink, purchaseSavings } from "@/lib/money/savings";
 
 async function requireSession() {
   if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== await expectedSessionValue()) {
@@ -111,6 +112,12 @@ async function saveManualTransaction(formData: FormData, requestId?: string) {
   const categoryId = formData.get("categoryId") ? String(formData.get("categoryId")) : null;
   const description = String(formData.get("description") ?? "");
   const merchant = String(formData.get("merchant") ?? "");
+  const savings = purchaseSavings(type, String(amount), {
+    discount: String(formData.get("discountAmount") ?? ""),
+    originalPrice: String(formData.get("originalPrice") ?? ""),
+    expected: String(formData.get("cashbackExpected") ?? ""),
+  });
+  const cashbackForId = String(formData.get("cashbackForId") ?? "") || null;
 
   const signedAmount = type === "expense" || type === "investment_contribution" ? -Math.abs(amount) : Math.abs(amount);
 
@@ -128,8 +135,11 @@ async function saveManualTransaction(formData: FormData, requestId?: string) {
    * that is the only currency the form could have meant.
    */
   const saved = await db.transaction(async (store) => {
+  const [purchase] = cashbackForId ? await store.select().from(transactions).where(eq(transactions.id, cashbackForId)).for("update") : [];
+  if (cashbackForId && !purchase) throw new Error("Purchase not found.");
   const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
   if (!account?.active) throw new Error("Choose an active account.");
+  if (purchase) assertCashbackLink({ id: requestId ?? '', type, amount: String(signedAmount), currency: account.currency, date: date.toISOString(), accountId, ...savings }, { ...purchase, date: purchase.date.toISOString() });
   if (categoryId) {
     const [category] = await store.select().from(categories).where(eq(categories.id, categoryId));
     if (!category || (type !== "investment_contribution" && category.kind !== type)) throw new Error("Choose a category for this transaction type.");
@@ -146,11 +156,13 @@ async function saveManualTransaction(formData: FormData, requestId?: string) {
     description,
     merchant,
     source: "manual",
+    ...savings,
+    cashbackForId,
   }).onConflictDoNothing({ target: transactions.id }).returning();
 
   if (!inserted) {
     const [previous] = await store.select().from(transactions).where(eq(transactions.id, requestId!));
-    if (!previous || previous.accountId !== accountId || Number(previous.amount) !== signedAmount || previous.type !== type || previous.date.getTime() !== date.getTime() || previous.categoryId !== categoryId || previous.description !== description) {
+    if (!previous || previous.accountId !== accountId || Number(previous.amount) !== signedAmount || previous.type !== type || previous.date.getTime() !== date.getTime() || previous.categoryId !== categoryId || previous.description !== description || Number(previous.discountAmount) !== Number(savings.discountAmount) || Number(previous.cashbackExpected) !== Number(savings.cashbackExpected) || previous.cashbackForId !== cashbackForId) {
       throw new Error("This request was already saved with different details. Check Cash Flow before adding another.");
     }
     return { id: previous.id, currency: previous.currency };
@@ -164,6 +176,7 @@ async function saveManualTransaction(formData: FormData, requestId?: string) {
   });
 
   revalidatePath("/transactions");
+  revalidatePath("/savings");
   revalidatePath("/accounts");
   revalidatePath(`/accounts/${accountId}`);
   revalidatePath("/");
@@ -295,35 +308,51 @@ export async function isTransferLeg(transactionId: string) {
 
 /** Edit an income/expense/investment_contribution transaction. Transfers can't be edited here — delete + recreate. */
 export async function updateTransaction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("id"));
-  const amount = Number(formData.get("amount"));
-  const date = new Date(String(formData.get("date")));
+  const amount = Number(manualAmount(String(formData.get("amount") ?? "")));
+  const date = manualDate(String(formData.get("date") ?? ""));
   const categoryId = formData.get("categoryId") ? String(formData.get("categoryId")) : null;
   const description = String(formData.get("description") ?? "");
 
-  const [tx] = await db.select().from(transactions).where(eq(transactions.id, id));
+  const accountId = await db.transaction(async (store) => {
+  const [tx] = await store.select().from(transactions).where(eq(transactions.id, id)).for("update");
   if (!tx) throw new Error("Transaction not found");
   if (tx.type === "transfer") throw new Error("Transfers can't be edited — delete and recreate instead");
 
   const oldAmount = Number(tx.amount);
   const signedAmount = tx.type === "expense" || tx.type === "investment_contribution" ? -Math.abs(amount) : Math.abs(amount);
   const delta = signedAmount - oldAmount;
+  const savings = purchaseSavings(tx.type, String(amount), {
+    discount: String(formData.get("discountAmount") ?? tx.discountAmount),
+    originalPrice: String(formData.get("originalPrice") ?? ""),
+    expected: String(formData.get("cashbackExpected") ?? tx.cashbackExpected),
+  });
+  if (tx.cashbackForId && (Number(savings.discountAmount) || Number(savings.cashbackExpected))) throw new Error("A cashback movement cannot also carry purchase savings.");
+  if (categoryId) {
+    const [category] = await store.select().from(categories).where(eq(categories.id, categoryId));
+    if (!category || (tx.type !== "investment_contribution" && category.kind !== tx.type)) throw new Error("Choose a category for this transaction type.");
+  }
 
-  await db
+  await store
     .update(transactions)
-    .set({ amount: String(signedAmount), date, categoryId, description })
+    .set({ amount: String(signedAmount), date, categoryId, description, ...savings })
     .where(eq(transactions.id, id));
 
   if (delta !== 0) {
-    await db
+    await store
       .update(accounts)
       .set({ balance: sql`${accounts.balance} + ${delta}`, updatedAt: new Date() })
       .where(eq(accounts.id, tx.accountId));
   }
+  return tx.accountId;
+  });
 
   revalidatePath("/transactions");
+  revalidatePath("/savings");
+  revalidatePath(`/transactions/${id}/edit`);
   revalidatePath("/accounts");
-  revalidatePath(`/accounts/${tx.accountId}`);
+  revalidatePath(`/accounts/${accountId}`);
   revalidatePath("/");
 }
 
@@ -333,6 +362,7 @@ export async function updateTransaction(formData: FormData) {
  * both accounts, so a transfer can never be left half-deleted.
  */
 export async function deleteTransaction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("id"));
   const [tx] = await db.select().from(transactions).where(eq(transactions.id, id));
   if (!tx) return;
@@ -373,6 +403,7 @@ export async function deleteTransaction(formData: FormData) {
   }
 
   revalidatePath("/transactions");
+  revalidatePath("/savings");
   revalidatePath("/accounts");
   revalidatePath("/");
 }

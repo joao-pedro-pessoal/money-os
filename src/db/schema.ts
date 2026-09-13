@@ -8,6 +8,7 @@ import {
   primaryKey,
   unique,
   integer,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -121,6 +122,9 @@ export const transactionTags = pgTable(
 // ---------- Transaction ----------
 export const transactions = pgTable("transactions", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
+  discountAmount: numeric("discount_amount", { precision: 18, scale: 2 }).notNull().default("0"),
+  cashbackExpected: numeric("cashback_expected", { precision: 18, scale: 2 }).notNull().default("0"),
+  cashbackForId: text("cashback_for_id").references((): AnyPgColumn => transactions.id, { onDelete: "set null" }),
   date: timestamp("date", { withTimezone: true }).notNull(),
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
   currency: text("currency").notNull().default("EUR"),

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createQuickTransaction, undoQuickTransaction } from "@/actions/transactions";
 import type { QuickEntryOptions } from "@/lib/money/manualEntry";
+import PurchaseSavingsFields from './PurchaseSavingsFields';
 
 function today() {
   const now = new Date();
@@ -124,6 +125,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
             <p role="status">{undone ? "Entry undone. The account balance has been restored." : "Entry saved."}</p>
             {error && <p role="alert" className="text-sm text-[var(--red)]">{error}</p>}
             <div className="flex gap-3 flex-wrap">
+              {savedId && <Link href="/savings" className="btn" onClick={close}>Savings / cashback</Link>}
               {savedId && <button type="button" className="btn" disabled={pending} onClick={undo}>{pending ? "Undoing…" : "Undo"}</button>}
               <button type="button" className="btn" disabled={pending} onClick={close}>Done</button>
             </div>
@@ -165,6 +167,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
                 </div>
               </details>
               {error && <p role="alert" className="text-sm text-[var(--red)]">{error}</p>}
+              {type === 'expense' && <PurchaseSavingsFields />}
               <button type="submit" className="btn w-full">{pending ? "Saving…" : type === "expense" ? "Save expense" : "Save income"}</button>
             </fieldset>
           </form>

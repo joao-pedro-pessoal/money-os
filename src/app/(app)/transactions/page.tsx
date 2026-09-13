@@ -3,6 +3,7 @@ import { listAccountsWithState } from "@/actions/accounts";
 import TransactionList from "@/components/TransactionList";
 import Link from "next/link";
 import { getDefaultAccountId } from "@/actions/settings";
+import PurchaseSavingsFields from '@/components/PurchaseSavingsFields';
 
 export default async function TransactionsPage() {
   const [txData, accounts, categories, defaultAccountId] = await Promise.all([
@@ -20,6 +21,7 @@ export default async function TransactionsPage() {
           it used to sit in the sidebar between two destinations. */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-lg font-semibold">Cash Flow</h1>
+        <Link href="/savings" className="btn">Savings / cashback</Link>
         <Link href="/import" className="btn whitespace-nowrap">
           Import statement
         </Link>
@@ -62,6 +64,7 @@ export default async function TransactionsPage() {
             <input name="amount" type="number" step="0.01" placeholder="Amount" className="input" required />
             <input name="date" type="date" defaultValue={today} className="input" required />
             <input name="description" placeholder="Description" className="input" />
+            <PurchaseSavingsFields />
             <button type="submit" className="btn w-full">
               Add
             </button>

@@ -27,6 +27,7 @@ const groups: { label?: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/accounts", label: "Accounts" },
       { href: "/transactions", label: "Cash Flow" },
+      { href: "/savings", label: "Savings" },
       { href: "/budgets", label: "Budgets" },
       { href: "/buckets", label: "Buckets" },
       { href: "/subscriptions", label: "Subscriptions" },
