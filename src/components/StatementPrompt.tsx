@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { buildConversionPrompt, CANONICAL_EXAMPLE } from "@/lib/csv/prompt";
+import { copyText } from "./copyText";
 
 /**
  * Turns "my bank's CSV is a mess" into a solved problem.
@@ -27,7 +28,7 @@ export default function StatementPrompt({
   const prompt = buildConversionPrompt({ categories, currency });
 
   async function copy() {
-    await navigator.clipboard.writeText(prompt);
+    if (!(await copyText(prompt))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

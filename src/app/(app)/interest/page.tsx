@@ -126,6 +126,7 @@ export default async function InterestPage() {
         <Section
           title="Accruing right now"
           defaultOpen
+          essential
           summary={`${outlook.length} ${outlook.length === 1 ? "account" : "accounts"}`}
         >
           <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">

@@ -128,6 +128,7 @@ export default async function ExpectedPage({
         <Section
           title="Still coming"
           defaultOpen
+          essential
           summary={`${data.rows.length} ${data.rows.length === 1 ? "entry" : "entries"}`}
         >
           <div className="overflow-x-auto">
@@ -215,6 +216,7 @@ export default async function ExpectedPage({
         title={filling ? `Schedule ${filling.name}` : "Add something coming in"}
         defaultOpen
         persistKey="expected:add"
+        essential={Boolean(filling)}
         className="max-w-md"
       >
         <form action={createExpected} className="space-y-3" key={filling?.id ?? "blank"}>

@@ -406,7 +406,7 @@ export default async function DashboardPage({
       {/* This month, split into what's already decided and what isn't. A single
           expenses figure can't answer "how much of this month is settled?". */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Section title="This month" defaultOpen>
+        <Section title="This month" defaultOpen essential>
           <FlowBars
             shape={{
               flows: {

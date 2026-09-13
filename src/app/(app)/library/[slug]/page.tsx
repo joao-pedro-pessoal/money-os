@@ -352,6 +352,7 @@ export default async function ResourceDetailPage({
           title="Your edition"
           summary="optional"
           defaultOpen={Boolean(r.meta.translation || r.meta.edition || r.meta.publisher)}
+          essential
         >
           <form action={updateResource} className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl">
             <input type="hidden" name="id" value={r.id} />
@@ -391,7 +392,7 @@ export default async function ResourceDetailPage({
         </Section>
       )}
 
-      <Section title="Your notes and rating" defaultOpen={Boolean(r.notes)}>
+      <Section title="Your notes and rating" defaultOpen={Boolean(r.notes)} essential>
         <form action={updateResource} className="space-y-3 max-w-2xl">
           <input type="hidden" name="taxonomy" value="1" />
           <input type="hidden" name="id" value={r.id} />

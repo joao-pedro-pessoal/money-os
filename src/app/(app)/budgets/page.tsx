@@ -219,7 +219,7 @@ export default async function BudgetsPage({
         </div>
       )}
 
-      <Section title="New budget" defaultOpen={data.items.length === 0}>
+      <Section title="New budget" defaultOpen={data.items.length === 0} essential>
         <form action={createBudget} className="space-y-3 max-w-2xl">
           <input name="name" placeholder="Name (e.g. Going out, Insurance)" className="input" required />
 

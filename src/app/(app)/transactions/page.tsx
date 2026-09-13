@@ -4,6 +4,7 @@ import TransactionList from "@/components/TransactionList";
 import Link from "next/link";
 import { getDefaultAccountId } from "@/actions/settings";
 import PurchaseSavingsFields from '@/components/PurchaseSavingsFields';
+import MobileFold from "@/components/MobileFold";
 
 export default async function TransactionsPage() {
   const [txData, accounts, categories, defaultAccountId] = await Promise.all([
@@ -27,6 +28,9 @@ export default async function TransactionsPage() {
         </Link>
       </div>
 
+      {/* On a phone the + button in the header already records a movement, so
+          these two forms fold away and the list comes first. */}
+      <MobileFold title="Add income, expense or transfer" persistKey="add-forms">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card p-4">
           <div className="text-sm font-medium mb-3">Add income / expense</div>
@@ -100,6 +104,7 @@ export default async function TransactionsPage() {
           </form>
         </div>
       </div>
+      </MobileFold>
 
       <TransactionList
         rows={txData.rows}

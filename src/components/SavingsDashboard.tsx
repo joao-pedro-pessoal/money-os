@@ -6,6 +6,7 @@ import { getSavingsData, linkCashback, recordCashback, unlinkCashback, updatePur
 import { savingsReport } from '@/lib/money/savings';
 import PurchaseSavingsFields from './PurchaseSavingsFields';
 import PanelFrame from './PanelFrame';
+import { newQuickEntryId } from '@/lib/money/quickEntryId';
 import { Money, usePrivacy } from './PrivacyContext';
 
 type Data = Awaited<ReturnType<typeof getSavingsData>>;
@@ -17,7 +18,7 @@ function ActionForm(props: FormProps) {
 function ActionAttempt({ action, children, label, once, restart }: FormProps & { restart: () => void }) {
   const request = useRef('');
   const [result, submit, pending] = useActionState<{ error?: string; saved?: boolean }, FormData>(async (_, form) => {
-    request.current ||= `quick-${crypto.randomUUID()}`;
+    request.current ||= newQuickEntryId();
     form.set('requestId', request.current);
     try { await action(form); return { saved: true }; }
     catch (error) { return { error: error instanceof Error ? error.message : 'Could not save. Retry with the same details.' }; }
@@ -65,10 +66,10 @@ export default function SavingsDashboard({ data, initialPurchase = '' }: { data:
       </div>
       <p className="text-xs text-[var(--muted)] mt-3">Filters select purchases. Cashback includes all receipts and reversals linked to those purchases, even if received later. Currencies are kept separate.</p>
     </PanelFrame>
-    {report.totals.map(t => <PanelFrame key={t.currency} persistKey={`savings-${t.currency}`} title={`Savings · ${t.currency}`} className="card p-4">
+    {report.totals.map(t => <PanelFrame key={t.currency} persistKey={`savings-${t.currency}`} essential title={`Savings · ${t.currency}`} className="card p-4">
       <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">{[['Discounts', t.discount], ['Cashback received (net)', t.received], ['Total saved', t.total], ['Cashback pending', t.pending]].map(([name, value]) => <div key={name}><dt className="text-xs text-[var(--muted)]">{name}</dt><dd className="text-lg"><Money value={Number(value)} currency={t.currency} /></dd></div>)}</dl>
     </PanelFrame>)}
-    <PanelFrame persistKey="savings-history" title="Purchase savings history" className="card p-4">
+    <PanelFrame persistKey="savings-history" essential title="Purchase savings history" className="card p-4">
       {!report.rows.length && <p className="text-sm mt-3">No savings recorded for these filters. Select a purchase below to add a discount or cashback.</p>}
       <div className="divide-y divide-[var(--border)]">{report.rows.slice(0, visible).map(row => <div key={row.purchase.id} className="py-4 space-y-2">
         <button type="button" className="text-left underline" onClick={() => setSelected(row.purchase.id)}>{row.purchase.description || 'Purchase'} · {row.purchase.date.slice(0, 10)}</button>
@@ -77,7 +78,7 @@ export default function SavingsDashboard({ data, initialPurchase = '' }: { data:
       </div>)}</div>
       {report.rows.length > visible && <button type="button" className="btn" onClick={() => setVisible(v => v + 30)}>Show more</button>}
     </PanelFrame>
-    <PanelFrame persistKey="savings-edit" title="Add or edit purchase savings" className="card p-4">
+    <PanelFrame persistKey="savings-edit" essential={Boolean(initialPurchase)} title="Add or edit purchase savings" className="card p-4">
       <div className="space-y-3 mt-3">
         <label className="block text-sm">Find purchase<input className="input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Description, date or account" /></label>
         <label className="block text-sm">Purchase<select aria-label="Purchase" className="input" value={purchase?.id ?? ''} onChange={e => setSelected(e.target.value)}><option value="">Choose a purchase</option>{purchases.filter(t => t.id === selected || label(t).toLowerCase().includes(search.toLowerCase())).map(t => <option key={t.id} value={t.id}>{label(t)}</option>)}</select></label>

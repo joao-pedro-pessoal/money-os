@@ -14,12 +14,11 @@ import {
   parseInvestmentActivity,
   type InvestmentActivityPreview,
 } from "@/lib/investment-activity";
+import { copyText } from "./copyText";
+import { sha256Text } from "@/lib/hash/sha256";
 
-async function sha256(text: string): Promise<string> {
-  const bytes = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
+/** The file's fingerprint. crypto.subtle is missing over plain http on a phone; see sha256Text. */
+const sha256 = sha256Text;
 
 export default function InvestmentActivityImporter({
   accounts,
@@ -49,7 +48,7 @@ export default function InvestmentActivityImporter({
   const invalid = preview.length - validRows.length;
 
   async function copyPrompt() {
-    await navigator.clipboard.writeText(prompt);
+    if (!(await copyText(prompt))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

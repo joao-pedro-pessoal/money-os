@@ -503,3 +503,21 @@ main .grid > * { min-width: 0; }
 .panel-toggle:hover, .panel-toggle:focus-visible { color: var(--accent); outline: 1px solid var(--accent); }
 .panel-frame[data-panel-collapsed="true"] { display: block !important; height: auto !important; min-height: 40px !important; }
 .panel-heading { min-height: 20px; }
+
+/* On a phone a page opens with only the panels it marks essential. The others
+   keep their content hidden until PanelFrame has read the saved choice, so they
+   do not flash open and then shut on every load. */
+@media (max-width: 767px) {
+  .panel-frame:not([data-panel-essential]):not([data-panel-ready="true"]) > [data-panel-content] { display: none !important; }
+}
+
+/* A block folded away on a phone (MobileFold). On a computer the toggle is
+   hidden and the wrapper is a plain block, so the layout does not change. */
+.mobile-fold-toggle { display: none; }
+.mobile-fold:has(> .mobile-fold-body:empty) { display: none; }
+@media (max-width: 767px) {
+  .mobile-fold-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; text-align: left; font-size: 0.875rem; font-weight: 500; }
+  .mobile-fold-toggle > span:last-child { color: var(--muted); }
+  .mobile-fold[data-open="false"] > .mobile-fold-body { display: none; }
+  .mobile-fold[data-open="true"] > .mobile-fold-body { margin-top: 12px; }
+}

@@ -55,7 +55,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
           </form>
         </Section>
 
-        <Section title="Allocations by account" defaultOpen>
+        <Section title="Allocations by account" defaultOpen essential>
           <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table mb-4">
             <thead>
               <tr>

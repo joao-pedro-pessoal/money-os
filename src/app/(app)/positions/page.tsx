@@ -174,6 +174,7 @@ export default async function PositionsPage() {
           title="Spot balances"
           defaultOpen
           persistKey="positions:spot"
+          essential
           summary={`${balances.length} ${balances.length === 1 ? "coin" : "coins"}`}
         >
           <div className="overflow-x-auto">
@@ -324,6 +325,7 @@ export default async function PositionsPage() {
           title="Your own positions"
           defaultOpen
           persistKey="positions:manual"
+          essential
           summary={`${manual.holdings.length} ${manual.holdings.length === 1 ? "holding" : "holdings"}`}
         >
           {/* RefreshPrices sits in the body rather than beside the title: the
@@ -486,6 +488,7 @@ export default async function PositionsPage() {
             title="Position detail"
             defaultOpen
             persistKey="positions:open"
+            essential
             summary={`${positions.length} open`}
           >
             <div className="overflow-x-auto">

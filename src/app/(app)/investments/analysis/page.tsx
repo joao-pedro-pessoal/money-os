@@ -280,7 +280,7 @@ export default async function PortfolioAnalysisPage({
         Profit against cost is below; these two are what a return actually
         means once money has moved in and out.
       */}
-      {windowPreferences["portfolio-returns"] !== "hidden" && <Section title="Investment returns" defaultOpen={windowPreferences["portfolio-returns"] === "visible"}>
+      {windowPreferences["portfolio-returns"] !== "hidden" && <Section title="Investment returns" essential defaultOpen={windowPreferences["portfolio-returns"] === "visible"}>
       <PortfolioReturns
         timeWeighted={returns.timeWeighted}
         moneyWeighted={returns.moneyWeighted}

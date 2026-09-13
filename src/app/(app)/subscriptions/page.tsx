@@ -76,6 +76,7 @@ export default async function SubscriptionsPage() {
       <Section
         title="Active"
         defaultOpen
+        essential
         summary={`${active.length} ${active.length === 1 ? "subscription" : "subscriptions"}`}
       >
         {active.length === 0 ? (

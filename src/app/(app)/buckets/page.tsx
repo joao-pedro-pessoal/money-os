@@ -47,7 +47,7 @@ export default async function BucketsPage() {
       </Section>
 
       {ranked.length > 1 && (
-        <Section title="Priority" defaultOpen summary={`${ranked.length} buckets`}>
+        <Section title="Priority" defaultOpen essential summary={`${ranked.length} buckets`}>
           <p className="text-xs text-[var(--muted)] mb-3">
             Money is shared out in this order, with the higher ranks getting more. Two goals on the
             same rank get the same share — set them to the same number to say &quot;these matter

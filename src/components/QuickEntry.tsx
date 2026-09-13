@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createQuickTransaction, undoQuickTransaction } from "@/actions/transactions";
 import type { QuickEntryOptions } from "@/lib/money/manualEntry";
+import { newQuickEntryId } from "@/lib/money/quickEntryId";
 import PurchaseSavingsFields from './PurchaseSavingsFields';
 
 function today() {
@@ -44,7 +45,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
     setSavedId(null);
     setUndone(false);
     if (!accounts.some(account => account.id === accountId)) setAccountId(accounts[0]?.id ?? "");
-    requestId.current = `quick-${crypto.randomUUID()}`;
+    requestId.current = newQuickEntryId();
     scrollBefore.current = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialog.current?.showModal();

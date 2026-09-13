@@ -56,7 +56,7 @@ export default async function AccountsPage() {
         action={removeEmptyAccounts}
       />
 
-      <Section title="Accounts" defaultOpen summary={`${accounts.length} active`}>
+      <Section title="Accounts" defaultOpen essential summary={`${accounts.length} active`}>
         <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
           <thead>
             <tr>

@@ -7,13 +7,13 @@ import { detectColumns, buildRows, summarize, type ColumnMapping, type ParsedRow
 import { looksLikeBrokerStatement } from "@/lib/csv/broker";
 import { checkCanonicalHeader } from "@/lib/csv/prompt";
 import { countDataRows, controlSums, reconcile } from "@/lib/csv/integrity";
+import { sha256Text } from "@/lib/hash/sha256";
 
-/** SHA-256 of the file's text, so the same file is recognisable later. */
-async function sha256(text: string): Promise<string> {
-  const bytes = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+/**
+ * SHA-256 of the file's text, so the same file is recognisable later. Not
+ * crypto.subtle directly: it is missing over plain http on a phone.
+ */
+const sha256 = sha256Text;
 
 /**
  * Upload → map columns → preview → import (MVP_SPEC §7).

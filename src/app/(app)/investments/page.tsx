@@ -33,6 +33,7 @@ import {
 import QuoteProbe from "@/components/QuoteProbe";
 import AutoPrice from "@/components/AutoPrice";
 import PricingCrossCheck from "@/components/PricingCrossCheck";
+import MobileFold from "@/components/MobileFold";
 
 /** A form action may not return a value; the counts go to the audit log. */
 async function adoptAction(formData: FormData) {
@@ -203,19 +204,28 @@ export default async function InvestmentsPage() {
         />
       </div>
 
-      <TimeSeriesCard
-        title="Portfolio value over time"
-        series={valueSeries.map((p) => ({ date: p.date, value: p.portfolioValue }))}
-        currency={contribution.baseCurrency}
-        note="Built from snapshots, so it starts the day tracking did. An imported statement reaches further back but records prices paid, not what things were worth since."
-      />
+      {/* On a phone the page opens on the five cards and the table below; the
+          chart, the statement's history, the audit and the price tools are one
+          tap away. On a computer nothing about the layout changes. */}
+      <MobileFold title="Portfolio value over time" persistKey="value-over-time">
+        <TimeSeriesCard
+          title="Portfolio value over time"
+          series={valueSeries.map((p) => ({ date: p.date, value: p.portfolioValue }))}
+          currency={contribution.baseCurrency}
+          note="Built from snapshots, so it starts the day tracking did. An imported statement reaches further back but records prices paid, not what things were worth since."
+        />
+      </MobileFold>
 
       {/* What the statement can account for, which is further back than any
           snapshot but a different measure — see the component. */}
-      <StatementHistory />
+      <MobileFold title="Statement history" persistKey="statement-history">
+        <StatementHistory />
+      </MobileFold>
 
       {/* The five cards above, reconciled per platform. */}
-      <PortfolioAudit items={portfolioItems.items} currency={base} />
+      <MobileFold title="Audit by platform" persistKey="portfolio-audit">
+        <PortfolioAudit items={portfolioItems.items} currency={base} />
+      </MobileFold>
 
 
       {/* One table for everything you hold, grouped and filtered however you
@@ -245,24 +255,30 @@ export default async function InvestmentsPage() {
       {/* Placed directly under the table, because the question it answers is
           "why doesn't this add up to the dashboard?" — which you ask while
           looking at the table, not somewhere else on the page. */}
-      <UnitemisedInvestments
-        items={unitemised.items}
-        total={unitemised.total}
-        currency={unitemised.baseCurrency}
-      />
+      <MobileFold title="Investments not itemised" persistKey="unitemised">
+        <UnitemisedInvestments
+          items={unitemised.items}
+          total={unitemised.total}
+          currency={unitemised.baseCurrency}
+        />
+      </MobileFold>
 
       {/* Right under the table, because that is where you notice the rows are
           read-only and want to do something about it. */}
-      <AdoptStatementPositions accounts={importedStatements} action={adoptAction} />
+      <MobileFold title="Positions from statements" persistKey="adopt-statement">
+        <AdoptStatementPositions accounts={importedStatements} action={adoptAction} />
+      </MobileFold>
 
-      {/* Only worth showing once there are ISINs to ask about. */}
-      {/* The automatic route first; the gateway probe stays as the manual
-          fallback for anything Stooq doesn't carry. */}
-      {knownIsins.length > 0 && <AutoPrice />}
-      {/* Immediately under the button that sets the prices, because that is
-          when a disagreement is worth knowing about. */}
-      <PricingCrossCheck />
-      {knownIsins.length > 0 && <QuoteProbe suggestions={knownIsins} />}
+      <MobileFold title="Price tools" persistKey="price-tools" className="space-y-8">
+        {/* Only worth showing once there are ISINs to ask about. */}
+        {/* The automatic route first; the gateway probe stays as the manual
+            fallback for anything Stooq doesn't carry. */}
+        {knownIsins.length > 0 && <AutoPrice />}
+        {/* Immediately under the button that sets the prices, because that is
+            when a disagreement is worth knowing about. */}
+        <PricingCrossCheck />
+        {knownIsins.length > 0 && <QuoteProbe suggestions={knownIsins} />}
+      </MobileFold>
 
       <Section title="Add a position by hand" summary="for anything not synced">
         <form action={createHolding} className="space-y-3 max-w-2xl">

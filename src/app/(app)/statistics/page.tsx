@@ -32,7 +32,7 @@ export default async function StatisticsPage() {
       )}
 
       {/* ---- Returns by period ---- */}
-      <Section title="How the money has moved" defaultOpen>
+      <Section title="How the money has moved" defaultOpen essential>
         {s.historyPoints < 2 ? (
           <div className="text-sm text-[var(--muted)] py-6 text-center">
             Not enough history yet. This fills in as balances change — each update adds a point.
@@ -119,6 +119,7 @@ export default async function StatisticsPage() {
       <Section
         title="Saving & spending"
         defaultOpen
+        essential
         summary={s.avgSavingsRate === null ? undefined : `${s.avgSavingsRate.toFixed(1)}% saved`}
       >
         {s.flows.length === 0 ? (

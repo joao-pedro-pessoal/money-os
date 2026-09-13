@@ -129,6 +129,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
         <Section
           title="Price history"
           defaultOpen
+          essential
           persistKey="holding:history"
           summary={snapshots.length === 0 ? "none yet" : `${snapshots.length} ${snapshots.length === 1 ? "reading" : "readings"}`}
         >

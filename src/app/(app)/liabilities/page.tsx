@@ -98,6 +98,7 @@ export default async function LiabilitiesPage() {
         <Section
           title="Debts"
           defaultOpen
+          essential
           summary={`${data.items.length} ${data.items.length === 1 ? "debt" : "debts"}`}
         >
           <div className="overflow-x-auto">

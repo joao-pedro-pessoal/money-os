@@ -170,7 +170,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
       {/* Growth over the windows the history can actually support. A window
           longer than the data returns nothing rather than a flattering number. */}
       {series.length >= 2 && (
-        <Section title="How this account has moved" defaultOpen>
+        <Section title="How this account has moved" defaultOpen essential>
           {/* The per-window growth stays in the body rather than in the folded
               summary: it is four figures wide and would crowd the heading. */}
           <div className="flex items-baseline justify-end gap-3 flex-wrap mb-3">
