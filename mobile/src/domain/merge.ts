@@ -230,7 +230,15 @@ export function mergeStates(base: LocalState, local: LocalState, remote: LocalSt
   }
 
   const conflicts: MergeConflict[] = [];
-  const events = mergeKeyed('events', [base.events, local.events, remote.events], eventKey, sameEvent, conflicts);
+  // Imported purchases can have different UUIDs on each device. Canonicalize
+  // references together with their targets before comparing or merging edits.
+  const originals = [...remote.events, ...base.events, ...local.events];
+  const canonicalId = new Map(originals.map(e => [eventKey(e), e.id]));
+  const aliases = new Map(originals.map(e => [e.id, canonicalId.get(eventKey(e))!]));
+  const canonicalEvents = (rows: LocalEvent[]) => rows.map(e => ({ ...e, id: aliases.get(e.id)!,
+    ...(e.cashbackForId ? { cashbackForId: aliases.get(e.cashbackForId) ?? e.cashbackForId } : {}),
+  }));
+  const events = mergeKeyed('events', [canonicalEvents(base.events), canonicalEvents(local.events), canonicalEvents(remote.events)], eventKey, sameEvent, conflicts);
   const accounts = mergeAccounts({ base, local, remote }, events, conflicts);
   const snapshots = mergeKeyed('snapshots', [base.snapshots, local.snapshots, remote.snapshots], s => s.id, same, conflicts);
   const goals = mergeKeyed('goals', [base.goals, local.goals, remote.goals], g => g.id, same, conflicts);

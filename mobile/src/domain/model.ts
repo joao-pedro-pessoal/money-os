@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { units } from './money';
+import { assertCashbackLink, purchaseSavings } from '../../../src/lib/money/savings';
 
 export const Platform = z.enum(['hyperliquid', 'trading212', 'bybit', 'binance', 'kraken', 'okx', 'mexc']);
 export type PlatformId = z.infer<typeof Platform>;
@@ -40,6 +41,10 @@ export const Event = z.object({
   quantity: nullable, price: nullable, fees: nullable,
   source: z.enum(['manual', 'csv', 'sync']), externalId: z.string().max(1000),
   transferId: id.nullable(),
+  discountAmount: z.string().regex(/^\d{1,12}(\.\d{1,2})?$/).optional(),
+  cashbackExpected: z.string().regex(/^\d{1,12}(\.\d{1,2})?$/).optional(),
+  cashbackForId: id.nullable().optional(),
+  categoryId: z.string().trim().max(80).optional(),
 }).strict();
 export type LocalEvent = z.infer<typeof Event>;
 export const Goal = z.object({ id, name: z.string().min(1).max(80), currency, target: amount, saved: amount }).strict();
@@ -64,7 +69,16 @@ export const StateSchema = z.object({
     if (account.reading && account.reading.currency !== account.currency) ctx.addIssue({ code: 'custom', message: 'Moeda inconsistente na conta.' });
   }
   const transfers = new Map<string, LocalEvent[]>();
+  const eventsById = new Map(state.events.map(e => [e.id, e]));
   for (const row of state.events) {
+    try {
+      purchaseSavings(row.type, row.amount, { discount: row.discountAmount, expected: row.cashbackExpected });
+      if (row.cashbackForId) {
+        const purchase = eventsById.get(row.cashbackForId);
+        if (!purchase) throw new Error('Cashback sem compra.');
+        assertCashbackLink(row, purchase);
+      }
+    } catch { ctx.addIssue({ code: 'custom', message: 'Desconto ou associação de cashback inválidos.' }); }
     if (['BUY', 'SELL'].includes(row.type) && (!row.symbol || row.quantity === null || row.quantity <= 0))
       ctx.addIssue({ code: 'custom', message: 'Compra ou venda sem quantidade positiva e instrumento.' });
     if (row.source === 'manual' && row.currency !== accounts.get(row.accountId)?.currency)

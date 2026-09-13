@@ -3,6 +3,7 @@ import { Account, Event, Reading, type LocalAccount, type LocalEvent, type Local
 import type { NormalizedAccountState } from '../../../src/lib/connectors/types';
 import { computeNetWorth } from '../../../src/lib/accounting/networth';
 import { capitalAtRisk } from '../../../src/lib/connectors/margin';
+import { assertCashbackLink, purchaseSavings } from '../../../src/lib/money/savings';
 
 export function addAccount(state: LocalState, account: LocalAccount): void {
   if (state.accounts.some(a => a.id === account.id)) throw new Error('A conta já existe.');
@@ -21,6 +22,12 @@ export function recordCash(state: LocalState, row: LocalEvent): void {
   if ((row.type === 'INCOME' && units(row.amount) <= 0n) || (row.type === 'EXPENSE' && units(row.amount) >= 0n))
     throw new Error('Sinal inválido no movimento.');
   if (state.events.some(e => e.id === row.id)) throw new Error('Movimento repetido.');
+  purchaseSavings(row.type, row.amount, { discount: row.discountAmount, expected: row.cashbackExpected });
+  if (row.cashbackForId) {
+    const purchase = state.events.find(e => e.id === row.cashbackForId);
+    if (!purchase) throw new Error('Compra não encontrada.');
+    assertCashbackLink(row, purchase);
+  }
   state.events.push(Event.parse(row));
   account.balance = add(account.balance, row.amount);
 }
@@ -53,6 +60,28 @@ export function deleteEvent(state: LocalState, id: string): void {
   }
   const ids = new Set(removed.map(e => e.id));
   state.events = state.events.filter(e => !ids.has(e.id));
+  for (const event of state.events) if (event.cashbackForId && ids.has(event.cashbackForId)) event.cashbackForId = null;
+}
+
+export function setPurchaseSavings(state: LocalState, id: string, input: { discount?: string; originalPrice?: string; expected?: string; category?: string }) {
+  const row = state.events.find(e => e.id === id);
+  if (!row || row.type !== 'EXPENSE' || row.cashbackForId) throw new Error('Escolhe uma compra.');
+  Object.assign(row, purchaseSavings(row.type, row.amount, input));
+  if (input.category !== undefined) row.categoryId = input.category.trim();
+}
+
+export function linkLocalCashback(state: LocalState, receiptId: string, purchaseId: string) {
+  const receipt = state.events.find(e => e.id === receiptId), purchase = state.events.find(e => e.id === purchaseId);
+  if (!receipt || !purchase) throw new Error('Movimento ou compra não encontrados.');
+  if (state.events.some(e => e.cashbackForId === receiptId)) throw new Error('Este movimento já tem cashback associado.');
+  assertCashbackLink(receipt, purchase);
+  receipt.cashbackForId = purchaseId;
+}
+
+export function unlinkLocalCashback(state: LocalState, receiptId: string, purchaseId: string) {
+  const receipt = state.events.find(e => e.id === receiptId);
+  if (receipt?.cashbackForId && receipt.cashbackForId !== purchaseId) throw new Error('A associação mudou. Atualiza a página.');
+  if (receipt) receipt.cashbackForId = null;
 }
 export function applyReading(state: LocalState, accountId: string, reading: NormalizedAccountState,
   now: string, newId: () => string): void {

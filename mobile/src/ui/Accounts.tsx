@@ -6,6 +6,7 @@ import { amountInput, negate, positive } from '../domain/money';
 import { accountValue, addAccount, recordCash, transfer, deleteEvent } from '../domain/operations';
 import { MobileSession } from '../services/session';
 import { Button, Card, Choices, Field, money, Note, Page, styles, type Run } from './kit';
+import { purchaseSavings } from '../../../src/lib/money/savings';
 
 export function Accounts({ state, session, run, busy }: { state: LocalState; session: MobileSession; run: Run; busy: boolean }) {
   const [name, setName] = useState('');
@@ -15,6 +16,8 @@ export function Accounts({ state, session, run, busy }: { state: LocalState; ses
   const [kind, setKind] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [discount, setDiscount] = useState(''), [originalPrice, setOriginalPrice] = useState(''), [expected, setExpected] = useState('');
+  const [category, setCategory] = useState('');
   const [to, setTo] = useState('');
   const [sent, setSent] = useState('');
   const [received, setReceived] = useState('');
@@ -47,12 +50,22 @@ export function Accounts({ state, session, run, busy }: { state: LocalState; ses
         <Choices value={kind} values={[{ value: 'EXPENSE', label: 'Despesa' }, { value: 'INCOME', label: 'Receita' }]} onChange={setKind} />
         <Field label={`Montante em ${account.currency}`} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
         <Field label="Descrição" value={description} onChangeText={setDescription} />
+        {kind === 'EXPENSE' ? <>
+          <Note>O montante é o que pagaste. Descontos não aumentam o saldo.</Note>
+          <Field label="Desconto / dinheiro poupado" value={discount} onChangeText={setDiscount} keyboardType="decimal-pad" />
+          <Field label="Ou preço original (deixa desconto vazio)" value={originalPrice} onChangeText={setOriginalPrice} keyboardType="decimal-pad" />
+          <Field label="Cashback total esperado" value={expected} onChangeText={setExpected} keyboardType="decimal-pad" />
+          <Field label="Categoria da compra" value={category} onChangeText={setCategory} maxLength={80} />
+          <Note>Depois de guardar, abre Poupanças para associar o cashback recebido. Se já foi descontado no pagamento, inclui-o apenas no desconto.</Note>
+        </> : null}
         <Button title="Registar movimento" disabled={busy} onPress={() => void run(async () => {
           await session.vault.update(draft => recordCash(draft, { id: randomUUID(), accountId: account.id,
             date: new Date().toISOString(), type: kind, amount: kind === 'EXPENSE' ? negate(positive(amount)) : positive(amount),
             currency: account.currency, description, symbol: '', quantity: null, price: null, fees: null,
-            source: 'manual', externalId: '', transferId: null }));
+            source: 'manual', externalId: '', transferId: null,
+            ...(kind === 'EXPENSE' ? { ...purchaseSavings(kind, positive(amount), { discount, originalPrice, expected }), categoryId: category.trim() } : {}) }));
           setAmount(''); setDescription('');
+          setDiscount(''); setOriginalPrice(''); setExpected(''); setCategory('');
         })} />
       </Card>
       {manual.length > 1 ? <Card title="Transferência entre as tuas contas">

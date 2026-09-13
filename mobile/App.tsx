@@ -9,6 +9,7 @@ import { pruneUnusedCredentials } from './src/storage/secrets';
 import { MobileSession } from './src/services/session';
 import { clearTemporaryFiles } from './src/services/files';
 import { Accounts } from './src/ui/Accounts';
+import { Savings } from './src/ui/Savings';
 import { Overview } from './src/ui/Overview';
 import { Portfolio } from './src/ui/Portfolio';
 import { Plans } from './src/ui/Plans';
@@ -50,12 +51,13 @@ function Unlocked({ session, external, lock }: { session: MobileSession; externa
     <View style={{ flex: 1 }}>
       {tab === 'overview' ? <Overview state={state} /> : null}
       {tab === 'accounts' ? <Accounts state={state} session={session} run={run} busy={busy} /> : null}
+      {tab === 'savings' ? <Savings state={state} session={session} run={run} busy={busy} /> : null}
       {tab === 'portfolio' ? <Portfolio state={state} /> : null}
       {tab === 'plans' ? <Plans state={state} session={session} run={run} busy={busy} /> : null}
       {tab === 'settings' ? <Settings state={state} session={session} run={run} busy={busy} external={external} lock={lock} /> : null}
     </View>
     <View style={{ flexDirection: 'row', borderTopColor: colors.border, borderTopWidth: 1, backgroundColor: colors.bg }}>
-      {[['overview', 'Resumo'], ['accounts', 'Contas'], ['portfolio', 'Carteira'], ['plans', 'Planos'], ['settings', 'Definições']].map(([id, label]) =>
+      {[['overview', 'Resumo'], ['accounts', 'Contas'], ['savings', 'Poupanças'], ['portfolio', 'Carteira'], ['plans', 'Planos'], ['settings', 'Definições']].map(([id, label]) =>
         <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: tab === id, disabled: busy }} disabled={busy} onPress={() => setTab(id)}
           style={{ flex: 1, minHeight: 60, justifyContent: 'center', alignItems: 'center', borderTopWidth: 2, borderTopColor: tab === id ? colors.accent : 'transparent' }}>
           <Text style={{ color: tab === id ? colors.accent : colors.muted, fontSize: 11, fontWeight: '600' }}>{label}</Text>
