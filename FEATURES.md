@@ -1070,9 +1070,10 @@ instância arrancada sem `.env` entrava, e podia calcular o cookie de sessão a
 partir do código. Agora rebenta a dizer o que falta, como o `ENCRYPTION_KEY`
 sempre fez.)
 
-**Uma tabela de segurança por apagar.** `investment_activities_pre0033` guarda a
-cópia dos 107 registos anteriores à migração da tabela de movimentos. Verificado
-que nenhuma linha se perderia; fica até dizeres que sai.
+**A tabela de segurança foi apagada** a 13 de setembro de 2026, a teu pedido.
+`investment_activities_pre0033` guardava a cópia dos 107 registos anteriores à
+migração da tabela de movimentos; antes de a apagar confirmou-se que os 107
+continuavam todos na tabela atual e que nada no código a usava.
 
 **Bybit EU não tem solução.** As chaves da bybit.eu ficam presas aos servidores
 das aplicações aprovadas por eles — nenhum endereço teu vai coincidir. Não é um
