@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The site runs on the owner's own computer and is reached by its Wi-Fi address
+  over plain http. That address changes from one network to the next, so cleartext
+  cannot be limited to a single host here. Nothing else is loaded in the app: any
+  link to another site opens in the phone's browser.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -1,0 +1,5 @@
+// The same Android Gradle Plugin the React Native app in mobile/ builds with,
+// so a machine that has built one already has everything to build the other.
+plugins {
+    id 'com.android.application' version '8.12.0' apply false
+}

@@ -1,0 +1,30 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace = 'com.joaonovais.moneyos.shell'
+    compileSdk = 36
+
+    defaultConfig {
+        // Not com.joaonovais.moneyos: that is the encrypted-vault app in mobile/,
+        // and both can be installed on the same phone.
+        applicationId = 'com.joaonovais.moneyos.site'
+        // 29 is where saving to Downloads needs no storage permission.
+        minSdk = 29
+        targetSdk = 36
+        versionCode = 1
+        versionName = '0.1.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
