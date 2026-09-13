@@ -15,10 +15,21 @@ mesmo tempo.
    a versão mais recente do site, põe-no a correr e mostra o endereço a usar, por
    exemplo `http://192.168.1.129:3000`. Na primeira vez o Windows pergunta se o Node.js
    pode usar a rede: escolhe **Redes privadas** e **Permitir**. Deixa a janela aberta.
-2. **No telemóvel**, instala o APK
-   `android-shell\app\build\outputs\apk\debug\app-debug.apk` (copia-o para o telemóvel e
-   abre-o; o Android pede para autorizar a instalação de fora da Play Store).
-3. Abre a app **Money OS**, escreve o endereço do passo 1 e inicia sessão com a
+2. **Passa a app para o telemóvel**, com o cabo USB:
+   - Liga o telemóvel ao PC e desbloqueia-o.
+   - No telemóvel, puxa a barra de notificações, toca na notificação do USB ("A
+     carregar este dispositivo via USB") e escolhe **Transferência de ficheiros**.
+     Enquanto estiver só a carregar, o Explorador do Windows mostra o telemóvel com a
+     pasta vazia.
+   - No Explorador: **Este PC → (o teu telemóvel) → Armazenamento interno → Download**.
+   - Arrasta para lá o ficheiro
+     `C:\Users\joao2\Projects\money-os\android-shell\app\build\outputs\apk\debug\app-debug.apk`.
+     Não está no Git: é o resultado de compilar (ver "Compilar", abaixo).
+3. **Instala-a no telemóvel**: abre o **Gestor de ficheiros** → **Transferências** →
+   toca em `app-debug.apk`. O Android pede para autorizar o Gestor de ficheiros a
+   instalar apps desconhecidas; autoriza e carrega em **Instalar**. Os telemóveis Xiaomi
+   e POCO podem mostrar ainda um aviso de segurança antes de instalar.
+4. Abre a app **Money OS**, escreve o endereço do passo 1 e inicia sessão com a
    palavra-passe do site.
 
 O telemóvel tem de estar no mesmo Wi-Fi que o PC. Se o PC mudar de endereço, a app

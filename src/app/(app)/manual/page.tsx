@@ -153,6 +153,7 @@ const CONTENTS = [
     items: [
       ["settings", "Settings"],
       ["library", "Library"],
+      ["phone", "On your phone"],
       ["wont", "What it deliberately won't do"],
     ],
   },
@@ -667,6 +668,23 @@ export default function ManualPage() {
           </p>
         </Entry>
 
+        <Entry id="phone" title="On your phone" where="The Money OS Android app, on the same Wi-Fi as the computer">
+          <p>
+            The phone shows this same site, with every feature. It reaches it on the
+            computer that runs Money OS, so the two have to be on the same Wi-Fi and
+            the site has to be running there. Each page opens with only what it is
+            for — the charts, audits and forms around it are one tap away, and what
+            you open stays open on that phone.
+          </p>
+          <Note label="Plain http at home" tone="care">
+            <p>
+              On your home network the connection is not encrypted: anyone on the
+              same Wi-Fi who tried could read it, including your password as you sign
+              in. Fine at home; don&apos;t use it on a shared network.
+            </p>
+          </Note>
+        </Entry>
+
         <Entry id="wont" title="What it deliberately won't do" where="Settled decisions, recorded so they aren't re-argued">
           <ul className="list-disc pl-5 space-y-1">
             <li><strong className="text-[var(--foreground)]">No advice.</strong> No recommendations, no signals. It shows what you hold and what you did.</li>
@@ -677,7 +695,7 @@ export default function ManualPage() {
           </ul>
           <Note label="Not built yet" tone="care">
             <p>
-              Alerts — the app knows a budget is blown and doesn&apos;t tell you.
+              Alerts outside the app — the bell only tells you while it is open.
               A monthly report. Recurring transactions created automatically.
               Bonds modelled properly, with coupon and maturity. Attaching
               receipts.

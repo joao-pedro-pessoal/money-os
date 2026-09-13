@@ -1,5 +1,10 @@
 # Money OS
 
+**On your phone:** the Android app in [android-shell/](android-shell/) opens this
+site from your own computer over your home Wi-Fi, with every feature and a simpler
+first screen on each page. How to install and run it:
+[docs/APP_ANDROID.md](docs/APP_ANDROID.md) (in Portuguese).
+
 **Native mobile development:** [mobile/README.md](mobile/README.md) contains a
 separate Android/iOS app with encrypted on-device storage and direct read-only
 broker connections. It needs device testing before store distribution. The

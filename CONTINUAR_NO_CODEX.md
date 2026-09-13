@@ -8,6 +8,13 @@ A interface simplificada independente criada em mobile/ foi rejeitada como
 direção do produto. Aproveitar componentes úteis dessa implementação sem tratar
 essa interface como a experiência pretendida.
 
+**Decisão de 13 de setembro de 2026 (caminho A):** por agora, a app do telemóvel é o
+próprio site, aberto a partir do PC pela app Android em `android-shell/`, com todas as
+funcionalidades. No telemóvel cada página abre só com o essencial (painéis
+`essential` e `MobileFold`). Ver `docs/APP_ANDROID.md` e as duas secções sobre o
+telemóvel no `CLAUDE.md`. O caminho B — o site a correr no telemóvel, com os dados
+cifrados só lá — continua descrito no `docs/PLANO_MOBILE.md`, com `mobile/` como base.
+
 O requisito inicial era armazenamento exclusivamente no dispositivo. Depois, o
 utilizador propôs contas e sincronização PC/telemóvel, com login apenas Google
 e Apple. Registar essa nova direção; autenticação, isolamento entre utilizadores
@@ -76,17 +83,18 @@ nativa de SQLCipher/biometria.
 
 ## Próximo trabalho
 
-1. Inspecionar o estado local e preservar as alterações. Se houver Git, criar
-   uma branch de trabalho; se não houver, preparar um checkpoint seguro sem
-   incluir segredos, dependências ou builds.
-2. Verificar diferenças face ao repositório remoto antes de integrar trabalho
-   mais recente do Claude; não substituir automaticamente esta cópia por main.
-3. Inventariar os ecrãs e operações do site e determinar como reutilizar a UI
-   com adaptação móvel e a nova direção de conta/sincronização.
-4. Apresentar os impactos técnicos concretos e iniciar a implementação por
-   etapas verificáveis, sem eliminar funcionalidades para simular conclusão.
+Atualizado a 13 de setembro de 2026. A junção com o `main`, a inventariação dos
+ecrãs e a primeira versão da app Android já estão feitas.
+
+1. Recolher do utilizador as páginas que ainda parecem cheias no telemóvel e
+   ajustá-las com `essential` e `MobileFold`, sem retirar funcionalidades.
+2. Testar a app Android num telemóvel real: importar um ficheiro, exportar para
+   Transferências, o gesto de voltar e o ecrã "Sem ligação".
+3. Antes de o site sair da rede de casa: https e limite de tentativas no login.
+4. Caminho B só quando o utilizador o pedir (ver `docs/PLANO_MOBILE.md`).
 5. Usar os comandos locais para investigar erros e testar no emulador sempre
-   que possível. Pedir ao utilizador apenas interação que exija a sua presença.
+   que possível. Pedir ao utilizador apenas interação que exija a sua presença,
+   como iniciar sessão ou desbloquear o telemóvel.
 
 Comunicar em português simples e distinguir trabalho concluído, propostas e
 dependências por configurar. O Codex local não recebe automaticamente esta conversa.

@@ -25,7 +25,7 @@ O site já inclui menu lateral que se transforma em gaveta no telemóvel, fecho 
 
 Primeira implementação: adaptar o próprio site responsivo e verificar os fluxos em larguras móveis. Os componentes HTML/CSS e gráficos atuais dependem do ambiente web; não podem ser importados diretamente como componentes React Native. O layout também lê alertas no servidor e as páginas usam Server Actions/PostgreSQL. Uma exportação estática ou uma WebView isolada não fornece automaticamente essas operações, armazenamento cifrado ou offline.
 
-A escolha do invólucro nativo fica para uma prova técnica posterior. Reaproveitar do mobile o que for compatível: parsers e regras financeiras, transporte de leitura, armazenamento, backups e bloqueio. Nunca importar `src/db` ou Server Actions para o bundle nativo. Não adicionar uma segunda definição dos totais financeiros.
+A escolha do invólucro nativo ficou decidida a 13 de setembro de 2026: por agora, uma app Android mínima (`android-shell/`) que abre o site servido pelo PC na rede de casa — ver [APP_ANDROID.md](APP_ANDROID.md). Não substitui o caminho B descrito neste plano. Reaproveitar do mobile o que for compatível: parsers e regras financeiras, transporte de leitura, armazenamento, backups e bloqueio. Nunca importar `src/db` ou Server Actions para o bundle nativo. Não adicionar uma segunda definição dos totais financeiros.
 
 Google/Apple, isolamento entre utilizadores e sincronização são a nova direção, ainda não implementada. Login sozinho não torna a base single-user segura para várias pessoas. Encriptação ponta a ponta é proposta: definir acesso do PC, posse das chaves, ligação/revogação de dispositivos e recuperação antes de a prometer. Não enviar chaves das corretoras para um proxy central.
 

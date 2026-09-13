@@ -366,6 +366,32 @@ a instalação por completo; e `md:hidden` **não funciona** num `.icon-btn`, po
 o `globals.css` define `display` depois do import do Tailwind e ganha por ser
 mais tardio.
 
+## Telemóvel: a app Android
+
+Decidido a 13 de setembro: a app do telemóvel é **o próprio site**, com tudo o que
+tem, aberto a partir do PC. `android-shell/` é uma app Android mínima — um ecrã, em
+Java, sem bibliotecas — que abre o site em ecrã inteiro e acrescenta o que um browser
+daria: escolher ficheiros para importar, guardar exportações em Transferências, o gesto
+de voltar e as ligações para outros sites abertas no browser.
+`SITE_PARA_TELEMOVEL.cmd` prepara o site, põe-no na rede de casa e mostra o endereço a
+escrever na app. Como instalar, usar e compilar: `docs/APP_ANDROID.md`.
+
+**No telemóvel cada página abre só com o essencial.** Abaixo dos 768px só abrem os
+painéis que a página marca como essenciais; os outros ficam fechados, a um toque, e
+uma escolha já feita no aparelho é respeitada. O gráfico, a auditoria e as ferramentas
+de preços em Investments, e os formulários do Cash Flow, dobram-se da mesma maneira.
+No PC nada muda.
+
+**Quatro coisas falhavam só no telemóvel.** Pelo endereço Wi-Fi (`http://192.168.…`)
+o browser não considera a ligação segura e retira três funções inteiras: gerar
+identificadores, calcular a impressão digital de um ficheiro e copiar para a área de
+transferência. O botão +, os formulários de cashback, os botões de copiar e as duas
+importações rebentavam — e no PC, onde se testa, tudo funcionava. Agora usam
+alternativas que funcionam nos dois.
+
+**Limites:** só em casa, no mesmo Wi-Fi, com o PC ligado; o tráfego na rede local não
+é cifrado; não há modo offline.
+
 ## Preços automáticos
 
 Construído depois da primeira versão deste documento, que o listava como falta.
@@ -1128,10 +1154,10 @@ em CSV, e a razão está em `docs/trade-republic.md`.
 acesso a alguém, não existe. É o que separa esta app de uma que possa ser
 distribuída a estranhos, mais do que qualquer funcionalidade desta lista.
 
-**Widgets e ecrã principal.** A app já instala no telemóvel e funciona lá — ver
-a Parte 1. O que falta é o que só um app nativo dá: widgets no ecrã principal e
-biometria. Nenhum dos dois vale, por si, o custo de embrulhar isto em Capacitor
-e passar pela revisão das lojas.
+**Widgets e a app fora de casa.** A app Android já existe — ver a Parte 1 — mas é
+o site do PC dentro de uma app: só funciona no Wi-Fi de casa, com o PC ligado. Falta
+o que só uma app nativa dá, widgets no ecrã principal e biometria, e usá-la fora de
+casa, que exige pôr o site na internet com https e com limite de tentativas no login.
 
 ## Coisas que decidi não fazer
 

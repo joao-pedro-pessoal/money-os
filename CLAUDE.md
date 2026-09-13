@@ -405,6 +405,34 @@ message that can't be acted on costs a round trip every time.
   confusing message.
 - `src/app/**` — pages. Server components by default.
 
+## A phone on the Wi-Fi is not a secure context
+
+The phone reaches the site on the computer as `http://192.168.x.x:3000` — the
+Android app in `android-shell/` is exactly that site in a WebView (see
+`docs/APP_ANDROID.md`). Plain http on any address other than localhost is not a
+secure context, and there the browser does not fail the call: it removes the API.
+`crypto.randomUUID`, `crypto.subtle` and `navigator.clipboard` are simply
+`undefined`. Everything works on the computer, where you test, and throws on the
+phone. The quick-entry form, the cashback forms, both importers and the copy
+buttons all did.
+
+- Client code never calls those three directly. Use `newQuickEntryId()`
+  (`src/lib/money/quickEntryId.ts`), `sha256Text()` (`src/lib/hash/sha256.ts`,
+  same digest as the browser's, tested against Node's) and `copyText()`
+  (`src/components/copyText.ts`). Server code runs in Node and is unaffected.
+- Test a phone-facing change on the phone's address, not on localhost:
+  localhost counts as secure and hides the problem.
+
+## On a phone a page opens with only what it is for
+
+Below 768px `PanelFrame` and `Section` open only panels marked `essential`; the
+rest start closed, one tap away (`startsCollapsed` in `src/lib/ui/panels.ts`). A
+saved choice on the device always wins, and `essential` never opens what a page
+keeps closed on a computer. So a new panel is **closed on a phone unless you mark
+it** — decide, don't leave it to the default. Blocks that are not panels (a chart,
+an audit, a form the + button covers) fold with `MobileFold`, which draws nothing of
+its own on a computer.
+
 ## Never add two amounts without converting first
 
 Every table that holds money holds a currency beside it: `transactions.currency`,

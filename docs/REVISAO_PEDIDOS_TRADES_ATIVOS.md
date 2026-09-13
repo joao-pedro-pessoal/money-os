@@ -98,6 +98,10 @@ Descontos, dinheiro poupado e cashback, com aba Poupanças: implementado em
 [POUPANCAS_DESCONTOS_CASHBACK.md](POUPANCAS_DESCONTOS_CASHBACK.md). O teste em
 dispositivos reais fica no ponto 4 abaixo.
 
+App Android com o site do PC (caminho A), e cada página a abrir só com o essencial no
+telemóvel: implementado em 2026-09-13 — ver [APP_ANDROID.md](APP_ANDROID.md). Testado
+no emulador; falta testar num telemóvel real.
+
 ### Pendente
 
 1. Login por email, Google ou Apple, e isolamento de utilizadores.
