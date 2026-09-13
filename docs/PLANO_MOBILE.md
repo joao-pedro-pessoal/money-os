@@ -613,6 +613,8 @@ Inventário das rotas e componentes existentes; não equivale a testes funcionai
 
 ## Etapas de implementação
 
+Pedido 8 implementado em 2026-09-13: [descontos/poupanças e cashback nas compras, com uma aba Poupanças](POUPANCAS_DESCONTOS_CASHBACK.md), no site e no mobile. Inclui metadados nos backups e na sincronização do cofre móvel, com normalização dos IDs de compras importadas entre dispositivos. Site e cofre móvel continuam com armazenamentos separados; testes em dispositivos físicos permanecem na etapa 7.
+
 ### Página de cada ativo e ligações externas — implementado
 
 Pedido do utilizador em 9 de setembro de 2026. **Implementado; esta entrada

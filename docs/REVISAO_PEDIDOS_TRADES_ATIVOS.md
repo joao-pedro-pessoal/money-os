@@ -93,6 +93,11 @@ Substitui as listas de pendentes acima, que ficaram desatualizadas.
 - **Sobreposição de preferências de painéis.** As Definições guardam no servidor e o
   `PanelFrame` guarda no browser; o segundo pode anular o primeiro.
 
+Descontos, dinheiro poupado e cashback, com aba Poupanças: implementado em
+2026-09-13 no site e no telemóvel — ver
+[POUPANCAS_DESCONTOS_CASHBACK.md](POUPANCAS_DESCONTOS_CASHBACK.md). O teste em
+dispositivos reais fica no ponto 4 abaixo.
+
 ### Pendente
 
 1. Login por email, Google ou Apple, e isolamento de utilizadores.

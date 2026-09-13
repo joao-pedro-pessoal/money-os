@@ -1,5 +1,7 @@
 # Registo rápido de despesas e receitas
 
+Desde 2026-09-13, o formulário de despesa inclui [descontos, dinheiro poupado e cashback esperado](POUPANCAS_DESCONTOS_CASHBACK.md). Depois de guardar, a ligação Savings / cashback permite associar ou registar o recebimento real na nova aba Poupanças.
+
 O botão **+ / Quick entry** no cabeçalho abre um formulário sobre a página
 atual, disponível no PC e no telemóvel. Começa em despesa, usa a conta habitual
 configurada (ou a primeira conta ativa) e a data local de hoje. Mantém a conta
