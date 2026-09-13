@@ -39,8 +39,13 @@ formulário compacto, offline, sincronização sem duplicados e desfazer.
 
 ## Windows do utilizador
 
-Pasta completa:
-C:\Users\joao2\Downloads\money-os-local-mobile\money-os
+Pasta completa (desde 2026-09-13):
+C:\Users\joao2\Projects\money-os
+
+O branch `feat/mobile-app` foi juntado ao `main` nesse dia e os dois partilham
+agora o mesmo histórico. Trabalhar no `main` desta pasta. A cópia antiga em
+C:\Users\joao2\Downloads\money-os-local-mobile\money-os já não é a pasta de
+trabalho: só guarda a base de testes local e as capturas em `.local-checkpoints`.
 
 SDK Android:
 C:\Users\joao2\AppData\Local\Android\Sdk

@@ -105,5 +105,7 @@ dispositivos reais fica no ponto 4 abaixo.
 3. Revisão de segurança, privacidade e obrigações legais.
 4. Instalação, widgets, notificações e testes em dispositivos reais.
 
-O desenho dos pontos 1 e 2 está decidido em [PLANO_MOBILE.md](PLANO_MOBILE.md). Antes
-de qualquer merge com `main`: este branch não partilha histórico com ele.
+O desenho dos pontos 1 e 2 está decidido em [PLANO_MOBILE.md](PLANO_MOBILE.md).
+
+Em 2026-09-13 este branch foi juntado ao `main` (commit `add5dd2`): o histórico
+dos dois passou a ser um só, e a pasta de trabalho é `C:\Users\joao2\Projects\money-os`.

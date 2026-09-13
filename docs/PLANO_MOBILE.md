@@ -350,11 +350,12 @@ defeito real — a resposta "ainda sem cofre" (204) rebentava com 500, porque
 `NextResponse.json(null)` escreve um corpo que um 204 não pode ter — e duas
 verificações do próprio teste que estavam erradas.
 
+Feito em 2026-09-13: o Next.js passou de 16.3.0 para 16.3.5, fora da
+vulnerabilidade crítica de execução remota de código em servidores Windows
+(GHSA-p293-qw3h-jr36).
+
 Por fazer no servidor:
 
-- **Atualizar o Next.js para 16.3.4 antes de qualquer publicação.** A 16.3.0
-  instalada tem uma vulnerabilidade crítica de execução remota de código em
-  servidores Windows.
 - **Limitar a criação de contas.** O registo está aberto e só guarda cifra, mas sem
   limite serve para ocupar espaço.
 - **Apagar versões antigas do cofre.** Hoje ficam todas até a conta ser apagada.
