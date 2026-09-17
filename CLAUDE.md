@@ -69,9 +69,9 @@ In the local-mobile checkout there is no `.env`; the isolated database is
 reached through `node .local-checkpoints/run-local.mjs run --import tsx
 scripts/audit.ts`, which loads its credentials without printing them.
 
-Check `git branch`. Work has been happening on `fix/secrets-and-unconverted-sums`,
-which is a long way ahead of `main` and has never been merged. Starting from
-`main` means starting without any of it.
+Work on `main` (checked 17 September 2026). `fix/secrets-and-unconverted-sums`
+and `feat/mobile-app` are both fully merged into it and hold nothing `main`
+lacks; do not start from either.
 
 ## A missing secret is refused, never defaulted
 
@@ -444,6 +444,34 @@ before paint. Simple panel/fold choices append `:simple` to the existing storage
 keys; desktop and complex mode keep the original keys. `MobileFold simpleOnly`
 must show its body in complex mode and on desktop even when its saved state is
 closed. Mode changes change visibility, never financial values or stored data.
+
+## A widget shows what a page shows, never a figure of its own
+
+The Android app's home-screen widgets and quick settings tiles
+(`android-shell/.../MoneyWidgets.java`, `Tiles.java`) read one route,
+`GET /api/widget`. Three rules keep them honest.
+
+- **Same functions as the page.** Every figure there comes from the action the
+  matching page renders — `getNetWorth`, `getPortfolioItems` +
+  `portfolioSummary`, `getDividendOverview`, `listAllPositions` — and is only
+  trimmed by `src/lib/widgets/summary.ts` (tested). Computing a total in the route
+  or in Java is a second definition; see above for why that is worse than a wrong
+  one.
+- **Unmeasured is null, on both ends.** A position with no measured cost has
+  `pnl`/`percent` null in the JSON and shows "—" in the widget. `movers` ranks
+  only positions with a positive measured cost.
+- **Behind the session.** The route is not in `src/proxy.ts`'s public list; the
+  app sends its WebView cookie and a redirect means "log in". The app keeps the
+  last answer so a widget can show it away from home, always with the time it was
+  read. Nothing is written through a widget: the quick-entry ones only open the
+  site's form.
+
+A widget's picture in the launcher's list is a PNG in
+`res/drawable-nodpi/widget_preview_*.png`, drawn by
+`android-shell/previews/render-previews.cmd` from `previews.html`. The empty
+layout used as a preview drew the same dark box for every widget. Change a
+widget, redraw its picture. When adding a figure to the JSON, read it with
+`opt…` in `WidgetData.java`: a phone keeps the older JSON until it next refreshes.
 
 ## Never add two amounts without converting first
 

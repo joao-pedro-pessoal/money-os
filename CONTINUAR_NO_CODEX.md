@@ -26,10 +26,17 @@ experiência atual ainda não está concluída. Ver a secção 4 de
 
 ## Código e estado
 
-- Estado a 17 de setembro de 2026: `main` no GitHub inclui o trabalho de telemóvel
-  (Simple/Complex, navegação inferior, tabelas em cartões, Trade history, Dividends,
-  Open positions, Connections e posições nas playlists). A01, A02 e A03 foram
-  concluídos pelo utilizador. 2337 testes.
+- Estado a 17 de setembro de 2026: `main` no GitHub (16631b1) inclui o trabalho de
+  telemóvel (Simple/Complex, navegação inferior, tabelas em cartões, Trade history,
+  Dividends, Open positions, Connections e posições nas playlists) e a app Android
+  0.6.0 com widgets (registo rápido, Money OS, Net worth, Where the money is, Cash
+  flow, Investments com todas as posições, Allocation, Winners & losers, Dividends,
+  Open trades), atalhos no ícone, botões nas definições rápidas e notificação.
+  A01, A02 e A03 foram concluídos pelo utilizador. 2347 testes. Os widgets ainda não
+  foram vistos num telemóvel; o emulador tem PIN e não é desbloqueado pelo agente.
+- Compilar a app: `android-shell\gradlew.bat assembleDebug` com `JAVA_HOME` do JDK 17
+  só nesse processo. `lintDebug` falha em dois erros antigos (`onBackPressed` e
+  `local.properties`), não nos widgets.
 - Chaves das corretoras no site: cifradas na base de dados (Neon), decifradas só com
   a `ENCRYPTION_KEY` do `.env`. Não ficam só num dispositivo; isso existe apenas em
   `mobile/` e é a tarefa E02.

@@ -10,6 +10,16 @@ cifrados só lá) continua no [PLANO_MOBILE.md](PLANO_MOBILE.md), e a app em `mo
 é a base dele. As duas apps têm identificadores diferentes e podem estar instaladas ao
 mesmo tempo.
 
+**Versão atual da app: 0.6.0** (17 de setembro de 2026). Resumo do que tem: o site
+completo, disposição própria no telemóvel com modos Simple e Complex, registo rápido
+a partir de widget, atalhos do ícone, definições rápidas e notificação, e nove
+widgets com valores. Detalhes nas secções abaixo.
+
+**Para atualizar a app no telemóvel:** reinicia o site no PC (`SITE_PARA_TELEMOVEL.cmd`)
+e instala o APK novo por cima do antigo (passos 2 e 3). Mantém-se o endereço, a sessão
+e os widgets já colocados; um widget cujo formato mudou (como o Investments na 0.6.0)
+deve ser retirado e colocado outra vez.
+
 ## Como usar
 
 1. **No PC**, abre `SITE_PARA_TELEMOVEL.cmd` (duplo clique na pasta do projeto). Prepara

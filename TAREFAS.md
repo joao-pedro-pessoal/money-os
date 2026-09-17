@@ -50,7 +50,7 @@ não significa que todas tenham sido pedidas para implementação imediata.
 | F05 | Completar o modelo de obrigações | Acrescentar cupões e maturidade, com uma definição explícita da avaliação. Priorizar quando existir uma obrigação real para validar. |
 | F06 | Validar e ampliar conectores | Testar Kraken, Binance e restantes caminhos de sucesso ainda sem validação com contas reais. Acrescentar Funding/Earn da Binance. Coinbase é candidata, dependente de credenciais de teste e confirmação da API. |
 | F07 | Implementar BloFin | Desenho documentado, conector por construir. Confirmar o âmbito e validar com uma chave de leitura real; seguir os pontos de integração do plano técnico. |
-| F08 | Widgets e ações em notificações | **Primeira versão feita a 17/09/2026** (ver secção 5): widget, atalhos do ícone e notificação abrem o registo rápido do site. Falta validar no telemóvel real e, se pedido, registar o valor diretamente na notificação sem abrir a app (exige uma rota própria, sessão e proteção contra duplicados). |
+| F08 | Widgets e ações em notificações | **Feito a 17/09/2026, app 0.6.0** (H09–H13 na secção 5): widget, atalhos, botão nas definições rápidas e notificação abrem o registo rápido; nove widgets com valores. Falta validar no telemóvel real e, se pedido, registar o valor diretamente na notificação sem abrir a app (exige uma rota de escrita própria, sessão e proteção contra duplicados). |
 
 ## 4. Acesso fora de casa e evolução independente do PC
 
@@ -129,9 +129,11 @@ ser apresentadas como propriedades já demonstradas do site atual.
 | Instalação atual | App Android que abre o site do PC | Exige PC ligado e acesso ao servidor. |
 | Cofre futuro | Armazenamento local e partes de identidade/sincronização implementados | Consultar a secção 4; integração com a experiência atual incompleta. |
 
-Validação da última alteração da interface: **2337 testes aprovados**, build e
-TypeScript aprovados, lint sem erros e com três avisos Bybit já existentes, sem
-alterações de esquema. Auditoria com a inconsistência de A02. Estes resultados
+Validação da última alteração (17/09/2026, widgets 0.6.0): **2347 testes
+aprovados**, build e TypeScript aprovados, sem alterações de esquema. `npx eslint src`
+tem um erro anterior a estas alterações em `src/components/LanguageContext.tsx`
+(setState dentro de um efeito) e os três avisos Bybit. A app Android compila; o
+`lintDebug` tem dois erros antigos (`onBackPressed`, `local.properties`). Auditoria com a inconsistência de A02. Estes resultados
 não certificam os fluxos futuros da secção 4.
 
 ## 6. Limites e decisões que não são tarefas de implementação

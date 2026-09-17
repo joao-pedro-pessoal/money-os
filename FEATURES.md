@@ -411,9 +411,10 @@ no ecrã principal com Despesa e Receita, os mesmos dois atalhos ao tocar sem la
 no ícone e uma notificação fixa opcional, ligada em Settings. Todos abrem a app
 diretamente no registo rápido do site; nada é gravado fora desse formulário.
 
-**Widgets com valores e definições rápidas** (app 0.3.0): widgets Money OS, Net worth,
-Where the money is, Cash flow, Investments, Allocation, Winners & losers, Dividends e
-Open trades (0.5.0), com imagem de exemplo na lista de widgets, lidos de `/api/widget` com a sessão da app e com os
+**Widgets com valores e definições rápidas** (app 0.3.0 a 0.6.0): widgets Money OS, Net
+worth, Where the money is, Cash flow, Investments (todas as posições numa lista que
+desliza, com P&L em € e %), Allocation, Winners & losers, Dividends e Open trades, com
+imagem de exemplo na lista de widgets, lidos de `/api/widget` com a sessão da app e com os
 últimos valores guardados no telemóvel para mostrar fora de casa, sempre com a hora;
 botões Record expense e Net worth no painel das definições rápidas.
 

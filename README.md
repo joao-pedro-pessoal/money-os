@@ -3,15 +3,9 @@
 Project status and the single task list: [TAREFAS.md](TAREFAS.md).
 
 **On your phone:** the Android app in [android-shell/](android-shell/) opens this
-site from your own computer over your home Wi-Fi, with every feature. Below 768 px
-the site has its own layout: a bottom menu, cards instead of wide tables, panels
-that open only when they matter, and two modes — **Simple** (the essentials) and
-**Complex** (all options). Home-screen widgets show net worth, its line over
-time, where the money is, this month's cash flow, the portfolio, allocation,
-winners and losers, dividends and open trades; a widget, icon shortcuts,
-a quick settings tile and an optional notification open the quick entry form in
-one tap. On a computer nothing changes. How to install and run
-it: [docs/APP_ANDROID.md](docs/APP_ANDROID.md) (in Portuguese).
+site from your own computer over your home Wi-Fi, with every feature — see
+[On your phone](#on-your-phone) below, and [docs/APP_ANDROID.md](docs/APP_ANDROID.md)
+(in Portuguese) to install and run it.
 
 **Native mobile development:** [mobile/README.md](mobile/README.md) contains a
 separate Android/iOS app with encrypted on-device storage and direct read-only
@@ -68,6 +62,33 @@ no method that could place an order or move funds — it is not a promise, it is
 the shape of the code.
 
 There is a manual inside the app, at `/manual`.
+
+<a name="on-your-phone"></a>
+### On your phone
+
+The Android app (version 0.6.0, [android-shell/](android-shell/)) is this same site
+in a full-screen WebView, reached on the computer that runs it over home Wi-Fi. It
+adds what a browser tab would: choosing files to import, saving exports to
+Downloads, the back gesture.
+
+- **A phone layout.** Below 768 px: a bottom menu, cards instead of wide tables,
+  panels that open only when they matter, and two modes — **Simple** (the
+  essentials) and **Complex** (all options). On a computer nothing changes.
+- **Record an expense in one tap.** A home-screen widget, two shortcuts on the app
+  icon, a *Record expense* tile in the quick settings panel and an optional
+  notification all open the quick entry form. Nothing is saved until you press
+  Save there, so its undo and duplicate protection still apply.
+- **Widgets with figures.** Money OS (net worth and this month), Net worth over
+  time, Where the money is, Cash flow, Investments (every position, with P&L in
+  money and percent, in a list that scrolls), Allocation, Winners & losers,
+  Dividends and Open trades — plus a *Net worth* tile that stays blank while the
+  phone is locked. They read `GET /api/widget`, which sits behind the same session
+  as every page and is built from the same functions as the pages it summarises.
+- **What stays on the phone:** only the last figures the widgets read, so they
+  can show something — always with its time — away from home. No keys, no
+  password.
+- **Limits:** home Wi-Fi only, with the computer on; plain http on the local
+  network; no offline mode; a debug build, not in any store.
 
 ---
 
@@ -129,7 +150,7 @@ encrypted with AES-256-GCM. The key that decrypts them is `ENCRYPTION_KEY`, whic
 exists only in `.env` and never enters the database — so a copy of the database
 alone, including one kept by a hosted Postgres provider, cannot read them. They
 are **not** kept on a single device: the phone app opens the site and stores no
-keys at all. Keys that never leave one device exist only in the separate native
+keys at all, and its widgets read figures through the session, never a key. Keys that never leave one device exist only in the separate native
 app in [mobile/](mobile/), which is not the app in daily use; bringing that
 model to this experience is planned, not built (see [TAREFAS.md](TAREFAS.md), E02).
 
@@ -146,7 +167,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2337 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2347 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 
@@ -206,5 +227,5 @@ Next.js App Router, TypeScript, Drizzle ORM, PostgreSQL, Recharts, Tailwind.
 
 `src/lib/**` is pure logic — no database and no React, and no `fetch` outside
 the four connector/FX files that are the outbound edge. That discipline is why
-all 2337 tests run without Postgres. Every database call lives in
+all 2347 tests run without Postgres. Every database call lives in
 `src/actions/**`.
