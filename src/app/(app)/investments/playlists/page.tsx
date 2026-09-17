@@ -3,6 +3,8 @@ import { listPlaylistsWithTotals, createPlaylist, deletePlaylist } from "@/actio
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Link from "next/link";
+import PanelFrame from "@/components/PanelFrame";
+import { shortName } from "@/lib/portfolio/shortName";
 
 export default async function PlaylistsPage() {
   const lists = await listPlaylistsWithTotals();
@@ -51,23 +53,23 @@ export default async function PlaylistsPage() {
                             className="inline-block shrink-0"
                           />
                         )}
-                        <span className="font-medium">{p.name}</span>
+                        <a href={`#playlist-${p.id}`} className="font-medium hover:underline">{p.name}</a>
                       </div>
                       {p.description && <div className="text-xs text-[var(--muted)]">{p.description}</div>}
                     </td>
                     <td className="text-right">{p.count}</td>
                     <td className="text-right">
-                      <Money value={p.value} />
+                      <Money value={p.value} currency={p.currency} />
                     </td>
                     <td className="text-right">
-                      <Money value={p.cost} />
+                      <Money value={p.cost} currency={p.currency} />
                     </td>
                     <td className={`text-right ${p.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                      <Money value={p.pnl} />
+                      <Money value={p.pnl} currency={p.currency} />
                       <div className="text-xs">{p.pnlPercent.toFixed(1)}%</div>
                     </td>
                     <td className={`text-right ${p.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                      <Money value={p.realized} />
+                      <Money value={p.realized} currency={p.currency} />
                     </td>
                     <td className="text-right">
                       <form action={deletePlaylist}>
@@ -85,6 +87,80 @@ export default async function PlaylistsPage() {
           </div>
         )}
       </div>
+
+      {/* What each playlist holds. A total is only worth trusting when the
+          rows behind it can be seen; these are the same items the table above
+          adds up. On a phone each playlist opens when tapped. */}
+      {lists.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-sm font-medium">Positions by playlist</h2>
+          {lists.map((p) => (
+            <PanelFrame
+              key={p.id}
+              id={`playlist-${p.id}`}
+              as="section"
+              persistKey={`playlist-${p.id}`}
+              title={p.name}
+              summary={<>{p.count} {p.count === 1 ? "position" : "positions"} · <Money value={p.value} currency={p.currency} /></>}
+              className="card p-4 scroll-mt-20"
+            >
+              {p.positions.length === 0 ? (
+                <p className="text-xs text-[var(--muted)] py-4">
+                  Nothing in this playlist yet. Pick it on the{" "}
+                  <Link href="/positions" className="text-[var(--accent)] hover:underline">Positions page</Link>{" "}
+                  or when adding a position.
+                </p>
+              ) : (
+                <div className="overflow-x-auto mt-3">
+                  <div className="table-scroll" role="region" aria-label={`Positions in ${p.name}`} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-sm">
+                    <thead>
+                      <tr>
+                        <th>Position</th>
+                        <th>Account</th>
+                        <th className="text-right">Value</th>
+                        <th className="text-right">Unrealized P&amp;L</th>
+                        <th className="text-right">Share</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {p.positions.map((i) => {
+                        const cost = i.value - i.pnl;
+                        return (
+                          <tr key={i.id}>
+                            <td className="font-medium" title={i.symbol}>
+                              <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-words hover:underline">
+                                {shortName(i.symbol)}
+                              </Link>
+                              {i.side === "short" && <span className="text-[10px] text-[var(--muted)] ml-1">short</span>}
+                              {i.leverage !== null && i.leverage > 1 && <span className="text-[10px] text-[var(--muted)] ml-1">{i.leverage}×</span>}
+                            </td>
+                            <td className="text-xs text-[var(--muted)]">{i.accountName}</td>
+                            <td className="text-right">
+                              <Money value={i.value} currency={p.currency} />
+                              {i.atCost && <div className="text-[10px] text-[var(--muted)]">at cost</div>}
+                            </td>
+                            {i.measured ? (
+                              <td className={`text-right ${i.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                                <Money value={i.pnl} currency={p.currency} />
+                                {cost > 0 && <div className="text-xs">{((i.pnl / cost) * 100).toFixed(1)}%</div>}
+                              </td>
+                            ) : (
+                              <td className="text-right text-[var(--muted)]">—</td>
+                            )}
+                            <td className="text-right text-xs text-[var(--muted)]">
+                              {p.value > 0 ? `${((i.value / p.value) * 100).toFixed(1)}%` : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </ResponsiveTable></div>
+                </div>
+              )}
+            </PanelFrame>
+          ))}
+        </div>
+      )}
 
       <div className="card p-4 max-w-md">
         <div className="text-sm font-medium mb-3">New playlist</div>

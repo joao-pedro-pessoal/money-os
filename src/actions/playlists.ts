@@ -13,7 +13,7 @@ import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 import { getPortfolioItems } from "./dashboard";
-import { portfolioSummary } from "@/lib/portfolio/positionView";
+import { hasPnl, portfolioSummary } from "@/lib/portfolio/positionView";
 import { isRealisedTrade } from "@/lib/trading/tradeMatches";
 import { getTradeAnalysis } from "./investmentActivity";
 
@@ -30,7 +30,14 @@ export async function listPlaylistsWithTotals() {
     // Manual sales are recorded on holdings, separately from imported executions.
     const manualRealized = manual.filter(h => h.playlistId === p.id).reduce((sum, h) =>
       sum + (toBase(Number(h.realizedPnl ?? 0), h.currency, rates, base) ?? 0), 0);
-    return { ...p, count: items.length, value: summary.held, cost: summary.cost,
+    // The positions themselves, largest first, so a playlist can be opened to
+    // see what makes up its totals — the same items the totals are built from.
+    const positions = [...items].sort((a, b) => b.value - a.value).map(i => ({
+      id: i.id, symbol: i.symbol, assetType: i.assetType, accountName: i.accountName,
+      side: i.side, value: i.value, pnl: i.pnl, leverage: i.leverage,
+      measured: hasPnl(i) && !i.costUnknown && !i.atCost, atCost: Boolean(i.atCost),
+    }));
+    return { ...p, positions, count: items.length, value: summary.held, cost: summary.cost,
       pnl: summary.pnl, pnlPercent: summary.pnlPercent,
       realized: Math.round((manualRealized + closed.reduce((sum, t) => sum + t.realizedPnl!, 0)) * 100) / 100,
       currency: base };

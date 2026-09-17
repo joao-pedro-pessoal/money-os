@@ -28,6 +28,7 @@ import { getBaseCurrency } from "@/actions/settings";
 import { toBase } from "@/lib/fx";
 import { displaySymbol } from "@/lib/quotes/symbolSource";
 import Link from "next/link";
+import MobileFold from "@/components/MobileFold";
 
 /** A form action may not return a value. */
 async function saveHoldingTags(formData: FormData) {
@@ -44,6 +45,29 @@ async function saveHoldingTags(formData: FormData) {
  */
 function round8(n: number): number {
   return Math.round((n + Number.EPSILON) * 1e8) / 1e8;
+}
+
+/** One labelled figure in a phone card. */
+function Fact({ label, children, className = "", detail = false }: {
+  label: string; children: React.ReactNode; className?: string;
+  /** Left out in the Simple phone mode. */
+  detail?: boolean;
+}) {
+  return (
+    <div className={`min-w-0${detail ? " positions-simple-hide" : ""}`}>
+      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
+      <div className={`text-sm tabular-nums break-words ${className}`}>{children}</div>
+    </div>
+  );
+}
+
+function SideBadge({ side }: { side: string }) {
+  const color = side === "long" ? "var(--green)" : "var(--red)";
+  return (
+    <span className="badge" style={{ border: `1px solid ${color}`, color }}>
+      {side.toUpperCase()}
+    </span>
+  );
 }
 
 export default async function PositionsPage() {
@@ -118,9 +142,9 @@ export default async function PositionsPage() {
   const totalNotional = sumInBaseCurrency(positions, (p) => p.positionValue ?? 0);
 
   return (
-    <div className="space-y-6">
+    <div className="positions-page space-y-6">
       <PageTabs tabs={INVESTMENT_TABS} />
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="positions-header flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold">Open positions &amp; balances</h1>
           <p className="text-xs text-[var(--muted)] mt-1">Live from your connected platforms.</p>
@@ -136,7 +160,7 @@ export default async function PositionsPage() {
       </div>
 
       {connections.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="positions-account-stats positions-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="card p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Perps equity</div>
             <div className="text-xl font-semibold truncate">
@@ -144,7 +168,7 @@ export default async function PositionsPage() {
             </div>
             <div className="text-[10px] text-[var(--muted)] mt-1">includes open position P&amp;L</div>
           </div>
-          <div className="card p-4">
+          <div className="card p-4 positions-simple-hide">
             <div className="text-xs text-[var(--muted)] mb-1">Spot balances</div>
             <div className="text-xl font-semibold truncate">
               <Money value={totalSpot} currency={base} />
@@ -161,7 +185,7 @@ export default async function PositionsPage() {
               <Money value={totalFree} currency={base} />
             </div>
           </div>
-          <div className="card p-4">
+          <div className="card p-4 positions-simple-hide">
             <div className="text-xs text-[var(--muted)] mb-1">Margin in use</div>
             <div className="text-xl font-semibold truncate text-[var(--amber)]">
               <Money value={totalMargin} currency={base} />
@@ -172,13 +196,99 @@ export default async function PositionsPage() {
 
       {balances.length > 0 && (
         <Section
+          className="positions-spot"
           title="Spot balances"
           defaultOpen
           persistKey="positions:spot"
           essential
           summary={`${balances.length} ${balances.length === 1 ? "coin" : "coins"}`}
         >
-          <div className="overflow-x-auto">
+          <div className="positions-phone-only positions-cards">
+            {groupBalancesByCoin(balances).map((g) => (
+              <article key={g.coin} className="position-card">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link href={`/investments/asset/${encodeURIComponent(g.coin)}?type=${encodeURIComponent(g.parts[0]?.assetType ?? "")}`} className="font-semibold hover:underline break-words">{g.coin}</Link>
+                    <div className="text-xs text-[var(--muted)] break-words">
+                      {g.parts.length === 1 ? g.parts[0].accountName : `across ${g.parts.length} accounts`}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 font-semibold">
+                    {g.value === null ? (
+                      <span className="text-[var(--muted)]" title={explainMissingTotal(g) ?? undefined}>unpriced</span>
+                    ) : (
+                      <Money value={g.value} currency={g.currency ?? base} />
+                    )}
+                  </div>
+                </div>
+                <div className="position-facts">
+                  <Fact label="Total">{round8(g.total)}</Fact>
+                  <Fact detail label="Available">{round8(g.available)}</Fact>
+                  {g.parts.length === 1 && (
+                    <Fact detail label="Price">
+                      {g.parts[0].price === null ? "—" : <Money value={g.parts[0].price} currency={g.parts[0].currency} />}
+                    </Fact>
+                  )}
+                </div>
+                {g.parts.length === 1 ? (
+                  <div className="mt-3 positions-simple-hide">
+                    <PositionTagsForm
+                      action={setPositionTags}
+                      connectionId={g.parts[0].connectionId}
+                      coin={g.parts[0].coin}
+                      riskLevel={g.parts[0].riskLevel}
+                      expectedReturn={g.parts[0].expectedReturn}
+                      timeHorizon={g.parts[0].timeHorizon}
+                      liquidity={g.parts[0].liquidity}
+                      assetType={g.parts[0].assetType}
+                      assetTypeAuto={g.parts[0].assetTypeAuto}
+                      apr={g.parts[0].apr}
+                      playlistId={g.parts[0].playlistId}
+                      notes={g.parts[0].notes}
+                      playlists={playlistList}
+                      entryPriceOverride={g.parts[0].entryPriceOverride}
+                      venueEntryPrice={g.parts[0].venueEntryPrice}
+                    />
+                  </div>
+                ) : (
+                  g.parts.map((b) => (
+                    <div key={b.id} className="position-part">
+                      <div className="flex items-start justify-between gap-3 text-xs">
+                        <div className="min-w-0 break-words">{b.accountName}</div>
+                        <div className="text-right shrink-0">
+                          {b.usdValue === null ? "—" : <Money value={b.usdValue} currency={b.currency} />}
+                          <div className="text-[10px] text-[var(--muted)]">
+                            {b.total}
+                            {b.hold > 0 && ` · ${b.hold} on hold`}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-2 positions-simple-hide">
+                        <PositionTagsForm
+                          action={setPositionTags}
+                          connectionId={b.connectionId}
+                          coin={b.coin}
+                          riskLevel={b.riskLevel}
+                          expectedReturn={b.expectedReturn}
+                          timeHorizon={b.timeHorizon}
+                          liquidity={b.liquidity}
+                          assetType={b.assetType}
+                          assetTypeAuto={b.assetTypeAuto}
+                          apr={b.apr}
+                          playlistId={b.playlistId}
+                          notes={b.notes}
+                          playlists={playlistList}
+                          entryPriceOverride={b.entryPriceOverride}
+                          venueEntryPrice={b.venueEntryPrice}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </article>
+            ))}
+          </div>
+          <div className="positions-desktop-only overflow-x-auto">
             <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
@@ -323,6 +433,7 @@ export default async function PositionsPage() {
           API had nothing here at all and no way to tag anything. */}
       {manual.holdings.length > 0 && (
         <Section
+          className="positions-manual"
           title="Your own positions"
           defaultOpen
           persistKey="positions:manual"
@@ -333,14 +444,70 @@ export default async function PositionsPage() {
               Section header is itself a button, and nesting one inside it is
               invalid markup that swallows the click. */}
           <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-            <p className="text-xs text-[var(--muted)] max-w-prose">
+            <p className="positions-long-note text-xs text-[var(--muted)] max-w-prose">
               Kept by you rather than by a platform. Anything rebuilt from an imported statement
               starts here, at the price you actually paid — tag them here, no need to open each one.
             </p>
             <RefreshPrices />
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="positions-phone-only positions-cards">
+            {manual.holdings.map((h) => (
+              <article key={h.id} className="position-card">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link href={`/investments/asset/${encodeURIComponent(h.symbol)}?type=${encodeURIComponent(h.assetType ?? "")}&name=${encodeURIComponent(h.name ?? "")}`} className="font-semibold hover:underline break-words">
+                      {h.symbol}
+                    </Link>
+                    {h.name && h.name !== h.symbol && (
+                      <div className="text-[11px] text-[var(--muted)] break-words">{h.name}</div>
+                    )}
+                    <div className="text-xs text-[var(--muted)] break-words">{h.accountName ?? "No account"}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-semibold"><Money value={h.marketValue} currency={h.currency} /></div>
+                    <div
+                      className="text-xs"
+                      style={{ color: h.unrealizedPnL === 0 ? "var(--muted)" : h.unrealizedPnL > 0 ? "var(--green)" : "var(--red)" }}
+                    >
+                      {h.unrealizedPnL === 0 ? "not measured yet" : <Money value={h.unrealizedPnL} currency={h.currency} />}
+                    </div>
+                  </div>
+                </div>
+                <div className="position-facts">
+                  <Fact label="Quantity">{h.quantity}</Fact>
+                  <Fact detail label="Avg cost"><Money value={h.avgEntryPrice} currency={h.currency} /></Fact>
+                  <Fact detail label="Price now">
+                    <Money value={h.currentPrice} currency={h.currency} />
+                    {displaySymbol(h.quoteSymbol) && (
+                      <div className="text-[10px] text-[var(--muted)]">{displaySymbol(h.quoteSymbol)}</div>
+                    )}
+                  </Fact>
+                </div>
+                <div className="mt-3 space-y-2 positions-simple-hide">
+                  <HoldingTagsForm
+                    action={saveHoldingTags}
+                    id={h.id}
+                    riskLevel={h.riskLevel}
+                    expectedReturn={h.expectedReturn}
+                    timeHorizon={h.timeHorizon}
+                    liquidity={h.liquidity}
+                    assetType={h.assetType}
+                    apr={h.apr}
+                    playlistId={h.playlistId}
+                    playlists={playlistList}
+                  />
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-[var(--accent)] py-2">Where the price comes from</summary>
+                    <div className="pt-1">
+                      <QuoteSymbolField id={h.id} symbol={h.quoteSymbol} currency={h.currency} ticker={h.symbol} />
+                    </div>
+                  </details>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="positions-desktop-only overflow-x-auto">
             <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
               <thead>
                 <tr>
@@ -440,6 +607,8 @@ export default async function PositionsPage() {
         </Section>
       )}
 
+      <div className="positions-note positions-simple-hide">
+      <MobileFold title="Why positions are not added to balances" persistKey="positions-double-count">
       <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
         <div className="text-sm">
           These positions are <span className="text-[var(--amber)]">already included</span> in each
@@ -453,24 +622,26 @@ export default async function PositionsPage() {
           <strong>Investments</strong> instead, so every euro lands in Net Worth exactly once.
         </div>
       </div>
+      </MobileFold>
+      </div>
 
       {positions.length === 0 ? (
-        <div className="card p-8 text-center text-sm text-[var(--muted)]">
+        <div className="positions-open card p-8 text-center text-sm text-[var(--muted)]">
           {connections.length === 0
             ? "No connections yet — add one first."
             : "No open positions right now."}
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="positions-open positions-open-stats positions-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="card p-4">
               <div className="text-xs text-[var(--muted)] mb-1">Open positions</div>
               <div className="text-xl font-semibold">{positions.length}</div>
             </div>
-            <div className="card p-4">
+            <div className="card p-4 positions-simple-hide">
               <div className="text-xs text-[var(--muted)] mb-1">Total notional</div>
               <div className="text-xl font-semibold truncate">
-                <Money value={totalNotional} />
+                <Money value={totalNotional} currency={base} />
               </div>
             </div>
             <div className="card p-4">
@@ -486,13 +657,85 @@ export default async function PositionsPage() {
           </div>
 
           <Section
+            className="positions-open"
             title="Position detail"
             defaultOpen
             persistKey="positions:open"
             essential
             summary={`${positions.length} open`}
           >
-            <div className="overflow-x-auto">
+            <div className="positions-phone-only positions-cards">
+              {positions.map((p) => (
+                <article key={p.id} className="position-card">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link href={`/investments/asset/${encodeURIComponent(p.coin)}?type=${encodeURIComponent(p.assetType ?? "")}`} className="font-semibold hover:underline break-words">{p.coin}</Link>
+                        <SideBadge side={p.side} />
+                        {p.leverage !== null && (
+                          <span className="text-xs text-[var(--muted)]">
+                            {p.leverage}x{p.leverageType ? ` ${p.leverageType}` : ""}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-[var(--muted)] mt-0.5 break-words">
+                        {p.accountName} · <span className="capitalize">{p.platform}</span>
+                      </div>
+                    </div>
+                    <div className={`text-right shrink-0 ${(p.unrealizedPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                      <div className="font-semibold">
+                        {p.unrealizedPnl === null ? "—" : <Money value={p.unrealizedPnl} currency={p.currency} />}
+                      </div>
+                      {p.returnOnEquity !== null && (
+                        <div className="text-xs">{(p.returnOnEquity * 100).toFixed(2)}%</div>
+                      )}
+                      {describePnlSource(p.pnlSource) && (
+                        <div className="text-[10px] text-[var(--muted)] positions-simple-hide">
+                          {p.pnlSource === "yours" ? "your entry" : "platform's result"}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="position-facts">
+                    <Fact label="Value">
+                      {p.positionValue === null ? "—" : <Money value={p.positionValue} currency={p.currency} />}
+                    </Fact>
+                    <Fact detail label="Size">{p.size}</Fact>
+                    <Fact detail label="Entry *">
+                      {p.entryPrice === null ? "—" : <Bare value={p.entryPrice} />}
+                      {p.entryOverridden && <span className="text-[10px] text-[var(--accent)] ml-1">yours</span>}
+                    </Fact>
+                    <Fact detail label="Mark *">{p.markPrice === null ? "—" : <Bare value={p.markPrice} />}</Fact>
+                    <Fact label="Liquidation *" className="text-[var(--amber)]">
+                      {p.liquidationPrice === null ? "—" : <Bare value={p.liquidationPrice} />}
+                    </Fact>
+                  </div>
+                  <div className="mt-3 positions-simple-hide">
+                    <PositionTagsForm
+                      action={setPositionTags}
+                      connectionId={p.connectionId}
+                      coin={p.coin}
+                      riskLevel={p.riskLevel}
+                      expectedReturn={p.expectedReturn}
+                      timeHorizon={p.timeHorizon}
+                      liquidity={p.liquidity}
+                      assetType={p.assetType}
+                      assetTypeAuto={p.assetTypeAuto}
+                      apr={p.apr}
+                      playlistId={p.playlistId}
+                      notes={p.notes}
+                      playlists={playlistList}
+                      entryPriceOverride={p.entryPriceOverride}
+                      venueEntryPrice={p.venueEntryPrice}
+                    />
+                  </div>
+                </article>
+              ))}
+              <p className="text-[10px] text-[var(--muted)] positions-simple-hide">
+                * Entry, mark and liquidation are in the instrument&apos;s own currency, which the platform does not state.
+              </p>
+            </div>
+            <div className="positions-desktop-only overflow-x-auto">
               <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
                 <thead>
                   <tr>

@@ -32,6 +32,7 @@ export default async function ConnectionsPage() {
     connections.map(async (c) => ({ id: c.id, logs: await getSyncLogs(c.id, 5) }))
   );
   const logsFor = new Map(logsByConnection.map((l) => [l.id, l.logs]));
+  const failing = connections.filter((c) => c.freshness === "ERROR").length;
 
   return (
     <div className="space-y-6">
@@ -39,7 +40,15 @@ export default async function ConnectionsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold">Connections</h1>
-          <p className="text-xs text-[var(--muted)] mt-1">
+          {connections.length > 0 && (
+            <p className="text-sm mt-1">
+              {connections.length} {connections.length === 1 ? "connection" : "connections"}
+              {failing > 0 && (
+                <span className="text-[var(--red)]"> · {failing} failing</span>
+              )}
+            </p>
+          )}
+          <p className="connections-intro text-xs text-[var(--muted)] mt-1">
             Read-only links to external platforms. The app can read balances and positions — it can never place
             an order or move funds.
           </p>
@@ -94,11 +103,15 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
       ) : (
         <div className="space-y-4">
           {connections.map((c) => (
-            <div key={c.id} className="card p-4">
+            <div
+              key={c.id}
+              className="connection-card card p-4"
+              style={{ borderLeft: `3px solid ${freshnessColor(c.freshness)}` }}
+            >
               <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium capitalize">{c.platform}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">{PLATFORM_LABELS[c.platform] ?? c.platform}</span>
                     {c.region && (
                       <span className="text-xs text-[var(--muted)]">
                         {c.region === "eu" ? "bybit.eu" : "bybit.com"}
@@ -111,7 +124,15 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                       {freshnessLabel(c.freshness)}
                     </span>
                   </div>
-                  <div className="text-xs text-[var(--muted)] mt-1">
+                  {c.lastSyncStatus === "ok" && (
+                    <div className="text-xl font-semibold mt-2 tabular-nums">
+                      <Money
+                        value={Number(c.lastEquity ?? 0) + Number(c.lastSpotValue ?? 0)}
+                        currency={c.reportingCurrency ?? "USD"}
+                      />
+                    </div>
+                  )}
+                  <div className="connection-extra text-xs text-[var(--muted)] mt-1 break-words">
                     feeds <span className="text-[var(--foreground)]">{c.accountName}</span> ·{" "}
                     <span className="font-mono">{c.externalIdMasked}</span>
                     {c.hasSecret && (
@@ -134,7 +155,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                       <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
                         Give up on syncing — track this account manually instead
                       </button>
-                      <div className="text-[10px] text-[var(--muted)] mt-1 max-w-xl">
+                      <div className="connection-extra text-[10px] text-[var(--muted)] mt-1 max-w-xl">
                         Removes the connection and keeps the account, its balance and its history. You update
                         the balance yourself, and everything still counts toward Net Worth, buckets and
                         statistics — only the automatic refresh goes away.
@@ -142,7 +163,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                     </form>
                   )}
                   {c.lastSyncStatus === "ok" && (
-                    <div className="text-xs text-[var(--muted)] mt-2">
+                    <div className="connection-extra text-xs text-[var(--muted)] mt-1">
                       {/* Each connection's own currency, not an assumption.
                           Trading 212 reports euros, and a euro figure with a
                           dollar sign is wrong by the exchange rate while
@@ -191,14 +212,14 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                   })()}
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="connection-actions flex items-center gap-3">
                   <form action={syncConnectionAction}>
                     <input type="hidden" name="id" value={c.id} />
                     <button type="submit" className="btn">
                       Sync now
                     </button>
                   </form>
-                  <form action={deleteConnection}>
+                  <form action={deleteConnection} className="connection-remove">
                     <input type="hidden" name="id" value={c.id} />
                     <ConfirmSubmitButton
                       label="Remove"
@@ -208,8 +229,56 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                 </div>
               </div>
 
+              {/* On a phone the card says what matters — the platform, whether
+                  it works, what it holds, and a button to sync. Everything else
+                  is one tap away, including Remove, which should not sit beside
+                  the button you press most. */}
+              <details className="connections-phone-only connection-details mt-3 text-xs">
+                <summary className="cursor-pointer text-[var(--accent)] py-2">Details</summary>
+                <div className="space-y-2 pt-1 text-[var(--muted)] break-words">
+                  <div>
+                    Feeds <span className="text-[var(--foreground)]">{c.accountName}</span> ·{" "}
+                    <span className="font-mono">{c.externalIdMasked}</span>
+                    {c.hasSecret && " · secret encrypted"}
+                  </div>
+                  {c.lastSyncStatus === "ok" && (
+                    <div>
+                      Account value <Money value={Number(c.lastEquity ?? 0)} currency={c.reportingCurrency ?? "USD"} />{" "}
+                      + coins <Money value={Number(c.lastSpotValue ?? 0)} currency={c.reportingCurrency ?? "USD"} />
+                    </div>
+                  )}
+                  {(logsFor.get(c.id) ?? []).length > 0 && (
+                    <ul className="connection-logs">
+                      {(logsFor.get(c.id) ?? []).map((l) => (
+                        <li key={l.id} className="connection-log">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span className={l.status === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}>
+                              {l.status}
+                            </span>
+                            <span>{new Date(l.startedAt).toLocaleString("pt-PT")}</span>
+                          </div>
+                          <div className="text-[11px] mt-0.5">
+                            {l.trigger} · {l.positionsFound ?? "—"} positions ·{" "}
+                            {l.equity === null ? "—" : <Money value={Number(l.equity)} currency={c.reportingCurrency ?? "USD"} />}
+                          </div>
+                          {l.message && <div className="text-[11px] mt-0.5">{l.message}</div>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <form action={deleteConnection}>
+                    <input type="hidden" name="id" value={c.id} />
+                    <ConfirmSubmitButton
+                      label="Remove connection"
+                      confirmMessage={`Remove this ${c.platform} connection? Synced positions are removed too; the account and its balance stay.`}
+                    />
+                  </form>
+                </div>
+              </details>
+
               {(logsFor.get(c.id) ?? []).length > 0 && (
-                <div className="mt-4 overflow-x-auto">
+                <div className="connections-desktop-only mt-4">
+                <div className="overflow-x-auto">
                   <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
                     <thead>
                       <tr>
@@ -238,12 +307,13 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                           <td>{l.trigger}</td>
                           <td className="text-right">{l.positionsFound ?? "—"}</td>
                           <td className="text-right">
-                            {l.equity === null ? "—" : <Money value={Number(l.equity)} />}
+                            {l.equity === null ? "—" : <Money value={Number(l.equity)} currency={c.reportingCurrency ?? "USD"} />}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </ResponsiveTable></div>
+                </div>
                 </div>
               )}
             </div>

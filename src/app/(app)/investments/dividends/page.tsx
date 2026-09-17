@@ -18,14 +18,27 @@ const CONFIDENCE_NOTE: Record<string, string> = {
   none: "not enough history",
 };
 
+/** The ticker in a round badge, so a list of payers can be scanned by shape. */
+function TickerBadge({ ticker }: { ticker: string }) {
+  const short = ticker.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase() || "?";
+  return (
+    <span className="dividend-badge" aria-hidden="true">
+      {short}
+    </span>
+  );
+}
+
+const rhythmLabel = (r: { cadence: string | null; medianGapDays: number | null }) =>
+  r.cadence ? r.cadence : r.medianGapDays ? `every ~${r.medianGapDays}d` : null;
+
 export default async function DividendsPage() {
   const o = await getDividendOverview();
 
   return (
-    <div className="space-y-6">
+    <div className="dividends-page space-y-6">
       <div>
         <h1 className="text-lg font-semibold">Dividends & income</h1>
-        <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
+        <p className="dividends-intro text-xs text-[var(--muted)] mt-1 max-w-2xl">
           Money that arrived without you selling anything. Everything below the estimates is what
           was actually paid, read from the platform&apos;s own history.
         </p>
@@ -39,7 +52,33 @@ export default async function DividendsPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* On a phone the four cards become one: the total first, what it is
+              made of beneath it. Same figures as the cards. */}
+          <div className="dividends-phone-only card dividends-hero">
+            <div className="text-xs text-[var(--muted)]">Received, all time</div>
+            <div className="text-3xl font-semibold mt-1 text-[var(--green)]">
+              <Money value={o.totalAll} currency={o.currency} />
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="dividends-mini">
+                <div className="text-[11px] text-[var(--muted)]">From instruments</div>
+                <div className="font-semibold mt-0.5">
+                  <Money value={o.totalDistributions} currency={o.currency} />
+                </div>
+              </div>
+              <div className="dividends-mini">
+                <div className="text-[11px] text-[var(--muted)]">Interest on cash</div>
+                <div className="font-semibold mt-0.5">
+                  <Money value={o.totalInterest} currency={o.currency} />
+                </div>
+              </div>
+            </div>
+            <div className="text-xs text-[var(--muted)] mt-3">
+              {o.byTicker.length} paying {o.byTicker.length === 1 ? "instrument" : "instruments"}
+            </div>
+          </div>
+
+          <div className="dividends-desktop-only grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="card p-3">
               <div className="text-xs text-[var(--muted)]">Received, all time</div>
               <div className="text-lg font-semibold mt-1">
@@ -76,7 +115,7 @@ export default async function DividendsPage() {
               and per kind; the rest are kept as cross-checks and never added,
               because on this account the same three payments exist twice. */}
           {o.sources.length > 0 && (
-            <details className="card p-4">
+            <details className="dividends-sources card p-4">
               <summary className="text-xs cursor-pointer text-[var(--muted)]">
                 Where these figures come from
                 {o.crossCheckOnly > 0 && ` · ${o.crossCheckOnly} record${o.crossCheckOnly === 1 ? "" : "s"} held back as a duplicate`}
@@ -113,19 +152,22 @@ export default async function DividendsPage() {
 
           {/* Estimates first, and labelled as estimates in the heading itself. */}
           {o.upcoming.length > 0 && (
-            <div className="card p-4">
+            <div className="dividends-expected card p-4">
               <div className="text-sm font-medium">Expected next</div>
-              <p className="text-xs text-[var(--muted)] mt-1 mb-3 max-w-2xl">
+              <p className="dividends-long-note text-xs text-[var(--muted)] mt-1 mb-3 max-w-2xl">
                 Worked out from the rhythm of your own payments. No platform publishes a forward
                 dividend calendar through its API, so these are patterns, not announcements — a
                 company can cut, delay or stop a dividend without warning.
               </p>
               <div className="space-y-2">
                 {o.upcoming.map((t) => (
-                  <div key={t.ticker} className="flex items-baseline justify-between gap-3 text-xs">
-                    <div className="min-w-0">
-                      <span className="font-medium">{t.instrumentName ?? t.ticker}</span>
-                      <span className="text-[var(--muted)]"> · {t.ticker}</span>
+                  <div key={t.ticker} className="dividends-expected-row flex items-center justify-between gap-3 text-xs">
+                    <div className="min-w-0 flex items-center gap-2">
+                      <span className="dividends-phone-only"><TickerBadge ticker={t.ticker} /></span>
+                      <div className="min-w-0">
+                        <span className="font-medium break-words">{t.instrumentName ?? t.ticker}</span>
+                        <span className="text-[var(--muted)]"> · {t.ticker}</span>
+                      </div>
                     </div>
                     <div className="text-right whitespace-nowrap">
                       <div style={{ color: "var(--amber)" }}>
@@ -138,16 +180,52 @@ export default async function DividendsPage() {
                   </div>
                 ))}
               </div>
+              <p className="dividends-phone-only text-[10px] text-[var(--muted)] mt-3">
+                Estimates from the rhythm of past payments, not announcements.
+              </p>
             </div>
           )}
 
           <div className="card p-4">
             <div className="text-sm font-medium">Instruments that pay you</div>
-            <p className="text-xs text-[var(--muted)] mt-1 mb-3">
+            <p className="dividends-long-note text-xs text-[var(--muted)] mt-1 mb-3">
               Only positions that have actually paid a distribution. Accumulating ETFs reinvest
               internally and never appear here, which is not the same as paying nothing.
             </p>
-            <div className="overflow-x-auto">
+            <ul className="dividends-phone-only dividends-list mt-3">
+              {o.byTicker.map((t) => {
+                const rhythm = rhythmLabel(t.rhythm);
+                return (
+                  <li key={t.ticker} className="dividends-item">
+                    <TickerBadge ticker={t.ticker} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm break-words">{t.instrumentName ?? t.ticker}</div>
+                          <div className="text-[11px] text-[var(--muted)]">{t.ticker}</div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="font-semibold text-[var(--green)]">
+                            <Money value={t.total} currency={t.currency} />
+                          </div>
+                          <div className="text-[10px] text-[var(--muted)]">
+                            {t.payments} {t.payments === 1 ? "payment" : "payments"}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {rhythm && <span className="dividends-chip">{rhythm}</span>}
+                        {t.trailingYield !== null && <span className="dividends-chip">{t.trailingYield}% last 12m</span>}
+                        <span className="dividends-chip">
+                          Last {dateLabel(t.lastPaidOn)} · <Money value={t.lastAmount} currency={t.currency} />
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="dividends-desktop-only overflow-x-auto">
               <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
                 <thead>
                   <tr>
@@ -206,22 +284,22 @@ export default async function DividendsPage() {
           {o.byYear.length > 0 && (
             <div className="card p-4">
               <div className="text-sm font-medium mb-3">By year</div>
-              <div className="space-y-1">
+              <div className="dividends-years space-y-1">
                 {o.byYear.map((y) => {
                   const max = Math.max(...o.byYear.map((x) => x.total));
                   return (
-                    <div key={y.year} className="flex items-center gap-2 text-xs">
-                      <span className="w-12">{y.year}</span>
+                    <div key={y.year} className="dividends-year flex items-center gap-2 text-xs">
+                      <span className="dividends-year-label w-12">{y.year}</span>
                       <div className="flex-1 h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
                         <div
                           className="h-full bg-[var(--green)]"
                           style={{ width: `${max === 0 ? 0 : (y.total / max) * 100}%` }}
                         />
                       </div>
-                      <span className="w-24 text-right">
+                      <span className="dividends-year-amount w-24 text-right">
                         <Money value={y.total} currency={o.currency} />
                       </span>
-                      <span className="w-20 text-right text-[var(--muted)]">
+                      <span className="dividends-year-count w-20 text-right text-[var(--muted)]">
                         {y.payments} {y.payments === 1 ? "payment" : "payments"}
                       </span>
                     </div>
@@ -242,7 +320,31 @@ export default async function DividendsPage() {
                 : `${o.recent.length} most recent`
             }
           >
-            <div className="overflow-x-auto">
+            <div className="dividends-phone-only mt-3">
+              {o.recent.map((p, i) => {
+                const month = monthLabel(p.paidOn);
+                const newMonth = i === 0 || monthLabel(o.recent[i - 1].paidOn) !== month;
+                return (
+                  <div key={`${p.ticker}-${p.paidOn.toISOString()}-${i}`}>
+                    {newMonth && <div className="dividends-month">{month}</div>}
+                    <div className="dividends-payment">
+                      <TickerBadge ticker={p.ticker} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm break-words">{p.instrumentName ?? p.ticker}</div>
+                        <div className="text-[11px] text-[var(--muted)] break-words">
+                          {dateLabel(p.paidOn)} · {p.accountName}
+                          {p.grossPerShare !== null && ` · ${p.grossPerShare} per share`}
+                        </div>
+                      </div>
+                      <div className="font-semibold text-[var(--green)] shrink-0">
+                        <Money value={p.amount} currency={p.currency} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="dividends-desktop-only overflow-x-auto">
               <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
                 <thead>
                   <tr>
@@ -284,7 +386,7 @@ export default async function DividendsPage() {
         </>
       )}
 
-      <p className="text-[10px] text-[var(--muted)]">
+      <p className="dividends-footer text-[10px] text-[var(--muted)]">
         Read from Trading 212&apos;s payment history.{" "}
         <Link href="/connections" className="text-[var(--accent)]">
           Other platforms

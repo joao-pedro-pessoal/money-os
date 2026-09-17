@@ -726,6 +726,85 @@ main .grid > * { min-width: 0; }
 }
 
 /* Cash flow enhancements are restricted to phones. */
+.positions-phone-only, .connections-phone-only { display: none; }
+@media (max-width: 767px) {
+  .positions-phone-only, .connections-phone-only { display: revert; }
+  .positions-desktop-only, .connections-desktop-only, .positions-long-note, .connections-intro { display: none; }
+
+  /* Open positions first: they move; balances and your own holdings after. */
+  .positions-page { display: flex; flex-direction: column; gap: 16px; }
+  .positions-page > * { margin: 0 !important; }
+  .positions-open { order: 1; }
+  .positions-account-stats { order: 2; }
+  .positions-spot { order: 3; }
+  .positions-manual { order: 4; }
+  .positions-note { order: 5; }
+  .positions-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .positions-open-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .positions-stats > .card { padding: 10px 12px; min-width: 0; }
+  .positions-stats .text-xl { font-size: 1rem; }
+  .positions-cards { display: grid; gap: 0; }
+  .position-card { padding: 14px 0; border-top: 1px solid var(--border); min-width: 0; }
+  .position-card:first-child { border-top: 0; padding-top: 4px; }
+  .position-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; margin-top: 10px; }
+  .position-part { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+
+  .connection-actions { width: 100%; }
+  .connection-actions > form { flex: 1; }
+  .connection-actions .btn, .connection-actions button { width: 100%; }
+  .connection-extra, .connection-remove { display: none; }
+  .connection-logs { list-style: none; padding: 0; }
+  .connection-log { padding: 8px 0; border-top: 1px solid var(--border); }
+
+  /* Simple mode: what each position is worth and how it is doing, nothing to
+     edit. Tags, entry and mark stay in Complex. */
+  [data-mobile-ui="simple"] .positions-simple-hide { display: none !important; }
+  [data-mobile-ui="simple"] .positions-open-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  [data-mobile-ui="simple"] .position-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.dividends-phone-only { display: none; }
+@media (max-width: 767px) {
+  .dividends-phone-only { display: revert; }
+  .dividends-desktop-only, .dividends-intro, .dividends-long-note { display: none; }
+  .dividends-page { display: flex; flex-direction: column; gap: 16px; }
+  .dividends-page > * { margin: 0 !important; }
+  .dividends-sources { order: 10; }
+  .dividends-footer { order: 11; }
+  .dividends-hero {
+    padding: 18px;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--green) 12%, var(--surface)) 0%, var(--surface) 70%);
+  }
+  .dividends-mini { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); min-width: 0; }
+  .dividend-badge {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 36px; height: 36px; border-radius: 999px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .dividends-expected-row { padding: 6px 0; }
+  .dividends-list { list-style: none; padding: 0; }
+  .dividends-item { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+  .dividends-item:first-child { border-top: 0; padding-top: 0; }
+  .dividends-chip {
+    display: inline-block; padding: 3px 8px; border-radius: 999px;
+    font-size: 10px; color: var(--muted); background: var(--surface-2);
+  }
+  .dividends-years { display: grid; gap: 12px; }
+  .dividends-years > * + * { margin-top: 0 !important; }
+  .dividends-year { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline; }
+  .dividends-year > .dividends-year-label { width: auto; font-weight: 600; font-size: 0.875rem; }
+  .dividends-year > .dividends-year-amount { width: auto; grid-column: 2; grid-row: 1; font-weight: 600; font-size: 0.875rem; }
+  .dividends-year > div { grid-column: 1 / -1; grid-row: 2; height: 8px; }
+  .dividends-year > .dividends-year-count { width: auto; grid-column: 1 / -1; grid-row: 3; text-align: left; font-size: 11px; }
+  .dividends-month {
+    padding: 14px 0 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .dividends-payment { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+}
+
 .cash-flow-phone-only { display: none; }
 @media (min-width: 768px) {
   .cash-flow-header-actions { display: contents; }
