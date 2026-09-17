@@ -690,6 +690,16 @@ export default function ManualPage() {
             the app straight on the quick entry form; nothing is saved until you press
             Save there, so the form&apos;s undo and duplicate protection still apply.
           </p>
+          <p>
+            Four more widgets show figures: <strong className="text-[var(--foreground)]">Money OS</strong>{" "}
+            (net worth and this month), <strong className="text-[var(--foreground)]">Net worth</strong>{" "}
+            over time, <strong className="text-[var(--foreground)]">Where the money is</strong> and{" "}
+            <strong className="text-[var(--foreground)]">Cash flow</strong>. They refresh about every
+            half hour, when you leave the app and when you tap ↻, and always say when their figures
+            were read — away from home they show the last ones. In the quick settings panel, beside
+            the torch and Wi-Fi, you can add <em>Record expense</em> and <em>Net worth</em>; the net
+            worth tile stays hidden while the phone is locked.
+          </p>
           <Note label="Plain http at home" tone="care">
             <p>
               On your home network the connection is not encrypted: anyone on the

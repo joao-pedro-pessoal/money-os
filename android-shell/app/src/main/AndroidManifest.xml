@@ -45,6 +45,77 @@
         </receiver>
 
         <receiver
+            android:name=".MoneyWidgets$Dashboard"
+            android:exported="false"
+            android:label="Money OS">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_dashboard" />
+        </receiver>
+
+        <receiver
+            android:name=".MoneyWidgets$NetWorth"
+            android:exported="false"
+            android:label="Net worth">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_net_worth" />
+        </receiver>
+
+        <receiver
+            android:name=".MoneyWidgets$WhereMoney"
+            android:exported="false"
+            android:label="Where the money is">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_where_money" />
+        </receiver>
+
+        <receiver
+            android:name=".MoneyWidgets$CashFlow"
+            android:exported="false"
+            android:label="Cash flow">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_cash_flow" />
+        </receiver>
+
+        <!-- Quick settings tiles, beside the torch and Wi-Fi. -->
+        <service
+            android:name=".Tiles$RecordExpense"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_quick_entry"
+            android:label="Record expense"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".Tiles$NetWorth"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_quick_entry"
+            android:label="Net worth"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <receiver
             android:name=".QuickEntryRestore"
             android:exported="false">
             <intent-filter>

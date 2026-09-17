@@ -53,13 +53,17 @@ import java.util.regex.Pattern;
 /**
  * The Money OS site, full screen, from the computer that runs it.
  *
- * Nothing financial lives in this app: the pages, the numbers and the login all
- * come from the site, so the phone shows exactly what the computer shows. What
+ * The pages, the numbers and the login all come from the site, so the phone
+ * shows exactly what the computer shows. The one thing kept on the phone is the
+ * last set of figures the home-screen widgets read (see WidgetData), so they
+ * can still show something, with its time, away from home Wi-Fi. What
  * the app adds is what a browser tab would otherwise supply — choosing a file to
  * import, saving an export, the back gesture — and a screen that says what to
  * check when the computer cannot be reached.
  */
 public class MainActivity extends Activity {
+    static final String ACTION_OPEN_PAGE = "com.joaonovais.moneyos.site.OPEN_PAGE";
+    static final String EXTRA_PATH = "path";
     private static final String PREFS = "money-os-shell";
     private static final String KEY_ADDRESS = "address";
     private static final int CHOOSE_FILE = 1;
@@ -87,6 +91,8 @@ public class MainActivity extends Activity {
 
     /** A quick entry asked for by the widget, a shortcut or the notification, not yet handed to the page. */
     private String pendingQuick;
+    /** A page of the site a widget asked for, such as "/transactions", not yet opened. */
+    private String pendingPath;
     /** True between a page finishing and the next one starting. */
     private boolean pageReady;
 
@@ -103,6 +109,7 @@ public class MainActivity extends Activity {
         setContentView(root);
         shellScript = readAsset("shell.js");
         pendingQuick = QuickEntry.kindOf(getIntent());
+        pendingPath = pathOf(getIntent());
         // Swiping an ongoing notification away is allowed since Android 14; it
         // comes back the next time the app opens, for as long as it is switched on.
         if (QuickEntry.active(this)) QuickEntry.show(this);
@@ -123,6 +130,12 @@ public class MainActivity extends Activity {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
         web.setVisibility(View.VISIBLE);
+        if (pendingPath != null) {
+            String path = pendingPath;
+            pendingPath = null;
+            web.loadUrl(origin + path);
+            return;
+        }
         if (state != null && web.restoreState(state) != null) return;
         web.loadUrl(origin);
     }
@@ -291,10 +304,24 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        String path = pathOf(intent);
+        if (path != null) {
+            if (web != null && overlay == null && !address.isEmpty()) web.loadUrl(address + path);
+            else pendingPath = path;
+            return;
+        }
         String kind = QuickEntry.kindOf(intent);
         if (kind == null) return;
         pendingQuick = kind;
         deliverQuickEntry();
+    }
+
+    /** A path on the site from a widget: starts with one "/", never another origin. */
+    static String pathOf(Intent intent) {
+        if (intent == null || !ACTION_OPEN_PAGE.equals(intent.getAction())) return null;
+        String path = intent.getStringExtra(EXTRA_PATH);
+        if (path == null || !path.startsWith("/") || path.startsWith("//") || path.contains("\\")) return null;
+        return path;
     }
 
     /**
@@ -586,6 +613,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         CookieManager.getInstance().flush();
+        // Whatever was just recorded or changed should reach the widgets.
+        MoneyWidgets.refreshAll(this);
         if (web != null) web.onPause();
         super.onPause();
     }

@@ -167,6 +167,39 @@ Settings (`PhoneQuickEntrySettings.tsx`) só aparece dentro da app e usa a ponte
 **Para atualizar a app no telemóvel** é preciso instalar o APK novo por cima do antigo
 (os passos 2 e 3 de "Como usar"); os dados e a sessão mantêm-se.
 
+### Widgets com valores e botões nas definições rápidas (versão 0.3.0)
+
+**Widgets** (toca sem largar no ecrã principal → **Widgets** → **Money OS**):
+
+| Widget | Mostra | Ao tocar abre |
+| --- | --- | --- |
+| **Money OS** | Património, saldo deste mês e a linha do património | Dashboard |
+| **Net worth** | Património, variação desde o início do registo e o gráfico maior | Analytics |
+| **Where the money is** | Donut com os 4 sítios com mais dinheiro, o resto em "Other", e percentagens | Dashboard |
+| **Cash flow** | Saldo do mês, entradas e saídas, e as duas barras | Cash flow |
+
+- Atualizam sozinhos de 30 em 30 minutos (o mínimo que o Android deixa), ao sair da
+  app e ao tocar em **↻**.
+- Em baixo dizem de quando são os valores. Fora de casa mostram os últimos valores
+  lidos, com a hora ("Offline · figures from …"). Sem sessão: "Open the app and log in".
+- Os valores ficam visíveis no ecrã principal para quem desbloquear o telemóvel.
+
+**Definições rápidas** (onde estão a lanterna e o Wi-Fi): puxa o painel até ao fim,
+toca no lápis ✏️ e arrasta para cima:
+
+- **Record expense** — abre o registo rápido numa despesa.
+- **Net worth** — mostra o património por baixo do nome; com o telemóvel bloqueado
+  mostra "Unlock to see". Ao tocar abre o dashboard.
+
+Como funciona: o site tem a rota `GET /api/widget` (atrás da sessão, como as páginas)
+com património, a linha do património (até 60 pontos), os sítios com mais dinheiro e
+entradas/saídas do mês, todos na moeda base e calculados pelas mesmas funções do
+dashboard (`src/lib/widgets/summary.ts`, com testes). A app pede-a com o cookie da
+WebView (`WidgetData.java`), guarda a última resposta nas preferências da app e desenha
+os gráficos em `Charts.java`; `MoneyWidgets.java` tem os quatro widgets e `Tiles.java`
+os dois botões. **Isto é a única coisa financeira guardada no telemóvel:** os últimos
+valores dos widgets.
+
 ### Chaves das corretoras
 
 A app não guarda chaves. Estão na base de dados do site, cifradas, e só se decifram
