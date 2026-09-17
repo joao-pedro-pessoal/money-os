@@ -410,7 +410,7 @@ export default function ManualPage() {
           </p>
         </Entry>
 
-        <Entry id="analytics" title="Analytics and Trends" where="Sidebar → Analytics · three tabs">
+        <Entry id="analytics" title="Analytics and Trends" where="Sidebar → Analytics · four tabs">
           <p>
             <strong className="text-[var(--foreground)]">Overview</strong> shows where your money
             is, by place, and what it is for, by purpose.
@@ -425,6 +425,16 @@ export default function ManualPage() {
             spending and surplus use up to three recorded months, with the period shown beside them.
             Future scenarios lets you choose monthly saving, a time horizon and an assumed return.
             These examples do not change your records or predict actual returns.
+          </p>
+          <p>
+            <strong className="text-[var(--foreground)]">Monthly report</strong> reads one month back as
+            a whole: income, spending, net and savings rate against the month before, spending by
+            category with the change, fixed against variable, monthly budgets, the largest expenses and
+            what net worth did. Pick the month at the top. <em>Download CSV</em> saves it for a
+            spreadsheet (on the phone, to Downloads); <em>Print / save as PDF</em> prints it without the
+            menus. The current month is marked as still open. Transfers and money moved into
+            investments are never counted as spending, and a month with no income shows no savings
+            rate rather than 0%.
           </p>
         </Entry>
       </Part>
@@ -726,7 +736,7 @@ export default function ManualPage() {
           <Note label="Not built yet" tone="care">
             <p>
               Alerts outside the app — the bell only tells you while it is open.
-              A monthly report. Recurring transactions created automatically.
+              Recurring transactions created automatically.
               Bonds modelled properly, with coupon and maturity. Attaching
               receipts.
             </p>

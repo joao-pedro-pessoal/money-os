@@ -893,6 +893,11 @@ moedas sem taxa são deixadas de fora **e nomeadas**, nunca contadas como zero.
 - Retornos por período, maior queda até hoje, poupança e gasto mensais,
   projeções, e quando cada objetivo chega ao fim.
 - Concentração e runway.
+- **Relatório mensal** (17/09/2026, `/analytics/report`): um mês lido de ponta a ponta —
+  receitas, despesas, saldo e taxa de poupança contra o mês anterior, categorias com
+  variação, fixo e variável, orçamentos mensais, maiores despesas e património no
+  início e no fim. Exporta CSV e imprime/guarda como PDF. Usa as mesmas funções de
+  Where it goes; um mês sem receitas não tem taxa de poupança (não 0%).
 
 ## Biblioteca
 

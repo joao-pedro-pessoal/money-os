@@ -880,3 +880,12 @@ main .grid > * { min-width: 0; }
   [data-mobile-ui="simple"] .mobile-records:not(.account-records) td:is(.record-description, [data-label="Amount"], [data-label="Date"], [data-label="Account"])::before { display: none; }
   [data-mobile-ui="simple"] .mobile-records:not(.account-records) td:is([data-label="Date"], [data-label="Account"]) { color: var(--muted); font-size: 12px; }
 }
+
+/* The monthly report prints as a document: no menus, no buttons, light paper. */
+@media print {
+  nav, header, .mobile-bottom-nav, .report-actions, .page-tabs, .mobile-mode-switch, .quick-entry-trigger { display: none !important; }
+  .monthly-report h1 { display: none; }
+  body, .app-main { background: #fff !important; color: #000 !important; }
+  .monthly-report .card { break-inside: avoid; border: 1px solid #ccc; background: #fff !important; }
+  .app-main { max-width: none !important; padding: 0 !important; }
+}

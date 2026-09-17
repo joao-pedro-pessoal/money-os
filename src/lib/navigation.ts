@@ -28,6 +28,7 @@ export const ANALYTICS_TABS = [
   { href: "/analytics", label: "Overview" },
   { href: "/analytics/spending", label: "Where it goes" },
   { href: "/statistics", label: "Trends & projections" },
+  { href: "/analytics/report", label: "Monthly report" },
 ];
 
 export const ACCOUNTS_TABS = [
