@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Alert } from "@/lib/alerts/rules";
 
@@ -24,6 +24,35 @@ const TONE: Record<Alert["severity"], { colour: string; label: string }> = {
 
 export default function AlertBell({ alerts }: { alerts: Alert[] }) {
   const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const popup = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const opener = trigger.current;
+    popup.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+      }
+      if (event.key !== 'Tab') return;
+      const targets = popup.current?.querySelectorAll<HTMLElement>('button, a[href]');
+      if (!targets?.length) return;
+      const first = targets[0];
+      const last = targets[targets.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      opener?.focus();
+    };
+  }, [open]);
 
   if (alerts.length === 0) return null;
 
@@ -34,6 +63,7 @@ export default function AlertBell({ alerts }: { alerts: Alert[] }) {
     <div className="relative">
       <div>
         <button
+          ref={trigger}
           type="button"
           onClick={() => setOpen(!open)}
           className="icon-btn relative"
@@ -61,12 +91,15 @@ export default function AlertBell({ alerts }: { alerts: Alert[] }) {
               a panel that opened from a button. */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden="true" />
           <div
-            className="card absolute right-0 mt-2 z-50 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto"
+            ref={popup}
+            className="alerts-popover card absolute right-0 mt-2 z-50 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto"
             role="dialog"
+            aria-modal="true"
             aria-label="Attention"
           >
-            <div className="p-3 border-b border-[var(--border)] text-xs font-medium">
-              {alerts.length} thing{alerts.length === 1 ? "" : "s"} to look at
+            <div className="p-3 border-b border-[var(--border)] text-xs font-medium flex items-center justify-between gap-3">
+              <span>{alerts.length} thing{alerts.length === 1 ? "" : "s"} to look at</span>
+              <button type="button" className="icon-btn shrink-0" aria-label="Close alerts" onClick={() => setOpen(false)}>×</button>
             </div>
 
             <ul>

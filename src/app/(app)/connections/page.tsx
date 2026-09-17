@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listConnections,
   createConnection,
@@ -209,7 +210,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
 
               {(logsFor.get(c.id) ?? []).length > 0 && (
                 <div className="mt-4 overflow-x-auto">
-                  <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+                  <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
                     <thead>
                       <tr>
                         <th>When</th>
@@ -242,7 +243,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                         </tr>
                       ))}
                     </tbody>
-                  </table></div>
+                  </ResponsiveTable></div>
                 </div>
               )}
             </div>

@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import { useState } from "react";
 import DonutChart from "./DonutChart";
 import { Money } from "./PrivacyContext";
@@ -118,7 +121,7 @@ export default function CompositionCard({
           ))}
         </div>
       ) : (
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="w-full text-xs">
+        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full text-xs">
           <tbody>
             {sorted.map((d, i) => (
               <tr key={d.name} className="border-b border-[var(--border)] last:border-0">
@@ -138,7 +141,7 @@ export default function CompositionCard({
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </ResponsiveTable></div>
       )}
 
       {note && <div className="text-[10px] text-[var(--muted)] mt-3 leading-snug">{note}</div>}

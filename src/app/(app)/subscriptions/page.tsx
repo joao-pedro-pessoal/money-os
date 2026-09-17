@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listSubscriptions,
   getSubscriptionTotals,
@@ -85,7 +86,7 @@ export default async function SubscriptionsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -145,7 +146,7 @@ export default async function SubscriptionsPage() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         )}
       </Section>
@@ -156,7 +157,7 @@ export default async function SubscriptionsPage() {
             Kept on purpose: this is the record of what you stopped paying, and it&apos;s worth
             re-checking your statement in a month to confirm the charges really stopped.
           </p>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
             <tbody>
               {cancelled.map((s) => (
                 <tr key={s.id} style={{ opacity: 0.6 }}>
@@ -184,7 +185,7 @@ export default async function SubscriptionsPage() {
                 </tr>
               ))}
             </tbody>
-          </table></div>
+          </ResponsiveTable></div>
         </Section>
       )}
 

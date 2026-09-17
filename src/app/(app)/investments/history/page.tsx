@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { listPlaylists } from "@/actions/playlists";
 import { accountBalanceHistory } from "@/lib/trading/accountEvolution";
 import { getAccountSnapshots, listAccountsWithState } from "@/actions/accounts";
@@ -11,6 +12,7 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import InvestmentActivityImporter from "@/components/InvestmentActivityImporter";
 import TradeHistory from "@/components/TradeHistory";
 import Section from "@/components/Section";
+import MobileFold from "@/components/MobileFold";
 export default async function InvestmentHistoryPage() {
   const [accounts, data, baseCurrency, analysis, playlists] = await Promise.all([
     listAccountsWithState(),
@@ -41,10 +43,10 @@ export default async function InvestmentHistoryPage() {
     : "—";
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="trade-history-page space-y-6 max-w-6xl">
       <div>
-        <h1 className="text-lg font-semibold">Account history</h1>
-        <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl">
+        <h1 className="text-lg font-semibold"><span className="trade-history-desktop-title">Account history</span><span className="trade-history-phone-title">Trade history</span></h1>
+        <p className="trade-history-intro text-xs text-[var(--muted)] mt-1 max-w-3xl">
           Import a broker or exchange statement to keep trades, dividends, fees, deposits, withdrawals,
           expenses, taxes and other account events together. Existing files and rows are detected before import.
         </p>
@@ -64,6 +66,7 @@ export default async function InvestmentHistoryPage() {
         unconvertible={analysis.unconvertible}
       />
 
+      <MobileFold title="Statements and imports" persistKey="trade-history-imports" className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
         <div className="card p-3"><div className="text-[10px] text-[var(--muted)] uppercase tracking-wide">Events</div><div className="text-xl font-semibold mt-1">{data.activity.length}</div></div>
         <div className="card p-3"><div className="text-[10px] text-[var(--muted)] uppercase tracking-wide">Trades</div><div className="text-xl font-semibold mt-1">{data.activity.filter((row) => row.type === "BUY" || row.type === "SELL").length}</div></div>
@@ -84,11 +87,12 @@ export default async function InvestmentHistoryPage() {
           summary={`${data.imports.length} ${data.imports.length === 1 ? "file" : "files"}`}
         >
           <p className="text-xs text-[var(--muted)] mt-1">Undo removes only the historical events created by that file.</p>
-          <div className="overflow-x-auto mt-3"><div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap text-xs"><thead><tr><th>When</th><th>File</th><th>Account</th><th className="text-right">Imported</th><th className="text-right">Duplicates</th><th /></tr></thead><tbody>
+          <div className="overflow-x-auto mt-3"><div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs"><thead><tr><th>When</th><th>File</th><th>Account</th><th className="text-right">Imported</th><th className="text-right">Duplicates</th><th /></tr></thead><tbody>
             {data.imports.map((row) => <tr key={row.id}><td>{new Date(row.createdAt).toLocaleString("pt-PT")}</td><td className="max-w-64 truncate">{row.fileName}</td><td>{row.accountName}</td><td className="text-right">{row.rowsImported}</td><td className="text-right">{row.rowsDuplicated}</td><td className="text-right"><form action={undoInvestmentActivityImport}><input type="hidden" name="importId" value={row.id} /><ConfirmSubmitButton label="Undo" confirmMessage={`Remove ${row.rowsImported} events imported from “${row.fileName}”?`} /></form></td></tr>)}
-          </tbody></table></div></div>
+          </tbody></ResponsiveTable></div></div>
         </Section>
       ) : null}
+      </MobileFold>
     </div>
   );
 }

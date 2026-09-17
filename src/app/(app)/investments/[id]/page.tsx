@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   getHolding,
   getHoldingSnapshots,
@@ -136,7 +137,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           {snapshots.length === 0 ? (
             <div className="text-sm text-[var(--muted)] py-4 text-center">No history yet</div>
           ) : (
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -157,7 +158,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           )}
         </Section>
       </div>

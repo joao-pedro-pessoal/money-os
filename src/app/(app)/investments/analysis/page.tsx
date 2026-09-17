@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   getPortfolioAnalysis,
   getGroupedPerformance,
@@ -46,7 +47,7 @@ export default async function PortfolioAnalysisPage({
   const groupBy = (GROUP_BY_OPTIONS.find((o) => o.value === sp.groupBy)?.value ?? "playlist") as GroupByKey;
   const sort = (SORT_COLUMNS.find((c) => c.key === sp.sort)?.key ?? "value") as SortKey;
   const dir: "asc" | "desc" = sp.dir === "asc" ? "asc" : "desc";
-  // Spot/stablecoins count by default; "off" narrows the view to at-risk positions.
+  // Cash/stablecoins count by default; "off" hides that asset category.
   const includeSynced = sp.synced !== "off";
   /**
    * Which group is opened, in the URL rather than in component state.
@@ -131,6 +132,7 @@ export default async function PortfolioAnalysisPage({
             {includeSynced ? "Cash & stablecoins: ON" : "Cash & stablecoins: OFF"}
           </FilterLink>
         </div>
+        <CashExplanation />
         <div className="card p-8 text-center text-sm text-[var(--muted)]">
           {includeSynced ? (
             <>
@@ -142,8 +144,7 @@ export default async function PortfolioAnalysisPage({
             </>
           ) : (
             <>
-              No at-risk positions. Your money is all in spot or stablecoins — turn them back on above to see
-              it here.
+              No positions match this view. Turn cash and stablecoins back on above to include them.
             </>
           )}
         </div>
@@ -201,7 +202,7 @@ export default async function PortfolioAnalysisPage({
           {/* Ordered by money: classifying the largest holding moves every
               breakdown on the page, and classifying the smallest moves none. */}
           <div className="overflow-auto max-h-72 mt-4">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap text-xs w-full">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs w-full">
               <thead>
                 <tr>
                   <th>Position</th>
@@ -228,7 +229,7 @@ export default async function PortfolioAnalysisPage({
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         </section>
       )}
@@ -250,7 +251,7 @@ export default async function PortfolioAnalysisPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold">Portfolio analysis</h1>
           <p className="text-xs text-[var(--muted)] mt-1">
@@ -258,76 +259,41 @@ export default async function PortfolioAnalysisPage({
             imported and synced.{" "}
             {includeSynced
               ? "Cash and stablecoins are included."
-              : "Cash and stablecoins are hidden, so this is what you're at risk on."}
+              : "Cash and stablecoins are excluded from the allocation and position breakdowns."}
           </p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
           <FilterLink
             href={qs({ synced: includeSynced ? "off" : "on" })}
             className="btn whitespace-nowrap"
-            title="Cash and stablecoins can't lose value to the market, so they flatten every risk breakdown they're in. Hiding them leaves what's actually exposed."
+            aria-describedby="cash-stablecoins-help"
           >
             {includeSynced ? "Cash & stablecoins: ON" : "Cash & stablecoins: OFF"}
           </FilterLink>
-          <Link href="/investments" className="btn whitespace-nowrap">
-            Back to positions
-          </Link>
         </div>
       </div>
 
-      {/*
-        How the investing has gone, before anything about what it holds.
-        Profit against cost is below; these two are what a return actually
-        means once money has moved in and out.
-      */}
-      {windowPreferences["portfolio-returns"] !== "hidden" && <Section title="Investment returns" essential defaultOpen={windowPreferences["portfolio-returns"] === "visible"}>
-      <PortfolioReturns
-        timeWeighted={returns.timeWeighted}
-        moneyWeighted={returns.moneyWeighted}
-        withheld={returns.withheld}
-        coverage={returns.coverage}
-        netContributed={returns.netContributed}
-        currentValue={returns.currentValue}
-        currency={returns.baseCurrency}
-      />
-      </Section>}
-
-      {/* Where the movement came from, before the headline numbers that mix
-          the sources together. */}
-      {windowPreferences["gain-attribution"] !== "hidden" && <Section title="Where the gains came from" defaultOpen={windowPreferences["gain-attribution"] === "visible"}><GainAttribution currency="EUR" /></Section>}
-      {windowPreferences.contributions !== "hidden" && <Section title="Money added versus money made" defaultOpen={windowPreferences.contributions === "visible"}><ContributionBreakdown currency="EUR" /></Section>}
-
-      {/* Everything below is read straight out of the imported statement, so it
-          only appears once one has been imported. */}
-      {statement && (
-        <div>
-          <div className="text-sm font-medium mb-3">From your imported statement</div>
-          <StatementBreakdown data={statement} />
-        </div>
-      )}
-
       {/* ---- Headline numbers ---- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <Section title="Portfolio overview" essential defaultOpen persistKey="analysis-overview">
+      <div className="grid grid-cols-1 min-[390px]:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat label="Portfolio Value" value={a.totals.totalValue} />
         <Stat label="Cost Basis" value={a.totals.totalCost} />
-        <Stat label="Unrealized P&L" value={a.totals.totalPnL} className={pnlColor} />
-        <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">Unrealized P&amp;L %</div>
-          <div className={`text-xl font-semibold ${pnlColor}`}>{a.totals.totalPnLPercent.toFixed(2)}%</div>
-        </div>
+        <Stat label="Unrealized P&L" value={a.totals.totalPnL} percent={a.totals.totalCost > 0 ? a.totals.totalPnLPercent : null} note="Return on known cost of open positions" className={pnlColor} />
         <Stat
           label="Realized P&L"
           value={a.realizedTotal}
+          percent={null}
+          note="Percentage unavailable: cost of closed positions is not available in this summary."
           className={a.realizedTotal >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}
         />
       </div>
 
-      {/* ---- Guaranteed vs market-exposed ---- */}
-      <div className="card p-4">
-        <div className="text-sm font-medium mb-3">Guaranteed vs market-exposed</div>
+      </Section>
+
+      <Section title="Cash & stablecoins vs other assets" essential defaultOpen persistKey="analysis-asset-split">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <div className="text-xs text-[var(--muted)] mb-1">Stable (cash + stablecoins)</div>
+            <div className="text-xs text-[var(--muted)] mb-1">Cash &amp; stablecoins</div>
             <div className="text-lg font-semibold text-[var(--green)]">
               <Money value={a.split.stable} />
             </div>
@@ -339,7 +305,7 @@ export default async function PortfolioAnalysisPage({
             </div>
           </div>
           <div>
-            <div className="text-xs text-[var(--muted)] mb-1">% at market risk</div>
+            <div className="text-xs text-[var(--muted)] mb-1">Market-exposed share</div>
             <div className="text-lg font-semibold">{a.split.floatingPercent.toFixed(1)}%</div>
           </div>
         </div>
@@ -347,63 +313,11 @@ export default async function PortfolioAnalysisPage({
           <div style={{ width: `${100 - a.split.floatingPercent}%`, background: "var(--green)" }} />
           <div style={{ width: `${a.split.floatingPercent}%`, background: "var(--amber)" }} />
         </div>
-      </div>
-
-      {/* ---- Staking / yield ---- */}
-      {(a.staking.stakedValue > 0 || a.staking.rewardsEarned > 0) && (
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">Yield &amp; staking</div>
-          <div className="grid grid-cols-1 min-[390px]:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Earning yield</div>
-              <div className="text-lg font-semibold">
-                <Money value={a.staking.stakedValue} />
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Weighted APR</div>
-              <div className="text-lg font-semibold">{a.staking.weightedApr.toFixed(2)}%</div>
-            </div>
-            <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Projected / year</div>
-              <div className="text-lg font-semibold text-[var(--accent)]">
-                <Money value={a.staking.projectedAnnual} />
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Rewards received</div>
-              <div className="text-lg font-semibold text-[var(--green)]">
-                <Money value={a.staking.rewardsEarned} />
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-[var(--muted)] mt-3">
-            &quot;Projected / year&quot; is an estimate (APR × current value), not realised income.
-          </p>
-        </div>
-      )}
-
-      {/* ---- Warnings ---- */}
-      {(a.concentration.length > 0 || a.mismatches.length > 0) && (
-        <div className="card p-4 space-y-2">
-          <div className="text-sm font-medium">Things worth a look</div>
-          {a.concentration.map((c) => (
-            <div key={c.key} className="text-sm text-[var(--muted)]">
-              ⚠️ <span className="text-[var(--foreground)]">{c.key}</span> is {c.percent.toFixed(1)}% of the portfolio —
-              a single position carrying most of the risk.
-            </div>
-          ))}
-          {a.mismatches.map((m) => (
-            <div key={m.id} className="text-sm text-[var(--muted)]">
-              🕒 <span className="text-[var(--foreground)]">{m.symbol}</span> is tagged short term but{" "}
-              {tagLabel(m.riskLevel, "risk")?.toLowerCase()} — money you may need soon sitting in a volatile position.
-            </div>
-          ))}
-        </div>
-      )}
+        <div className="mt-4"><CashExplanation /></div>
+      </Section>
 
       {/* ---- Grouped performance: sortable by every variable ---- */}
-      <div className="card p-4">
+      <Section title="Performance" essential defaultOpen persistKey="analysis-performance">
         {/* Nine groupings crossed with seven sort columns is a lot to rebuild by
             hand each visit; these are the two or three you actually use. */}
         <div className="mb-3 pb-3 border-b border-[var(--border)]">
@@ -450,7 +364,7 @@ export default async function PortfolioAnalysisPage({
         {status !== "closed" && <DonutChart data={grouped.filter((g) => g.value > 0).map((g) => ({ name: label(g.key), value: g.value }))} />}
 
         <div className="overflow-x-auto mt-4">
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
             <thead>
               <tr>
                 {SORT_COLUMNS.map((c) => (
@@ -482,7 +396,7 @@ export default async function PortfolioAnalysisPage({
                       {openGroup === g.key ? "▾ " : "▸ "}
                       {label(g.key)}
                     </FilterLink>
-                    {status !== "closed" && <div className="text-xs text-[var(--muted)]">{g.percent.toFixed(1)}% do portefólio</div>}
+                    {status !== "closed" && <div className="text-xs text-[var(--muted)]">{g.percent.toFixed(1)}% of portfolio</div>}
                   </td>
                   <td className="text-right">{g.openCount ?? g.count} open / {g.closedCount ?? 0} closed</td>
                   <td className="text-right">
@@ -510,7 +424,7 @@ export default async function PortfolioAnalysisPage({
                     {/*
                       Rows of the same table, not a table of their own.
 
-                      A nested <table> sizes its columns from its own content,
+                      A nested <ResponsiveTable> sizes its columns from its own content,
                       so the detail's Value could never line up under the Value
                       it belongs to — "Weight in group" sat across two of the
                       headings above it, and reading a member against its group
@@ -579,19 +493,99 @@ export default async function PortfolioAnalysisPage({
                 </Fragment>
               ))}
             </tbody>
-          </table></div>
+          </ResponsiveTable></div>
         </div>
-      </div>
+      </Section>
 
-      {/* ---- Breakdowns ---- */}
+      <Section title="Portfolio allocation" persistKey="analysis-allocation">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BreakdownCard title="By account / wallet" rows={a.byAccount} donut />
         <BreakdownCard title="By asset type" rows={a.byAssetType} axis="assetType" translate donut />
+      </div>
+      </Section>
+
+      {windowPreferences["portfolio-returns"] !== "hidden" && <Section title="Investment returns" essential defaultOpen={windowPreferences["portfolio-returns"] === "visible"}>
+      <PortfolioReturns
+        timeWeighted={returns.timeWeighted}
+        moneyWeighted={returns.moneyWeighted}
+        withheld={returns.withheld}
+        coverage={returns.coverage}
+        netContributed={returns.netContributed}
+        currentValue={returns.currentValue}
+        currency={returns.baseCurrency}
+      />
+      </Section>}
+
+      {windowPreferences["gain-attribution"] !== "hidden" && <Section title="Where the gains came from" defaultOpen={windowPreferences["gain-attribution"] === "visible"}><GainAttribution currency="EUR" /></Section>}
+      {windowPreferences.contributions !== "hidden" && <Section title="Money added versus money made" defaultOpen={windowPreferences.contributions === "visible"}><ContributionBreakdown currency="EUR" /></Section>}
+
+      {/* ---- Staking / yield ---- */}
+      {(a.staking.stakedValue > 0 || a.staking.rewardsEarned > 0) && (
+        <Section title="Yield & staking">
+          <div className="grid grid-cols-1 min-[390px]:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <div className="text-xs text-[var(--muted)] mb-1">Earning yield</div>
+              <div className="text-lg font-semibold">
+                <Money value={a.staking.stakedValue} />
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-[var(--muted)] mb-1">Weighted APR</div>
+              <div className="text-lg font-semibold">{a.staking.weightedApr.toFixed(2)}%</div>
+            </div>
+            <div>
+              <div className="text-xs text-[var(--muted)] mb-1">Projected / year</div>
+              <div className="text-lg font-semibold text-[var(--accent)]">
+                <Money value={a.staking.projectedAnnual} />
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-[var(--muted)] mb-1">Rewards received</div>
+              <div className="text-lg font-semibold text-[var(--green)]">
+                <Money value={a.staking.rewardsEarned} />
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-[var(--muted)] mt-3">
+            &quot;Projected / year&quot; is an estimate (APR × current value), not realised income.
+          </p>
+        </Section>
+      )}
+
+      {/* ---- Warnings ---- */}
+      {(a.concentration.length > 0 || a.mismatches.length > 0) && (
+        <Section title="Things worth a look">
+          {a.concentration.map((c) => (
+            <div key={c.key} className="text-sm text-[var(--muted)]">
+              ⚠️ <span className="text-[var(--foreground)]">{c.key}</span> is {c.percent.toFixed(1)}% of the portfolio —
+              a single position carrying most of the risk.
+            </div>
+          ))}
+          {a.mismatches.map((m) => (
+            <div key={m.id} className="text-sm text-[var(--muted)]">
+              🕒 <span className="text-[var(--foreground)]">{m.symbol}</span> is tagged short term but{" "}
+              {tagLabel(m.riskLevel, "risk")?.toLowerCase()} — money you may need soon sitting in a volatile position.
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* ---- Breakdowns ---- */}
+      <Section title="Risk and time horizon">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BreakdownCard title="By risk level" rows={a.byRisk} axis="risk" translate colorByRisk />
         <BreakdownCard title="By time horizon" rows={a.byTimeHorizon} axis="timeHorizon" translate />
       </div>
+      </Section>
+
+      {statement && (
+        <Section title="From your imported statement">
+          <StatementBreakdown data={statement} />
+        </Section>
+      )}
 
       {/* ---- Winners & losers ---- */}
+      <Section title="Biggest gains and losses">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card p-4">
           <div className="text-sm font-medium">Biggest gains</div>
@@ -610,10 +604,11 @@ export default async function PortfolioAnalysisPage({
       </div>
 
       {/* ---- Full position table ---- */}
-      <div className="card p-4">
-        <div className="text-sm font-medium mb-3">All positions</div>
+      </Section>
+
+      <Section title="All positions">
         <div className="overflow-x-auto">
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
           <thead>
             <tr>
               <th>Symbol</th>
@@ -644,20 +639,35 @@ export default async function PortfolioAnalysisPage({
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </ResponsiveTable></div>
         </div>
-      </div>
+      </Section>
     </div>
   );
 }
 
-function Stat({ label, value, className = "" }: { label: string; value: number; className?: string }) {
+function CashExplanation() {
   return (
-    <div className="card p-4">
+    <details className="card p-4" id="cash-stablecoins-help">
+      <summary className="cursor-pointer text-sm font-medium">What are cash &amp; stablecoins?</summary>
+      <div className="mt-3 space-y-2 text-xs text-[var(--muted)] leading-relaxed">
+        <p><strong className="text-[var(--foreground)]">Cash</strong> means currency balances included in this portfolio, such as EUR or USD.</p>
+        <p><strong className="text-[var(--foreground)]">Stablecoins</strong> are cryptoassets such as USDC and USDT designed to track a currency, usually the US dollar. They can lose that peg, and their value in euros can change with exchange rates.</p>
+        <p>ON includes these balances in allocation charts and position breakdowns; OFF hides them from those views. It does not move money or change your holdings. Investment returns, gain attribution and imported statement figures keep their own scope.</p>
+      </div>
+    </details>
+  );
+}
+
+function Stat({ label, value, percent, note, className = "" }: { label: string; value: number; percent?: number | null; note?: string; className?: string }) {
+  return (
+    <div className="min-w-0">
       <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
       <div className={`text-xl font-semibold truncate ${className}`}>
         <Money value={value} />
       </div>
+      {percent !== undefined && <div className={`text-sm mt-1 ${className}`}>{percent === null ? "Percentage unavailable" : `${percent.toFixed(2)}%`}</div>}
+      {note && <p className="text-xs text-[var(--muted)] mt-1">{note}</p>}
     </div>
   );
 }
@@ -720,7 +730,7 @@ function MoversTable({
     return <div className="text-sm text-[var(--muted)] py-4 text-center">None yet</div>;
   }
   return (
-    <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+    <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
       <thead>
         <tr>
           <th>Symbol</th>
@@ -747,6 +757,6 @@ function MoversTable({
           </tr>
         ))}
       </tbody>
-    </table></div>
+    </ResponsiveTable></div>
   );
 }

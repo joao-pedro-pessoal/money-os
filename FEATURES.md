@@ -1,5 +1,8 @@
 # Money OS — o que faz e o que falta
 
+> **Tarefas e estado atual:** [TAREFAS.md](TAREFAS.md) é a lista única do projeto.
+> Este ficheiro preserva o catálogo e notas históricas; datas, contagens e propostas antigas não definem o estado atual.
+
 Estado a 5 de setembro de 2026. 2202 testes em 119 ficheiros, 40 migrations,
 43 tabelas, 105 módulos de lógica, 32 módulos de acesso a dados, 34 páginas.
 
@@ -1041,137 +1044,11 @@ moeda afirmado sem base**:
 agrupamento deixou de descartar parâmetros que não estavam nos campos
 escondidos.
 
-# PARTE 2 — O que falta
+# PARTE 2 — Tarefas centralizadas
 
-Ordenado por quanto acho que te faria falta, não por dificuldade.
-
-## Erros conhecidos e coisas por acabar
-
-**Metade da app nunca foi usada a sério.** Zero transações, zero subscrições,
-zero transferências, zero alocações de buckets. O lado dos investimentos tem 187
-movimentos e quatro plataformas ligadas, e foi por isso que os erros dele
-apareceram. O lado do dinheiro não está certo — está *por estrear*, o que é
-diferente e pior de avaliar.
-
-Havia uma prova disso e já está corrigida: o `src/actions/stats.ts` deitava fora
-a moeda das transações antes de as somar, portanto a primeira despesa em dólares
-teria estragado a média mensal, a taxa de poupança, a autonomia e as duas
-projeções. Agora converte antes de agrupar e a página nomeia as moedas para as
-quais não há taxa, em vez de as contar como euros.
-
-Na mesma passagem apareceram mais duas do mesmo erro, ambas corrigidas: o
-`summariseCashFlows` somava depósitos e levantamentos através das moedas do
-extrato (agora recusa-se e devolve a lista de moedas, para quem tem taxas
-converter), e os passivos eram a única componente do património que não dizia o
-que não tinha conseguido converter — uma hipoteca numa moeda sem taxa
-desaparecia, e o património ficava mais alto do que é, sem marcador nenhum.
-
-O que **continua** por converter: dentro do `getStatementBreakdown`, os totais de
-custo, juros, dividendos e taxas são somados em bruto através das moedas do
-ficheiro (vêm assim do `reconstructHoldings`). Num extrato de moeda única — o
-caso normal — estão certos. Num extrato misto o ecrã avisa que aqueles totais
-são somas de coisas diferentes, mas ainda não os converte. Fazê-lo implica passar
-uma taxa por dentro da reconstrução.
-
-**Duas medidas de retorno estão retidas.** O TWR e a TIR não podem ser
-calculados com os dados de hoje — ver a secção acima. Não é um defeito do
-cálculo; é falta de histórico e de registo de contribuições, e ambos se
-resolvem sozinhos com o tempo.
-
-**A metade dos investimentos não é o problema; a do dinheiro é.** Vale a pena
-notar a assimetria: os investimentos têm 187 movimentos e quatro plataformas
-ligadas, e foi por isso que os erros deles apareceram. Cada erro encontrado foi
-encontrado da mesma maneira — alguém abriu um ecrã e disse *isto está mal*.
-
-**IBKR expira a sessão.** O gateway da IB desliga a sessão ao fim de algumas
-horas e obriga a novo login no browser. É desenho deles, não há volta. A app
-deteta e explica, mas continua a ser chato.
-
-**Sem limite de tentativas no login.** Numa app pessoal atrás de uma password
-é aceitável, mas se alguma vez a puseres na internet aberta, isto é o primeiro
-buraco. (O segundo buraco, esse já foi tapado: o `APP_PASSWORD` caía para
-`"changeme"` e o `APP_SECRET` para `"dev-secret-change-me"` quando não estavam
-definidos. Como o repositório é público, qualquer pessoa que encontrasse uma
-instância arrancada sem `.env` entrava, e podia calcular o cookie de sessão a
-partir do código. Agora rebenta a dizer o que falta, como o `ENCRYPTION_KEY`
-sempre fez.)
-
-**A tabela de segurança foi apagada** a 13 de setembro de 2026, a teu pedido.
-`investment_activities_pre0033` guardava a cópia dos 107 registos anteriores à
-migração da tabela de movimentos; antes de a apagar confirmou-se que os 107
-continuavam todos na tabela atual e que nada no código a usava.
-
-**Bybit EU não tem solução.** As chaves da bybit.eu ficam presas aos servidores
-das aplicações aprovadas por eles — nenhum endereço teu vai coincidir. Não é um
-bug meu, é restrição do lado deles, confirmada contra a tua conta real. A única
-saída seria o Broker Program, que exige empresa registada e volume de negociação
-que um tracker não gera.
-
-## Funcionalidades que faltam
-
-Por ordem do que faria mais diferença, não do que é mais fácil.
-
-**Transações recorrentes** passou a ser a primeira, porque a comparação com um
-índice já está feita — ver a Parte 1.
-
-**Transações recorrentes.** As subscrições dizem o que *vai* sair, mas não
-criam as transações. Continuas a lançar o Netflix à mão todos os meses, ou a
-esperar pelo extrato. O passo natural é a app propor a transação quando a data
-chega, para tu confirmares — nunca criar sozinha, porque uma transação
-inventada num registo financeiro é pior do que uma em falta.
-
-**Alertas fora da app.** O motor está feito e o sino existe — ver a Parte 1 —
-mas só te avisa se abrires a app. Falta o canal: notificação push, email, ou
-ambos. O service worker de que a push precisa já está instalado, portanto o que
-falta é a decisão e as chaves VAPID, não a infraestrutura.
-
-**Relatório mensal.** Um resumo do mês fechado: quanto entrou, quanto saiu,
-onde falhaste o orçamento, como está o património contra o mês anterior.
-A informação já existe toda espalhada; falta juntá-la numa página que se leia
-de uma vez.
-
-**Anexar recibos.** Uma foto ou PDF por transação. Implica guardar ficheiros,
-incluí-los no backup e no restauro — custo alto para o valor.
-
-**Obrigações a sério.** O tipo de ativo existe, mas uma obrigação tem cupão e
-maturidade, não preço de mercado. Modelada como está, dá um número errado com
-ar de certo. Só vale a pena se tiveres alguma.
-
-**Mais plataformas.** A Kraken e a Binance já estão feitas — ver a Parte 1 — e
-**faltam testar contra contas reais**, que é o único passo que descobre erros de
-connector neste projeto. Da Binance falta também ler as carteiras Funding e
-Earn, que a app avisa que não lê. Fica a Coinbase, que mudou para chaves CDP com
-JWT ES256 — bastante mais superfície e um alvo em movimento, portanto mau
-candidato para construir sem uma chave para testar.
-
-A Revolut pessoal e os bancos portugueses passam por PSD2 e exigem licença
-AISP. A Degiro não tem API pública: os clientes que existem são engenharia
-inversa sobre o login, o que os põe na mesma objeção da Trade Republic — seriam
-credenciais capazes de mover dinheiro. A Trade Republic saiu desta lista: fica
-em CSV, e a razão está em `docs/trade-republic.md`.
-
-**Multi-utilizador.** A app assume uma pessoa. Contas partilhadas, ou dar
-acesso a alguém, não existe. É o que separa esta app de uma que possa ser
-distribuída a estranhos, mais do que qualquer funcionalidade desta lista.
-
-**Widgets e a app fora de casa.** A app Android já existe — ver a Parte 1 — mas é
-o site do PC dentro de uma app: só funciona no Wi-Fi de casa, com o PC ligado. Falta
-o que só uma app nativa dá, widgets no ecrã principal e biometria, e usá-la fora de
-casa, que exige pôr o site na internet com https e com limite de tentativas no login.
-
-## Coisas que decidi não fazer
-
-Ficam aqui para não voltarmos a discuti-las do zero.
-
-**Metas de rendimento por fonte.** Um orçamento para receitas é uma lista de
-desejos. Podes controlar o que gastas; não podes decidir receber mais 500 €.
-
-**Impedir saldo negativo.** Contas *podem* legitimamente ficar negativas —
-cartões de crédito, margem, descobertos. Proibir seria modelar mal a realidade.
-Um *aviso* faria sentido; uma proibição não.
-
-**Open Banking.** Precisa de licença. O Enable Banking é o substituto
-self-service do Nordigen, mas nunca foi testado com bancos portugueses.
+A lista de trabalho foi consolidada em [TAREFAS.md](TAREFAS.md), em 15 de
+setembro de 2026. Consultar lá correções, funcionalidades, evolução móvel,
+estados e critérios de conclusão. Não manter pendentes neste catálogo.
 
 ---
 

@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import { useState } from "react";
 import Papa from "papaparse";
 import { commitImport, getExistingKeys } from "@/actions/imports";
@@ -275,7 +278,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
               </div>
 
               <div className="overflow-x-auto max-h-72 overflow-y-auto border border-[var(--border)] rounded-lg">
-                <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap text-xs">
+                <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
                   <thead>
                     <tr>
                       <th>Date</th>
@@ -308,7 +311,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
                       </tr>
                     ))}
                   </tbody>
-                </table></div>
+                </ResponsiveTable></div>
               </div>
               {rows.length > 200 && (
                 <div className="text-xs text-[var(--muted)]">

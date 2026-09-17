@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listExpected,
   listExpectedOptions,
@@ -132,7 +133,7 @@ export default async function ExpectedPage({
           summary={`${data.rows.length} ${data.rows.length === 1 ? "entry" : "entries"}`}
         >
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
                   <th>What</th>
@@ -207,7 +208,7 @@ export default async function ExpectedPage({
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         </Section>
       )}

@@ -6,6 +6,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Money, usePrivacy } from './PrivacyContext';
 import type { PnlPoint } from '@/lib/trading/stats';
 import type { AccountEvolution } from '@/lib/trading/accountEvolution';
+import { fmt } from '@/lib/format';
 
 export default function TradeEvolutionChart({ pnl, currency, accounts, accountName, from, to, onAccount }: {
   pnl: PnlPoint[]; currency: string; accounts: AccountEvolution[]; accountName: string | null;
@@ -18,9 +19,9 @@ export default function TradeEvolutionChart({ pnl, currency, accounts, accountNa
   const data: { date: string; value?: number; realized?: number; fees?: number; net?: number }[] = mode === 'account' ? balance : pnl;
   const unit = mode === 'account' ? account?.currency ?? currency : currency;
   const last = pnl.at(-1);
-  const money = (n: number) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: unit }).format(n);
+  const money = (n: number) => fmt(n, unit);
 
-  return <PanelFrame title="Account & P&L evolution" persistKey="trade-evolution" className="card p-4" data-testid="trade-evolution">
+  return <PanelFrame title="Account & P&L evolution" persistKey="trade-evolution" essential className="card p-4" data-testid="trade-evolution">
     <div className="flex flex-wrap gap-3 items-center my-3">
       <label className="text-xs">Line chart <select aria-label="Evolution chart" className="input ml-2" value={mode} onChange={e => setMode(e.target.value as 'pnl' | 'account')}>
         <option value="pnl">Cumulative P&amp;L</option><option value="account">Account value</option>

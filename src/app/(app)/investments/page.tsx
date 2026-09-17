@@ -97,7 +97,7 @@ export default async function InvestmentsPage() {
     .join(" + ") || "nothing realised yet";
 
   return (
-    <div className="space-y-8">
+    <div className="holdings-page space-y-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold">Investments</h1>
@@ -123,17 +123,14 @@ export default async function InvestmentsPage() {
             />
           </div>
         </div>
-        <div className="flex gap-2">
-          <Link href="/investments/playlists" className="btn whitespace-nowrap">
-            Playlists
-          </Link>
-          <Link href="/investments/watchlist" className="btn whitespace-nowrap">
-            Watchlist
-          </Link>
-          <Link href="/investments/analysis" className="btn whitespace-nowrap">
-            Analysis
-          </Link>
-        </div>
+        <nav aria-label="Holdings sections" className="flex flex-wrap gap-2">
+          <a href="#what-you-hold" className="btn">
+            What you hold
+          </a>
+          <a href="#portfolio-value-over-time" className="btn">
+            Portfolio value over time
+          </a>
+        </nav>
       </div>
 
       <Section title="Search assets" defaultOpen persistKey="asset-search"><AssetSearch navigate /></Section>
@@ -142,7 +139,7 @@ export default async function InvestmentsPage() {
           manual holdings alone, so with everything synced they read zero while
           the table below reported a real loss. Two numbers for one question is
           worse than either being wrong. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="holdings-summary grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* One definition for all five cards: everything the table below shows.
             Portfolio Value used to come from getPortfolioContribution, which
             deliberately excludes positions already inside an account balance —
@@ -204,18 +201,17 @@ export default async function InvestmentsPage() {
         />
       </div>
 
-      {/* On a phone the page opens on the five cards and the table below; the
-          chart, the statement's history, the audit and the price tools are one
-          tap away. On a computer nothing about the layout changes. */}
-      <MobileFold title="Portfolio value over time" persistKey="value-over-time">
+      {/* Keep both shortcut destinations visible in every display mode. */}
+      <section id="portfolio-value-over-time" aria-label="Portfolio value over time" className="scroll-mt-24">
         <TimeSeriesCard
           title="Portfolio value over time"
           series={valueSeries.map((p) => ({ date: p.date, value: p.portfolioValue }))}
           currency={contribution.baseCurrency}
           note="Built from snapshots, so it starts the day tracking did. An imported statement reaches further back but records prices paid, not what things were worth since."
         />
-      </MobileFold>
+      </section>
 
+      <MobileFold simpleOnly title="History and checks" persistKey="simple-investment-analysis" className="space-y-8">
       {/* What the statement can account for, which is further back than any
           snapshot but a different measure — see the component. */}
       <MobileFold title="Statement history" persistKey="statement-history">
@@ -226,13 +222,14 @@ export default async function InvestmentsPage() {
       <MobileFold title="Audit by platform" persistKey="portfolio-audit">
         <PortfolioAudit items={portfolioItems.items} currency={base} />
       </MobileFold>
+      </MobileFold>
 
 
       {/* One table for everything you hold, grouped and filtered however you
           want to look at it — and the chart measures whatever it is showing,
           so the two cannot drift apart. Open trades are listed but NOT counted
           in Portfolio Value: their value is already inside the account equity. */}
-      <div className="card p-4">
+      <div id="what-you-hold" className="holdings-list card p-4 scroll-mt-24">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
           <div className="text-sm font-medium">What you hold</div>
           <div className="text-xs text-[var(--muted)]">

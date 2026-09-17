@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import { useState } from "react";
 import { Money } from "@/components/PrivacyContext";
 import { fmt } from "@/lib/format";
@@ -156,7 +159,7 @@ export default function StatementBreakdown({
             Nothing still held according to this statement.
           </div>
         ) : (
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="w-full text-xs">
+          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full text-xs">
             <thead>
               <tr className="text-[var(--muted)] text-[10px]">
                 <th className="text-left font-normal pb-1">Instrument</th>
@@ -194,7 +197,7 @@ export default function StatementBreakdown({
                 </tr>
               ))}
             </tbody>
-          </table></div>
+          </ResponsiveTable></div>
         )}
 
         {closed.length > 0 && (

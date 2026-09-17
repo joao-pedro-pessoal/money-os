@@ -15,6 +15,7 @@ import ThemePicker from "@/components/ThemePicker";
 import SettingRow from "@/components/SettingRow";
 import Link from "next/link";
 import DashboardWindowSettings from "@/components/DashboardWindowSettings";
+import LanguagePicker from "@/components/LanguagePicker";
 
 export default async function SettingsGeneralPage() {
   const baseCurrency = await getBaseCurrency();
@@ -28,6 +29,11 @@ export default async function SettingsGeneralPage() {
 
   return (
     <>
+      <div className="card">
+        <SettingRow title="Language" description="Choose the language for the app interface. Your financial data stays unchanged.">
+          <LanguagePicker />
+        </SettingRow>
+      </div>
       <div className="card">
         <SettingRow
           title="Base currency"

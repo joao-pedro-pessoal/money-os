@@ -1,4 +1,3 @@
-import PanelControls from "@/components/PanelControls";
 import { PrivacyProvider } from "@/components/PrivacyContext";
 import { ThemeProvider } from "@/components/ThemeContext";
 import Nav from "@/components/Nav";
@@ -7,6 +6,9 @@ import TopBar from "@/components/TopBar";
 import { getAlerts } from "@/actions/alerts";
 import { getQuickEntryOptions } from "@/actions/transactions";
 import QuickEntry from "@/components/QuickEntry";
+import MobileNav from "@/components/MobileNav";
+import MobileModeSwitch from "@/components/MobileMode";
+import { LanguageProvider } from "@/components/LanguageContext";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <ThemeProvider>
+      <LanguageProvider>
       <PrivacyProvider>
         <NavProvider>
           <div className="flex">
@@ -33,11 +36,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             */}
             <div id="app-content" className="flex-1 min-w-0 flex flex-col">
               <TopBar alerts={alerts} quickEntry={<QuickEntry {...quickEntry} />} />
-              <main className="flex-1 p-4 md:p-8 max-w-5xl"><PanelControls />{children}</main>
+              <main className="app-main flex-1 p-4 md:p-8 max-w-5xl"><MobileModeSwitch />{children}</main>
+              <MobileNav />
             </div>
           </div>
         </NavProvider>
       </PrivacyProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

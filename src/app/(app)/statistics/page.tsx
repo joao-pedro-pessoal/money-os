@@ -1,21 +1,24 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { getStatistics } from "@/actions/stats";
 import { Money } from "@/components/PrivacyContext";
 import PageTabs from "@/components/PageTabs";
 import { ANALYTICS_TABS } from "@/lib/navigation";
 import BenchmarkCard from "@/components/BenchmarkCard";
 import Section from "@/components/Section";
+import TrendsViews from "@/components/TrendsViews";
+import ProjectionScenario from "@/components/ProjectionScenario";
 
 export default async function StatisticsPage() {
   const s = await getStatistics();
   const c = s.baseCurrency;
+  const recent = s.flows.slice(-3);
+  const basis = recent.length === 1 ? 'recorded transactions in ' + recent[0].month :
+    recent.length > 1 ? 'the last ' + recent.length + ' recorded months (' + recent[0].month + ' to ' + recent.at(-1)!.month + ')' : 'no recorded months';
 
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold">Analytics</h1>
       <PageTabs tabs={ANALYTICS_TABS} />
-      <p className="text-xs text-[var(--muted)]">
-        Everything here is measured from your own history, not estimated.
-      </p>
 
       {/* Every figure on this page is converted to the base currency first.
           Anything that had no rate is left out and named here, rather than
@@ -31,19 +34,92 @@ export default async function StatisticsPage() {
         </div>
       )}
 
+      <TrendsViews progress={<>
+        <p className="text-sm text-[var(--muted)]">Understand what you have saved and how your net worth has changed.</p>
+      {/* ---- Savings & cash flow ---- */}
+      <Section
+        title="Your monthly cash flow" persistKey="Saving & spending"
+        defaultOpen
+        essential
+        summary={s.avgSavingsRate === null ? undefined : `${s.avgSavingsRate.toFixed(1)}% saved`}
+      >
+        <p className="text-xs text-[var(--muted)] mb-4">Income minus expenses is what you kept that month. Transfers between your accounts are excluded.</p>
+        {s.flows.length === 0 ? (
+          <div className="text-sm text-[var(--muted)] py-6 text-center">
+            No income or expenses recorded yet — add transactions or import a statement.
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Income kept</div>
+                <div className="text-lg font-semibold">
+                  {s.avgSavingsRate === null ? "—" : `${s.avgSavingsRate.toFixed(1)}%`}
+                </div>
+                <div className="text-[10px] text-[var(--muted)]">Average monthly rate across recorded months with income</div>
+              </div>
+              <Stat label="Average monthly surplus" value={s.avgMonthlySaving} currency={c} note={basis} />
+              <Stat label="Average monthly spending" value={s.avgMonthlyExpenses} currency={c} note={basis} />
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Cash covers</div>
+                <div className="text-lg font-semibold">
+                  {s.runwayMonths === null ? "—" : `${s.runwayMonths.toFixed(1)} months`}
+                </div>
+                <div className="text-[10px] text-[var(--muted)]">Current cash divided by average monthly spending</div>
+              </div>
+            </div>
+
+            <details className="mt-3"><summary className="cursor-pointer text-sm py-2">Monthly breakdown ({Math.min(s.flows.length, 12)} months)</summary>
+            <div className="overflow-x-auto">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th className="text-right">Income</th>
+                    <th className="text-right">Expenses</th>
+                    <th className="text-right">Surplus</th>
+                    <th className="text-right">Saved</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...s.flows].reverse().slice(0, 12).map((f) => (
+                    <tr key={f.month}>
+                      <td>{f.month}</td>
+                      <td className="text-right text-[var(--green)]">
+                        <Money value={f.income} currency={c} />
+                      </td>
+                      <td className="text-right text-[var(--red)]">
+                        <Money value={f.expenses} currency={c} />
+                      </td>
+                      <td className={`text-right ${f.net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                        <Money value={f.net} currency={c} />
+                      </td>
+                      <td className="text-right">
+                        {f.savingsRate === null ? "—" : `${f.savingsRate.toFixed(0)}%`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </ResponsiveTable></div>
+            </div></details>
+          </>
+        )}
+      </Section>
+
       {/* ---- Returns by period ---- */}
-      <Section title="How the money has moved" defaultOpen essential>
+      <Section title="Net worth changes" persistKey="How the money has moved" defaultOpen essential>
+        <p className="text-xs text-[var(--muted)] mb-4">Change in your recorded net worth over each period. Includes money added or withdrawn as well as market movements; this is not an investment return.</p>
         {s.historyPoints < 2 ? (
           <div className="text-sm text-[var(--muted)] py-6 text-center">
             Not enough history yet. This fills in as balances change — each update adds a point.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {s.returns.map((r) => (
               <div key={r.key}>
                 <div className="text-xs text-[var(--muted)] mb-1">{r.label}</div>
                 {r.change === null ? (
-                  <div className="text-sm text-[var(--muted)]">no data</div>
+                  <div className="text-sm text-[var(--muted)]">Not enough history</div>
                 ) : (
                   <>
                     <div
@@ -68,16 +144,14 @@ export default async function StatisticsPage() {
         )}
       </Section>
 
-      {/* ---- Against the market ---- */}
-      <BenchmarkCard />
-
       {/* ---- Drawdown ---- */}
       {s.drawdown.maxDrawdown > 0 && (
         <Section
-          title="Worst fall so far"
+          title="Falls in net worth" persistKey="Worst fall so far"
           defaultOpen
           summary={`${s.drawdown.maxDrawdownPercent.toFixed(1)}% from peak`}
         >
+          <p className="text-xs text-[var(--muted)] mb-4">The largest recorded fall from a previous high. Withdrawals and account changes can also cause a fall.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Stat
               label="Biggest drop"
@@ -115,73 +189,13 @@ export default async function StatisticsPage() {
         </Section>
       )}
 
-      {/* ---- Savings & cash flow ---- */}
-      <Section
-        title="Saving & spending"
-        defaultOpen
-        essential
-        summary={s.avgSavingsRate === null ? undefined : `${s.avgSavingsRate.toFixed(1)}% saved`}
-      >
-        {s.flows.length === 0 ? (
-          <div className="text-sm text-[var(--muted)] py-6 text-center">
-            No income or expenses recorded yet — add transactions or import a statement.
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div>
-                <div className="text-xs text-[var(--muted)] mb-1">Average savings rate</div>
-                <div className="text-lg font-semibold">
-                  {s.avgSavingsRate === null ? "—" : `${s.avgSavingsRate.toFixed(1)}%`}
-                </div>
-              </div>
-              <Stat label="Saved per month" value={s.avgMonthlySaving} currency={c} note="last 3 months" />
-              <Stat label="Spent per month" value={s.avgMonthlyExpenses} currency={c} note="last 3 months" />
-              <div>
-                <div className="text-xs text-[var(--muted)] mb-1">Runway</div>
-                <div className="text-lg font-semibold">
-                  {s.runwayMonths === null ? "—" : `${s.runwayMonths.toFixed(1)} months`}
-                </div>
-                <div className="text-[10px] text-[var(--muted)]">cash ÷ monthly spending</div>
-              </div>
-            </div>
 
-            <div className="overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
-                <thead>
-                  <tr>
-                    <th>Month</th>
-                    <th className="text-right">In</th>
-                    <th className="text-right">Out</th>
-                    <th className="text-right">Net</th>
-                    <th className="text-right">Saved</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...s.flows].reverse().slice(0, 12).map((f) => (
-                    <tr key={f.month}>
-                      <td>{f.month}</td>
-                      <td className="text-right text-[var(--green)]">
-                        <Money value={f.income} currency={c} />
-                      </td>
-                      <td className="text-right text-[var(--red)]">
-                        <Money value={f.expenses} currency={c} />
-                      </td>
-                      <td className={`text-right ${f.net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                        <Money value={f.net} currency={c} />
-                      </td>
-                      <td className="text-right">
-                        {f.savingsRate === null ? "—" : `${f.savingsRate.toFixed(0)}%`}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></div>
-            </div>
-          </>
-        )}
-      </Section>
-
+        <Section title="Investment return vs the market" persistKey="market-comparison" defaultOpen={false}>
+          <p className="text-xs text-[var(--muted)] mb-3">Compare investment performance after removing the effect of deposits and withdrawals.</p>
+          <BenchmarkCard />
+        </Section>
+        <Section title="How your money is spread" persistKey="concentration" defaultOpen={false}>
+          <p className="text-xs text-[var(--muted)] mb-3">See how much is concentrated in one account or position.</p>
       {/* ---- Concentration ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ConcentrationCard
@@ -196,50 +210,23 @@ export default async function StatisticsPage() {
         />
       </div>
 
-      {/* ---- Projections ---- */}
-      <Section title="If nothing changes" defaultOpen>
-        <p className="text-xs text-[var(--muted)] mb-3">
-          Arithmetic on two assumptions: that you keep saving{" "}
-          <Money value={s.avgMonthlySaving} currency={c} /> a month, and a steady annual return. Real markets
-          don&apos;t return a constant rate — this is a rough sense of scale, not a forecast.
-        </p>
-        <div className="overflow-x-auto">
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
-            <thead>
-              <tr>
-                <th>Horizon</th>
-                <th className="text-right">At 5% a year</th>
-                <th className="text-right">At 8% a year</th>
-              </tr>
-            </thead>
-            <tbody>
-              {s.projections.map((p, i) => (
-                <tr key={p.years}>
-                  <td>{p.years} {p.years === 1 ? "year" : "years"}</td>
-                  <td className="text-right">
-                    <Money value={p.value} currency={c} />
-                  </td>
-                  <td className="text-right text-[var(--muted)]">
-                    <Money value={s.projectionsOptimistic[i].value} currency={c} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        </div>
-      </Section>
 
+        </Section>
+      </>} scenarios={<>
+        <p className="text-sm text-[var(--muted)]">Explore assumptions about the future. These examples are separate from your recorded progress.</p>
+        <ProjectionScenario current={s.netWorth.total} monthlySaving={s.flows.length > 0 ? s.avgMonthlySaving : null} basis={basis} currency={c} />
       {/* ---- Bucket goals ---- */}
       {s.bucketProgress.length > 0 && (
         <Section
-          title="When each goal arrives"
+          title="Time to reach each goal" persistKey="When each goal arrives"
           defaultOpen
           summary={`${s.bucketProgress.length} ${s.bucketProgress.length === 1 ? "goal" : "goals"}`}
         >
+          <p className="text-xs text-[var(--muted)] mb-4">Each estimate assumes your entire average monthly surplus goes to that goal alone. These dates do not describe a plan to fund all goals at once.</p>
           <div className="space-y-3">
             {s.bucketProgress.map((b) => (
               <div key={b.id}>
-                <div className="flex justify-between text-sm mb-1">
+                <div className="flex flex-wrap justify-between gap-2 text-sm mb-1">
                   <span>{b.name}</span>
                   <span className="text-[var(--muted)]">
                     <Money value={b.current} currency={c} /> / <Money value={b.target} currency={c} />
@@ -266,6 +253,8 @@ export default async function StatisticsPage() {
           </div>
         </Section>
       )}
+
+      </>} />
     </div>
   );
 }
@@ -327,7 +316,7 @@ function ConcentrationCard({
           <div className="text-xs text-[var(--muted)] truncate">{data.largestName}</div>
         </div>
         <div>
-          <div className="text-xs text-[var(--muted)] mb-1">Effective spread</div>
+          <div className="text-xs text-[var(--muted)] mb-1">Equivalent equal-sized spread</div>
           <div className="text-lg font-semibold">{data.effectiveCount.toFixed(1)}</div>
           <div className="text-[10px] text-[var(--muted)]">
             behaves like this many equal {what}s
@@ -336,7 +325,7 @@ function ConcentrationCard({
       </div>
       {risky && (
         <div className="text-xs text-[var(--amber)] mt-3">
-          {data.largestShare.toFixed(0)}% sits in {data.largestName}. Worth knowing if that one fails.
+          {data.largestShare.toFixed(0)}% sits in {data.largestName}. A large share of the measured total depends on this one place.
         </div>
       )}
     </Section>

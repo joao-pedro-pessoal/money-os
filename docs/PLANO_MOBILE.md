@@ -1,5 +1,8 @@
 # Money OS: continuação a partir do site
 
+> **Tarefas e estado atual:** [TAREFAS.md](../TAREFAS.md) é a lista única do projeto.
+> Documento técnico com decisões e entregas datadas. As etapas e listas históricas abaixo não substituem o estado consolidado.
+
 Inspeção local: 8 de setembro de 2026. Esta preparação não altera a interface nem a lógica financeira e não publica nada.
 
 ## Estado verificado
@@ -292,16 +295,9 @@ que não escreve nada, restauro, ordem ao parar), verificação de tipos, e
 `expo export` para Android e iOS — o Metro empacota a seed e a cifra a partir de
 `mobile/node_modules`, onde `@scure/bip39` teve de ser acrescentado.
 
-Por fazer:
-
-- **Ver os ecrãs num dispositivo.** A aplicação exige o bloqueio do dispositivo antes
-  de abrir o cofre; configurar e introduzir esse código no emulador fica para o dono
-  do projeto.
-- **Sincronizar ao abrir a aplicação**, como decidido. Hoje é só manual, e o ecrã diz.
-- **Rodar a seed ao revogar um dispositivo**, como decidido. Hoje revogar só corta a
-  sessão desse dispositivo no servidor, e o ecrã não promete mais do que isso.
-- **Terminar a sessão no servidor ao deixar de sincronizar.** O token é apagado do
-  dispositivo mas continua válido no servidor até expirar.
+Trabalho restante centralizado em [TAREFAS.md](../TAREFAS.md): E04
+(sincronização ao abrir), E06 (recuperação e rotação), E07 (terminar sessão) e
+E11 (validação em dispositivos).
 
 ### Servidor de sincronização
 
@@ -354,13 +350,8 @@ Feito em 2026-09-13: o Next.js passou de 16.3.0 para 16.3.5, fora da
 vulnerabilidade crítica de execução remota de código em servidores Windows
 (GHSA-p293-qw3h-jr36).
 
-Por fazer no servidor:
-
-- **Limitar a criação de contas.** O registo está aberto e só guarda cifra, mas sem
-  limite serve para ocupar espaço.
-- **Apagar versões antigas do cofre.** Hoje ficam todas até a conta ser apagada.
-- **Link por email e contas Google e Apple.** Precisam de credenciais do dono do
-  projeto junto de cada fornecedor.
+Trabalho restante no servidor centralizado em [TAREFAS.md](../TAREFAS.md):
+E03 (métodos de login), E08 (registo e retenção) e E09 (eliminação).
 
 ### Construção criptográfica do cofre sincronizado
 

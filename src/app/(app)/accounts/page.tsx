@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listAccountsWithState,
   createAccount,
@@ -45,6 +46,7 @@ export default async function AccountsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold">Accounts</h1>
+      <p className="simple-only text-sm text-[var(--muted)]">Each account’s balance and available cash. Tap its name for details and reserved money.</p>
       <PageTabs tabs={ACCOUNTS_TABS} />
 
       <TidyEmptyAccounts
@@ -57,7 +59,7 @@ export default async function AccountsPage() {
       />
 
       <Section title="Accounts" defaultOpen essential summary={`${accounts.length} active`}>
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+        <div className="table-scroll mobile-records account-records" role="region" aria-label="Accounts" tabIndex={0}><ResponsiveTable className="data-table" role="table">
           <thead>
             <tr>
               <th>Institution</th>
@@ -70,14 +72,14 @@ export default async function AccountsPage() {
           </thead>
           <tbody>
             {accounts.map((a) => (
-              <tr key={a.id}>
-                <td>{a.institution}</td>
-                <td>
+              <tr key={a.id} role="row">
+                <td role="cell" data-label="Institution">{a.institution}</td>
+                <td role="cell" data-label="Name" className="record-name">
                   <Link href={`/accounts/${a.id}`} className="hover:underline">
                     {a.name}
                   </Link>
                 </td>
-                <td>
+                <td role="cell" data-label="Balance">
                   {(() => {
                     const p = platformTotals.get(a.id);
                     const shown = p ? p.total : a.balance;
@@ -87,9 +89,9 @@ export default async function AccountsPage() {
                         {p && p.unrealizedPnl !== 0 && (
                           <span
                             className={
-                              p.unrealizedPnl > 0
+                              "account-balance-detail " + (p.unrealizedPnl > 0
                                 ? "text-[var(--green)]"
-                                : "text-[var(--red)]"
+                                : "text-[var(--red)]")
                             }
                           >
                             {" "}
@@ -98,7 +100,7 @@ export default async function AccountsPage() {
                           </span>
                         )}
                         {p && p.spot > 0 && (
-                          <div className="text-[10px] text-[var(--muted)]">
+                          <div className="account-balance-detail text-[10px] text-[var(--muted)]">
                             {p.equity.toFixed(2)} in positions + {p.spot.toFixed(2)}{" "}
                             spot
                           </div>
@@ -107,17 +109,17 @@ export default async function AccountsPage() {
                     );
                   })()}
                 </td>
-                <td>
+                <td role="cell" data-label="Allocated">
                   <Money value={a.allocated} currency={a.currency} />
                 </td>
-                <td>
+                <td role="cell" data-label="Free">
                   <Money value={a.free} currency={a.currency} />
                 </td>
-                <td className={STATE_COLOR[a.state]}>{a.state}</td>
+                <td role="cell" data-label="Status" className={STATE_COLOR[a.state]}>{a.state === "RECONCILED" ? "Up to date" : a.state === "STALE" ? "Needs review" : a.state === "OVERALLOCATED" ? "Overallocated" : a.state}</td>
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </ResponsiveTable></div>
       </Section>
 
       <ConnectablePlatforms options={options}>
@@ -169,7 +171,7 @@ export default async function AccountsPage() {
 
       {archived.length > 0 && (
         <Section title="Archived accounts" summary={`${archived.length} archived`}>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
             <thead>
               <tr>
                 <th>Institution</th>
@@ -200,7 +202,7 @@ export default async function AccountsPage() {
                 </tr>
               ))}
             </tbody>
-          </table></div>
+          </ResponsiveTable></div>
         </Section>
       )}
     </div>

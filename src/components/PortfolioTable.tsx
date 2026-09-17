@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import {
   Fragment,
   useCallback,
@@ -274,6 +277,7 @@ export default function PortfolioTable({
     values: string[]
   ) => (
     <select
+      aria-label={all}
       value={filters[key]}
       onChange={(e) => set({ [key]: e.target.value } as Partial<Filters>)}
       className="input input-narrow text-xs py-1"
@@ -288,11 +292,16 @@ export default function PortfolioTable({
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+    <div className="holdings-browser space-y-4">
+      <div className="holdings-phone-search">
+        <input type="search" aria-label="Search holdings" placeholder="Search your holdings…" className="input" value={filters.search} onChange={(e) => set({ search: e.target.value })} />
+        {Object.values(filters).some(Boolean) && <button type="button" onClick={() => setFilters(NO_FILTERS)} className="text-xs text-[var(--accent)]">Clear filters</button>}
+      </div>
+      <div className="holdings-toolbar flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="text-xs text-[var(--muted)]">Group by</span>
           <select
+            aria-label="Group holdings by"
             value={group}
             onChange={(e) => setGroup(e.target.value as GroupKey)}
             className="input input-narrow text-xs py-1"
@@ -308,6 +317,7 @@ export default function PortfolioTable({
           <button
             type="button"
             onClick={() => setShowColumns(!showColumns)}
+            aria-expanded={showColumns}
             className="text-xs text-[var(--accent)] hover:underline"
           >
             {showColumns ? "Hide columns" : "Columns"}
@@ -315,6 +325,7 @@ export default function PortfolioTable({
           <button
             type="button"
             onClick={() => setShowFilters(!showFilters)}
+            aria-expanded={showFilters}
             className="text-xs text-[var(--accent)] hover:underline"
           >
             {showFilters ? "Hide filters" : "Filters"}
@@ -323,7 +334,7 @@ export default function PortfolioTable({
       </div>
 
       {showColumns && (
-        <div className="flex gap-3 flex-wrap items-center pb-3 border-b border-[var(--border)]">
+        <div className="holdings-columns flex gap-3 flex-wrap items-center pb-3 border-b border-[var(--border)]">
           {COLUMNS.map((c) => (
             <label key={c.key} className="text-xs flex items-center gap-1.5 cursor-pointer">
               <input
@@ -344,8 +355,9 @@ export default function PortfolioTable({
       )}
 
       {showFilters && (
-        <div className="flex gap-2 flex-wrap items-center pb-3 border-b border-[var(--border)]">
+        <div className="holdings-filters flex gap-2 flex-wrap items-center pb-3 border-b border-[var(--border)]">
           <input
+            aria-label="Search positions"
             value={filters.search}
             onChange={(e) => set({ search: e.target.value })}
             placeholder="Search"
@@ -368,8 +380,8 @@ export default function PortfolioTable({
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-        <div className="min-w-0">
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table
+        <div className="min-w-0 order-2 lg:order-1">
+          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable
             id="portfolio-table"
             className="data-table w-full"
             style={{ tableLayout: "fixed" }}
@@ -414,7 +426,7 @@ export default function PortfolioTable({
               {groups.map((g) => (
                 <Fragment key={g.key || "all"}>
                   {group !== "none" && (
-                    <tr style={{ background: "var(--surface-2)" }}>
+                    <tr className="holding-group" style={{ background: "var(--surface-2)" }}>
                       {/* Spans every column before the money, whichever those
                           happen to be — hiding one used to leave the group's
                           total sitting under the wrong heading. */}
@@ -441,7 +453,7 @@ export default function PortfolioTable({
                     </tr>
                   )}
                   {g.items.map((i) => (
-                    <tr key={i.id}>
+                    <tr key={i.id} className="holding-row">
                       {shown.map((c) => {
                         const badges = c.key === shown[0]?.key && (
                           <>
@@ -619,7 +631,7 @@ export default function PortfolioTable({
                 </Fragment>
               ))}
             </tbody>
-          </table></div>
+          </ResponsiveTable></div>
 
           {filtered.length === 0 && (
             <div className="text-xs text-[var(--muted)] py-8 text-center">
@@ -648,7 +660,7 @@ export default function PortfolioTable({
           )}
         </div>
 
-        <div>
+        <div className="min-w-0 order-1 lg:order-2">
           <div className="text-sm font-medium mb-3">Allocation</div>
           {allocation.length === 0 ? (
             <div className="text-xs text-[var(--muted)] py-8 text-center">Nothing to show.</div>

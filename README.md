@@ -1,5 +1,7 @@
 # Money OS
 
+Project status and the single task list: [TAREFAS.md](TAREFAS.md).
+
 **On your phone:** the Android app in [android-shell/](android-shell/) opens this
 site from your own computer over your home Wi-Fi, with every feature and a simpler
 first screen on each page. How to install and run it:

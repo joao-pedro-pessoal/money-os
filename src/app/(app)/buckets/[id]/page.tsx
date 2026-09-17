@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { getBucket, listBucketsWithTotals, updateBucket, deleteBucket, setAllocation } from "@/actions/buckets";
 import { listAccountsWithState } from "@/actions/accounts";
 import { Money } from "@/components/PrivacyContext";
@@ -56,7 +57,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
         </Section>
 
         <Section title="Allocations by account" defaultOpen essential>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table mb-4">
+          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table mb-4">
             <thead>
               <tr>
                 <th>Account</th>
@@ -73,7 +74,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
                 </tr>
               ))}
             </tbody>
-          </table></div>
+          </ResponsiveTable></div>
           <form action={setAllocation} className="space-y-3">
             <input type="hidden" name="bucketId" value={bucket.id} />
             <select name="accountId" className="input" required>

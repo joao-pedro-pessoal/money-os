@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { listRates, refreshRatesAction, setManualRate, unpinRate } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
 import SettingRow from "@/components/SettingRow";
@@ -31,7 +32,7 @@ export default async function SettingsRatesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
                   <th>Currency</th>
@@ -71,7 +72,7 @@ export default async function SettingsRatesPage() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         )}
       </SettingRow>

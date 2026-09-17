@@ -1,5 +1,8 @@
 # Revisão dos pedidos de trades e ativos
 
+> **Tarefas e estado atual:** [TAREFAS.md](../TAREFAS.md) é a lista única do projeto.
+> Histórico de entregas: a correção antiga da Interactive Brokers não descreve os dados atuais; consultar A02.
+
 ## Implementado
 
 - Nomes clicáveis nos holdings, posições live, saldos spot, watchlist e histórico.
@@ -102,14 +105,13 @@ App Android com o site do PC (caminho A), e cada página a abrir só com o essen
 telemóvel: implementado em 2026-09-13 — ver [APP_ANDROID.md](APP_ANDROID.md). Testado
 no emulador; falta testar num telemóvel real.
 
-### Pendente
+### Tarefas atuais
 
-1. Login por email, Google ou Apple, e isolamento de utilizadores.
-2. Sincronização encriptada, offline e gestão de dispositivos.
-3. Revisão de segurança, privacidade e obrigações legais.
-4. Instalação, widgets, notificações e testes em dispositivos reais.
+Centralizadas em [TAREFAS.md](../TAREFAS.md). As listas anteriores são histórico,
+não uma lista para executar. A02/A03 registam as divergências financeiras atuais;
+A06 trata das preferências de painéis; a secção 4 acompanha a evolução móvel.
 
-O desenho dos pontos 1 e 2 está decidido em [PLANO_MOBILE.md](PLANO_MOBILE.md).
+O desenho de identidade e sincronização está descrito em [PLANO_MOBILE.md](PLANO_MOBILE.md).
 
 Em 2026-09-13 este branch foi juntado ao `main` (commit `add5dd2`): o histórico
 dos dois passou a ser um só, e a pasta de trabalho é `C:\Users\joao2\Projects\money-os`.

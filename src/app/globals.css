@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+.trade-history-phone-title { display: none; }
+@media (max-width: 767px) {
+  .trade-history-desktop-title, .trade-history-intro { display: none; }
+  .trade-history-phone-title { display: inline; }
+  .trade-history-view { display: flex; flex-direction: column; gap: 12px; }
+  .trade-history-view > * { margin: 0; }
+  .trade-history-summary { order: 0; }
+  .trade-history-filters { order: 1; }
+  .trade-history-charts { order: 2; }
+  .trade-history-list { order: 3; }
+  .trade-history-view .trade-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .trade-filter-grid > label { min-width: 0; }
+  .trade-history-view .trade-filter-grid .input { width: 100%; min-width: 0; max-width: 100%; }
+  .trade-phone-card { padding: 12px 0; border-top: 1px solid var(--border); }
+  .trade-phone-card details { min-width: 0; }
+}
+
 :root,
 [data-accent="gold"][data-mode="dark"] {
   --background: #141210;
@@ -348,15 +365,38 @@ main .grid > * { min-width: 0; }
   main .icon-btn { min-width: 44px; }
   main .btn { white-space: normal; }
   main h1, main h2, main p { overflow-wrap: anywhere; }
-  .page-tabs { max-width: 100%; }
+  .page-tabs { max-width: 100%; flex-wrap: wrap; overflow-x: visible; gap: 4px; }
   .page-tabs a {
     min-height: 44px;
     display: flex;
     align-items: center;
     flex-shrink: 0;
+    padding: 8px 10px;
+    font-size: 12px;
   }
-  .table-scroll table { min-width: max-content; }
+  .table-scroll table { min-width: 0; }
   .table-scroll td { max-width: 24rem; }
+
+  /* Small tables fit the screen. Wide ones become compact labelled records,
+     using the same cells and headers rather than a second copy of the data. */
+  table.responsive-table { table-layout: fixed; width: 100%; font-size: 12px; }
+  table.responsive-table :is(th, td) { min-width: 0; white-space: normal; overflow-wrap: anywhere; padding: 8px 6px; }
+  table.responsive-table :is(.truncate, .whitespace-nowrap, .break-all) { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; word-break: normal; }
+  table.responsive-table[data-phone-records] { display: block; }
+  table.responsive-table[data-phone-records] > colgroup { display: none; }
+  table.responsive-table[data-phone-records] > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  table.responsive-table[data-phone-records] > :is(tbody, tfoot) { display: grid; gap: 10px; }
+  table.responsive-table[data-phone-records] > :is(tbody, tfoot) > tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
+  table.responsive-table[data-phone-records] > :is(tbody, tfoot) > tr > :is(td, th) { display: block; max-width: none; padding: 0; border: 0; text-align: left; }
+  table.responsive-table[data-phone-records] td::before { content: attr(data-label); display: block; margin-bottom: 3px; color: var(--muted); font-size: 10px; font-weight: 400; }
+  table.responsive-table[data-phone-records] td:not([data-label])::before { display: none; }
+  table.responsive-table[data-phone-records] [data-wide-cell] { grid-column: 1 / -1; }
+  table.responsive-table[data-phone-records] td > :is(form, .flex) { max-width: 100%; flex-wrap: wrap; }
+  main pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .dashboard-overview { gap: 12px; }
+  .calendar-controls { display: grid; width: 100%; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: end; }
+  .calendar-controls > label { min-width: 0; }
+  .calendar-controls > button:last-child { grid-column: 1 / -1; min-height: 36px; justify-self: start; }
 }
 
 /* These unlayered rules override icon-btn only in the mobile shell. */
@@ -514,10 +554,250 @@ main .grid > * { min-width: 0; }
 /* A block folded away on a phone (MobileFold). On a computer the toggle is
    hidden and the wrapper is a plain block, so the layout does not change. */
 .mobile-fold-toggle { display: none; }
-.mobile-fold:has(> .mobile-fold-body:empty) { display: none; }
+/* Keep the empty-wrapper selector's specificity low. The production CSS
+   optimizer can merge this with the toggle's display:none using :is(); a
+   stronger :has() would then prevent the phone rule from showing the toggle. */
+:where(.mobile-fold:has(> .mobile-fold-body:empty)) { display: none; }
 @media (max-width: 767px) {
   .mobile-fold-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; text-align: left; font-size: 0.875rem; font-weight: 500; }
   .mobile-fold-toggle > span:last-child { color: var(--muted); }
   .mobile-fold[data-open="false"] > .mobile-fold-body { display: none; }
   .mobile-fold[data-open="true"] > .mobile-fold-body { margin-top: 12px; }
+}
+
+/* Phone navigation shares the website's routes and the full menu. */
+.mobile-bottom-nav, .mobile-brand, .quick-entry-label { display: none; }
+.panel-heading-button { text-align: left; width: 100%; cursor: pointer; }
+.input.budget-limit { width: 7rem; }
+:where(button, a, input, select, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 767px) {
+  html { scroll-padding-bottom: 10rem; }
+  .app-main { padding-bottom: calc(10rem + env(safe-area-inset-bottom)); }
+  .app-topbar { padding-top: 12px; padding-bottom: 8px; }
+  .mobile-brand { display: block; font-family: var(--font-heading); font-size: 1rem; white-space: nowrap; }
+  .mobile-bottom-nav {
+    position: fixed;
+    z-index: 30;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 24px rgb(0 0 0 / 8%);
+  }
+  .mobile-bottom-nav a, .mobile-bottom-nav button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 56px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .mobile-bottom-nav [aria-current="page"], .mobile-bottom-nav [data-active="true"] {
+    color: var(--accent);
+    background: var(--surface-2);
+  }
+  .app-topbar .quick-entry-trigger {
+    position: fixed;
+    z-index: 30;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    width: auto;
+    height: 48px;
+    gap: 8px;
+    padding: 0 18px;
+    border-radius: 24px;
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-contrast);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+  }
+  .quick-entry-label { display: inline; font-size: 14px; font-weight: 600; }
+  .quick-entry {
+    margin: auto 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 12px);
+    padding: 20px max(20px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+    border-radius: 24px 24px 0 0;
+  }
+  .quick-entry .icon-btn { min-width: 44px; min-height: 44px; }
+  .quick-entry input#quick-amount { font-size: 28px; min-height: 60px; }
+  .quick-entry form button[type="submit"] { width: 100%; min-height: 48px; }
+  .panel-controls { gap: 8px; margin-bottom: 12px; }
+  .panel-controls button { min-height: 44px; padding: 0 12px; background: var(--surface-2); border-radius: 10px; }
+  main a.btn { display: inline-flex; align-items: center; justify-content: center; }
+  .budget-actions button { min-height: 44px; padding-left: 8px; padding-right: 8px; }
+  main label:has(> input[type="checkbox"]) { min-height: 44px; }
+  .panel-toggle { width: 44px; height: 44px; top: 4px; right: 4px; font-size: 18px; }
+  .panel-heading { padding-right: 36px; }
+  .panel-heading-button { min-height: 36px; }
+  .panel-summary { display: block; margin-left: 0; margin-top: 3px; }
+  .panel-frame[data-panel-collapsed="true"] { min-height: 60px !important; }
+  .panel-frame[data-panel-collapsed="false"]:not(:has(> .panel-heading)) > [data-panel-content] > :first-child { padding-right: 32px; }
+  .page-tabs { gap: 6px; border-bottom: 0; padding: 2px 2px 8px; }
+  .page-tabs a { border-radius: 10px; border: 1px solid var(--border); }
+  .page-tabs a[aria-current="page"] { background: var(--surface-2); }
+  .transaction-totals { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .transaction-totals > div { padding: 12px 8px; background: var(--surface-2); border-radius: 10px; overflow-wrap: anywhere; }
+  .transaction-totals > div > :first-child { font-size: 12px; }
+  .dashboard-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .dashboard-overview > :first-child { grid-column: 1 / -1; }
+  .dashboard-overview > :first-child .card { padding: 20px; border-color: var(--border-strong); background: var(--surface-2); }
+  .dashboard-overview > :first-child .text-xl { font-size: 30px; }
+  .dashboard-overview .text-xl { overflow-wrap: anywhere; }
+  .dashboard-overview .text-\[10px\] { font-size: 11px; line-height: 1.5; }
+  .alerts-popover { position: fixed; top: calc(72px + env(safe-area-inset-top)); left: 16px; right: 16px; width: auto; }
+
+  /* The same cells become labeled records; no second set of financial values. */
+  .mobile-records table.data-table { display: block; min-width: 0; }
+  .mobile-records thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .mobile-records tbody { display: grid; gap: 12px; }
+  .mobile-records tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 14px; padding: 12px; gap: 12px; }
+  .mobile-records table.data-table td { display: block; min-width: 0; max-width: none; padding: 0; border: 0; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  .mobile-records td::before { content: attr(data-label); display: block; margin-bottom: 4px; color: var(--muted); font-size: 11px; font-weight: 400; }
+  .mobile-records td.record-description { overflow: visible; white-space: normal; }
+  .mobile-records table.data-table td.record-actions { display: flex; grid-column: 1 / -1; gap: 8px; align-items: center; justify-content: flex-end; border-top: 1px solid var(--border); padding-top: 10px; }
+  .mobile-records td.record-actions::before { display: none; }
+  .mobile-records .record-actions a, .mobile-records .record-actions button { display: inline-flex; min-height: 44px; align-items: center; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; margin: 0; }
+  .account-records table.responsive-table[data-phone-records] tbody { gap: 0; }
+  .account-records table.responsive-table[data-phone-records] td.record-name { grid-column: 1; grid-row: 1; font-size: 13px; font-weight: 600; }
+  .account-records table.responsive-table[data-phone-records] td.record-name::before { display: none; }
+  .account-records table.responsive-table[data-phone-records] td.record-name a { display: flex; min-height: 44px; align-items: center; gap: 6px; }
+  .account-records table.responsive-table[data-phone-records] td.record-name a::after { content: "›"; color: var(--accent); font-size: 24px; }
+  .account-records table.responsive-table[data-phone-records] tr { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; padding: 2px 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; align-items: center; }
+  .account-records table.responsive-table[data-phone-records] tr:last-child { border-bottom: 0; }
+  .account-records table.responsive-table[data-phone-records] td:is([data-label="Institution"], [data-label="Allocated"]) { display: none; }
+  .account-records table.responsive-table[data-phone-records] td[data-label="Balance"] { grid-column: 2; grid-row: 1; text-align: right; font-size: 14px; }
+  .account-records table.responsive-table[data-phone-records] td[data-label="Free"] { grid-column: 2; grid-row: 2; text-align: right; font-size: 11px; color: var(--muted); }
+  .account-records table.responsive-table[data-phone-records] td[data-label="Free"]::before { display: inline; margin-right: 4px; }
+  .account-records table.responsive-table[data-phone-records] td[data-label="Balance"]::before, .account-records table.responsive-table[data-phone-records] td[data-label="Status"]::before { display: none; }
+  .account-records table.responsive-table[data-phone-records] .account-balance-detail { display: none; }
+  .account-records table.responsive-table[data-phone-records] td[data-label="Balance"]::before, .account-records table.responsive-table[data-phone-records] td[data-label="Allocated"]::before, .account-records table.responsive-table[data-phone-records] td[data-label="Free"]::before { margin-bottom: 2px; }
+  .account-records table.responsive-table[data-phone-records] td[data-label="Status"] { grid-column: 1; grid-row: 2; font-size: 11px; }
+}
+
+.holdings-phone-search { display: none; }
+@media (max-width: 767px) {
+  .holdings-page { display: flex; flex-direction: column; gap: 16px; }
+  .holdings-page > * { order: 5; margin: 0; }
+  .holdings-page > :first-child { order: 0; gap: 12px; }
+  .holdings-page > :nth-child(2) { order: 1; }
+  .holdings-page > .holdings-summary { order: 2; }
+  .holdings-page > .holdings-list { order: 3; }
+  .holdings-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .holdings-summary > .card { min-width: 0; padding: 12px; }
+  .holdings-summary > :first-child { grid-column: 1 / -1; background: var(--surface-2); }
+  .holdings-summary > :first-child .text-xl { font-size: 26px; }
+  .holdings-summary .truncate { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+  .holdings-summary .text-xl { font-size: 18px; }
+  .holdings-summary .text-\[10px\] { font-size: 11px; }
+  .holdings-phone-search { display: flex; align-items: center; gap: 8px; }
+  .holdings-phone-search input { min-width: 0; flex: 1; }
+  .holdings-phone-search button { min-height: 44px; flex-shrink: 0; }
+  .holdings-toolbar { gap: 8px; }
+  .holdings-toolbar > div:first-child { flex: 1; min-width: 0; }
+  .holdings-toolbar select { min-width: 0; flex: 1; }
+  .holdings-toolbar button { min-height: 44px; }
+  .holdings-columns label { min-height: 44px; }
+  .holdings-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .holdings-filters > input { display: none; }
+  .holdings-filters > select { width: 100%; min-width: 0; }
+  .holdings-browser table.responsive-table[data-phone-records] > tbody { gap: 6px; }
+  .holdings-browser table.responsive-table[data-phone-records] > tbody > .holding-row { gap: 6px 12px; padding: 12px; }
+  .holdings-browser table.responsive-table[data-phone-records] > tbody > .holding-group { padding: 10px 12px; margin-top: 8px; gap: 6px; }
+  .holdings-browser table.responsive-table[data-phone-records] .holding-row td[data-label="Name"] { font-size: 14px; font-weight: 600; }
+  .holdings-browser table.responsive-table[data-phone-records] .holding-row td[data-label="Name"]::before { display: none; }
+  .holdings-browser table.responsive-table[data-phone-records] .holding-row td[data-label="Name"] a { display: inline-flex; min-height: 44px; align-items: center; }
+  .holdings-browser table.responsive-table[data-phone-records] .holding-row td:is([data-label="At risk"], [data-label="Unrealized P&L"]) { font-size: 14px; font-weight: 600; padding-top: 6px; border-top: 1px solid var(--border); }
+  .holdings-browser table.responsive-table[data-phone-records] .holding-row td:is([data-label="Type"], [data-label="Playlist"], [data-label="Account"]) { font-size: 11px; }
+}
+
+/* Cash flow enhancements are restricted to phones. */
+.cash-flow-phone-only { display: none; }
+@media (min-width: 768px) {
+  .cash-flow-header-actions { display: contents; }
+  .cash-flow-list { display: flex; flex-direction: column; }
+  .cash-flow-list > * { order: 3; }
+  .cash-flow-list > .cash-flow-list-heading { order: 0; }
+  .cash-flow-list > .mobile-fold { order: 1; }
+  .cash-flow-list > .transaction-totals { order: 2; }
+  .cash-flow-filter-fields > label { display: contents; }
+}
+@media (max-width: 767px) {
+  .cash-flow-phone-only { display: revert; }
+  .cash-flow-desktop-only { display: none; }
+  .cash-flow-page > :not(:last-child) { margin-bottom: 16px; }
+  .cash-flow-page > .transaction-page-header { gap: 12px; }
+  .cash-flow-directions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--surface-2); border-radius: 10px; }
+  .cash-flow-directions button { min-height: 44px; padding: 6px; font-size: 12px; border: 1px solid transparent; border-radius: 7px; color: var(--muted); cursor: pointer; }
+  .cash-flow-directions button[aria-pressed="true"] { color: var(--foreground); background: var(--surface); border-color: var(--border-strong); }
+  .cash-flow-list-heading button { min-height: 44px; }
+  .cash-flow-list > .mobile-fold { margin: 12px 0; }
+  .cash-flow-list .transaction-totals { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cash-flow-list .transaction-totals > div { min-width: 0; padding: 12px 8px; border-radius: 10px; background: var(--surface-2); overflow-wrap: anywhere; }
+  .cash-flow-records table.responsive-table[data-phone-records] > tbody { gap: 0; }
+  .cash-flow-records table.responsive-table[data-phone-records] > tbody > tr { gap: 4px 12px; padding: 14px 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+  .cash-flow-records table.responsive-table[data-phone-records] td::before { display: none; }
+  .cash-flow-records table.responsive-table[data-phone-records] td.record-description { grid-column: 1; grid-row: 1; font-weight: 600; font-size: 13px; }
+  .cash-flow-records table.responsive-table[data-phone-records] td[data-label="Amount"] { grid-column: 2; grid-row: 1; text-align: right; font-size: 14px; }
+  .cash-flow-records table.responsive-table[data-phone-records] td[data-label="Account"] { grid-column: 1; grid-row: 2; color: var(--muted); font-size: 11px; }
+  .cash-flow-records table.responsive-table[data-phone-records] td[data-label="Date"] { grid-column: 2; grid-row: 2; text-align: right; color: var(--muted); font-size: 11px; }
+  .cash-flow-records table.responsive-table[data-phone-records] td[data-label="Category"] { grid-column: 1 / -1; grid-row: 3; color: var(--muted); font-size: 11px; }
+  .cash-flow-records table.responsive-table[data-phone-records] td.record-actions { padding-top: 4px; border-top: 0; gap: 8px; }
+  .cash-flow-records .record-actions a, .cash-flow-records .record-actions button { font-size: 11px; }
+}
+
+/* Mobile modes only change presentation. The existing interface is the default. */
+:where(.mobile-mode-picker, .simple-only) { display: none; }
+.mobile-fold[data-simple-only] > .mobile-fold-toggle { display: none; }
+.mobile-fold[data-simple-only] > .mobile-fold-body { display: block; margin-top: 0; }
+.dashboard-overview > .overview-secondary > .relative { height: 100%; }
+.transaction-page-header > .mobile-fold[data-simple-only],
+.transaction-page-header > .mobile-fold[data-simple-only] > .mobile-fold-body { display: contents; }
+
+@media (max-width: 767px) {
+  .mobile-mode-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 5px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+  .mobile-mode-picker button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 52px; border: 1px solid transparent; border-radius: 10px; color: var(--muted); cursor: pointer; }
+  .mobile-mode-picker button > span { font-size: 14px; font-weight: 600; }
+  .mobile-mode-picker small { font-size: 11px; }
+  .mobile-mode-picker [aria-pressed="true"] { background: var(--surface-2); border-color: var(--border-strong); color: var(--foreground); }
+  [data-mobile-ui="simple"] .mobile-fold[data-simple-only] > .mobile-fold-toggle { display: flex; }
+  [data-mobile-ui="simple"] .mobile-fold[data-simple-only][data-open="false"] > .mobile-fold-body { display: none; }
+  [data-mobile-ui="simple"] .mobile-fold[data-simple-only][data-open="true"] > .mobile-fold-body { margin-top: 12px; }
+  [data-mobile-ui="simple"] .simple-only { display: block; }
+  [data-mobile-ui="simple"] .complex-visible { display: none; }
+  [data-mobile-ui="simple"] .mobile-bottom-nav a[href="/investments"] { display: none; }
+  [data-mobile-ui="simple"] .mobile-bottom-nav a[href="/transactions"] { grid-column: 4; }
+  [data-mobile-ui="simple"] .mobile-bottom-nav > button { grid-column: 5; }
+  [data-mobile-ui="simple"] .app-topbar .quick-entry-trigger { left: 50%; right: auto; bottom: calc(6px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: 60px; height: 56px; padding: 6px 2px; flex-direction: column; gap: 3px; border-radius: 12px; box-shadow: none; z-index: 31; }
+  [data-mobile-ui="simple"] .quick-entry-trigger .quick-entry-label { font-size: 11px; }
+  [data-mobile-ui="simple"] .app-main { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+  [data-mobile-ui="simple"] .transaction-page-header > .mobile-fold[data-simple-only] { display: block; flex-basis: 100%; }
+  [data-mobile-ui="simple"] .transaction-page-header > .mobile-fold[data-simple-only] > .mobile-fold-body { display: flex; flex-wrap: wrap; gap: 8px; }
+  [data-mobile-ui="simple"] .transaction-page-header > .mobile-fold[data-simple-only][data-open="false"] > .mobile-fold-body { display: none; }
+  [data-mobile-ui="simple"] .app-main { display: flex; flex-direction: column; }
+  [data-mobile-ui="simple"] .app-main > * { flex-shrink: 0; }
+  [data-mobile-ui="simple"] .page-panel-controls { order: 2; margin-top: 24px; }
+  [data-mobile-ui="simple"] .simple-overview:not([data-show-details="true"]) .overview-secondary { display: none; }
+  [data-mobile-ui="simple"] .simple-details-button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; margin-top: 10px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); text-align: left; font-size: 13px; }
+  [data-mobile-ui="simple"] .simple-dashboard-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  [data-mobile-ui="simple"] .simple-dashboard-actions a { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 56px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 14px; }
+  [data-mobile-ui="simple"] .simple-dashboard-actions a > span { color: var(--accent); }
+  [data-mobile-ui="simple"] .mobile-records:not(.account-records) td.record-description { grid-row: 1; grid-column: 1; font-weight: 600; }
+  [data-mobile-ui="simple"] .mobile-records:not(.account-records) td[data-label="Amount"] { grid-row: 1; grid-column: 2; text-align: right; font-size: 17px; }
+  [data-mobile-ui="simple"] .mobile-records:not(.account-records) td:is(.record-description, [data-label="Amount"], [data-label="Date"], [data-label="Account"])::before { display: none; }
+  [data-mobile-ui="simple"] .mobile-records:not(.account-records) td:is([data-label="Date"], [data-label="Account"]) { color: var(--muted); font-size: 12px; }
 }

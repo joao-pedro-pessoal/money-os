@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useSyncExternalStore } from "react";
+import { fmt } from "@/lib/format";
 
 interface PrivacyCtx {
   hidden: boolean;
@@ -11,37 +12,31 @@ const Ctx = createContext<PrivacyCtx>({ hidden: false, toggle: () => {} });
 
 const KEY = "moneyos_privacy";
 
-/**
- * Privacy mode, read from storage without an effect.
- *
- * The obvious version — `useState(false)` plus a `useEffect` that reads
- * localStorage and calls `setState` — renders once with the wrong answer and
- * then again with the right one. For this particular flag that means every
- * figure on the page is briefly *visible* to someone who asked for them to be
- * hidden, which is the one thing the feature exists to prevent.
- *
- * `useSyncExternalStore` is built for exactly this: a server snapshot, a client
- * snapshot, and a subscription. React knows the two may differ and handles it
- * without a hydration mismatch.
- */
+/** Shared across amounts; the current choice works even if storage is blocked. */
 const listeners = new Set<() => void>();
+let sessionHidden: boolean | undefined;
 
 function subscribe(onChange: () => void): () => void {
   listeners.add(onChange);
   // Another tab toggling it should be reflected here too.
-  window.addEventListener("storage", onChange);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== KEY && event.key !== null) return;
+    sessionHidden = event.newValue === "1";
+    onChange();
+  };
+  window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(onChange);
-    window.removeEventListener("storage", onChange);
+    window.removeEventListener("storage", onStorage);
   };
 }
 
 function readHidden(): boolean {
+  if (sessionHidden !== undefined) return sessionHidden;
   try {
     return window.localStorage.getItem(KEY) === "1";
   } catch {
-    // Storage can be unavailable (private mode, blocked cookies). Not hidden is
-    // the safe default: the app still works, it just doesn't remember.
+    // With no saved or session choice, use the initial visible state.
     return false;
   }
 }
@@ -55,8 +50,9 @@ export function PrivacyProvider({ children }: { children: React.ReactNode }) {
   const hidden = useSyncExternalStore(subscribe, readHidden, serverSnapshot);
 
   const toggle = () => {
+    sessionHidden = !readHidden();
     try {
-      window.localStorage.setItem(KEY, hidden ? "0" : "1");
+      window.localStorage.setItem(KEY, sessionHidden ? "1" : "0");
     } catch {
       // Nothing to do — the toggle still applies for this session below.
     }
@@ -103,6 +99,6 @@ export function Bare({ value }: { value: number }) {
 export function Money({ value, currency = "EUR" }: { value: number; currency?: string }) {
   const { hidden } = usePrivacy();
   if (hidden) return <span>••••••</span>;
-  const formatted = new Intl.NumberFormat("pt-PT", { style: "currency", currency }).format(value);
+  const formatted = fmt(value, currency);
   return <span>{formatted}</span>;
 }

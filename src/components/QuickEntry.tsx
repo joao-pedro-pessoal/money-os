@@ -106,8 +106,9 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
 
   return (
     <>
-      <button type="button" className="icon-btn" aria-label="Quick entry" title="Add income or expense" onClick={open}>
+      <button type="button" className="icon-btn quick-entry-trigger" aria-label="Quick entry" title="Add income or expense" onClick={open}>
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
+        <span className="quick-entry-label"><span className="complex-visible">Add entry</span><span className="simple-only">Add entry</span></span>
       </button>
       <dialog ref={dialog} className="quick-entry" aria-labelledby="quick-entry-title"
         onCancel={event => { event.preventDefault(); close(); }}

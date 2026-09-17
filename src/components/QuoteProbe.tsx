@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import { useState } from "react";
 import { probeIbkrQuotes } from "@/actions/quotes";
 
@@ -112,7 +115,7 @@ export default function QuoteProbe({ suggestions }: { suggestions: string[] }) {
                 </span>
               )}
             </div>
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="w-full text-[11px]">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full text-[11px]">
               <tbody>
                 {result.candidates.slice(0, 8).map((c) => (
                   <tr key={c.conid} className="border-t border-[var(--border)]">
@@ -123,7 +126,7 @@ export default function QuoteProbe({ suggestions }: { suggestions: string[] }) {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         </div>
       )}

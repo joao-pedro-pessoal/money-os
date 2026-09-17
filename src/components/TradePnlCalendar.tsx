@@ -20,10 +20,10 @@ export default function TradePnlCalendar({ rows, currency }: { rows: TradeHistor
   const changeMonth = (next: string) => { setChosenMonth(next); setSelectedDay(null); };
   const color = (value: number) => value > 0 ? 'var(--green)' : value < 0 ? 'var(--red)' : 'var(--muted)';
 
-  return <PanelFrame title="Daily P&L calendar" persistKey="pnl-calendar" className="card p-4" data-testid="pnl-calendar">
+  return <PanelFrame title="Daily P&L calendar" persistKey="pnl-calendar" essential className="card p-4" data-testid="pnl-calendar">
     <p className="text-xs text-[var(--muted)] mt-2">Realised P&amp;L by closing day (UTC), before separately reported fees. Uses the filters above.</p>
     <div className="flex flex-wrap items-center justify-between gap-3 my-4">
-      <div className="flex items-center gap-2">
+      <div className="calendar-controls flex items-center gap-2">
         <button type="button" className="btn" aria-label="Previous month" onClick={() => changeMonth(shiftMonth(month, -1))}>‹</button>
         <label className="text-xs">Month <input aria-label="P&L month" type="month" className="input" value={month}
           onChange={e => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(e.target.value)) changeMonth(e.target.value); }} /></label>

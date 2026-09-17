@@ -1,6 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
+import { useId, useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -61,6 +64,9 @@ export default function SpendingAnalysis({
   approximate: boolean;
 }) {
   const [filters, setFilters] = useState<SpendingFilters>(NO_SPENDING_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [customDates, setCustomDates] = useState(false);
+  const filtersId = useId();
   const [depth, setDepth] = useState<"category" | "subcategory" | "merchant" | "account">(
     "category"
   );
@@ -88,6 +94,19 @@ export default function SpendingAnalysis({
 
   const active = hasActiveSpendingFilters(filters);
   const describing = describeSpendingFilters(filters);
+  const periods = [
+    { value: "last-month", label: "Last month" },
+    { value: "last-3-months", label: "Last 3 months" },
+    { value: "last-12-months", label: "Last 12 months" },
+    { value: "this-year", label: "This year" },
+  ] as const;
+  const period = customDates ? "custom" : filters.from === null && filters.to === null ? "all" :
+    periods.find((p) => {
+      const range = presetRange(p.value);
+      return range.from === filters.from && range.to === filters.to;
+    })?.value ?? "custom";
+  const filterCount = [filters.categoryName, filters.subcategoryName, filters.merchant, filters.accountName, filters.committed]
+    .filter((value) => value !== null).length + (filters.from !== null || filters.to !== null ? 1 : 0);
   const set = <K extends keyof SpendingFilters>(key: K, value: SpendingFilters[K]) =>
     setFilters((f) => ({ ...f, [key]: value }));
   const pick = (v: string) => (v === "" ? null : v);
@@ -119,33 +138,38 @@ export default function SpendingAnalysis({
   return (
     <div className="space-y-4">
       <section className="card p-4">
-        <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-          <div className="text-sm font-medium">Filter</div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {(["last-month", "last-3-months", "last-12-months", "this-year"] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => {
-                  const r = presetRange(p);
-                  setFilters((f) => ({ ...f, from: r.from, to: r.to }));
-                }}
-                className="text-xs px-2 py-1 rounded border border-[var(--border)]"
-              >
-                {p.replace(/-/g, " ")}
-              </button>
-            ))}
+        <div className="flex items-end gap-2">
+          <label className="min-w-0 flex-1 text-xs text-[var(--muted)]">
+            Period
+            <select aria-label="Spending period" className="input w-full mt-1" value={period} onChange={(event) => {
+              const value = event.target.value;
+              setCustomDates(value === "custom");
+              if (value === "custom") { setFiltersOpen(true); return; }
+              const selected = periods.find((p) => p.value === value);
+              const range = selected ? presetRange(selected.value) : { from: null, to: null };
+              setFilters((f) => ({ ...f, from: range.from, to: range.to }));
+            }}>
+              <option value="all">All time</option>
+              {periods.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+              <option value="custom">Custom dates</option>
+            </select>
+          </label>
+          <button type="button" className="btn text-xs shrink-0" aria-expanded={filtersOpen} aria-controls={filtersId} onClick={() => setFiltersOpen((open) => !open)}>
+            {filtersOpen ? "Close filters" : "Filters"}{filterCount > 0 ? ` (${filterCount})` : ""}
+          </button>
             {active && (
               <button
-                onClick={() => setFilters(NO_SPENDING_FILTERS)}
+                type="button"
+                onClick={() => { setFilters(NO_SPENDING_FILTERS); setCustomDates(false); }}
                 className="text-xs text-[var(--accent)]"
               >
                 Clear
               </button>
             )}
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+        <div id={filtersId} hidden={!filtersOpen}>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
           <Select
             label="Category"
             value={filters.categoryName ?? ""}
@@ -174,7 +198,7 @@ export default function SpendingAnalysis({
             <span className="text-[10px] text-[var(--muted)] block mb-1">From</span>
             <input
               type="date"
-              className="input input-narrow text-xs w-full"
+              className="input text-xs w-full"
               value={filters.from ?? ""}
               onChange={(e) => set("from", pick(e.target.value))}
             />
@@ -183,7 +207,7 @@ export default function SpendingAnalysis({
             <span className="text-[10px] text-[var(--muted)] block mb-1">To</span>
             <input
               type="date"
-              className="input input-narrow text-xs w-full"
+              className="input text-xs w-full"
               value={filters.to ?? ""}
               onChange={(e) => set("to", pick(e.target.value))}
             />
@@ -191,7 +215,7 @@ export default function SpendingAnalysis({
         </div>
 
         {(options.hasFixed || options.hasVariable) && (
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex flex-wrap items-center gap-2 mt-3">
             <span className="text-[10px] text-[var(--muted)]">Show</span>
             {([null, "fixed", "variable"] as const).map((c) => (
               <button
@@ -208,6 +232,7 @@ export default function SpendingAnalysis({
             ))}
           </div>
         )}
+        </div>
 
         {describing !== null && (
           <p className="text-xs mt-3" style={{ color: "var(--accent)" }}>
@@ -297,7 +322,7 @@ export default function SpendingAnalysis({
               currency={currency}
             />
             <div className="overflow-auto max-h-72">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap text-xs w-full">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs w-full">
                 <thead>
                   <tr>
                     <th>{depth}</th>
@@ -334,7 +359,7 @@ export default function SpendingAnalysis({
                     </tr>
                   ))}
                 </tbody>
-              </table></div>
+              </ResponsiveTable></div>
             </div>
           </div>
         )}
@@ -487,7 +512,7 @@ function Select({
     <label className="block">
       <span className="text-[10px] text-[var(--muted)] block mb-1">{label}</span>
       <select
-        className="input input-narrow text-xs w-full"
+        className="input text-xs w-full"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={options.length === 0}

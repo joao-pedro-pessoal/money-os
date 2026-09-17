@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useNav } from "./NavContext";
+import { ACCOUNTS_TABS, ANALYTICS_TABS, INVESTMENT_TABS, isNavigationActive } from "@/lib/navigation";
+import { logout } from "@/app/login/actions";
+import { useMobileMode } from "./MobileMode";
+import MobileFold from "./MobileFold";
+import { useLanguage } from "./LanguageContext";
 
 /**
  * Eleven entries in three groups, down from fifteen in a flat list.
@@ -48,27 +54,42 @@ const groups: { label?: string; links: { href: string; label: string }[] }[] = [
   },
 ];
 
-/**
- * Pages that belong to a sidebar entry without being under its URL.
- * Keeps the parent lit while you're on one of its tabs.
- */
-const OWNED_BY: Record<string, string[]> = {
-  "/analytics": ["/statistics", "/money-map"],
-  "/accounts": ["/interest", "/liabilities"],
-  "/investments": ["/positions", "/connections"],
-  "/transactions": ["/import"],
-};
+// Reuse the page tabs so search follows the same destinations and labels.
+const searchablePages = [
+  ...groups.flatMap(group => group.links),
+  ...ACCOUNTS_TABS,
+  ...ANALYTICS_TABS,
+  ...INVESTMENT_TABS,
+  { href: "/import", label: "Import statement" },
+  { href: "/manual", label: "Manual" },
+  { href: "/settings", label: "Settings" },
+].filter((link, index, pages) => pages.findIndex(page => page.href === link.href) === index);
 
 export default function Nav() {
   const pathname = usePathname();
   const { open, setOpen } = useNav();
+  const { simple } = useMobileMode();
+  const { t } = useLanguage();
+  const [query, setQuery] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const searching = terms.length > 0;
+  const labelFor = (href: string, fallback: string) => ({
+    "/": t.dashboard, "/analytics": t.analytics, "/accounts": t.accounts, "/transactions": t.cashFlow,
+    "/savings": t.savings, "/budgets": t.budgets, "/buckets": t.buckets, "/subscriptions": t.subscriptions,
+    "/expected": t.comingIn, "/library": t.library, "/investments": t.investments, "/manual": t.manual,
+    "/settings": t.settings,
+  }[href] ?? fallback);
+  const matches = searchablePages.filter(link =>
+    terms.every(term => `${link.label} ${link.href}`.toLowerCase().includes(term)),
+  );
 
-  const isActive = (href: string) => {
-    // "/" is exact, or it would match every page.
-    if (href === "/") return pathname === "/";
-    if (pathname === href || pathname.startsWith(`${href}/`)) return true;
-    return (OWNED_BY[href] ?? []).some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  };
+  function closeMenu() {
+    setOpen(false);
+    setQuery("");
+  }
+
+  const isActive = (href: string) => isNavigationActive(pathname, href);
 
   const linkClass = (href: string) =>
     `block rounded-lg px-3 py-2 text-sm transition-colors ${
@@ -84,9 +105,8 @@ export default function Nav() {
    * 87px for the content once the page padding was taken off — every table and
    * every card squeezed into a column narrower than the sidebar beside it.
    *
-   * Off-canvas rather than collapsed to icons: eleven entries in three labelled
-   * groups don't survive being reduced to glyphs, and a menu you open on
-   * purpose costs one tap while a row of ambiguous icons costs a guess.
+   * The complete menu stays in this drawer. MobileNav offers four labeled
+   * shortcuts and opens this same drawer for every other destination.
    */
   return (
     <>
@@ -94,7 +114,7 @@ export default function Nav() {
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/50 md:hidden"
-          onClick={() => setOpen(false)}
+          onClick={closeMenu}
           aria-hidden="true"
         />
       )}
@@ -127,7 +147,7 @@ export default function Nav() {
           <div className="md:hidden">
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={closeMenu}
               className="icon-btn"
               aria-label="Close menu"
             >
@@ -138,7 +158,50 @@ export default function Nav() {
           </div>
         </div>
 
-      <div className="space-y-5 flex-1">
+      <div className="mb-5">
+        <label htmlFor="nav-search" className="block mb-1.5 text-sm text-[var(--muted)]">{t.findPage}</label>
+        <div className="flex gap-1 items-center">
+          <input ref={searchInput} id="nav-search" type="search" className="input min-w-0 w-full"
+            placeholder={t.searchPages} autoComplete="off" value={query}
+            aria-controls="nav-pages" onChange={event => setQuery(event.target.value)}
+            onKeyDownCapture={event => {
+              if (event.key === "Escape" && query) {
+                event.preventDefault();
+                event.stopPropagation();
+                setQuery("");
+              }
+            }} />
+          {query && <button type="button" className="icon-btn shrink-0" aria-label="Clear page search"
+            onClick={() => { setQuery(""); searchInput.current?.focus(); }}>×</button>}
+        </div>
+      </div>
+
+      <div id="nav-pages" className="space-y-5 flex-1">
+        {searching ? <div>
+          <p role="status" className="px-3 mb-2 text-sm text-[var(--muted)]">
+            {matches.length === 0 ? t.noPages : `${matches.length} ${matches.length === 1 ? "page" : "pages"} found`}
+          </p>
+          <ul className="space-y-1">
+            {matches.map(link => <li key={link.href}>
+              <Link href={link.href} className={linkClass(link.href)}
+                aria-current={pathname === link.href ? "page" : undefined} onClick={closeMenu}>
+                {labelFor(link.href, link.label)}
+              </Link>
+            </li>)}
+          </ul>
+        </div> : simple ? <>
+          <ul className="space-y-1">
+            {[
+              { href: "/", label: t.home }, { href: "/accounts", label: t.accounts }, { href: "/transactions", label: t.cashFlow },
+              { href: "/savings", label: t.savings }, { href: "/budgets", label: t.budgets }, { href: "/investments", label: t.investments },
+            ].map(link => <li key={link.href}><Link href={link.href} className={linkClass(link.href)} aria-current={isActive(link.href) ? "page" : undefined} onClick={() => setOpen(false)}>{link.label}</Link></li>)}
+          </ul>
+          <MobileFold simpleOnly title="More pages" persistKey="simple-navigation">
+            <ul className="space-y-1">
+              {groups.flatMap(group => group.links).filter(link => !["/", "/accounts", "/transactions", "/savings", "/budgets", "/investments"].includes(link.href)).map(link => <li key={link.href}><Link href={link.href} className={linkClass(link.href)} aria-current={isActive(link.href) ? "page" : undefined} onClick={() => setOpen(false)}>{labelFor(link.href, link.label)}</Link></li>)}
+            </ul>
+          </MobileFold>
+        </> : <>
         {groups.map((g, i) => (
           <div key={g.label ?? i}>
             {g.label && (
@@ -150,24 +213,30 @@ export default function Nav() {
               {g.links.map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className={linkClass(l.href)} aria-current={isActive(l.href) ? "page" : undefined} onClick={() => setOpen(false)}>
-                    {l.label}
+                    {labelFor(l.href, l.label)}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
         ))}
+        </>}
       </div>
 
       {/* Settings and the manual are both somewhere you go rarely and
           deliberately, so they sit apart from the pages you actually work in. */}
       <div className="pt-4 mt-4 border-t border-[var(--border)] space-y-1">
         <Link href="/manual" className={linkClass("/manual")} aria-current={isActive("/manual") ? "page" : undefined} onClick={() => setOpen(false)}>
-          Manual
+          {t.manual}
         </Link>
         <Link href="/settings" className={linkClass("/settings")} aria-current={isActive("/settings") ? "page" : undefined} onClick={() => setOpen(false)}>
-          Settings
+          {t.settings}
         </Link>
+        <form action={logout}>
+          <button type="submit" className="w-full min-h-11 rounded-lg px-3 py-2 text-left text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
+            {t.logOut}
+          </button>
+        </form>
       </div>
       </nav>
     </>

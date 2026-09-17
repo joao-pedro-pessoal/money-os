@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { db } from "@/db/client";
 import { interestPayments, accounts } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -135,7 +136,7 @@ export default async function InterestPage() {
             differs.
           </p>
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
                   <th>Account</th>
@@ -178,7 +179,7 @@ export default async function InterestPage() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         </Section>
       )}
@@ -262,7 +263,7 @@ export default async function InterestPage() {
       )}
 
       <Section title="Payments received" defaultOpen>
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -281,7 +282,7 @@ export default async function InterestPage() {
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </ResponsiveTable></div>
       </Section>
     </div>
   );

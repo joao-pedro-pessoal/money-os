@@ -17,20 +17,23 @@ export default async function TransactionsPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="space-y-8">
+    <div className="cash-flow-page space-y-8">
       {/* Importing is an action on this page's data, not a place of its own —
           it used to sit in the sidebar between two destinations. */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-lg font-semibold">Cash Flow</h1>
+      <div className="transaction-page-header flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-lg font-semibold">Cash Flow</h1>
+          <p className="cash-flow-phone-only text-xs text-[var(--muted)] mt-1">See what comes in, what goes out, and where it went.</p>
+        </div>
+        <div className="cash-flow-header-actions flex gap-2 flex-wrap">
         <Link href="/savings" className="btn">Savings / cashback</Link>
         <Link href="/import" className="btn whitespace-nowrap">
           Import statement
         </Link>
+        </div>
       </div>
 
-      {/* On a phone the + button in the header already records a movement, so
-          these two forms fold away and the list comes first. */}
-      <MobileFold title="Add income, expense or transfer" persistKey="add-forms">
+      <MobileFold title="Add a transaction or transfer" persistKey="add-forms">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card p-4">
           <div className="text-sm font-medium mb-3">Add income / expense</div>
@@ -65,12 +68,18 @@ export default async function TransactionsPage() {
                 </option>
               ))}
             </select>
-            <input name="amount" type="number" step="0.01" placeholder="Amount" className="input" required />
-            <input name="date" type="date" defaultValue={today} className="input" required />
-            <input name="description" placeholder="Description" className="input" />
+            <label className="block text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Amount</span>
+              <input name="amount" aria-label="Amount" type="number" step="0.01" placeholder="Amount" className="input" required />
+            </label>
+            <label className="block text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Date</span>
+              <input name="date" aria-label="Date" type="date" defaultValue={today} className="input" required />
+            </label>
+            <label className="block text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Description (optional)</span>
+              <input name="description" aria-label="Description" placeholder="Description" className="input" />
+            </label>
             <PurchaseSavingsFields />
             <button type="submit" className="btn w-full">
-              Add
+              <span className="cash-flow-phone-only">Save transaction</span><span className="cash-flow-desktop-only">Add</span>
             </button>
           </form>
         </div>
@@ -95,11 +104,17 @@ export default async function TransactionsPage() {
                 </option>
               ))}
             </select>
-            <input name="amount" type="number" step="0.01" placeholder="Amount" className="input" required />
-            <input name="date" type="date" defaultValue={today} className="input" required />
-            <input name="description" placeholder="Description (optional)" className="input" />
+            <label className="block text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Amount</span>
+              <input name="amount" aria-label="Amount" type="number" step="0.01" placeholder="Amount" className="input" required />
+            </label>
+            <label className="block text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Date</span>
+              <input name="date" aria-label="Date" type="date" defaultValue={today} className="input" required />
+            </label>
+            <label className="block text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Description (optional)</span>
+              <input name="description" aria-label="Description (optional)" placeholder="Description (optional)" className="input" />
+            </label>
             <button type="submit" className="btn w-full">
-              Transfer
+              <span className="cash-flow-phone-only">Save transfer</span><span className="cash-flow-desktop-only">Transfer</span>
             </button>
           </form>
         </div>

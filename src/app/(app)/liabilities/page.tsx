@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listLiabilities,
   createLiability,
@@ -102,7 +103,7 @@ export default async function LiabilitiesPage() {
           summary={`${data.items.length} ${data.items.length === 1 ? "debt" : "debts"}`}
         >
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table" style={{ minWidth: 720 }}>
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table" style={{ minWidth: 720 }}>
               <thead>
                 <tr>
                   <th>Debt</th>
@@ -206,7 +207,7 @@ export default async function LiabilitiesPage() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         </Section>
       )}

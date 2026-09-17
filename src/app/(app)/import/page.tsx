@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { listCategories } from "@/actions/transactions";
 import { listAccountsWithState } from "@/actions/accounts";
 import { getBaseCurrency } from "@/actions/settings";
@@ -99,7 +100,7 @@ export default async function ImportPage() {
         {imported.length > 0 ? (
           <div className="mt-4 pt-4 border-t border-[var(--border)]">
             <div className="text-xs font-medium mb-2">Statements already imported</div>
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="w-full text-xs">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full text-xs">
               <tbody>
                 {imported.map((s) => (
                   <tr key={s.accountId} className="border-t border-[var(--border)] first:border-0">
@@ -118,7 +119,7 @@ export default async function ImportPage() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
             <p className="text-[10px] text-[var(--muted)] mt-2 leading-snug">
               An account missing from this list has no broker statement, whatever else was imported
               for it. A statement with no instruments has no positions to rebuild — usually a cash
@@ -180,7 +181,7 @@ export default async function ImportPage() {
             at all — a bad mapping shouldn&apos;t mean deleting rows by hand.
           </p>
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap text-xs">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
               <thead>
                 <tr>
                   <th>When</th>
@@ -209,7 +210,7 @@ export default async function ImportPage() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         </div>
       )}

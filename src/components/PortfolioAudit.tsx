@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { Money } from "@/components/PrivacyContext";
 import type { PositionItem } from "@/lib/portfolio/positionView";
 import { auditByPlatform } from "@/lib/portfolio/positionView";
@@ -40,7 +41,7 @@ export default function PortfolioAudit({
       </p>
 
       <div className="overflow-x-auto">
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
           <thead>
             <tr>
               <th>Platform</th>
@@ -74,7 +75,7 @@ export default function PortfolioAudit({
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </ResponsiveTable></div>
       </div>
 
       {overlapping.length > 0 && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { useMobileMode } from "./MobileMode";
 
 const listeners = new Set<() => void>();
 /** Survives a browser that refuses storage, for as long as the page is open. */
@@ -9,10 +10,16 @@ const memory = new Map<string, boolean>();
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  window.addEventListener("storage", listener);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null) memory.clear();
+    else if (event.key.startsWith("money-os:fold:")) memory.delete(event.key);
+    else return;
+    listener();
+  };
+  window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(listener);
-    window.removeEventListener("storage", listener);
+    window.removeEventListener("storage", onStorage);
   };
 }
 
@@ -52,16 +59,20 @@ export default function MobileFold({
   persistKey,
   className,
   children,
+  simpleOnly = false,
 }: {
   title: string;
   persistKey: string;
   /** Classes for the wrapper around the children, e.g. spacing between several. */
   className?: string;
   children: ReactNode;
+  /** Fold only in the simple phone mode; preserve the current layout elsewhere. */
+  simpleOnly?: boolean;
 }) {
   const pathname = usePathname();
+  const { simple } = useMobileMode();
   const bodyId = useId();
-  const key = `money-os:fold:${pathname}:${persistKey}`;
+  const key = `money-os:fold:${pathname}:${persistKey}${simple ? ':simple' : ''}`;
   const open = useSyncExternalStore(subscribe, () => readOpen(key), () => false);
 
   useEffect(() => {
@@ -74,7 +85,7 @@ export default function MobileFold({
   }, [key]);
 
   return (
-    <div className="mobile-fold" data-open={open}>
+    <div className="mobile-fold" data-open={open} data-simple-only={simpleOnly || undefined}>
       <button
         type="button"
         className="mobile-fold-toggle card"

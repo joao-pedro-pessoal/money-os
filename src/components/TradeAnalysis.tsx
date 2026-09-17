@@ -1,5 +1,9 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+import PanelFrame from "./PanelFrame";
+
+
 import {
   BarChart,
   Bar,
@@ -40,21 +44,25 @@ const RED = "var(--red)";
 const AMBER = "var(--amber)";
 const MUTED = "var(--muted)";
 
+/** Each panel minimizes on its own; on a phone only the `essential` one opens. */
 function Panel({
   title,
   subtitle,
+  persistKey,
+  essential = false,
   children,
 }: {
   title: string;
   subtitle: string;
+  persistKey: string;
+  essential?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="card p-4">
-      <div className="text-sm font-medium">{title}</div>
+    <PanelFrame title={title} persistKey={persistKey} essential={essential} className="card p-4">
       <div className="text-[10px] text-[var(--muted)] mb-3">{subtitle}</div>
       {children}
-    </div>
+    </PanelFrame>
   );
 }
 
@@ -132,7 +140,7 @@ export default function TradeAnalysis({
 
       {/* ---- Result by what kind of trade it was ---- */}
       <Panel
-        title="Result by kind of trade"
+        title="Result by kind of trade" persistKey="trade-kind" essential
         subtitle="Not what you traded, but what kind of thing it was — the classification you gave the instrument, kept after you sold out of it."
       >
         <div className="flex gap-2 flex-wrap mb-3">
@@ -163,7 +171,7 @@ export default function TradeAnalysis({
         ) : (
           <>
             <div className="overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
                 <thead>
                   <tr>
                     <th>{TRADE_GROUPINGS.find((g) => g.key === grouping)?.label ?? "Group"}</th>
@@ -248,7 +256,7 @@ export default function TradeAnalysis({
                     </Fragment>
                   ))}
                 </tbody>
-              </table></div>
+              </ResponsiveTable></div>
             </div>
 
             {/*
@@ -279,7 +287,7 @@ export default function TradeAnalysis({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* ---- 2. What do I trade well? ---- */}
         <Panel
-          title="Result by instrument"
+          title="Result by instrument" persistKey="trade-instrument"
           subtitle="After fees, which is what decides whether to keep trading it."
         >
           {topSymbols.length === 0 ? (
@@ -319,7 +327,7 @@ export default function TradeAnalysis({
                 </ResponsiveContainer>
               </div>
               <div className="overflow-x-auto mt-3">
-                <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table text-xs whitespace-nowrap">
+                <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table text-xs whitespace-nowrap">
                   <thead>
                     <tr>
                       <th>Symbol</th>
@@ -353,7 +361,7 @@ export default function TradeAnalysis({
                       </tr>
                     ))}
                   </tbody>
-                </table></div>
+                </ResponsiveTable></div>
               </div>
             </>
           )}
@@ -361,7 +369,7 @@ export default function TradeAnalysis({
 
         {/* ---- 4. How long do I hold? ---- */}
         <Panel
-          title="How long you hold"
+          title="How long you hold" persistKey="trade-holding"
           subtitle="Winners against losers. Holding losers longer is the pattern a P&L total cannot show you."
         >
           {holding.count === 0 ? (
@@ -401,7 +409,7 @@ export default function TradeAnalysis({
           {directions.length > 0 && (
             <div className="mt-4 pt-3 border-t border-[var(--border)]">
               <div className="text-[10px] text-[var(--muted)] mb-2">By direction</div>
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table text-xs w-full">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table text-xs w-full">
                 <tbody>
                   {directions.map((d) => (
                     <tr key={d.direction}>
@@ -416,7 +424,7 @@ export default function TradeAnalysis({
                     </tr>
                   ))}
                 </tbody>
-              </table></div>
+              </ResponsiveTable></div>
             </div>
           )}
         </Panel>
@@ -424,7 +432,7 @@ export default function TradeAnalysis({
 
       {/* ---- 3. How often, and when? ---- */}
       <Panel
-        title="How often you trade"
+        title="How often you trade" persistKey="trade-cadence"
         subtitle="Trades per month, and the hour of day they land. Hours are UTC — the app has no reliable answer for where you were."
       >
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">

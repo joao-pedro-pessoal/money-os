@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { listPlaylistsWithTotals, createPlaylist, deletePlaylist } from "@/actions/playlists";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
@@ -12,7 +13,7 @@ export default async function PlaylistsPage() {
         <div>
           <h1 className="text-lg font-semibold">Playlists</h1>
           <p className="text-xs text-[var(--muted)] mt-1">
-            Group your positions by purpose (Reforma, Especulação, …) and see which group is actually performing.
+            Group your positions by purpose (Retirement, Speculation, …) and see which group is actually performing.
           </p>
         </div>
         <Link href="/investments" className="btn whitespace-nowrap">
@@ -27,7 +28,7 @@ export default async function PlaylistsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
                   <th>Playlist</th>
@@ -80,7 +81,7 @@ export default async function PlaylistsPage() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         )}
       </div>

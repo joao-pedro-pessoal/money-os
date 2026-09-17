@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -14,6 +17,7 @@ import {
 } from "@/lib/money/transactionFilter";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import MobileFold from "@/components/MobileFold";
 
 /**
  * The transaction list, over whatever slice is chosen.
@@ -58,31 +62,71 @@ export default function TransactionList({
 
   return (
     <div className="space-y-4">
-      <div className="card p-4">
-        <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-          <div className="text-sm font-medium">Transactions</div>
+      <div className="cash-flow-list card p-4">
+        <div className="cash-flow-list-heading flex items-baseline justify-between gap-3 flex-wrap mb-3">
+          <div>
+            <h2 className="text-sm font-medium"><span className="cash-flow-phone-only">Recent activity</span><span className="cash-flow-desktop-only">Transactions</span></h2>
+            <p className="cash-flow-phone-only text-xs text-[var(--muted)] mt-1" role="status">Showing {filtered.length} of {rows.length} loaded transactions</p>
+          </div>
           {active && (
             <button
               onClick={() => setFilters(NO_TRANSACTION_FILTERS)}
               className="text-xs text-[var(--accent)]"
             >
-              Clear ({hidden} row{hidden === 1 ? "" : "s"} hidden)
+              <span className="cash-flow-phone-only">Clear filters</span><span className="cash-flow-desktop-only">Clear ({hidden} row{hidden === 1 ? "" : "s"} hidden)</span>
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
-          <select
-            className="input input-narrow text-xs py-1"
-            value={filters.direction ?? ""}
-            onChange={(e) => set("direction", pick(e.target.value) as "in" | "out" | null)}
-          >
-            <option value="">In and out</option>
-            <option value="in">Money in</option>
-            <option value="out">Money out</option>
-          </select>
+        {/*
+          In and out kept apart, never netted into one figure. A month with
+          3 000 in and 2 900 out is not the same as one with 100 in and nothing
+          out, and a single number renders them identically.
+        */}
+        <div className="transaction-totals grid grid-cols-1 sm:grid-cols-3 gap-3 my-3">
+          <div>
+            <div className="text-[10px] text-[var(--muted)]"><span className="cash-flow-phone-only">Money in</span><span className="cash-flow-desktop-only">In</span></div>
+            <div className="text-sm font-semibold text-[var(--green)]">
+              <Money value={totals.inflow} currency={currency} />
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] text-[var(--muted)]"><span className="cash-flow-phone-only">Money out</span><span className="cash-flow-desktop-only">Out</span></div>
+            <div className="text-sm font-semibold text-[var(--red)]">
+              <Money value={totals.outflow} currency={currency} />
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] text-[var(--muted)]">
+              <span className="cash-flow-phone-only">Net change</span><span className="cash-flow-desktop-only">Net{active && " — over what is shown"}</span>
+            </div>
+            <div
+              className={`text-sm font-semibold ${
+                totals.net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"
+              }`}
+            >
+              <Money value={totals.net} currency={currency} />
+            </div>
+          </div>
+        </div>
+        <p className="cash-flow-phone-only text-xs text-[var(--muted)] mb-3">Totals for the transactions shown. Up to 200 recent transactions are loaded.</p>
 
+        <div className="cash-flow-phone-only cash-flow-search space-y-3">
+          <input type="search" aria-label="Search transactions" className="input" placeholder="Search description or merchant…" value={filters.search} onChange={(e) => set("search", e.target.value)} />
+          <div className="cash-flow-directions" role="group" aria-label="Money direction">
+            {([ [null, "All activity"], ["in", "Money in"], ["out", "Money out"] ] as const).map(([direction, label]) => (
+              <button type="button" key={label} aria-pressed={filters.direction === direction} onClick={() => set("direction", direction)}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <MobileFold title={`Account, category & dates${(filters.accountName || filters.categoryName || filters.from || filters.to) ? " · Filters applied" : ""}`} persistKey="transaction-filters">
+        <div className="cash-flow-filter-fields grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
+          <select aria-label="Money direction" className="cash-flow-desktop-only input input-narrow text-xs py-1" value={filters.direction ?? ""} onChange={(e) => set("direction", pick(e.target.value) as "in" | "out" | null)}>
+            <option value="">In and out</option><option value="in">Money in</option><option value="out">Money out</option>
+          </select>
+          <label className="text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Account</span>
           <select
+            aria-label="Filter by account"
             className="input input-narrow text-xs py-1"
             value={filters.accountName ?? ""}
             onChange={(e) => set("accountName", pick(e.target.value))}
@@ -94,8 +138,10 @@ export default function TransactionList({
               </option>
             ))}
           </select>
-
+          </label>
+          <label className="text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Category</span>
           <select
+            aria-label="Filter by category"
             className="input input-narrow text-xs py-1"
             value={filters.categoryName ?? ""}
             onChange={(e) => set("categoryName", pick(e.target.value))}
@@ -107,59 +153,28 @@ export default function TransactionList({
               </option>
             ))}
           </select>
-
+          </label>
+          <label className="text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">From date</span>
           <input
             type="date"
+            aria-label="From date"
             className="input input-narrow text-xs py-1"
             value={filters.from ?? ""}
             onChange={(e) => set("from", pick(e.target.value))}
           />
+          </label>
+          <label className="text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">To date</span>
           <input
             type="date"
+            aria-label="To date"
             className="input input-narrow text-xs py-1"
             value={filters.to ?? ""}
             onChange={(e) => set("to", pick(e.target.value))}
           />
-
-          <input
-            className="input input-narrow text-xs py-1"
-            placeholder="Search"
-            value={filters.search}
-            onChange={(e) => set("search", e.target.value)}
-          />
+          </label>
+          <input aria-label="Search transactions" className="cash-flow-desktop-only input input-narrow text-xs py-1" placeholder="Search" value={filters.search} onChange={(e) => set("search", e.target.value)} />
         </div>
-
-        {/*
-          In and out kept apart, never netted into one figure. A month with
-          3 000 in and 2 900 out is not the same as one with 100 in and nothing
-          out, and a single number renders them identically.
-        */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-          <div>
-            <div className="text-[10px] text-[var(--muted)]">In</div>
-            <div className="text-sm font-semibold text-[var(--green)]">
-              <Money value={totals.inflow} currency={currency} />
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] text-[var(--muted)]">Out</div>
-            <div className="text-sm font-semibold text-[var(--red)]">
-              <Money value={totals.outflow} currency={currency} />
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] text-[var(--muted)]">
-              Net{active && " — over what is shown"}
-            </div>
-            <div
-              className={`text-sm font-semibold ${
-                totals.net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"
-              }`}
-            >
-              <Money value={totals.net} currency={currency} />
-            </div>
-          </div>
-        </div>
+        </MobileFold>
 
         {(approximate || unconverted.length > 0) && (
           <div className="text-[10px] text-[var(--muted)] mb-3 max-w-prose leading-relaxed">
@@ -176,7 +191,7 @@ export default function TransactionList({
         )}
 
         <div className="overflow-x-auto">
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+          <div className="table-scroll mobile-records cash-flow-records" role="region" aria-label="Transactions" tabIndex={0}><ResponsiveTable className="data-table" role="table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -191,10 +206,10 @@ export default function TransactionList({
               {filtered.map((t) => {
                 const out = directionOf(t) === "out";
                 return (
-                  <tr key={t.id}>
-                    <td>{new Date(t.date).toLocaleDateString("pt-PT")}</td>
-                    <td>{t.accountName ?? "—"}</td>
-                    <td>
+                  <tr key={t.id} role="row">
+                    <td role="cell" data-label="Date"><span className="cash-flow-phone-only">{new Date(t.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span><span className="cash-flow-desktop-only">{new Date(t.date).toLocaleDateString("pt-PT")}</span></td>
+                    <td role="cell" data-label="Account">{t.accountName ?? "—"}</td>
+                    <td role="cell" data-label="Category">
                       {t.categoryName ?? "—"}
                       {/* The type says more than the direction for this one:
                           money leaving to be invested is not spending. */}
@@ -205,8 +220,9 @@ export default function TransactionList({
                         <div className="text-[10px] text-[var(--muted)]">internal transfer</div>
                       )}
                     </td>
-                    <td className="max-w-64 truncate">{t.description || t.merchant || "—"}</td>
+                    <td role="cell" data-label="Description" className="record-description max-w-64 truncate"><span className="cash-flow-phone-only">{t.description || t.merchant || t.categoryName || (t.type === "transfer" ? "Internal transfer" : t.type === "investment_contribution" ? "Investment contribution" : out ? "Expense" : "Income")}</span><span className="cash-flow-desktop-only">{t.description || t.merchant || t.categoryName || "—"}</span></td>
                     <td
+                      role="cell" data-label="Amount"
                       className={`text-right font-medium ${
                         out ? "text-[var(--red)]" : "text-[var(--green)]"
                       }`}
@@ -221,7 +237,7 @@ export default function TransactionList({
                         </div>
                       )}
                     </td>
-                    <td className="text-right whitespace-nowrap">
+                    <td role="cell" data-label="Actions" className="record-actions text-right whitespace-nowrap">
                       <Link href={`/transactions/${t.id}/edit`} className="text-xs mr-3">
                         Edit
                       </Link>
@@ -237,14 +253,14 @@ export default function TransactionList({
                 );
               })}
             </tbody>
-          </table></div>
+          </ResponsiveTable></div>
         </div>
 
         {filtered.length === 0 && (
           <div className="text-xs text-[var(--muted)] py-8 text-center">
             {rows.length === 0
-              ? "Nothing recorded yet."
-              : "Nothing matches these filters — the rows are still there."}
+              ? "No transactions yet. Add your first transaction above or import a statement."
+              : "No matching transactions. Try another search or clear the filters."}
           </div>
         )}
       </div>

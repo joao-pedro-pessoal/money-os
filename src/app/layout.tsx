@@ -50,6 +50,9 @@ export const viewport: Viewport = {
  */
 const applyStoredTheme = `
 try {
+  var l = localStorage.getItem("moneyos_language");
+  if (["en","pt","es","fr","de","it","nl","pl","tr","ja","ko","zh"].indexOf(l) >= 0) document.documentElement.lang = l;
+  document.documentElement.dataset.mobileUi = localStorage.getItem("moneyos_mobile_mode") === "simple" ? "simple" : "complex";
   var a = localStorage.getItem("moneyos_accent");
   var m = localStorage.getItem("moneyos_mode");
   var s = localStorage.getItem("moneyos_signal");

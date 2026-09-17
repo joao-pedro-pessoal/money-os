@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import { useState } from "react";
 import { previewBrokerStatement } from "@/actions/brokerImport";
 
@@ -313,7 +316,7 @@ function ReadableReport({ preview }: { preview: Readable }) {
           <div className="text-[var(--muted)] mb-1">
             What this says you hold — compare it against your broker&apos;s app:
           </div>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="w-full">
+          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full">
             <tbody>
               {preview.holdings.map((h) => (
                 <tr key={h.key}>
@@ -329,7 +332,7 @@ function ReadableReport({ preview }: { preview: Readable }) {
                 </tr>
               ))}
             </tbody>
-          </table></div>
+          </ResponsiveTable></div>
         </div>
       )}
 

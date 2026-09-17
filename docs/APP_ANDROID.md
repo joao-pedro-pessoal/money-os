@@ -1,8 +1,9 @@
 # App Android — o site no telemóvel
 
 Decidido a 13 de setembro de 2026: para já, a app do telemóvel é **o próprio site**,
-aberto a partir do PC, com todas as funcionalidades e a mesma aparência. Só muda uma
-coisa no telemóvel: cada página abre com o essencial, e o resto fica fechado a um toque.
+aberto a partir do PC, com todas as funcionalidades e os mesmos temas. No telemóvel,
+cada página abre com o essencial, e o resto fica fechado a um toque. A navegação e os
+ecrãs de uso diário têm uma disposição própria para larguras pequenas.
 
 Isto é o caminho A. O caminho B (o site a correr dentro do telemóvel, com os dados
 cifrados só lá) continua no [PLANO_MOBILE.md](PLANO_MOBILE.md), e a app em `mobile/`
@@ -35,7 +36,22 @@ mesmo tempo.
 O telemóvel tem de estar no mesmo Wi-Fi que o PC. Se o PC mudar de endereço, a app
 mostra "Sem ligação ao Money OS" com o botão **Mudar endereço**.
 
+No PC, o endereço é **http://localhost:3000**, incluindo `:3000`.
+O arranque usa `scripts/start-phone-site.ps1`: substitui uma instância antiga
+identificada como sendo deste projeto antes de compilar, recusa parar outros
+programas na porta 3000 e impede dois arranques simultâneos. Se falhar, a janela
+fica aberta com o erro e o registo fica em `.local-checkpoints/site-startup.log`.
+
 ## O que a app faz
+
+Para atualizar o site no telemóvel: fecha a janela antiga do site no PC, abre
+`SITE_PARA_TELEMOVEL.cmd`, espera por "Ready" e deixa a janela aberta. No telemóvel,
+fecha a app na lista de aplicações recentes e volta a abri-la. Não é necessário
+reinstalar o APK nem terminar sessão.
+
+Para terminar sessão: **More → Log out**, no fim do menu. Na versão anterior sem
+barra inferior, o menu abre pelo botão ☰. O botão Log out está disponível depois
+de atualizar o site. Termina a sessão neste aparelho, sem apagar os dados financeiros.
 
 A pasta `android-shell/` é uma app Android mínima, em Java e sem bibliotecas: um único
 ecrã com o site em ecrã inteiro. Nada financeiro fica guardado nela. Acrescenta o que um
@@ -65,6 +81,37 @@ O `local.properties` (fora do Git) aponta para o SDK com barras normais:
 o Gradle falha com "A sintaxe do nome do ficheiro… é incorreta".
 
 ## Telemóvel mais simples: painéis
+
+### Dois modos no telemóvel
+
+No topo de cada página podes escolher **Simple** ou **Complex**. O Complex
+mantém a interface anterior e é a opção inicial. A escolha fica guardada neste
+navegador/app; no PC continua a aparecer a interface completa.
+
+O Simple mostra três indicadores principais no início, atalhos para o dia a dia,
+contas mais compactas e movimentos com o valor em destaque. **Add entry** fica no
+centro da barra inferior. Investimentos e as outras páginas continuam em **More**.
+Gráficos, indicadores adicionais e ferramentas abrem pelos respetivos botões.
+
+Os valores e os cálculos são os mesmos. As escolhas de painéis e secções abertas
+ficam separadas entre modos, para regressar ao Complex sem perder a organização.
+Os avisos de estado das contas continuam visíveis no Simple.
+
+A interface usa inglês nos dois modos. No telemóvel, as tabelas largas mostram
+cada registo em campos identificados, organizados verticalmente, e os separadores
+distribuem-se por várias linhas. Não é necessário deslizar para os lados para
+chegar às colunas. No computador mantém-se a tabela completa.
+
+- Barra inferior com Home, Accounts, Cash flow, Invest e More. More abre o menu
+  completo; os atalhos identificam também as subpáginas da sua secção.
+- Botão **Add entry** ao alcance do polegar, com formulário aberto a partir da
+  parte inferior do ecrã. Mantém o registo rápido e a opção de desfazer existentes.
+- Contas e movimentos apresentam os mesmos dados em cartões com rótulos no
+  telemóvel, mantendo as tabelas no PC. Os filtros de movimentos abrem num botão.
+- O património total ganha destaque no dashboard. Cabeçalhos dos painéis são
+  clicáveis e os controlos, alertas e campos dos orçamentos cabem no ecrã.
+- Estas alterações chegam ao telemóvel ao reiniciar o site no PC com
+  `SITE_PARA_TELEMOVEL.cmd`; não exigem recompilar o APK.
 
 - `PanelFrame` e `Section` aceitam `essential`. Num ecrã com menos de 768 px só os
   painéis essenciais abrem; os outros começam fechados. A regra está em

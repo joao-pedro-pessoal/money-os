@@ -5,6 +5,7 @@ import { useTheme } from "./ThemeContext";
 import { useNav } from "./NavContext";
 import AlertBell from "./AlertBell";
 import type { Alert } from "@/lib/alerts/rules";
+import { useLanguage } from "./LanguageContext";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -37,6 +38,7 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
   const { hidden, toggle } = usePrivacy();
   const { mode, toggleMode } = useTheme();
   const { open, setOpen } = useNav();
+  const { t } = useLanguage();
 
   return (
     <div className="app-topbar flex items-center gap-2 px-4 md:px-8 pt-4 md:pt-6">
@@ -52,7 +54,7 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
         <button
           onClick={() => setOpen(!open)}
           className="icon-btn"
-          aria-label="Open menu"
+          aria-label={t.openMenu}
           aria-expanded={open}
           aria-controls="app-nav"
         >
@@ -62,7 +64,7 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
         </button>
       </div>
 
-      <div className="flex-1" />
+      <div className="flex-1 min-w-0"><span className="mobile-brand">Money OS</span></div>
       {quickEntry}
 
       {/* Only rendered when there is something to say; see AlertBell. */}
@@ -71,16 +73,16 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
       <button
         onClick={toggle}
         className="icon-btn"
-        aria-label={hidden ? "Show values" : "Hide values (Privacy Mode)"}
-        title={hidden ? "Show values" : "Hide values (Privacy Mode)"}
+        aria-label={hidden ? t.showValues : t.hideValues}
+        title={hidden ? t.showValues : t.hideValues}
       >
         <EyeIcon open={!hidden} />
       </button>
       <button
         onClick={toggleMode}
         className="icon-btn"
-        aria-label={mode === "light" ? "Switch to dark" : "Switch to light"}
-        title={mode === "light" ? "Switch to dark" : "Switch to light"}
+        aria-label={mode === "light" ? t.switchDark : t.switchLight}
+        title={mode === "light" ? t.switchDark : t.switchLight}
       >
         <SunMoonIcon light={mode === "light"} />
       </button>

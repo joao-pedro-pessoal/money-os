@@ -11,6 +11,7 @@ import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Section from "@/components/Section";
 import Link from "next/link";
+import FilterLink from "@/components/FilterLink";
 
 const STATUS_COLOR: Record<string, string> = {
   under: "var(--green)",
@@ -47,15 +48,15 @@ export default async function BudgetsPage({
         {/* Each budget has its own cycle now, so stepping moves every one of
             them by one of its own periods rather than by a shared month. */}
         <div className="flex items-center gap-2 text-sm">
-          <Link href={`/budgets?offset=${offset - 1}`} className="btn">
+          <FilterLink href={`/budgets?offset=${offset - 1}`} className="btn" aria-label="Previous budget period">
             ←
-          </Link>
+          </FilterLink>
           <span className="text-xs text-[var(--muted)] min-w-[7rem] text-center">
             {offset === 0 ? "Current period" : `${Math.abs(offset)} period${Math.abs(offset) === 1 ? "" : "s"} ${offset < 0 ? "back" : "ahead"}`}
           </span>
-          <Link href={`/budgets?offset=${offset + 1}`} className="btn">
+          <FilterLink href={`/budgets?offset=${offset + 1}`} className="btn" aria-label="Next budget period">
             →
-          </Link>
+          </FilterLink>
         </div>
       </div>
 
@@ -148,7 +149,7 @@ export default async function BudgetsPage({
                   )}
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="budget-actions flex items-center gap-3 flex-wrap min-w-0">
                   <form action={setBudgetRollover}>
                     <input type="hidden" name="id" value={b.id} />
                     <input type="hidden" name="rollover" value={String(!b.rollover)} />
@@ -177,7 +178,8 @@ export default async function BudgetsPage({
                       step="0.01"
                       min="0"
                       defaultValue={b.limit}
-                      className="input input-narrow text-xs py-1 w-24"
+                      className="input input-narrow budget-limit text-xs py-1"
+                      aria-label={`Limit for ${b.name}`}
                     />
                     <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
                       Save

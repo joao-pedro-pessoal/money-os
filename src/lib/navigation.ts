@@ -10,6 +10,20 @@
  *   2. Screens that answer the same question share one entry and use tabs.
  */
 
+/** Shared by the full menu and the phone's shortcuts, including sibling tabs. */
+export function isNavigationActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  const ownedBy: Record<string, string[]> = {
+    "/analytics": ["/statistics", "/money-map"],
+    "/accounts": ["/interest", "/liabilities"],
+    "/investments": ["/positions", "/connections"],
+    "/transactions": ["/import"],
+  };
+  return [href, ...(ownedBy[href] ?? [])].some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
+
 export const ANALYTICS_TABS = [
   { href: "/analytics", label: "Overview" },
   { href: "/analytics/spending", label: "Where it goes" },

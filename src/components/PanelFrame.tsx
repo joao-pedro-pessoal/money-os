@@ -2,7 +2,8 @@
 
 import { useEffect, useId, useRef, useState, type HTMLAttributes, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { PHONE_QUERY, startsCollapsed } from '@/lib/ui/panels';
+import { startsCollapsed } from '@/lib/ui/panels';
+import { useMobileMode } from './MobileMode';
 
 export default function PanelFrame({ as: Element = 'div', persistKey, title, summary, defaultOpen = true, essential = false, children, className, ...props }:
   HTMLAttributes<HTMLElement> & { as?: 'div' | 'section' | 'article'; persistKey: string; title?: string; summary?: ReactNode; defaultOpen?: boolean;
@@ -12,6 +13,7 @@ export default function PanelFrame({ as: Element = 'div', persistKey, title, sum
   // HTMLElement subtypes, and the only use here is querySelector.
   const root = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const { simple, phone } = useMobileMode();
   const bodyId = useId();
   const [collapsed, setCollapsed] = useState(!defaultOpen);
   // Until the saved choice and the screen width have been read, a phone keeps a
@@ -25,10 +27,9 @@ export default function PanelFrame({ as: Element = 'div', persistKey, title, sum
     const heading = content?.querySelector('h1,h2,h3,h4,h5,h6,.font-medium,.uppercase');
     const nextLabel = title ?? heading?.textContent?.trim().slice(0, 80) ?? 'Panel';
     setLabel(nextLabel || 'Panel');
-    storageKey.current = `money-os:panel:${pathname}:${persistKey}:${nextLabel}`;
+    storageKey.current = `money-os:panel:${pathname}:${persistKey}:${nextLabel}${simple ? ':simple' : ''}`;
     let saved: string | null = null;
     try { saved = localStorage.getItem(storageKey.current); } catch { /* Storage is optional. */ }
-    const phone = window.matchMedia(PHONE_QUERY).matches;
     setCollapsed(startsCollapsed({ saved, defaultOpen, phone, essential }));
     setReady(true);
     const handle = (event: Event) => {
@@ -39,7 +40,7 @@ export default function PanelFrame({ as: Element = 'div', persistKey, title, sum
     };
     window.addEventListener('money-os:panels', handle);
     return () => window.removeEventListener('money-os:panels', handle);
-  }, [pathname, persistKey, title, defaultOpen, essential]);
+  }, [pathname, persistKey, title, defaultOpen, essential, simple, phone]);
   function toggle() {
     const next = !collapsed;
     setCollapsed(next);
@@ -51,7 +52,7 @@ export default function PanelFrame({ as: Element = 'div', persistKey, title, sum
       aria-expanded={!collapsed} aria-controls={bodyId} title={collapsed ? 'Expand panel' : 'Minimize panel'} onClick={toggle}>
       <span aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
     </button>
-    {(title || collapsed) && <div className="panel-heading text-sm font-medium pr-8">{title ?? label}{summary && <span className="ml-3 text-xs text-[var(--muted)]">{summary}</span>}</div>}
+    {(title || collapsed) && <div className="panel-heading text-sm font-medium pr-8"><button type="button" className="panel-heading-button" onClick={toggle} aria-expanded={!collapsed} aria-controls={bodyId}>{title ?? label}</button>{summary && <span className="panel-summary ml-3 text-xs text-[var(--muted)]">{summary}</span>}</div>}
     <div id={bodyId} data-panel-content="" style={{ display: collapsed ? 'none' : 'contents' }}>
       {children}
     </div>

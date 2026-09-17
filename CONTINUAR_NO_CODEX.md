@@ -1,5 +1,8 @@
 # Continuar o Money OS no Codex local
 
+> **Tarefas e estado atual:** [TAREFAS.md](TAREFAS.md) é a lista única do projeto.
+> Esta passagem de trabalho mantém o contexto e os caminhos do ambiente; registos antigos devem ser lidos com a sua data.
+
 ## Objetivo do utilizador
 
 Usar o site existente como base para a aplicação móvel, mantendo o design,
@@ -15,16 +18,11 @@ funcionalidades. No telemóvel cada página abre só com o essencial (painéis
 telemóvel no `CLAUDE.md`. O caminho B — o site a correr no telemóvel, com os dados
 cifrados só lá — continua descrito no `docs/PLANO_MOBILE.md`, com `mobile/` como base.
 
-O requisito inicial era armazenamento exclusivamente no dispositivo. Depois, o
-utilizador propôs contas e sincronização PC/telemóvel, com login apenas Google
-e Apple. Registar essa nova direção; autenticação, isolamento entre utilizadores
-e sincronização ainda não foram implementados. O site atual é single-user.
-Encriptação ponta a ponta com chaves das corretoras no dispositivo foi discutida
-como proposta, não é uma propriedade atual da sincronização. Projetar recuperação
-e ligação de dispositivos antes de afirmar que essa proteção está disponível.
-
-Backlog: registo rápido de despesas/receitas, widget e ações em notificações,
-formulário compacto, offline, sincronização sem duplicados e desfazer.
+A evolução futura está descrita em `docs/PLANO_MOBILE.md`. O site financeiro
+continua single-user, mas o cofre móvel já tem implementação parcial de login
+por email, armazenamento cifrado e sincronização manual. A integração com a
+experiência atual ainda não está concluída. Ver a secção 4 de
+[TAREFAS.md](TAREFAS.md) para o estado consolidado.
 
 ## Código e estado
 
@@ -83,18 +81,12 @@ nativa de SQLCipher/biometria.
 
 ## Próximo trabalho
 
-Atualizado a 13 de setembro de 2026. A junção com o `main`, a inventariação dos
-ecrãs e a primeira versão da app Android já estão feitas.
+Consultar apenas [TAREFAS.md](TAREFAS.md): a secção 2 trata da aplicação atual e
+a secção 4 da evolução futura. O caminho B só avança quando for pedido.
 
-1. Recolher do utilizador as páginas que ainda parecem cheias no telemóvel e
-   ajustá-las com `essential` e `MobileFold`, sem retirar funcionalidades.
-2. Testar a app Android num telemóvel real: importar um ficheiro, exportar para
-   Transferências, o gesto de voltar e o ecrã "Sem ligação".
-3. Antes de o site sair da rede de casa: https e limite de tentativas no login.
-4. Caminho B só quando o utilizador o pedir (ver `docs/PLANO_MOBILE.md`).
-5. Usar os comandos locais para investigar erros e testar no emulador sempre
-   que possível. Pedir ao utilizador apenas interação que exija a sua presença,
-   como iniciar sessão ou desbloquear o telemóvel.
+Usar os comandos locais para investigar erros e testar no emulador sempre que
+possível. Pedir ao utilizador apenas interação que exija a sua presença, como
+iniciar sessão ou desbloquear o telemóvel.
 
 Comunicar em português simples e distinguir trabalho concluído, propostas e
 dependências por configurar. O Codex local não recebe automaticamente esta conversa.

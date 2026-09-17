@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import { useState, useTransition } from "react";
 import { planDistribution } from "@/actions/distribute";
 import { STRATEGIES, type Strategy, type Share } from "@/lib/accounting/distribute";
@@ -168,7 +171,7 @@ export default function Distributor({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap text-xs">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
                 <thead>
                   <tr>
                     <th>Move</th>
@@ -192,7 +195,7 @@ export default function Distributor({
                     </tr>
                   ))}
                 </tbody>
-              </table></div>
+              </ResponsiveTable></div>
             </div>
           )}
 

@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { getDividendOverview } from "@/actions/dividends";
 import { Money } from "@/components/PrivacyContext";
 import Section from "@/components/Section";
@@ -80,7 +81,7 @@ export default async function DividendsPage() {
                 Where these figures come from
                 {o.crossCheckOnly > 0 && ` · ${o.crossCheckOnly} record${o.crossCheckOnly === 1 ? "" : "s"} held back as a duplicate`}
               </summary>
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table text-xs mt-3">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table text-xs mt-3">
                 <thead>
                   <tr>
                     <th>Account</th>
@@ -101,7 +102,7 @@ export default async function DividendsPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table></div>
+              </ResponsiveTable></div>
               <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed">
                 A payment held in two places is counted once, from the source above. The other
                 copy is kept rather than deleted, so a disagreement between a broker&apos;s own
@@ -147,7 +148,7 @@ export default async function DividendsPage() {
               internally and never appear here, which is not the same as paying nothing.
             </p>
             <div className="overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
                 <thead>
                   <tr>
                     <th>Instrument</th>
@@ -193,7 +194,7 @@ export default async function DividendsPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table></div>
+              </ResponsiveTable></div>
             </div>
             <p className="text-[10px] text-[var(--muted)] mt-2">
               Yield is what was actually paid over the last twelve months against today&apos;s
@@ -242,7 +243,7 @@ export default async function DividendsPage() {
             }
           >
             <div className="overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
                 <thead>
                   <tr>
                     <th>Paid on</th>
@@ -272,7 +273,7 @@ export default async function DividendsPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table></div>
+              </ResponsiveTable></div>
             </div>
             <p className="text-[10px] text-[var(--muted)] mt-2">
               &quot;Per share&quot; is gross, in the instrument&apos;s own currency. The amount is

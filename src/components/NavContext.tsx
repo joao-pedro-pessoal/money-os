@@ -61,7 +61,7 @@ export function NavProvider({ children }: { children: React.ReactNode }) {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousInert = content.inert;
     const previous = document.body.style.overflow;
-    const controls = () => Array.from(panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled])"))
+    const controls = () => Array.from(panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), input:not([disabled])"))
       .filter((element) => element.getClientRects().length > 0);
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-modal", "true");

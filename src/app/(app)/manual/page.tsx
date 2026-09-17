@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import Link from "next/link";
 import Section from "@/components/Section";
 import PanelFrame from "@/components/PanelFrame";
@@ -278,7 +279,7 @@ export default function ManualPage() {
           </p>
 
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table" style={{ minWidth: 560 }}>
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table" style={{ minWidth: 560 }}>
               <colgroup>
                 <col style={{ width: "22%" }} />
                 <col style={{ width: "40%" }} />
@@ -308,7 +309,7 @@ export default function ManualPage() {
                   <td>Enter the total, then say how much is invested; the rest is cash</td>
                 </tr>
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
 
           <Note label="If you get this wrong" tone="stop">
@@ -409,16 +410,21 @@ export default function ManualPage() {
           </p>
         </Entry>
 
-        <Entry id="analytics" title="Analytics and Trends" where="Sidebar → Analytics · two tabs">
+        <Entry id="analytics" title="Analytics and Trends" where="Sidebar → Analytics · three tabs">
           <p>
             <strong className="text-[var(--foreground)]">Overview</strong> shows where your money
             is, by place, and what it is for, by purpose.
           </p>
           <p>
-            <strong className="text-[var(--foreground)]">Trends &amp; projections</strong> looks
-            forward: average spending over the last three complete months,
-            average saving, and how long you would last. Three months rather than
-            one, because a single large purchase distorts a single month.
+            <strong className="text-[var(--foreground)]">Where it goes</strong> shows spending.
+            Choose a period, then open Filters for accounts, categories, merchants or custom dates.
+          </p>
+          <p>
+            <strong className="text-[var(--foreground)]">Trends &amp; projections</strong> has two views.
+            Your progress explains recorded cash flow and changes in net worth. Average monthly
+            spending and surplus use up to three recorded months, with the period shown beside them.
+            Future scenarios lets you choose monthly saving, a time horizon and an assumed return.
+            These examples do not change your records or predict actual returns.
           </p>
         </Entry>
       </Part>
@@ -439,7 +445,7 @@ export default function ManualPage() {
           </p>
 
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table" style={{ minWidth: 560 }}>
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table" style={{ minWidth: 560 }}>
               <colgroup>
                 <col style={{ width: "20%" }} />
                 <col style={{ width: "34%" }} />
@@ -479,7 +485,7 @@ export default function ManualPage() {
                   <td>No public API. See <a href="#import" style={{ color: "var(--accent)" }}>Importing statements</a>.</td>
                 </tr>
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
 
           <Note label="Secrets">
@@ -498,7 +504,7 @@ export default function ManualPage() {
           </p>
 
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
               <tbody>
                 <tr><td className="whitespace-nowrap">Portfolio Value</td><td>Everything, at the capital you actually committed</td></tr>
                 <tr><td className="whitespace-nowrap">Unrealized P&amp;L</td><td>Profit <strong>on paper</strong>, measured against cost</td></tr>
@@ -506,7 +512,7 @@ export default function ManualPage() {
                 <tr><td className="whitespace-nowrap">Cash &amp; stablecoins</td><td>The part whose price cannot</td></tr>
                 <tr><td className="whitespace-nowrap">Realized P&amp;L</td><td>Money that <strong>arrived</strong>: closed sales, dividends, interest</td></tr>
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
 
           <p>
@@ -566,14 +572,14 @@ export default function ManualPage() {
           </p>
 
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
               <tbody>
                 <tr><td className="whitespace-nowrap">Realised result over time</td><td>What closed trades made, what fees cost, and what is left</td></tr>
                 <tr><td className="whitespace-nowrap">Result by instrument</td><td>Ranked on net — after fees</td></tr>
                 <tr><td className="whitespace-nowrap">How often you trade</td><td>Trades per month, and the hour of day they land</td></tr>
                 <tr><td className="whitespace-nowrap">How long you hold</td><td>Winners against losers, as medians</td></tr>
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
 
           <Note label="Read the fees line" tone="care">

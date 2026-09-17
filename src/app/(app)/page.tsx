@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { listAccountsWithState } from "@/actions/accounts";
 import { listTransactions } from "@/actions/transactions";
 import { getNetWorth } from "@/actions/networth";
@@ -23,6 +24,8 @@ import { getFavouriteCurrencies, getDashboardCurrency } from "@/actions/settings
 import { resolveDisplayCurrency } from "@/lib/fx/favourites";
 import CurrencySwitch from "@/components/CurrencySwitch";
 import Explain from "@/components/Explain";
+import SimpleOverview from "@/components/SimpleOverview";
+import MobileFold from "@/components/MobileFold";
 
 export default async function DashboardPage({
   searchParams,
@@ -40,7 +43,8 @@ export default async function DashboardPage({
   const [{ currency: requestedCurrency }, favouriteCurrencies, savedDashboardCurrency] =
     await Promise.all([searchParams, getFavouriteCurrencies(), getDashboardCurrency()]);
   const accounts = await listAccountsWithState();
-  const recentTx = (await listTransactions(8)).rows;
+  const recentTxData = await listTransactions(8);
+  const recentTx = recentTxData.rows;
   // Every money total on this page comes from one place — see
   // src/lib/accounting/networth.ts for why.
   const nw = await getNetWorth();
@@ -263,9 +267,10 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 min-[390px]:grid-cols-2 lg:grid-cols-5 gap-4">
+      <SimpleOverview>
         <StatCard
           label="Net Worth"
+          simpleLabel="Net worth"
           value={inDisplay(nw.total)}
           floating={inDisplay(nw.floating)}
           pnl={{
@@ -287,8 +292,10 @@ export default async function DashboardPage({
             "A position with no price yet, and a synced exchange balance with no record of what it cost, cannot produce a gain. Those are left out and counted rather than added as zero, and the card says so when there are any.",
           ]}
         />
+        <div className="overview-secondary">
         <StatCard
           label="Investments"
+          simpleLabel="Investments"
           value={inDisplay(nw.portfolio)}
           floating={inDisplay(nw.floating)}
           pnl={{
@@ -303,8 +310,10 @@ export default async function DashboardPage({
             "The figure in parentheses is the unrealised gain or loss against what these cost. The amber figure below is the part a market can move — for this card, usually all of it.",
           ]}
         />
+        </div>
         <StatCard
           label="Free Cash"
+          simpleLabel="Available to spend"
           value={totalFree}
           currency={base}
           explain={[
@@ -320,8 +329,10 @@ export default async function DashboardPage({
                 : undefined
           }
         />
+        <div className="overview-secondary">
         <StatCard
           label="Allocated Cash"
+          simpleLabel="Reserved money"
           value={inDisplay(totalAllocated)}
           currency={base}
           explain={[
@@ -329,8 +340,10 @@ export default async function DashboardPage({
             "Nothing has moved. The money is still in the same account; this only records that it is spoken for, which is why it comes out of Free Cash.",
           ]}
         />
+        </div>
         <StatCard
           label="Net Cash Flow (month)"
+          simpleLabel="Monthly cash flow"
           value={inDisplay(income - expenses)}
           currency={base}
           explain={[
@@ -339,7 +352,14 @@ export default async function DashboardPage({
             "It does not include gains or losses on what you hold. That is a change in what things are worth, not money arriving.",
           ]}
         />
-      </div>
+      </SimpleOverview>
+
+      <nav className="simple-only simple-dashboard-actions" aria-label="Tarefas do dia a dia">
+        <Link href="/accounts">View accounts <span aria-hidden="true">→</span></Link>
+        <Link href="/transactions">View transactions <span aria-hidden="true">→</span></Link>
+        <Link href="/budgets">Budgets <span aria-hidden="true">→</span></Link>
+        <Link href="/savings">Savings <span aria-hidden="true">→</span></Link>
+      </nav>
 
       {subs.activeCount > 0 && (
         <div className="card p-3 text-xs flex items-center justify-between gap-3 flex-wrap">
@@ -387,6 +407,7 @@ export default async function DashboardPage({
         </div>
       )}
 
+      <MobileFold simpleOnly title="Details, charts and goals" persistKey="simple-dashboard-details" className="space-y-8">
       {/* Open by default: this is the shape of the whole thing at a glance. */}
       <Section
         title="Net worth over time"
@@ -518,10 +539,7 @@ export default async function DashboardPage({
           </>
         }
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="min-w-0">
-            <AccountsCard accounts={accountRows} />
-          </div>
+        <div className="grid grid-cols-1 gap-6">
           <div className="min-w-0">
             <DonutChart
               data={composition
@@ -529,12 +547,17 @@ export default async function DashboardPage({
                 .map((c) => ({ name: c.name, value: c.composition.total }))}
             />
           </div>
+          <div className="min-w-0">
+            <AccountsCard accounts={accountRows} />
+          </div>
         </div>
       </Section>
 
-      <Section title="Recent transactions" summary={`${recentTx.length} shown`}>
+      <Section title="Recent transactions" summary={`${recentTx.length} shown · ${recentTxData.baseCurrency}`}>
+        {recentTxData.approximate && <p className="text-xs text-[var(--muted)] mb-3">Converted amounts use current exchange rates.</p>}
+        {recentTxData.unconverted.length > 0 && <p className="text-xs text-[var(--amber)] mb-3">{recentTxData.unconverted.length} transaction(s) omitted because an exchange rate is missing. See all transactions for details.</p>}
         <div className="overflow-x-auto" role="region" aria-label="Recent transactions" tabIndex={0}>
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -548,17 +571,18 @@ export default async function DashboardPage({
                 <td>{new Date(t.date).toLocaleDateString("pt-PT")}</td>
                 <td>{t.description || t.categoryName || t.type}</td>
                 <td>
-                  <Money value={Number(t.amount)} />
+                  <Money value={Number(t.amount)} currency={recentTxData.baseCurrency} />
                 </td>
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </ResponsiveTable></div>
         </div>
         <Link href="/transactions" className="text-xs text-[var(--accent)] block pt-3">
           All transactions →
         </Link>
       </Section>
+      </MobileFold>
     </div>
   );
 }
@@ -579,6 +603,7 @@ export default async function DashboardPage({
  */
 function StatCard({
   label,
+  simpleLabel,
   value,
   floating,
   pnl,
@@ -587,6 +612,7 @@ function StatCard({
   explain,
 }: {
   label: string;
+  simpleLabel?: string;
   value: number;
   floating?: number;
   pnl?: { value: number; costUnknown: number };
@@ -606,7 +632,7 @@ function StatCard({
 
   const card = (
     <div className="card p-4 h-full">
-      <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
+      <div className="text-xs text-[var(--muted)] mb-1"><span className={simpleLabel ? "complex-visible" : undefined}>{label}</span>{simpleLabel && <span className="simple-only">{simpleLabel}</span>}</div>
       <div className="text-xl font-semibold">
         <Money value={value} currency={currency} />
         {showPnl && (

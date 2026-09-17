@@ -1,5 +1,8 @@
 # Revisão dos dados restaurados
 
+> **Tarefas e estado atual:** [TAREFAS.md](../TAREFAS.md) é a lista única do projeto.
+> Este documento preserva a análise dos dados restaurados. As decisões e correções ainda abertas são acompanhadas em A02/A03/A08; as conclusões antigas de resolução não descrevem a auditoria atual.
+
 Este documento regista as decisões pendentes do passo 2. A auditoria é
 executada na base local e não altera automaticamente o histórico.
 

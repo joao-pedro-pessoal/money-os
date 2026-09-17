@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listAllPositions,
   listBalances,
@@ -178,7 +179,7 @@ export default async function PositionsPage() {
           summary={`${balances.length} ${balances.length === 1 ? "coin" : "coins"}`}
         >
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
                   <th>Coin</th>
@@ -312,7 +313,7 @@ export default async function PositionsPage() {
                   </Fragment>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         </Section>
       )}
@@ -340,7 +341,7 @@ export default async function PositionsPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
               <thead>
                 <tr>
                   <th>Symbol</th>
@@ -428,7 +429,7 @@ export default async function PositionsPage() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
 
           <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">
@@ -492,7 +493,7 @@ export default async function PositionsPage() {
             summary={`${positions.length} open`}
           >
             <div className="overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
                 <thead>
                   <tr>
                     <th>Coin</th>
@@ -627,7 +628,7 @@ export default async function PositionsPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table></div>
+              </ResponsiveTable></div>
             </div>
           </Section>
         </>

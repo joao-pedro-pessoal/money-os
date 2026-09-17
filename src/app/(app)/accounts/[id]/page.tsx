@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { getAccount, getAccountSnapshots, updateAccountBalance, updateAccount, archiveAccount } from "@/actions/accounts";
 import { listBucketsWithTotals, setAllocation } from "@/actions/buckets";
 import { Money } from "@/components/PrivacyContext";
@@ -10,6 +11,7 @@ import BalanceMeaningField from "@/components/BalanceMeaningField";
 import { meaningOf } from "@/lib/accounting/balanceScope";
 import { eligibleCash } from "@/lib/accounting";
 import Section from "@/components/Section";
+import AccountViews from "@/components/AccountViews";
 
 export default async function AccountDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -82,7 +84,9 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="space-y-8">
+    <AccountViews
+      overview={
+        <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="text-xs text-[var(--muted)]">{account.institution}</div>
@@ -206,6 +210,21 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
         </Section>
       )}
 
+      </div>}
+      manage={
+        <div className="space-y-6">
+      <Section title="Account actions" summary="Archive this account" defaultOpen>
+        <p className="text-xs text-[var(--muted)] mb-3">
+          Archiving keeps the history and transactions, but removes the account from active totals and lists.
+        </p>
+        <form action={archiveAccount}>
+          <input type="hidden" name="id" value={account.id} />
+          <ConfirmSubmitButton
+            label={account.active ? "Archive account" : "Account archived"}
+            confirmMessage={`Archive "${account.name}"? Its history stays intact, it just leaves the active lists.`}
+          />
+        </form>
+      </Section>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section title="Update balance (reconciliation)" defaultOpen>
           <form action={updateAccountBalance} className="space-y-3">
@@ -244,7 +263,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
         </Section>
 
         <Section title="Bucket allocations" defaultOpen>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table mb-4">
+          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table mb-4">
             <thead>
               <tr>
                 <th>Bucket</th>
@@ -261,7 +280,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
                 </tr>
               ))}
             </tbody>
-          </table></div>
+          </ResponsiveTable></div>
           <form action={setAllocation} className="space-y-3">
             <input type="hidden" name="accountId" value={account.id} />
             <select name="bucketId" className="input" required>
@@ -365,6 +384,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
           </button>
         </form>
       </Section>
-    </div>
+        </div>}
+    />
   );
 }

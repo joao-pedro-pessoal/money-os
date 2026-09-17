@@ -2,6 +2,7 @@
 
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { usePrivacy } from "./PrivacyContext";
+import { fmt } from "@/lib/format";
 
 export default function NetWorthChart({
   data,
@@ -55,7 +56,7 @@ export default function NetWorthChart({
                 color: "var(--foreground)",
               }}
               formatter={(value) =>
-                new Intl.NumberFormat("pt-PT", { style: "currency", currency }).format(Number(value))
+                fmt(Number(value), currency)
               }
             />
           )}

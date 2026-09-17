@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import AssetSearch from "@/components/AssetSearch";
 import { listWatchlist, addWatchlistItem, deleteWatchlistItem, listPlaylists } from "@/actions/playlists";
 import { Money } from "@/components/PrivacyContext";
@@ -29,7 +30,7 @@ export default async function WatchlistPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
                   <th>Symbol</th>
@@ -83,7 +84,7 @@ export default async function WatchlistPage() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         )}
       </div>

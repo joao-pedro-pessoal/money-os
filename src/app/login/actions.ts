@@ -4,6 +4,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { checkPassword, expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
 
+export async function logout() {
+  const store = await cookies();
+  store.delete(SESSION_COOKIE_NAME);
+  redirect("/login");
+}
+
 export async function login(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const ok = await checkPassword(password);

@@ -49,6 +49,11 @@ exact mistake it spends a section warning about.
 
 ## Before you start
 
+`TAREFAS.md` is the single task/status list. Read it before choosing work and
+update it when tasks change. Other documents preserve technical details and
+dated history; do not create competing pending-task lists there. An old
+"resolved" note does not override a current audit finding.
+
 Two things orient faster than reading the rest of this file.
 
 Run `npm run audit`. It checks the invariants below against the real database
@@ -433,6 +438,13 @@ it** — decide, don't leave it to the default. Blocks that are not panels (a ch
 an audit, a form the + button covers) fold with `MobileFold`, which draws nothing of
 its own on a computer.
 
+`MobileMode` adds a device-local simple mode below 768px; the default complex
+mode is the existing phone interface. The root script reads `moneyos_mobile_mode`
+before paint. Simple panel/fold choices append `:simple` to the existing storage
+keys; desktop and complex mode keep the original keys. `MobileFold simpleOnly`
+must show its body in complex mode and on desktop even when its saved state is
+closed. Mode changes change visibility, never financial values or stored data.
+
 ## Never add two amounts without converting first
 
 Every table that holds money holds a currency beside it: `transactions.currency`,
@@ -545,6 +557,12 @@ utility. Before assuming a Tailwind class is winning against something in
 which rules sit inside `@layer` and which do not. That check is what turned this
 from a plausible theory into a verified one.
 
+Production optimization can also merge selectors with `:is()`. Keep the
+empty `MobileFold` wrapper selector inside `:where()`: without it, its `:has()`
+specificity was inherited by the merged `display:none` rule and hid every
+phone fold button, even though the development CSS showed them. Verify phone
+controls in a production build as well as the development server.
+
 ## A control that changes the view must not scroll it away
 
 Next resets scroll on every navigation. That is right when you are going
@@ -570,6 +588,14 @@ own query builder, so a parameter added later is carried without anyone
 remembering to add a hidden input for it.
 
 ## Nested tables cannot align with the table they sit in
+
+Use `components/ResponsiveTable` for data tables. It preserves the same rows and
+values on desktop and adds labels from the rendered headers for compact phone
+records. Single-row headers with more than three columns become records; small
+tables wrap in place. Keep group totals in the same table with correct `colSpan`
+so their labels still match after columns are hidden. Verify internal horizontal
+scroll containers with panels expanded, not just the document width. The web UI,
+including the Simple and Complex modes, must be in English.
 
 A `<table>` sizes its columns from its own content. The analysis page's group
 detail was a nested table inside a `colSpan` cell, so its Value could never line
@@ -712,6 +738,15 @@ Seeds are idempotent by slug. Re-running one must add what's missing and
 overwrite nothing the user edited.
 
 ## Verify before saying it works
+
+Never run `next build` into `.next` while a `next start` process is serving that
+directory, including the user's site on port 3000. The running server retains
+old asset names while the build replaces the files, producing CSS/JS 404s and
+an unstyled page. Stop the verified Money OS servers before rebuilding, restart
+the user's server afterward, and check its stylesheet URLs return 200 on the
+actual user-facing port. Checking only a preview port does not verify the site.
+UI changes requested for the phone must stay below 768px; preserve the desktop
+layout and verify both sizes.
 
 ```
 npx tsc --noEmit

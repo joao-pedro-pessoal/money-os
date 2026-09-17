@@ -75,44 +75,23 @@ export default function TimeSeriesCard({
         {action}
       </div>
 
-      <div className="flex gap-3 flex-wrap items-center mb-3">
-        <div className="flex gap-1 flex-wrap">
-          {RANGES.filter((r) => r.value !== "custom").map((r) => (
-            <button
-              key={r.value}
-              type="button"
-              onClick={() => pickRange(r.value)}
-              className="badge border text-[10px]"
-              style={{
-                borderColor: range === r.value ? "var(--accent)" : "var(--border)",
-                color: range === r.value ? "var(--accent)" : "var(--muted)",
-              }}
-            >
-              {r.label}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => pickRange("custom")}
-            className="badge border text-[10px]"
-            style={{
-              borderColor: range === "custom" ? "var(--accent)" : "var(--border)",
-              color: range === "custom" ? "var(--accent)" : "var(--muted)",
-            }}
-          >
-            Custom
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1 ml-auto">
-          <span className="text-[10px] text-[var(--muted)]">Every</span>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <label className="min-w-0 text-xs text-[var(--muted)]">
+          Period
+          <select aria-label="Chart period" value={range} onChange={(e) => pickRange(e.target.value as RangeKey)} className="input w-full mt-1">
+            {RANGES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+        </label>
+        <label className="min-w-0 text-xs text-[var(--muted)]">
+          Group points by
           <select
+            aria-label="Group chart points by"
             value={bucket}
             onChange={(e) => {
               setBucket(e.target.value as Bucket);
               setTouchedBucket(true);
             }}
-            className="input input-narrow text-xs py-0.5"
+            className="input w-full mt-1"
           >
             {BUCKETS.map((b) => (
               <option key={b.value} value={b.value}>
@@ -120,24 +99,27 @@ export default function TimeSeriesCard({
               </option>
             ))}
           </select>
-        </div>
+        </label>
       </div>
 
       {range === "custom" && (
-        <div className="flex gap-2 items-center mb-3 text-xs">
+        <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+          <label className="min-w-0">From
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="input input-narrow text-xs py-1"
+            className="input w-full min-w-0 mt-1"
           />
-          <span className="text-[var(--muted)]">to</span>
+          </label>
+          <label className="min-w-0">To
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="input input-narrow text-xs py-1"
+            className="input w-full min-w-0 mt-1"
           />
+          </label>
         </div>
       )}
 

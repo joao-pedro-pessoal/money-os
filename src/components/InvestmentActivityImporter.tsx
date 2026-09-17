@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import { useMemo, useState } from "react";
 import Papa from "papaparse";
 import {
@@ -294,7 +297,7 @@ export default function InvestmentActivityImporter({
               {invalid > 0 ? <span className="text-[var(--red)]">{invalid} unreadable</span> : null}
             </div>
             <div className="overflow-auto max-h-80 border border-[var(--border)] rounded-lg">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap text-xs">
+              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
                 <thead><tr><th>Date</th><th>Type</th><th>Asset</th><th>Description</th><th className="text-right">Amount</th><th>Status</th></tr></thead>
                 <tbody>
                   {preview.slice(0, 200).map((item, index) => {
@@ -311,7 +314,7 @@ export default function InvestmentActivityImporter({
                     );
                   })}
                 </tbody>
-              </table></div>
+              </ResponsiveTable></div>
             </div>
             <button type="button" className="btn w-full" disabled={busy || importable.length === 0} onClick={doImport} style={busy || importable.length === 0 ? { opacity: 0.5 } : undefined}>
               {busy ? "Importing…" : `Import ${importable.length} events`}

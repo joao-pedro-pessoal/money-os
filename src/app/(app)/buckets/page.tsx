@@ -1,3 +1,4 @@
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { listBucketsWithTotals, createBucket, addToAllocation } from "@/actions/buckets";
 import { listAccountsWithState } from "@/actions/accounts";
 import { listPurposes } from "@/actions/purpose";
@@ -146,7 +147,7 @@ export default async function BucketsPage() {
             each goal survives a bad month.
           </p>
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
                   <th>Goal</th>
@@ -202,7 +203,7 @@ export default async function BucketsPage() {
                     </tr>
                   ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         </Section>
       )}

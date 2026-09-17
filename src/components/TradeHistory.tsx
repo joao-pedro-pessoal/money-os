@@ -1,5 +1,8 @@
 "use client";
 
+import ResponsiveTable from "@/components/ResponsiveTable";
+
+
 import { useMemo, useState } from "react";
 import TradeAnalysis from "./TradeAnalysis";
 import TradeEvolutionChart from "./TradeEvolutionChart";
@@ -34,6 +37,10 @@ import Link from "next/link";
 import { isRealisedTrade, matchTradeOpenings } from "@/lib/trading/tradeMatches";
 
 import TradeRowTags from "./TradeRowTags";
+import MobileFold from "./MobileFold";
+import { useMobileMode } from "./MobileMode";
+import { Money } from "./PrivacyContext";
+import type { TradeOpeningMatch } from "@/lib/trading/tradeMatches";
 
 /**
  * The trade history, and every figure about it, over whatever slice is chosen.
@@ -67,6 +74,8 @@ export default function TradeHistory({
   unconvertible: number;
 }) {
   const [filters, setFilters] = useState<TradeFilters>(NO_TRADE_FILTERS);
+  const { phone } = useMobileMode();
+  const [visibleCount, setVisibleCount] = useState(15);
 
   // The filter is generic over the row shape, so the derived-result flag each
   // row carries survives into every figure below without a cast.
@@ -144,20 +153,34 @@ export default function TradeHistory({
   // views, not beside completed trades where they add noise.
   const completedTrades = filtered.filter((row) => row.realizedPnl !== null);
 
-  const set = <K extends keyof TradeFilters>(key: K, value: TradeFilters[K]) =>
+  const set = <K extends keyof TradeFilters>(key: K, value: TradeFilters[K]) => {
+    setVisibleCount(15);
     setFilters((f) => ({ ...f, [key]: value }));
+  };
 
   /** "" is the empty <select> option and means no filter, not a value of "". */
   const pick = (value: string) => (value === "" ? null : value);
 
   return (
-    <div className="space-y-4">
+    <div className="trade-history-view space-y-4">
+      {phone && <div className="trade-history-summary card p-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div><div className="text-xs text-[var(--muted)]">Closed trades</div><div className="text-xl font-semibold">{stats.closedCount}</div></div>
+          <div><div className="text-xs text-[var(--muted)]">Realized P&amp;L</div><div className={`text-xl font-semibold ${toneOf(stats.pnl.at(-1)?.realized ?? 0)}`}><Money value={stats.pnl.at(-1)?.realized ?? 0} currency={currency} /></div></div>
+        </div>
+        {approximate && <p className="text-xs text-[var(--muted)] mt-2">Currency conversions use current rates; historical results are approximate.</p>}
+        {unconvertible > 0 && <p className="text-xs text-[var(--muted)] mt-2">{unconvertible} events excluded: exchange rate unavailable.</p>}
+        {stats.provenance.derived > 0 && <p className="text-xs text-[var(--muted)] mt-2">{stats.provenance.derived} results estimated using average cost.</p>}
+        {active && <div className="mt-2 text-xs"><p>{describing}</p><button className="btn mt-2" onClick={() => { setFilters(NO_TRADE_FILTERS); setVisibleCount(15); }}>Clear filters</button></div>}
+      </div>}
+      <div className="trade-history-filters">
+      <MobileFold title={active ? "Filters (active)" : "Filters"} persistKey="trade-history-filters">
       <section className="card p-4">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
           <div className="text-sm font-medium">Filter</div>
           {active && (
             <button
-              onClick={() => setFilters(NO_TRADE_FILTERS)}
+              onClick={() => { setFilters(NO_TRADE_FILTERS); setVisibleCount(15); }}
               className="text-xs text-[var(--accent)]"
             >
               Clear ({hidden} row{hidden === 1 ? "" : "s"} hidden)
@@ -165,7 +188,7 @@ export default function TradeHistory({
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+        <div className="trade-filter-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
           <Select
             label="Instrument"
             value={filters.symbol ?? ""}
@@ -285,11 +308,16 @@ export default function TradeHistory({
           </p>
         )}
       </section>
+      </MobileFold>
+      </div>
+
+      {/* Calendar, evolution and result by kind of trade open first; every other
+          panel below them starts minimized on a phone. */}
+      <div className="trade-history-charts space-y-4">
+      <TradePnlCalendar rows={filtered} currency={currency} />
 
       <TradeEvolutionChart pnl={stats.pnl} currency={currency} accounts={accountHistory} accountName={filters.accountName}
         from={filters.from} to={filters.to} onAccount={name => set("accountName", name)} />
-
-      <TradePnlCalendar rows={filtered} currency={currency} />
 
       <TradeAnalysis
         pnl={stats.pnl}
@@ -309,16 +337,39 @@ export default function TradeHistory({
         approximate={approximate}
         unconvertible={unconvertible}
       />
+      </div>
 
-      <section className="card p-4">
+      <section className="trade-history-list card p-4">
         <h2 className="text-sm font-medium">
           {active ? "Matching realised trades" : "Individual realised trades"}
         </h2>
         {completedTrades.length === 0 ? (
           <p className="text-sm text-[var(--muted)] py-6 text-center">No events match.</p>
+        ) : phone ? (
+          <div className="space-y-3 mt-3">
+            <p className="text-xs text-[var(--muted)]">Showing {Math.min(visibleCount, completedTrades.length)} of {completedTrades.length} trades</p>
+            {completedTrades.slice(0, visibleCount).map(r => <article key={r.id} className="trade-phone-card">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0"><div className="font-semibold break-words">{r.symbol ? <Link href={`/investments/asset/${encodeURIComponent(r.symbol)}`}>{r.symbol}</Link> : "Unknown asset"}</div><div className="text-xs text-[var(--muted)] break-words">{r.accountName}</div></div>
+                <div className="shrink-0 text-right"><div className={`font-semibold ${toneOf(r.realizedPnl!)}`}><Money value={r.realizedPnl!} currency={currency} /></div><div className="text-[10px] text-[var(--muted)]">Realized P&amp;L</div></div>
+              </div>
+              <div className="text-xs text-[var(--muted)] mt-2">{r.date.slice(0, 10)} · {r.type}</div>
+              <details className="mt-2 text-xs">
+                <summary className="cursor-pointer text-[var(--accent)] py-2">Trade details</summary>
+                <div className="space-y-3 pt-2 break-words">
+                  <p>Closed: {r.date.replace("T", " ").replace("Z", " UTC")}</p>
+                  <p>{r.description ?? "No description"}</p>
+                  <div className="grid grid-cols-2 gap-3"><div>Quantity<br />{r.quantity ?? "Unavailable"}</div><div>Net amount<br /><Money value={r.amount} currency={currency} /></div></div>
+                  <OpeningDetails match={matches.get(r.id)} />
+                  <TradeRowTags id={r.id} classification={r.classification} playlists={playlists} />
+                </div>
+              </details>
+            </article>)}
+            {visibleCount < completedTrades.length && <button type="button" className="btn w-full" onClick={() => setVisibleCount(count => count + 15)}>Show more trades</button>}
+          </div>
         ) : (
           <div className="overflow-auto max-h-[36rem] mt-3">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><table className="data-table whitespace-nowrap text-xs">
+            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -336,17 +387,7 @@ export default function TradeHistory({
                 {completedTrades.map((r) => (
                   <tr key={r.id}>
                     <td>{r.date.replace("T", " ").replace("Z", " UTC")}
-                      <details><summary>Opening details</summary>
-                        <p>{matches.get(r.id)?.method === "broker-summary" ? "Closed position reported by broker."
-                          : matches.get(r.id)?.method === "broker-position" ? "Matched within the broker position ID; quantities allocated in chronological order."
-                          : "FIFO estimate within the same account, connection and instrument."}</p>
-                        {matches.get(r.id)?.brokerPositionId && <p>Broker position ID: {matches.get(r.id)!.brokerPositionId}</p>}
-                        {matches.get(r.id)?.openedAt && <p>Position created: {matches.get(r.id)!.openedAt}</p>}
-                        {matches.get(r.id)?.openings.map(o => <div key={o.id}>{o.date} ? {o.quantity} units</div>)}
-                        {matches.get(r.id)?.method === "broker-summary"
-                          ? <p>Individual opening fills are not supplied in this summary.{!matches.get(r.id)?.openedAt && " Position creation time unavailable."}</p>
-                          : (!matches.get(r.id) || (matches.get(r.id)?.unmatched ?? 0) > 1e-8) && <p>Opening history incomplete or unavailable.</p>}
-                      </details>
+                      <OpeningDetails match={matches.get(r.id)} />
                     </td>
                     <td>{r.accountName}</td>
                     <td>{r.type}</td>
@@ -371,12 +412,27 @@ export default function TradeHistory({
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
         )}
       </section>
     </div>
   );
+}
+
+function OpeningDetails({ match }: { match?: TradeOpeningMatch }) {
+  return <details>
+    <summary className="cursor-pointer py-2">Opening details</summary>
+    <p>{match?.method === "broker-summary" ? "Closed position reported by broker."
+      : match?.method === "broker-position" ? "Matched within the broker position ID; quantities allocated in chronological order."
+      : "FIFO estimate within the same account, connection and instrument."}</p>
+    {match?.brokerPositionId && <p>Broker position ID: {match.brokerPositionId}</p>}
+    {match?.openedAt && <p>Position created: {match.openedAt}</p>}
+    {match?.openings.map(o => <div key={o.id}>{o.date} · {o.quantity} units</div>)}
+    {match?.method === "broker-summary"
+      ? <p>Individual opening fills are not supplied in this summary.{!match.openedAt && " Position creation time unavailable."}</p>
+      : (!match || match.unmatched > 1e-8) && <p>Opening history incomplete or unavailable.</p>}
+  </details>;
 }
 
 function toneOf(amount: number): string {
