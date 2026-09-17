@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getNetWorth } from "@/actions/networth";
 import { getTotalNetWorthOverTime } from "@/actions/analytics";
-import { getAccountComposition, getMonthShape } from "@/actions/dashboard";
-import { downsample, topSlices } from "@/lib/widgets/summary";
+import { getAccountComposition, getMonthShape, getPortfolioItems } from "@/actions/dashboard";
+import { hasPnl, portfolioSummary } from "@/lib/portfolio/positionView";
+import { shortName } from "@/lib/portfolio/shortName";
+import { downsample, topPositions, topSlices } from "@/lib/widgets/summary";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +17,15 @@ export const dynamic = "force-dynamic";
  * the base currency and comes from the same actions the dashboard renders.
  */
 export async function GET() {
-  const [nw, series, composition, month] = await Promise.all([
+  const [nw, series, composition, month, portfolio] = await Promise.all([
     getNetWorth(),
     getTotalNetWorthOverTime(),
     getAccountComposition(),
     getMonthShape(),
+    // The same list and summary the Investments page shows.
+    getPortfolioItems(),
   ]);
+  const invested = portfolioSummary(portfolio.items);
 
   const income = month.flows.income.total;
   const expenses = month.flows.expenses.total;
@@ -36,6 +41,21 @@ export async function GET() {
         composition.map((c) => ({ name: c.name, value: c.composition.total })),
         4
       ),
+      investments: {
+        value: Math.round((invested.floating + invested.stable) * 100) / 100,
+        pnl: invested.pnl,
+        pnlPercent: invested.pnlPercent,
+        count: portfolio.items.length,
+        top: topPositions(
+          portfolio.items.map((i) => ({
+            name: shortName(i.symbol),
+            value: i.value,
+            pnl: i.pnl,
+            measured: hasPnl(i) && !i.costUnknown && !i.atCost,
+          })),
+          3
+        ),
+      },
       month: {
         label: now.toLocaleDateString("en-GB", { month: "long", year: "numeric" }),
         income: Math.round(income * 100) / 100,

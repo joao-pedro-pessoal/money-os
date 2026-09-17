@@ -8,4 +8,9 @@
     <string name="shortcut_expense_long">Registar despesa</string>
     <string name="shortcut_income">Receita</string>
     <string name="shortcut_income_long">Registar receita</string>
+    <string name="widget_dashboard_description">Net worth, this month and the line over time</string>
+    <string name="widget_net_worth_description">Net worth over time, and how far it has moved</string>
+    <string name="widget_where_money_description">Where the money is, as a donut with percentages</string>
+    <string name="widget_cash_flow_description">This month: money in, money out and what is left</string>
+    <string name="widget_investments_description">Portfolio value, unrealized P&amp;L and the largest positions</string>
 </resources>

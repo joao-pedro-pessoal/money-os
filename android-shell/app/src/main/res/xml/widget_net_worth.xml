@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Net worth over time. Refreshed every 30 minutes, the shortest period Android allows. -->
+<!-- Refreshed every 30 minutes, the shortest period Android allows. The preview
+     is a picture with example figures (android-shell/previews): the layout
+     itself has none until it has read them, and showed as an empty dark box. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_net_worth_description"
     android:initialLayout="@layout/widget_money"
-    android:previewLayout="@layout/widget_money"
+    android:previewImage="@drawable/widget_preview_networth"
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:minResizeWidth="160dp"

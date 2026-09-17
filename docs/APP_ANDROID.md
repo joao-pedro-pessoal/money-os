@@ -177,12 +177,18 @@ Settings (`PhoneQuickEntrySettings.tsx`) só aparece dentro da app e usa a ponte
 | **Net worth** | Património, variação desde o início do registo e o gráfico maior | Analytics |
 | **Where the money is** | Donut com os 4 sítios com mais dinheiro, o resto em "Other", e percentagens | Dashboard |
 | **Cash flow** | Saldo do mês, entradas e saídas, e as duas barras | Cash flow |
+| **Investments** (0.4.0) | Valor da carteira, P&L não realizado (e %) e as 3 maiores posições com o seu P&L | Investments |
 
 - Atualizam sozinhos de 30 em 30 minutos (o mínimo que o Android deixa), ao sair da
   app e ao tocar em **↻**.
 - Em baixo dizem de quando são os valores. Fora de casa mostram os últimos valores
   lidos, com a hora ("Offline · figures from …"). Sem sessão: "Open the app and log in".
 - Os valores ficam visíveis no ecrã principal para quem desbloquear o telemóvel.
+- Na lista de widgets cada um aparece com uma imagem de exemplo e uma descrição. Sem
+  isso o launcher desenhava o próprio widget ainda sem valores — uma caixa escura
+  igual para todos. As imagens estão em `res/drawable-nodpi/widget_preview_*.png` e
+  são desenhadas com o Edge a partir de `android-shell/previews/previews.html`
+  (`render-previews.cmd`); ao mudar um widget, mudar também a imagem.
 
 **Definições rápidas** (onde estão a lanterna e o Wi-Fi): puxa o painel até ao fim,
 toca no lápis ✏️ e arrasta para cima:

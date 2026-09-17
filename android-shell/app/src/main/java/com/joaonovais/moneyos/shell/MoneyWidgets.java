@@ -16,7 +16,7 @@ import android.widget.RemoteViews;
 
 /**
  * The home-screen widgets with figures: dashboard, net worth over time, where
- * the money is, and this month's cash flow.
+ * the money is, this month's cash flow, and investments.
  *
  * Each draws from the last figures read (see WidgetData) straight away, then
  * asks the site for new ones. Tapping a widget opens the matching page;
@@ -27,7 +27,7 @@ public final class MoneyWidgets {
     static final String ACTION_REFRESH = "com.joaonovais.moneyos.site.WIDGET_REFRESH";
 
     private static final Class<?>[] ALL = {
-            Dashboard.class, NetWorth.class, WhereMoney.class, CashFlow.class,
+            Dashboard.class, NetWorth.class, WhereMoney.class, CashFlow.class, Investments.class,
     };
 
     private MoneyWidgets() {}
@@ -46,6 +46,10 @@ public final class MoneyWidgets {
 
     public static class CashFlow extends Base {
         @Override int kind() { return 3; }
+    }
+
+    public static class Investments extends Base {
+        @Override int kind() { return 4; }
     }
 
     /** Reads new figures and redraws every widget. Returns at once. */
@@ -117,8 +121,8 @@ public final class MoneyWidgets {
 
     // ------------------------------------------------------------ drawing
 
-    private static final String[] TITLES = {"Money OS", "Net worth", "Where the money is", "Cash flow"};
-    private static final String[] PATHS = {"/", "/analytics", "/", "/transactions"};
+    private static final String[] TITLES = {"Money OS", "Net worth", "Where the money is", "Cash flow", "Investments"};
+    private static final String[] PATHS = {"/", "/analytics", "/", "/transactions", "/investments"};
 
     private static void draw(Context context, AppWidgetManager manager, int id, int kind) {
         float density = context.getResources().getDisplayMetrics().density;
@@ -141,6 +145,7 @@ public final class MoneyWidgets {
             if (kind != 2) {
                 views.setViewVisibility(R.id.widget_sub, View.GONE);
                 views.setViewVisibility(R.id.widget_chart, View.GONE);
+                views.setViewVisibility(R.id.widget_legend, View.GONE);
             } else {
                 views.setTextViewText(R.id.widget_legend, "");
             }
@@ -151,6 +156,7 @@ public final class MoneyWidgets {
         int chartWidth = Math.round((widthDp - 28) * density);
         switch (kind) {
             case 0: { // Dashboard: net worth, and how this month is going.
+                views.setViewVisibility(R.id.widget_legend, View.GONE);
                 views.setTextViewText(R.id.widget_value, WidgetData.money(data.netWorth, data.currency));
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
                 views.setTextViewText(R.id.widget_sub, signed("This month ", data.net, data.currency));
@@ -160,6 +166,7 @@ public final class MoneyWidgets {
                 break;
             }
             case 1: { // Net worth over time: the line, and how far it moved.
+                views.setViewVisibility(R.id.widget_legend, View.GONE);
                 views.setTextViewText(R.id.widget_value, WidgetData.money(data.netWorth, data.currency));
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
                 double change = data.series.size() < 2 ? 0
@@ -193,10 +200,37 @@ public final class MoneyWidgets {
                 views.setImageViewBitmap(R.id.widget_chart, Charts.donut(data.sliceValues, colors, size, density));
                 break;
             }
+            case 4: { // Investments: what is held, how it is doing, the largest three.
+                views.setTextViewText(R.id.widget_value, WidgetData.money(data.investedValue, data.currency));
+                views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
+                CharSequence pnl = signed("Unrealized ", data.investedPnl, data.currency);
+                SpannableStringBuilder sub = new SpannableStringBuilder(pnl);
+                if (data.investedPnl != 0) {
+                    sub.append(String.format(java.util.Locale.ROOT, "  %+.2f%%", data.investedPnlPercent));
+                }
+                views.setTextViewText(R.id.widget_sub, sub);
+                views.setViewVisibility(R.id.widget_chart, View.GONE);
+                SpannableStringBuilder list = new SpannableStringBuilder();
+                for (int i = 0; i < data.topNames.size(); i++) {
+                    if (i > 0) list.append("\n");
+                    list.append(data.topNames.get(i)).append("  ");
+                    int valueStart = list.length();
+                    list.append(WidgetData.money(data.topValues.get(i), data.currency));
+                    list.setSpan(new ForegroundColorSpan(Charts.MUTED), valueStart, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    double result = data.topPnl.get(i);
+                    if (!Double.isNaN(result)) list.append("  ").append(signed("", result, data.currency));
+                }
+                if (data.topNames.isEmpty()) list.append(data.positionCount == 0 ? "No positions yet" : "");
+                views.setViewVisibility(R.id.widget_legend, View.VISIBLE);
+                views.setTextViewText(R.id.widget_legend, list);
+                break;
+            }
             default: { // Cash flow: this month in, out, and what is left.
+                views.setViewVisibility(R.id.widget_legend, View.GONE);
                 views.setTextViewText(R.id.widget_value, signed("", data.net, data.currency));
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
-                SpannableStringBuilder sub = new SpannableStringBuilder(data.monthLabel + "  ");
+                views.setTextViewText(R.id.widget_title, TITLES[kind] + " · " + data.monthLabel);
+                SpannableStringBuilder sub = new SpannableStringBuilder();
                 int in = sub.length();
                 sub.append("In ").append(WidgetData.money(data.income, data.currency));
                 sub.setSpan(new ForegroundColorSpan(Charts.GREEN), in, sub.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);

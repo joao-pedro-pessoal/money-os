@@ -49,3 +49,25 @@ export function topSlices(items: WidgetSlice[], count: number): WidgetSlice[] {
   const rest = positive.slice(count).reduce((s, i) => s + i.value, 0);
   return rest > 0 ? [...top, { name: "Other", value: round2(rest) }] : top;
 }
+
+export interface WidgetPosition {
+  name: string;
+  value: number;
+  /** Null when nothing measured a result: cash, an unknown cost, a price at cost. */
+  pnl: number | null;
+}
+
+/**
+ * The `count` largest positions by value, each with its result when one was
+ * measured. A missing result stays null rather than becoming a flat 0.
+ */
+export function topPositions(
+  items: { name: string; value: number; pnl: number; measured: boolean }[],
+  count: number
+): WidgetPosition[] {
+  return [...items]
+    .filter((i) => i.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, count)
+    .map((i) => ({ name: i.name, value: round2(i.value), pnl: i.measured ? round2(i.pnl) : null }));
+}

@@ -92,6 +92,18 @@
                 android:resource="@xml/widget_cash_flow" />
         </receiver>
 
+        <receiver
+            android:name=".MoneyWidgets$Investments"
+            android:exported="false"
+            android:label="Investments">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_investments" />
+        </receiver>
+
         <!-- Quick settings tiles, beside the torch and Wi-Fi. -->
         <service
             android:name=".Tiles$RecordExpense"

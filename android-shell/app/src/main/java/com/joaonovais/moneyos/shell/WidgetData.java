@@ -44,6 +44,14 @@ final class WidgetData {
     final List<double[]> series = new ArrayList<>();
     final List<String> sliceNames = new ArrayList<>();
     final List<Double> sliceValues = new ArrayList<>();
+    final double investedValue;
+    final double investedPnl;
+    final double investedPnlPercent;
+    final int positionCount;
+    final List<String> topNames = new ArrayList<>();
+    final List<Double> topValues = new ArrayList<>();
+    /** NaN where no result was measured. */
+    final List<Double> topPnl = new ArrayList<>();
     final String monthLabel;
     final double income;
     final double expenses;
@@ -62,6 +70,19 @@ final class WidgetData {
         for (int i = 0; i < where.length(); i++) {
             sliceNames.add(where.getJSONObject(i).getString("name"));
             sliceValues.add(where.getJSONObject(i).getDouble("value"));
+        }
+        // Absent in figures saved by the 0.3.0 app; they read as empty until refreshed.
+        JSONObject invested = json.optJSONObject("investments");
+        investedValue = invested == null ? 0 : invested.getDouble("value");
+        investedPnl = invested == null ? 0 : invested.getDouble("pnl");
+        investedPnlPercent = invested == null ? 0 : invested.getDouble("pnlPercent");
+        positionCount = invested == null ? 0 : invested.getInt("count");
+        JSONArray top = invested == null ? new JSONArray() : invested.getJSONArray("top");
+        for (int i = 0; i < top.length(); i++) {
+            JSONObject position = top.getJSONObject(i);
+            topNames.add(position.getString("name"));
+            topValues.add(position.getDouble("value"));
+            topPnl.add(position.isNull("pnl") ? Double.NaN : position.getDouble("pnl"));
         }
         JSONObject month = json.getJSONObject("month");
         monthLabel = month.getString("label");

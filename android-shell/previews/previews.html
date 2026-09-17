@@ -1,0 +1,81 @@
+<!doctype html>
+<!--
+  The pictures shown in the launcher's widget list.
+
+  A widget's own layout has no figures until it has read them, so as a preview
+  it drew an empty dark box and nothing said which widget was which. These are
+  drawn with example figures and rendered to PNG by render-previews.cmd; the
+  build uses the PNGs in res/drawable-nodpi. Change a widget, change it here.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: transparent; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
+  .w { box-sizing: border-box; width: var(--w); height: var(--h); background: #1c1912; border: 1px solid #2a241a;
+       border-radius: 22px; padding: 10px 14px; color: #f2ead9; display: flex; flex-direction: column; }
+  .head { display: flex; justify-content: space-between; color: #8a8375; font-size: 12px; }
+  .value { font-size: 24px; font-weight: 700; margin-top: 2px; }
+  .sub { font-size: 12px; color: #8a8375; margin-top: 1px; }
+  .status { font-size: 10px; color: #8a8375; margin-top: 4px; }
+  .grow { flex: 1; min-height: 0; margin-top: 6px; }
+  .green { color: #34d399; } .red { color: #f87171; } .muted { color: #8a8375; }
+  .row { display: flex; gap: 12px; }
+  .btn { flex: 1; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+         font-weight: 700; font-size: 15px; }
+  .list { font-size: 12px; line-height: 1.6; }
+  svg { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<script>
+  const params = new URLSearchParams(location.search);
+  const kind = params.get("w");
+  // Sized from the URL: headless Edge's viewport is not the window size it was given.
+  document.documentElement.style.setProperty("--w", params.get("width") + "px");
+  document.documentElement.style.setProperty("--h", params.get("height") + "px");
+  const line = `<svg viewBox="0 0 200 60" preserveAspectRatio="none">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34d399" stop-opacity=".35"/><stop offset="1" stop-color="#34d399" stop-opacity="0"/></linearGradient></defs>
+    <path d="M2,52 L25,48 L45,50 L65,40 L85,42 L105,33 L125,35 L145,24 L165,27 L185,14 L198,9 L198,60 L2,60 Z" fill="url(#g)"/>
+    <path d="M2,52 L25,48 L45,50 L65,40 L85,42 L105,33 L125,35 L145,24 L165,27 L185,14 L198,9" fill="none" stroke="#34d399" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+  const head = (t) => `<div class="head"><span>${t}</span><span>↻</span></div>`;
+  const html = {
+    quick: `<div class="w" style="padding:10px"><div class="head" style="margin:0 0 6px 4px">Money OS</div>
+      <div class="row" style="flex:1;gap:12px">
+        <div class="btn red" style="background:rgba(248,113,113,.15)">− Despesa</div>
+        <div class="btn green" style="background:rgba(52,211,153,.15)">+ Receita</div></div></div>`,
+    dashboard: `<div class="w">${head("Money OS")}<div class="value">24 580,00 €</div>
+      <div class="sub">This month <span class="green">+412,30 €</span></div><div class="grow">${line}</div>
+      <div class="status">Updated 18:05</div></div>`,
+    networth: `<div class="w">${head("Net worth")}<div class="value">24 580,00 €</div>
+      <div class="sub">Since tracking began <span class="green">+3 120,00 €</span></div><div class="grow">${line}</div>
+      <div class="status">Updated 18:05</div></div>`,
+    where: `<div class="w">${head("Where the money is")}<div class="value" style="font-size:20px">24 580,00 €</div>
+      <div class="grow row" style="align-items:center">
+        <svg viewBox="0 0 42 42" style="width:auto;height:100%;aspect-ratio:1">
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="#c9a86a" stroke-width="6" stroke-dasharray="44 56" stroke-dashoffset="25"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="#7aa2ff" stroke-width="6" stroke-dasharray="26 74" stroke-dashoffset="-20"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="#34d399" stroke-width="6" stroke-dasharray="17 83" stroke-dashoffset="-47"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="#8a8375" stroke-width="6" stroke-dasharray="11 89" stroke-dashoffset="-65"/></svg>
+        <div class="list"><span style="color:#c9a86a">●</span> Bank <span class="muted">45%</span><br>
+          <span style="color:#7aa2ff">●</span> Broker <span class="muted">27%</span><br>
+          <span style="color:#34d399">●</span> Exchange <span class="muted">17%</span><br>
+          <span class="muted">●</span> Other <span class="muted">11%</span></div></div>
+      <div class="status">Updated 18:05</div></div>`,
+    cashflow: `<div class="w">${head("Cash flow · September 2026")}<div class="value green">+412,30 €</div>
+      <div class="sub"><span class="green">In 1 850,00 €</span>  <span class="red">Out 1 437,70 €</span></div>
+      <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:6px">
+        <div style="height:11px;border-radius:6px;background:#2a241a"><div style="width:100%;height:100%;border-radius:6px;background:#34d399"></div></div>
+        <div style="height:11px;border-radius:6px;background:#2a241a"><div style="width:78%;height:100%;border-radius:6px;background:#f87171"></div></div></div>
+      <div class="status">Updated 18:05</div></div>`,
+    investments: `<div class="w">${head("Investments")}<div class="value">9 740,00 €</div>
+      <div class="sub">Unrealized <span class="green">+865,20 €</span> +9.75%</div>
+      <div class="grow list">VWCE  <span class="muted">4 210,00 €</span>  <span class="green">+512,40 €</span><br>
+        BTC  <span class="muted">2 980,00 €</span>  <span class="green">+401,10 €</span><br>
+        AAPL  <span class="muted">1 150,00 €</span>  <span class="red">−48,30 €</span></div>
+      <div class="status">Updated 18:05</div></div>`,
+  };
+  document.body.innerHTML = html[kind] ?? "";
+</script>
+</body>
+</html>
