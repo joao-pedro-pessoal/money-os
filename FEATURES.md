@@ -219,7 +219,8 @@ Módulo separado da contabilidade, de propósito.
   obrigações, imobiliário, outro. APR só aparece nos tipos que rendem.
 - Ligação a uma conta existente — a conta é uma *etiqueta de localização*, o
   saldo dela é cash parado e as posições são contadas por cima, sem sobreposição.
-- **Playlists**: grupos de posições que tens.
+- **Playlists**: grupos de posições que tens. A página mostra os totais de cada uma
+  e, por baixo, as posições que a compõem (valor, P&L não realizado e peso).
 - **Watchlist**: coisas que não tens, com preço-alvo e notas.
 
 ## O que deves (passivos)
@@ -391,6 +392,23 @@ identificadores, calcular a impressão digital de um ficheiro e copiar para a á
 transferência. O botão +, os formulários de cashback, os botões de copiar e as duas
 importações rebentavam — e no PC, onde se testa, tudo funcionava. Agora usam
 alternativas que funcionam nos dois.
+
+**Simple e Complex.** No telemóvel escolhes entre **Simple** (o essencial) e
+**Complex** (todas as opções); a escolha fica no aparelho e no PC aparece sempre a
+interface completa. Barra de navegação em baixo, pesquisa de páginas, tabelas largas
+mostradas como cartões e textos longos recolhidos.
+
+**Ecrãs com disposição própria no telemóvel** (17 de setembro): Trade history
+(resumo, filtros, calendário diário, evolução e resultado por tipo de trade primeiro,
+cartões por trade), Dividends (um cartão com o total, pagadores em cartões,
+pagamentos por mês), Open positions (posições abertas primeiro, cartões; em Simple
+sem tags nem preços para editar) e Connections (cartão curto com estado, valor e
+Sync now; o resto, incluindo Remove, em Details). Playlists mostram as posições de
+cada playlist, no PC e no telemóvel.
+
+**Onde ficam as chaves das corretoras.** Na base de dados, cifradas; a chave que as
+decifra só existe no `.env` do PC. O telemóvel não guarda chaves. Chaves só num
+dispositivo existem apenas na app separada `mobile/` — é a tarefa E02.
 
 **Limites:** só em casa, no mesmo Wi-Fi, com o PC ligado; o tráfego na rede local não
 é cifrado; não há modo offline.
@@ -786,6 +804,10 @@ código.
 | Bybit (global) | Funciona | Chave API + secret, IP na allowlist |
 | Bybit EU | **Impossível** | Ver abaixo |
 | Interactive Brokers | Funciona | Precisa do gateway local a correr num computador |
+| MEXC | Funciona | Spot e futuros; chave + secret |
+| Kraken | Construído, por validar | Sem conta real para testar; ver F06 |
+| Binance | Construído, por validar | Só a carteira Spot; ver F06 |
+| OKX | Construído, por validar | Chave + secret + passphrase; ver F06 |
 | Trade Republic | Só CSV | Sem API pública, por decisão. Ver `docs/trade-republic.md` |
 
 - Credenciais cifradas com **AES-256-GCM**, IV novo por cifragem, autenticado.

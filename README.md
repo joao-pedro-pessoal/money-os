@@ -3,9 +3,11 @@
 Project status and the single task list: [TAREFAS.md](TAREFAS.md).
 
 **On your phone:** the Android app in [android-shell/](android-shell/) opens this
-site from your own computer over your home Wi-Fi, with every feature and a simpler
-first screen on each page. How to install and run it:
-[docs/APP_ANDROID.md](docs/APP_ANDROID.md) (in Portuguese).
+site from your own computer over your home Wi-Fi, with every feature. Below 768 px
+the site has its own layout: a bottom menu, cards instead of wide tables, panels
+that open only when they matter, and two modes — **Simple** (the essentials) and
+**Complex** (all options). On a computer nothing changes. How to install and run
+it: [docs/APP_ANDROID.md](docs/APP_ANDROID.md) (in Portuguese).
 
 **Native mobile development:** [mobile/README.md](mobile/README.md) contains a
 separate Android/iOS app with encrypted on-device storage and direct read-only
@@ -30,19 +32,32 @@ detects rows you have already imported. Budgets per category and period.
 Buckets — money set aside for a purpose, filled in priority order.
 Subscriptions, so you know what is already committed before you decide anything.
 
-**Money the market moves.** Holdings from four platforms that sync themselves,
+**Money the market moves.** Holdings from eight platforms that sync themselves,
 plus anything you type in or import from a broker statement. Automatic prices
-for stocks and ETFs from their ISIN. A portfolio analysis by asset type, risk,
-horizon and account. A trade history with charts covering whether trading is
-making money, which instruments work, how often you trade and how long you hold.
+for stocks and ETFs from their ISIN, with historical exchange rates. A portfolio
+analysis by asset type, risk, horizon and account. Playlists — your own groups of
+positions — with the positions inside each one and how the group is doing. A
+dividends page with what was paid, by instrument and by year, and when the next
+payment is likely. A trade history with a daily P&L calendar, account and P&L
+evolution, result by kind of trade, which instruments work, how often you trade
+and how long you hold.
 
-| Platform | What it needs |
-|---|---|
-| Hyperliquid | A public wallet address. No keys. Brings trade history too. |
-| Trading 212 | An API key, generated with order permissions off |
-| Bybit | A read-only API key and secret. bybit.com only — [see below](#bybit-eu) |
-| Interactive Brokers | Their Client Portal Gateway running on your machine. IBKR Pro. |
-| Trade Republic | CSV import. No public API, [by decision](docs/trade-republic.md). |
+**Everyday use.** Quick entry for an expense or income in a few taps, with undo.
+Savings from discounts and cashback recorded against the purchase. Expected
+money still to come. Alerts inside the app. The interface language can be
+changed; financial names and data are never translated.
+
+| Platform | What it needs | Status |
+|---|---|---|
+| Hyperliquid | A public wallet address. No keys. Brings trade history too. | Used with a real account |
+| Trading 212 | An API key, generated with order permissions off | Used with a real account |
+| Bybit | A read-only API key and secret. bybit.com only — [see below](#bybit-eu) | Used with a real account |
+| Interactive Brokers | Their Client Portal Gateway running on your machine. IBKR Pro. | Used with a real account |
+| MEXC | A read-only API key and secret. Spot and futures. | Used with a real account |
+| Kraken | An API key with *Query Funds* only | Built and tested; not yet checked against a real account |
+| Binance | An API key with *Enable Reading* only. Spot wallet. | Built and tested; not yet checked against a real account |
+| OKX | A read-only API key, secret and passphrase | Built and tested; not yet checked against a real account |
+| Trade Republic | CSV import. No public API, [by decision](docs/trade-republic.md). | CSV |
 
 Every connector is **read-only by architecture**. The `Connector` interface has
 no method that could place an order or move funds — it is not a promise, it is
@@ -105,6 +120,15 @@ Migrations and the category seed run on start and are safe to repeat.
 **Keep `ENCRYPTION_KEY` somewhere off the server.** Whoever holds it can decrypt
 your stored API secrets, and losing it means reconnecting every platform.
 
+**Where your API keys live.** In this web app they are stored in your database,
+encrypted with AES-256-GCM. The key that decrypts them is `ENCRYPTION_KEY`, which
+exists only in `.env` and never enters the database — so a copy of the database
+alone, including one kept by a hosted Postgres provider, cannot read them. They
+are **not** kept on a single device: the phone app opens the site and stores no
+keys at all. Keys that never leave one device exist only in the separate native
+app in [mobile/](mobile/), which is not the app in daily use; bringing that
+model to this experience is planned, not built (see [TAREFAS.md](TAREFAS.md), E02).
+
 **Do not put this on the open internet.** It holds your entire financial
 position. Both ports bind to `127.0.0.1` by default. [DEPLOY.md](DEPLOY.md) has
 the full setup, including Tailscale, backups and updating.
@@ -118,7 +142,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2193 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2337 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 
@@ -178,5 +202,5 @@ Next.js App Router, TypeScript, Drizzle ORM, PostgreSQL, Recharts, Tailwind.
 
 `src/lib/**` is pure logic — no database and no React, and no `fetch` outside
 the four connector/FX files that are the outbound edge. That discipline is why
-1681 tests run without Postgres. Every database call lives in
+all 2337 tests run without Postgres. Every database call lives in
 `src/actions/**`.

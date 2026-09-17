@@ -126,6 +126,24 @@ chegar às colunas. No computador mantém-se a tabela completa.
   has moved e Saving & spending, Active (subscrições), totais e histórico em Savings, e
   o manual inteiro (o índice precisa das secções abertas).
 
+### Ecrãs com versão própria no telemóvel
+
+- **Trade history:** resumo, filtros, Daily P&L calendar, Account & P&L evolution e
+  Result by kind of trade abertos; os outros gráficos começam minimizados; trades em
+  cartões, 15 de cada vez.
+- **Dividends:** cartão com o total, pagadores em cartões, pagamentos por mês.
+- **Open positions:** posições abertas primeiro, em cartões. Em Simple ficam só o
+  valor, o P&L e a liquidação — sem tags nem preços para editar.
+- **Connections:** cartão curto com plataforma, estado, valor, última sincronização e
+  Sync now; o resto, incluindo Remove, em **Details**.
+- **Playlists:** cada playlist abre com as posições que tem.
+
+### Chaves das corretoras
+
+A app não guarda chaves. Estão na base de dados do site, cifradas, e só se decifram
+com a `ENCRYPTION_KEY` do `.env` do PC. Chaves só num dispositivo existem apenas na
+app separada `mobile/` (tarefa E02).
+
 ## Correções para http na rede local
 
 O telemóvel chega ao site por `http://192.168.…`, que para o browser não é um

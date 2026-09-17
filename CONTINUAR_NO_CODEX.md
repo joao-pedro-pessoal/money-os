@@ -26,6 +26,14 @@ experiência atual ainda não está concluída. Ver a secção 4 de
 
 ## Código e estado
 
+- Estado a 17 de setembro de 2026: `main` no GitHub inclui o trabalho de telemóvel
+  (Simple/Complex, navegação inferior, tabelas em cartões, Trade history, Dividends,
+  Open positions, Connections e posições nas playlists). A01, A02 e A03 foram
+  concluídos pelo utilizador. 2337 testes.
+- Chaves das corretoras no site: cifradas na base de dados (Neon), decifradas só com
+  a `ENCRYPTION_KEY` do `.env`. Não ficam só num dispositivo; isso existe apenas em
+  `mobile/` e é a tarefa E02.
+
 - Repositório original: https://github.com/joao-pedro-pessoal/money-os
 - Base usada nesta sessão: 49680e8baae798817baedf5ad835bf67addc8436.
 - Site: Next.js 16.3, React, TypeScript, Drizzle e PostgreSQL.

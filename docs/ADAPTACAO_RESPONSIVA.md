@@ -1,5 +1,38 @@
 # Adaptação dos restantes ecrãs — 9 de setembro de 2026
 
+## Playlists, Dividends, Open positions e Connections — 17 de setembro de 2026
+
+Padrão usado nestas páginas (componentes de servidor, sem `useMobileMode`): a
+versão de telemóvel é marcação própria com a classe `…-phone-only` e a do PC fica
+com `…-desktop-only`; o CSS em `globals.css` troca uma pela outra abaixo de 768 px.
+O Simple usa `[data-mobile-ui="simple"]` dentro do mesmo `@media`. Os valores vêm
+dos mesmos dados nas duas versões.
+
+- **Playlists** (PC e telemóvel): `listPlaylistsWithTotals` devolve também
+  `positions`, as mesmas posições que formam os totais. Cada playlist é um
+  `PanelFrame` (aberto no PC, fechado no telemóvel) com posição, conta, valor, P&L
+  não realizado (e %) e peso. “—” quando não há custo conhecido. Os valores passam a
+  usar a moeda base em vez de assumir euros.
+- **Dividends** (`dividends-*`): um cartão com o total e duas caixas (instrumentos,
+  juros); símbolo redondo em Expected next e nos pagadores; etiquetas com ritmo,
+  rendimento 12m e último pagamento; By year com a barra numa linha própria; Every
+  dividend agrupado por mês; origem dos valores no fim.
+- **Open positions** (`positions-*`, `position-card`, `Fact`): posições abertas
+  primeiro (CSS `order`), indicadores 2×2, cartões para posições, saldos spot e
+  posições próprias; nota de dupla contagem num `MobileFold`. Em Simple
+  (`positions-simple-hide` e `Fact detail`) saem tags, tamanho, entrada, mark, custo
+  médio, origem do preço, Spot balances/Margin in use/Total notional e a nota. O
+  Total notional passou a usar a moeda base.
+- **Connections** (PC e telemóvel): nome da plataforma por `PLATFORM_LABELS`, valor
+  em destaque, borda com a cor do estado e contagem de ligações com erro. No
+  telemóvel (Simple e Complex) `connection-extra` e `connection-remove` ficam
+  escondidos; conta, ID, detalhe do valor, sincronizações recentes e Remove estão
+  em `<details>` Details. O equity dos registos usa a moeda da ligação.
+
+Verificação: TypeScript, lint, build e 2337 testes. Dividends visto numa
+pré-visualização estática a 375 px com o CSS compilado e dados de exemplo; as
+outras páginas não foram vistas com sessão iniciada.
+
 ## Trade history no telemóvel — 17 de setembro de 2026
 
 Abaixo de 768 px, `/investments/history` passa a chamar-se **Trade history** e
@@ -24,8 +57,8 @@ por isso o primeiro desenho no telemóvel é a tabela.
 
 Verificação: TypeScript, lint dos ficheiros alterados, build e 2337 testes. O
 site na porta 3000 serve o CSS novo. A navegação com sessão iniciada foi feita
-pelo Codex (320/390/430 px em Simple/Complex e PC 1440 px); falta o telemóvel
-real (A01).
+pelo Codex (320/390/430 px em Simple/Complex e PC 1440 px); o telemóvel real
+foi validado pelo utilizador (A01, 17/09).
 
 ## Analytics e controlos de painéis — 15 de setembro de 2026
 

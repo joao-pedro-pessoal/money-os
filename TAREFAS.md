@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **15 de setembro de 2026**.
+Atualizado em **17 de setembro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -15,8 +15,8 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 - **Produto em uso:** o site existente e a app Android em `android-shell/`, que
   abre esse site servido pelo PC. Preservar o design e as funcionalidades; a
   interface mantém-se em inglês, incluindo Simple e Complex.
-- **Próxima prioridade:** corrigir problemas da experiência atual e validar os
-  fluxos no telemóvel real.
+- **Próxima prioridade:** A01–A03 concluídos a 17/09. Seguem A04–A08 e os ecrãs
+  do telemóvel que ainda forem reportados.
 - **Evolução futura, quando pedida:** usar a mesma experiência com dados locais,
   offline e sincronização entre PC e telemóvel. A interface separada de `mobile/`
   não é o modelo visual escolhido; o seu armazenamento, conectores e cofre podem
@@ -27,9 +27,9 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 
 | ID | Tarefa | Estado e critério de conclusão |
 | --- | --- | --- |
-| A01 | Validar a app Android num telemóvel real | Por validar: abrir, autenticar, importar ficheiro, exportar para Transferências, voltar, teclado e ecrã sem ligação. Confirmar também gráficos por toque, privacidade e modos Simple/Complex. |
-| A02 | Reconciliar a Interactive Brokers | A auditoria de 15/09 voltou a encontrar um movimento de 100 EUR numa conta USD, saldo guardado de 134,24 USD e leitura do conector de 34,24 USD. Investigar a origem e preparar a correção antes de modificar dados. Concluir quando moeda, saldo e dinheiro livre estiverem reconciliados. A nota antiga de “resolvido” não descreve os dados atuais. |
-| A03 | Atualizar saldo e valor investido da Trade Republic | Depende dos valores atuais da corretora. A última auditoria encontrou 450,83 EUR declarados como investidos e 456,09 EUR em holdings: diferença de 5,26 EUR. Reconciliar sem somar investimentos já incluídos no saldo. |
+| A01 | Validar a app Android num telemóvel real | **Concluído pelo utilizador (17/09/2026).** Critério original: Por validar: abrir, autenticar, importar ficheiro, exportar para Transferências, voltar, teclado e ecrã sem ligação. Confirmar também gráficos por toque, privacidade e modos Simple/Complex. |
+| A02 | Reconciliar a Interactive Brokers | **Concluído pelo utilizador (17/09/2026).** Critério original: A auditoria de 15/09 voltou a encontrar um movimento de 100 EUR numa conta USD, saldo guardado de 134,24 USD e leitura do conector de 34,24 USD. Investigar a origem e preparar a correção antes de modificar dados. Concluir quando moeda, saldo e dinheiro livre estiverem reconciliados. A nota antiga de “resolvido” não descreve os dados atuais. |
+| A03 | Atualizar saldo e valor investido da Trade Republic | **Concluído pelo utilizador (17/09/2026).** Critério original: Depende dos valores atuais da corretora. A última auditoria encontrou 450,83 EUR declarados como investidos e 456,09 EUR em holdings: diferença de 5,26 EUR. Reconciliar sem somar investimentos já incluídos no saldo. |
 | A04 | Completar a validação funcional por área | Existem testes e verificações parciais. Testar receitas/despesas, transferências, subscrições, objetivos e orçamentos: criar, editar, cancelar, repetir pedidos, desfazer e persistência. Incluir várias moedas, falhas de rede e estados preenchidos. |
 | A05 | Corrigir totais de extratos com várias moedas | Documentado como pendente em `getStatementBreakdown`: custos, juros, dividendos e taxas ainda podem ser somados em bruto. Converter com taxas adequadas antes de totalizar; nomear o que não pode ser convertido. Confirmar o caminho atual antes de editar. |
 | A06 | Unificar as preferências de painéis | Definir a precedência entre preferências no servidor e escolhas no browser, incluindo Simple/Complex. Preservar escolhas guardadas e verificar recarregamento e mudança de dispositivo. |
@@ -85,7 +85,9 @@ não significa que todas tenham sido pedidas para implementação imediata.
 | E12 | Preparar distribuição, quando solicitada | Binários de produção assinados, identificação da app, ícones, capturas, suporte e validação dos requisitos das lojas. A app Android local já existe; não está publicada nas lojas. |
 | E13 | Validar interesse e preparar divulgação, quando solicitado | A proposta anterior era observar cinco pessoas a configurar a app com os seus dados antes de investir na distribuição. Preparar descrição, tópicos e capturas do projeto apenas quando essa etapa avançar. |
 
-Decisões do desenho futuro: chaves de corretoras ficam em cada dispositivo,
+Hoje, no site e na app Android, as chaves das corretoras estão cifradas na base de
+dados e só se decifram com a `ENCRYPTION_KEY` do `.env` do PC; não ficam só num
+dispositivo. Decisões do desenho futuro: chaves de corretoras ficam em cada dispositivo,
 preferencialmente distintas por dispositivo; o servidor recebe dados financeiros
 cifrados; recuperação não entrega a chave ao operador. Estas decisões não devem
 ser apresentadas como propriedades já demonstradas do site atual.
