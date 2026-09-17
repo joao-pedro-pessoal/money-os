@@ -724,6 +724,16 @@ export default function ManualPage() {
             the torch and Wi-Fi, you can add <em>Record expense</em> and <em>Net worth</em>; the net
             worth tile stays hidden while the phone is locked.
           </p>
+          <p>
+            <strong className="text-[var(--foreground)]">Alerts on the phone.</strong> In Settings,
+            inside the app, switch on <em>Alert notifications</em> and what the bell would show you
+            arrives as a notification: a budget over or running ahead, a subscription about to
+            charge or waiting to be confirmed, a manual balance not updated in two months, a
+            connection that stopped syncing, a watchlist price reached. Each alert once; one that
+            goes away and comes back is news again. The site decides what is worth saying — the
+            phone only asks, about every half hour, and hears nothing while it cannot reach this
+            computer. The lock screen shows only that something is waiting, not the figures.
+          </p>
           <Note label="Plain http at home" tone="care">
             <p>
               On your home network the connection is not encrypted: anyone on the
@@ -743,7 +753,7 @@ export default function ManualPage() {
           </ul>
           <Note label="Not built yet" tone="care">
             <p>
-              Alerts outside the app — the bell only tells you while it is open.
+              Alerts by email — on the phone they arrive as notifications, only while it can reach the computer.
               Recurring transactions created without asking — subscriptions propose theirs instead.
               Bonds modelled properly, with coupon and maturity. Attaching
               receipts.

@@ -70,7 +70,7 @@ There is a manual inside the app, at `/manual`.
 <a name="on-your-phone"></a>
 ### On your phone
 
-The Android app (version 0.6.0, [android-shell/](android-shell/)) is this same site
+The Android app (version 0.7.0, [android-shell/](android-shell/)) is this same site
 in a full-screen WebView, reached on the computer that runs it over home Wi-Fi. It
 adds what a browser tab would: choosing files to import, saving exports to
 Downloads, the back gesture.
@@ -88,6 +88,13 @@ Downloads, the back gesture.
   Dividends and Open trades — plus a *Net worth* tile that stays blank while the
   phone is locked. They read `GET /api/widget`, which sits behind the same session
   as every page and is built from the same functions as the pages it summarises.
+- **Alerts as notifications.** Switched on in Settings inside the app: what the
+  bell would show — a budget over or running ahead, a subscription charging or
+  waiting to be confirmed, a stale balance, a failing connection, a watchlist price
+  reached — arrives once as a notification. The phone asks `GET /api/alerts` about
+  every half hour; the site decides what is worth an interruption. No push service
+  and no email account, so nothing leaves your computer and phone — and nothing
+  arrives while the phone cannot reach the computer.
 - **What stays on the phone:** only the last figures the widgets read, so they
   can show something — always with its time — away from home. No keys, no
   password.
@@ -171,7 +178,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2372 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2376 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 
@@ -231,5 +238,5 @@ Next.js App Router, TypeScript, Drizzle ORM, PostgreSQL, Recharts, Tailwind.
 
 `src/lib/**` is pure logic — no database and no React, and no `fetch` outside
 the four connector/FX files that are the outbound edge. That discipline is why
-all 2372 tests run without Postgres. Every database call lives in
+all 2376 tests run without Postgres. Every database call lives in
 `src/actions/**`.

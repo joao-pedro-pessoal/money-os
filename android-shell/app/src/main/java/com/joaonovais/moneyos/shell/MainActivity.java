@@ -1,6 +1,7 @@
 package com.joaonovais.moneyos.shell;
 
 import android.app.Activity;
+import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -95,6 +96,8 @@ public class MainActivity extends Activity {
     private String pendingPath;
     /** True between a page finishing and the next one starting. */
     private boolean pageReady;
+    /** Which switch asked for the notification permission: "quick" or "alerts". */
+    private String askingFor;
 
     private android.window.OnBackInvokedCallback backCallback;
     private boolean backRegistered;
@@ -113,6 +116,8 @@ public class MainActivity extends Activity {
         // Swiping an ongoing notification away is allowed since Android 14; it
         // comes back the next time the app opens, for as long as it is switched on.
         if (QuickEntry.active(this)) QuickEntry.show(this);
+        // Normally already scheduled; this only restores a check the system dropped.
+        Alerts.schedule(this);
 
         String saved = prefs().getString(KEY_ADDRESS, null);
         if (saved == null) showAddressForm(null, null);
@@ -265,6 +270,17 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public boolean alertNotificationsEnabled() {
+            return address.equals(pageOrigin) && Alerts.active(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public void setAlertNotifications(boolean enabled) {
+            if (!address.equals(pageOrigin)) return;
+            runOnUiThread(() -> MainActivity.this.setAlertNotifications(enabled));
+        }
+
+        @JavascriptInterface
         public void themeColor(String value) {
             if (value == null || !address.equals(pageOrigin)) return;
             runOnUiThread(() -> applyColor(value));
@@ -347,11 +363,7 @@ public class MainActivity extends Activity {
             return;
         }
         QuickEntry.prefs(this).edit().putBoolean(QuickEntry.KEY_NOTIFICATION, true).apply();
-        if (Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, ASK_NOTIFICATIONS);
-            return;
-        }
+        if (askPermission("quick")) return;
         finishEnablingNotification();
     }
 
@@ -359,23 +371,63 @@ public class MainActivity extends Activity {
         if (QuickEntry.active(this)) {
             QuickEntry.show(this);
         } else {
-            // Refused now or earlier: only the system settings can allow it.
             QuickEntry.prefs(this).edit().putBoolean(QuickEntry.KEY_NOTIFICATION, false).apply();
-            toast("As notificações da Money OS estão desligadas. Ativa-as nas definições do Android.");
-            try {
-                startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                        .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
-            } catch (ActivityNotFoundException ignored) {
-                // The toast already said where to go.
-            }
+            sendToNotificationSettings();
         }
         reportQuickNotification();
+    }
+
+    private void setAlertNotifications(boolean enabled) {
+        if (!enabled) {
+            Alerts.setWanted(this, false);
+            reportAlertNotifications();
+            return;
+        }
+        QuickEntry.prefs(this).edit().putBoolean(Alerts.KEY_WANTED, true).apply();
+        if (askPermission("alerts")) return;
+        finishEnablingAlerts();
+    }
+
+    private void finishEnablingAlerts() {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null && manager.areNotificationsEnabled()) {
+            Alerts.setWanted(this, true);
+        } else {
+            QuickEntry.prefs(this).edit().putBoolean(Alerts.KEY_WANTED, false).apply();
+            sendToNotificationSettings();
+        }
+        reportAlertNotifications();
+    }
+
+    /** True when the system was asked and its answer is still to come. */
+    private boolean askPermission(String purpose) {
+        if (Build.VERSION.SDK_INT < 33
+                || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            return false;
+        }
+        askingFor = purpose;
+        requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, ASK_NOTIFICATIONS);
+        return true;
+    }
+
+    /** Refused now or earlier: only the system settings can allow it. */
+    private void sendToNotificationSettings() {
+        toast("As notificações da Money OS estão desligadas. Ativa-as nas definições do Android.");
+        try {
+            startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
+        } catch (ActivityNotFoundException ignored) {
+            // The toast already said where to go.
+        }
     }
 
     @Override
     public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
         if (request == ASK_NOTIFICATIONS) {
-            finishEnablingNotification();
+            String purpose = askingFor;
+            askingFor = null;
+            if ("alerts".equals(purpose)) finishEnablingAlerts();
+            else finishEnablingNotification();
             return;
         }
         super.onRequestPermissionsResult(request, permissions, results);
@@ -386,6 +438,12 @@ public class MainActivity extends Activity {
         if (web == null || !address.equals(pageOrigin)) return;
         web.evaluateJavascript("window.dispatchEvent(new CustomEvent('money-os:quick-notification',{detail:"
                 + QuickEntry.active(this) + "}));", null);
+    }
+
+    private void reportAlertNotifications() {
+        if (web == null || !address.equals(pageOrigin)) return;
+        web.evaluateJavascript("window.dispatchEvent(new CustomEvent('money-os:alert-notifications',{detail:"
+                + Alerts.active(this) + "}));", null);
     }
 
     static String cleanName(String name) {

@@ -47,6 +47,19 @@ export function sortAlerts(alerts: Alert[]): Alert[] {
   return [...alerts].sort((a, b) => ORDER[a.severity] - ORDER[b.severity]);
 }
 
+/**
+ * Whether an alert is worth interrupting you for outside the app.
+ *
+ * Everything that needs fixing or a look, plus the informational alerts that
+ * have a moment: a charge about to leave or waiting to be confirmed, a price you
+ * were waiting for. Unclassified value is true every day until you tag it, so
+ * it stays in the bell and never buzzes a phone.
+ */
+export function shouldNotify(alert: Alert): boolean {
+  if (alert.severity !== "info") return true;
+  return alert.kind === "subscription" || alert.kind === "watchlist";
+}
+
 function money(amount: number, currency: string): string {
   return `${amount.toFixed(2)} ${currency}`;
 }
@@ -142,9 +155,13 @@ export interface SubscriptionAlertInput {
  * A subscription with no known date says nothing. Guessing a schedule and
  * warning about it would be inventing a fact about your money.
  */
-export function subscriptionAlerts(subs: SubscriptionAlertInput[]): Alert[] {
+export function subscriptionAlerts(subs: SubscriptionAlertInput[], confirming: ReadonlySet<string> = new Set()): Alert[] {
   return subs
     .filter((s) => s.daysUntil !== null && s.daysUntil >= 0 && s.daysUntil <= 3)
+    // `confirming` holds the subscriptions whose charge day is asked about as a
+    // charge to confirm. On that day "charges today" beside it would be two
+    // alerts about one charge — or, once answered, news of something done.
+    .filter((s) => !(s.daysUntil === 0 && confirming.has(s.id)))
     .map((s) => ({
       id: `subscription:due:${s.id}`,
       severity: "info" as const,
@@ -156,6 +173,31 @@ export function subscriptionAlerts(subs: SubscriptionAlertInput[]): Alert[] {
       detail: money(s.amount, s.currency),
       href: "/subscriptions",
     }));
+}
+
+export interface ChargeToConfirmInput {
+  subscriptionId: string;
+  /** YYYY-MM-DD. */
+  dueOn: string;
+  name: string;
+  amount: number;
+  currency: string;
+}
+
+/**
+ * A charge has fallen due and is waiting for an answer (see
+ * lib/accounting/subscriptionCharges). One alert per charge, so a phone that
+ * notified about this month's does not stay silent about next month's.
+ */
+export function chargeToConfirmAlerts(charges: ChargeToConfirmInput[]): Alert[] {
+  return charges.map((c) => ({
+    id: `subscription:confirm:${c.subscriptionId}:${c.dueOn}`,
+    severity: "info" as const,
+    kind: "subscription" as const,
+    title: `Confirm the ${c.name} charge`,
+    detail: `${money(c.amount, c.currency)} due ${c.dueOn}. Record it, match it or skip it.`,
+    href: "/subscriptions",
+  }));
 }
 
 // ---------------------------------------------------------------------------

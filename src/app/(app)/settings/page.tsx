@@ -17,6 +17,7 @@ import Link from "next/link";
 import DashboardWindowSettings from "@/components/DashboardWindowSettings";
 import LanguagePicker from "@/components/LanguagePicker";
 import PhoneQuickEntrySettings from "@/components/PhoneQuickEntrySettings";
+import PhoneAlertSettings from "@/components/PhoneAlertSettings";
 
 export default async function SettingsGeneralPage() {
   const baseCurrency = await getBaseCurrency();
@@ -154,6 +155,7 @@ export default async function SettingsGeneralPage() {
 
       {/* Only inside the Android app; renders nothing in a browser. */}
       <PhoneQuickEntrySettings />
+      <PhoneAlertSettings />
 
       {/* This was buried three cards down inside Settings, which is why it was
           impossible to find. It gets its own page and its own nav entry now. */}

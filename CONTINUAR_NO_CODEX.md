@@ -26,14 +26,17 @@ experiência atual ainda não está concluída. Ver a secção 4 de
 
 ## Código e estado
 
-- Estado a 17 de setembro de 2026: `main` no GitHub (16631b1) inclui o trabalho de
+- Estado a 17 de setembro de 2026: `main` inclui o trabalho de
   telemóvel (Simple/Complex, navegação inferior, tabelas em cartões, Trade history,
   Dividends, Open positions, Connections e posições nas playlists) e a app Android
-  0.6.0 com widgets (registo rápido, Money OS, Net worth, Where the money is, Cash
+  0.7.0 com widgets (registo rápido, Money OS, Net worth, Where the money is, Cash
   flow, Investments com todas as posições, Allocation, Winners & losers, Dividends,
-  Open trades), atalhos no ícone, botões nas definições rápidas e notificação.
-  A01, A02 e A03 foram concluídos pelo utilizador. 2347 testes. Os widgets ainda não
-  foram vistos num telemóvel; o emulador tem PIN e não é desbloqueado pelo agente.
+  Open trades), atalhos no ícone, botões nas definições rápidas, notificação de
+  registo rápido e alertas como notificações (F02, `/api/alerts`). Também o relatório
+  mensal (F03) e as cobranças de subscrições para confirmar (F01).
+  A01, A02 e A03 foram concluídos pelo utilizador. 2376 testes. O utilizador testou os
+  widgets no telemóvel; os alertas ainda não foram vistos num telemóvel. O emulador
+  tem PIN e não é desbloqueado pelo agente.
 - Compilar a app: `android-shell\gradlew.bat assembleDebug` com `JAVA_HOME` do JDK 17
   só nesse processo. `lintDebug` falha em dois erros antigos (`onBackPressed` e
   `local.properties`), não nos widgets.

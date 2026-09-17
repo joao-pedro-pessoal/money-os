@@ -10,10 +10,10 @@ cifrados só lá) continua no [PLANO_MOBILE.md](PLANO_MOBILE.md), e a app em `mo
 é a base dele. As duas apps têm identificadores diferentes e podem estar instaladas ao
 mesmo tempo.
 
-**Versão atual da app: 0.6.0** (17 de setembro de 2026). Resumo do que tem: o site
+**Versão atual da app: 0.7.0** (17 de setembro de 2026). Resumo do que tem: o site
 completo, disposição própria no telemóvel com modos Simple e Complex, registo rápido
-a partir de widget, atalhos do ícone, definições rápidas e notificação, e nove
-widgets com valores. Detalhes nas secções abaixo.
+a partir de widget, atalhos do ícone, definições rápidas e notificação, nove
+widgets com valores e alertas como notificações. Detalhes nas secções abaixo.
 
 **Para atualizar a app no telemóvel:** reinicia o site no PC (`SITE_PARA_TELEMOVEL.cmd`)
 e instala o APK novo por cima do antigo (passos 2 e 3). Mantém-se o endereço, a sessão
@@ -219,6 +219,35 @@ WebView (`WidgetData.java`), guarda a última resposta nas preferências da app 
 os gráficos em `Charts.java`; `MoneyWidgets.java` tem os widgets, `PositionsListService.java` as linhas da lista do Investments e `Tiles.java`
 os dois botões. **Isto é a única coisa financeira guardada no telemóvel:** os últimos
 valores dos widgets.
+
+### Alertas como notificações (versão 0.7.0)
+
+**Ligar:** na app, **Settings → Alerts on this phone → Alert notifications**. Na
+primeira vez o Android pergunta se a Money OS pode enviar notificações: **Permitir**.
+Se já tiver sido recusado, a app abre as definições de notificações do Android.
+
+- Chega uma notificação para o que o sino do site mostraria e merece interromper: um
+  orçamento ultrapassado ou a gastar depressa demais, uma subscrição a cobrar nos
+  próximos 3 dias ou com uma cobrança por confirmar, um saldo manual sem atualizar há
+  60 dias, uma ligação a falhar, um preço da watchlist atingido. Não notifica "valor
+  sem tipo de ativo", que fica só no sino.
+- **Cada alerta uma vez.** Se o afastares não volta enquanto o site o continuar a
+  reportar. Quando o problema se resolve a notificação desaparece; se voltar a
+  acontecer, notifica outra vez.
+- Tocar abre a página do alerta (Budgets, Subscriptions, a conta, Connections…).
+- No ecrã bloqueado aparece só "Money OS — Something needs your attention", sem valores.
+- **Verifica cerca de 30 em 30 minutos** (o Android decide o momento exato e pode
+  atrasar com a bateria em poupança) e ao ligar o interruptor. Continua depois de
+  reiniciar o telemóvel.
+- **Só ouve enquanto chega ao PC**: mesmo Wi-Fi, PC ligado e site a correr. Fora de
+  casa não chega nada — nem um aviso antigo.
+
+Como funciona: o site tem `GET /api/alerts` (atrás da sessão), a lista do sino
+filtrada por `shouldNotify` em `src/lib/alerts/rules.ts`. A app (`Alerts.java`) pede-a
+com o cookie da WebView através de `Site.java` num `JobService` periódico, guarda os
+ids já notificados e publica cada alerta novo com o id como etiqueta. A decisão fica
+no site; a app não tem regras próprias. Não há serviço de push nem email: nada sai do
+PC e do telemóvel.
 
 ### Chaves das corretoras
 

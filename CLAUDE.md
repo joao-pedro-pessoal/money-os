@@ -459,6 +459,17 @@ transaction as the expense, and its unique `(subscription_id, due_on)` is the
 guard against a double tap or a second device. `likelyMatch` only suggests; an
 expense is claimed by one charge at most.
 
+## Phone alerts: the site decides, the phone only says it once
+
+`GET /api/alerts` is the bell's list (`getAlerts`) narrowed by `shouldNotify` in
+`src/lib/alerts/rules.ts`. The Android app (`Alerts.java`, a periodic
+`JobService`) fetches it and notifies each id it has not notified yet, and
+cancels and forgets ids the site stops reporting. So an alert id must be stable
+while the condition lasts and new when it is news again (one per subscription
+charge, not per subscription). Never add a rule in Java, and never notify from a
+stale copy: unreachable means silence. No push service or email — that would
+need credentials the user sets up.
+
 ## A widget shows what a page shows, never a figure of its own
 
 The Android app's home-screen widgets and quick settings tiles

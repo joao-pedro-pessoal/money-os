@@ -333,9 +333,19 @@ A app sempre soube que um orçamento estourou, que uma subscrição cobra amanh�
 que um saldo não é confirmado há dois meses, que uma sincronização está a
 falhar. Nunca dizia nada.
 
-O motor decide; o canal por onde te chega é outra pergunta e ainda não está
-respondida. Por agora é um sino na barra de topo, que **só existe quando há algo
-a dizer** — um ícone sempre presente e quase sempre vazio ensina-te a ignorá-lo.
+O motor decide; o canal por onde te chega é outra pergunta. No site é um sino na
+barra de topo, que **só existe quando há algo a dizer** — um ícone sempre presente e
+quase sempre vazio ensina-te a ignorá-lo.
+
+**Fora da app** (17 de setembro, app 0.7.0): notificações no telemóvel, ligadas em
+Settings dentro da app. A app pede `GET /api/alerts` de ~30 em 30 minutos com a sessão
+da WebView e notifica cada alerta **uma vez**; um que desaparece é retirado e, se
+voltar, é notícia outra vez. O site decide o que merece interromper (`shouldNotify`:
+crítico e aviso, mais subscrições e watchlist; "valor sem tipo de ativo" fica só no
+sino, porque é verdade todos os dias). Sem serviço de push nem conta de email: nada sai
+do PC e do telemóvel, e o preço é só ouvir enquanto o telemóvel chega ao PC. No ecrã
+bloqueado aparece só "Something needs your attention". Uma cobrança de subscrição por
+confirmar é também um alerta, um por cobrança.
 
 Três regras moldaram os limiares:
 
@@ -414,6 +424,8 @@ cada playlist, no PC e no telemóvel.
 no ecrã principal com Despesa e Receita, os mesmos dois atalhos ao tocar sem largar
 no ícone e uma notificação fixa opcional, ligada em Settings. Todos abrem a app
 diretamente no registo rápido do site; nada é gravado fora desse formulário.
+
+**Alertas como notificações** (app 0.7.0): ver a secção Alertas.
 
 **Widgets com valores e definições rápidas** (app 0.3.0 a 0.6.0): widgets Money OS, Net
 worth, Where the money is, Cash flow, Investments (todas as posições numa lista que

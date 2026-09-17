@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- The quick-entry notification, asked for only when it is switched on. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- To put that notification back after the phone restarts. -->
+    <!-- To put that notification back, and keep checking alerts, after the phone restarts. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
@@ -157,6 +157,12 @@
             android:name=".PositionsListService"
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <!-- The half-hourly look at the site's alerts, when switched on. -->
+        <service
+            android:name=".Alerts$Check"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <!-- Quick settings tiles, beside the torch and Wi-Fi. -->
         <service

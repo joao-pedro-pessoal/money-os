@@ -43,8 +43,8 @@ não significa que todas tenham sido pedidas para implementação imediata.
 
 | ID | Tarefa | Resultado esperado / dependências |
 | --- | --- | --- |
-| F01 | Propor transações recorrentes | **Feito a 17/09/2026** (H15 na secção 5). Possível a seguir: o mesmo para Expected money (receitas previstas) e um aviso no sino/notificação quando há cobranças por confirmar. |
-| F02 | Alertas fora da app | Ligar o motor de alertas existente a push e/ou email. Escolher o canal e configurar o serviço e credenciais necessários. |
+| F01 | Propor transações recorrentes | **Feito a 17/09/2026** (H15 na secção 5). Possível a seguir: o mesmo para Expected money (receitas previstas). O aviso no sino e no telemóvel ficou feito com F02. |
+| F02 | Alertas fora da app | **Feito a 17/09/2026, app 0.7.0** (H16 na secção 5): notificações no telemóvel, sem serviço externo nem credenciais. Possível a seguir, se pedido: email (exige uma conta de envio e a sua palavra-passe, configurada pelo utilizador no `.env`) e o envio automático do relatório mensal. |
 | F03 | Relatório mensal | **Feito a 17/09/2026** (H14 na secção 5). Possível a seguir, se pedido: relatório anual e envio automático no fim do mês (depende de F02). |
 | F04 | Anexar recibos | Foto/PDF associado à transação, com armazenamento, exportação, backup, restauro e eliminação coerentes. |
 | F05 | Completar o modelo de obrigações | Acrescentar cupões e maturidade, com uma definição explícita da avaliação. Priorizar quando existir uma obrigação real para validar. |
@@ -97,6 +97,7 @@ ser apresentadas como propriedades já demonstradas do site atual.
 | Área | Entregue | Limite relevante |
 | --- | --- | --- |
 | Adaptação móvel | Páginas responsivas, navegação inferior, painéis recolhíveis, modos Simple/Complex e tabelas compactas | Verificações em navegador não substituem A01/A04. |
+| H16 — Alertas no telemóvel (17/09/2026) | App Android 0.7.0: Settings → **Alert notifications** (só dentro da app). A app pede `GET /api/alerts` (atrás da sessão) de ~30 em 30 minutos com `JobScheduler` e notifica cada alerta uma vez; retira os que o site deixa de reportar; tocar abre a página do alerta; no ecrã bloqueado só "Something needs your attention". O site decide com `shouldNotify` (crítico e aviso; subscrições e watchlist também). Novo alerta por cobrança de subscrição por confirmar (também no sino); "charges today" deixa de aparecer para subscrições com data, que já pedem confirmação. Sem push externo nem email | Site: TypeScript, lint, build e 2376 testes (4 novos); `/api/alerts` sem sessão redireciona para o login. App compilada. Não visto num telemóvel. Exige reinstalar o APK e reiniciar o site. |
 | H15 — Cobranças de subscrições para confirmar (17/09/2026) | Na data de cada subscrição ativa com data, “Subscription charges to confirm” aparece no dashboard (os 3 primeiros) e em Subscriptions (todos): **Record expense** (conta, valor e data editáveis; na moeda da conta), **Yes, that's it** quando uma despesa já registada parece ser essa cobrança (mesma moeda, ±10%, ±5 dias, mesma conta se definida; o nome conta a favor) ou **Skip**. Nada é criado sem escolha. Tabela nova `subscription_charges` (migration 0044, aplicada) com par único subscrição+dia: um duplo toque ou outro aparelho não regista duas vezes. Só cobranças dos últimos 31 dias e depois da subscrição existir. Lógica em `src/lib/accounting/subscriptionCharges.ts` (12 testes) | TypeScript, lint, build e 2372 testes; migration aplicada à base real e `db:generate` sem diferenças. Não visto com sessão iniciada. |
 | H14 — Relatório mensal (17/09/2026) | Analytics → **Monthly report** (`/analytics/report`): escolher o mês; receitas, despesas, saldo e taxa de poupança com comparação ao mês anterior e média de até 3 meses anteriores com dados; despesas por categoria com variação ("new" sem mês anterior); fixo vs variável; orçamentos mensais do mês; maiores despesas; património no início e no fim do mês; dinheiro movido para investimentos à parte. **Download CSV** (também na app, para Transferências) e **Print / save as PDF** (escondido na app). Lógica em `src/lib/reports/monthly.ts` sobre as funções de Where it goes (13 testes) | TypeScript, lint dos ficheiros, build e 2360 testes. Não visto com sessão iniciada. |
 | H13 — Todas as posições no widget Investments (17/09/2026) | App Android 0.6.0: o widget Investments lista todas as posições numa lista que desliza (`ListView` + `PositionsListService`), cada uma com valor, P&L em euros e percentagem sobre o custo, a cores; tocar numa linha abre Investments. `/api/widget` envia todas as posições com `percent` (null sem custo medido, testado) | Site: TypeScript, build e 2347 testes. App compilada; lint sem erros novos. Não visto num telemóvel. |
@@ -131,7 +132,7 @@ ser apresentadas como propriedades já demonstradas do site atual.
 | Instalação atual | App Android que abre o site do PC | Exige PC ligado e acesso ao servidor. |
 | Cofre futuro | Armazenamento local e partes de identidade/sincronização implementados | Consultar a secção 4; integração com a experiência atual incompleta. |
 
-Validação da última alteração (17/09/2026, widgets 0.6.0): **2347 testes
+Validação da última alteração (17/09/2026, alertas na app 0.7.0): **2376 testes
 aprovados**, build e TypeScript aprovados, sem alterações de esquema. `npx eslint src`
 tem um erro anterior a estas alterações em `src/components/LanguageContext.tsx`
 (setState dentro de um efeito) e os três avisos Bybit. A app Android compila; o

@@ -7,11 +7,13 @@ import { listBudgets } from "./budgets";
 import { listConnections } from "./connections";
 import { getPortfolioItems } from "./dashboard";
 import { getBaseCurrency } from "./settings";
+import { getDueSubscriptionCharges } from "./subscriptionCharges";
 import { reconciliationState } from "@/lib/accounting";
 import { nextCharge, daysUntil, isCadence } from "@/lib/accounting/subscriptions";
 import {
   budgetAlerts,
   subscriptionAlerts,
+  chargeToConfirmAlerts,
   accountAlerts,
   connectionAlerts,
   watchlistAlerts,
@@ -34,7 +36,7 @@ import {
 export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }> {
   const today = new Date();
 
-  const [budgets, connections, portfolio, base, subs, watch, accountRows, allocations] =
+  const [budgets, connections, portfolio, base, subs, watch, accountRows, allocations, due] =
     await Promise.all([
       listBudgets(),
       listConnections(),
@@ -44,6 +46,8 @@ export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }
       db.select().from(watchlistItems),
       db.select().from(accounts).where(eq(accounts.active, true)),
       db.select().from(bucketAllocations),
+      // The same list the dashboard and Subscriptions page ask you to answer.
+      getDueSubscriptionCharges(),
     ]);
 
   const alerts: Alert[] = [];
@@ -76,9 +80,14 @@ export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }
           currency: s.currency,
           daysUntil: daysUntil(next, today),
         };
-      })
+      }),
+      // A stored date means the charge day is asked about as a charge to
+      // confirm, answered or not; see `subscriptionAlerts`.
+      new Set(subs.filter((s) => s.nextChargeAt !== null).map((s) => s.id))
     )
   );
+
+  alerts.push(...chargeToConfirmAlerts(due.charges));
 
   alerts.push(
     ...accountAlerts(

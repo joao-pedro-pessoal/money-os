@@ -7,6 +7,8 @@ import {
   watchlistAlerts,
   portfolioAlerts,
   sortAlerts,
+  chargeToConfirmAlerts,
+  shouldNotify,
 } from "../rules";
 
 /**
@@ -187,5 +189,46 @@ describe("ordering", () => {
       { id: "3", severity: "warning", title: "c", href: "/", kind: "account" },
     ]);
     expect(sorted.map((a) => a.severity)).toEqual(["critical", "warning", "info"]);
+  });
+});
+
+describe("charges to confirm", () => {
+  const charge = { subscriptionId: "s", dueOn: "2026-09-17", name: "Netflix", amount: 12.99, currency: "EUR" };
+
+  it("gives each charge its own alert, so next month's is news again", () => {
+    const [september] = chargeToConfirmAlerts([charge]);
+    const [october] = chargeToConfirmAlerts([{ ...charge, dueOn: "2026-10-17" }]);
+    expect(september.title).toContain("Netflix");
+    expect(september.href).toBe("/subscriptions");
+    expect(september.id).not.toBe(october.id);
+  });
+
+  it("drops 'charges today' for a subscription whose day is asked about as a charge", () => {
+    const sub = { id: "s", name: "Netflix", amount: 12.99, currency: "EUR", daysUntil: 0 };
+    expect(subscriptionAlerts([sub], new Set(["s"]))).toEqual([]);
+    expect(subscriptionAlerts([sub])).toHaveLength(1);
+    // Before the day, the heads-up still comes.
+    expect(subscriptionAlerts([{ ...sub, daysUntil: 2 }], new Set(["s"]))).toHaveLength(1);
+  });
+});
+
+describe("shouldNotify", () => {
+  const alert = (severity: "critical" | "warning" | "info", kind: Parameters<typeof shouldNotify>[0]["kind"]) => ({
+    id: "x",
+    severity,
+    kind,
+    title: "t",
+    href: "/",
+  });
+
+  it("interrupts for anything that needs fixing or a look", () => {
+    expect(shouldNotify(alert("critical", "account"))).toBe(true);
+    expect(shouldNotify(alert("warning", "portfolio"))).toBe(true);
+  });
+
+  it("interrupts for information with a moment, not for a standing fact", () => {
+    expect(shouldNotify(alert("info", "subscription"))).toBe(true);
+    expect(shouldNotify(alert("info", "watchlist"))).toBe(true);
+    expect(shouldNotify(alert("info", "portfolio"))).toBe(false);
   });
 });

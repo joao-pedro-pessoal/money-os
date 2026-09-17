@@ -2,18 +2,11 @@ package com.joaonovais.moneyos.shell;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.webkit.CookieManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Currency;
@@ -23,8 +16,8 @@ import java.util.Locale;
 /**
  * The figures behind the widgets and the quick settings tile.
  *
- * Read from the site's /api/widget with the session cookie the app's WebView
- * already holds, so a phone that is not logged in gets nothing. The last answer
+ * Read from the site's /api/widget through Site, with the session cookie the
+ * app's WebView already holds, so a phone that is not logged in gets nothing. The last answer
  * is kept on the phone so a widget still shows something away from home Wi-Fi,
  * always with the time it was read — a figure without its age would pass for
  * today's.
@@ -33,11 +26,10 @@ final class WidgetData {
     private static final String KEY_JSON = "widget_json";
     private static final String KEY_READ_AT = "widget_read_at";
     private static final String KEY_PROBLEM = "widget_problem";
-    private static final String KEY_ADDRESS = "address";
 
-    static final String PROBLEM_LOGIN = "login";
-    static final String PROBLEM_OFFLINE = "offline";
-    static final String PROBLEM_NO_ADDRESS = "address";
+    static final String PROBLEM_LOGIN = Site.PROBLEM_LOGIN;
+    static final String PROBLEM_OFFLINE = Site.PROBLEM_OFFLINE;
+    static final String PROBLEM_NO_ADDRESS = Site.PROBLEM_NO_ADDRESS;
 
     final String currency;
     final double netWorth;
@@ -185,57 +177,18 @@ final class WidgetData {
     /** Asks the site for fresh figures. Blocking: call off the main thread. */
     static void refresh(Context context) {
         SharedPreferences prefs = prefs(context);
-        String address = prefs.getString(KEY_ADDRESS, null);
-        if (address == null) {
-            prefs.edit().putString(KEY_PROBLEM, PROBLEM_NO_ADDRESS).apply();
-            return;
-        }
-        String cookie = null;
         try {
-            cookie = CookieManager.getInstance().getCookie(address);
-        } catch (RuntimeException ignored) {
-            // No WebView on this phone state; treated as not logged in.
-        }
-        if (cookie == null || cookie.isEmpty()) {
-            prefs.edit().putString(KEY_PROBLEM, PROBLEM_LOGIN).apply();
-            return;
-        }
-
-        HttpURLConnection connection = null;
-        try {
-            connection = (HttpURLConnection) new URL(address + "/api/widget").openConnection();
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(15000);
-            // A redirect here is the login page, not the data.
-            connection.setInstanceFollowRedirects(false);
-            connection.setRequestProperty("Cookie", cookie);
-            connection.setRequestProperty("Accept", "application/json");
-            int status = connection.getResponseCode();
-            if (status >= 300 && status < 400 || status == 401 || status == 403) {
-                prefs.edit().putString(KEY_PROBLEM, PROBLEM_LOGIN).apply();
-                return;
-            }
-            if (status != 200) throw new IOException("HTTP " + status);
-            String body = read(connection.getInputStream());
+            String body = Site.get(context, "/api/widget");
             new WidgetData(new JSONObject(body), System.currentTimeMillis()); // validates
             prefs.edit()
                     .putString(KEY_JSON, body)
                     .putLong(KEY_READ_AT, System.currentTimeMillis())
                     .remove(KEY_PROBLEM)
                     .apply();
-        } catch (IOException | JSONException | RuntimeException e) {
+        } catch (Site.Unavailable e) {
+            prefs.edit().putString(KEY_PROBLEM, e.reason).apply();
+        } catch (JSONException | RuntimeException e) {
             prefs.edit().putString(KEY_PROBLEM, PROBLEM_OFFLINE).apply();
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
-    }
-
-    private static String read(InputStream in) throws IOException {
-        try (InputStream stream = in; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[8192];
-            int n;
-            while ((n = stream.read(buffer)) != -1) out.write(buffer, 0, n);
-            return out.toString(StandardCharsets.UTF_8.name());
         }
     }
 
