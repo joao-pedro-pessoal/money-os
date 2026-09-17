@@ -152,6 +152,12 @@
                 android:resource="@xml/widget_open_trades" />
         </receiver>
 
+        <!-- The rows of the Investments widget. -->
+        <service
+            android:name=".PositionsListService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
         <!-- Quick settings tiles, beside the torch and Wi-Fi. -->
         <service
             android:name=".Tiles$RecordExpense"

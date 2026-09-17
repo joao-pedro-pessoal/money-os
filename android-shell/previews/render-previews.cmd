@@ -13,7 +13,7 @@ call :shot dashboard 260 170
 call :shot networth 300 170
 call :shot where 300 170
 call :shot cashflow 260 170
-call :shot investments 300 170
+call :shot investments 300 260
 call :shot allocation 300 170
 call :shot movers 300 170
 call :shot dividends 300 170
@@ -22,6 +22,8 @@ echo Done.
 exit /b 0
 
 :shot
+rem A profile left from an earlier run can make headless Edge hang; start clean.
+if exist "%TEMP%\money-os-previews\%1" rmdir /s /q "%TEMP%\money-os-previews\%1"
 "%EDGE%" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 ^
   --default-background-color=00000000 --no-first-run --disable-extensions ^
   --user-data-dir="%TEMP%\money-os-previews\%1" ^

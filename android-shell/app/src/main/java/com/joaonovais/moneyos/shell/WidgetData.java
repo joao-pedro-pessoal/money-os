@@ -52,6 +52,8 @@ final class WidgetData {
     final List<Double> topValues = new ArrayList<>();
     /** NaN where no result was measured. */
     final List<Double> topPnl = new ArrayList<>();
+    /** Return on cost; NaN where there is no measured cost. */
+    final List<Double> topPercent = new ArrayList<>();
     final List<String> allocationNames = new ArrayList<>();
     final List<Double> allocationValues = new ArrayList<>();
     final List<String> bestNames = new ArrayList<>();
@@ -106,6 +108,8 @@ final class WidgetData {
             topNames.add(position.getString("name"));
             topValues.add(position.getDouble("value"));
             topPnl.add(position.isNull("pnl") ? Double.NaN : position.getDouble("pnl"));
+            topPercent.add(position.isNull("percent") || !position.has("percent")
+                    ? Double.NaN : position.getDouble("percent"));
         }
         if (invested != null) {
             JSONArray allocation = invested.optJSONArray("allocation");

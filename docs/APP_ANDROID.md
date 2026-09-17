@@ -177,7 +177,7 @@ Settings (`PhoneQuickEntrySettings.tsx`) só aparece dentro da app e usa a ponte
 | **Net worth** | Património, variação desde o início do registo e o gráfico maior | Analytics |
 | **Where the money is** | Donut com os 4 sítios com mais dinheiro, o resto em "Other", e percentagens | Dashboard |
 | **Cash flow** | Saldo do mês, entradas e saídas, e as duas barras | Cash flow |
-| **Investments** | Valor da carteira, P&L não realizado (e %) e as maiores posições com o seu P&L — quanto mais alto o widget, mais posições (até 10) | Investments |
+| **Investments** (0.6.0) | Valor da carteira, P&L não realizado (€ e %) e **todas as posições** numa lista que desliza dentro do widget, cada uma com valor, P&L em euros e em % (retorno sobre o custo; "—" quando não há custo medido) | Investments |
 | **Allocation** (0.5.0) | Donut da carteira por tipo de ativo, com percentagens | Investment Analysis |
 | **Winners & losers** (0.5.0) | Melhores e piores posições pelo retorno sobre o custo, em % e em dinheiro; mais linhas quando o widget é mais alto | Investments |
 | **Dividends** (0.5.0) | Total recebido, este ano (valor e pagamentos) e o próximo pagamento estimado | Dividends |
@@ -206,7 +206,7 @@ com património, a linha do património (até 60 pontos), os sítios com mais di
 entradas/saídas do mês, todos na moeda base e calculados pelas mesmas funções do
 dashboard (`src/lib/widgets/summary.ts`, com testes). A app pede-a com o cookie da
 WebView (`WidgetData.java`), guarda a última resposta nas preferências da app e desenha
-os gráficos em `Charts.java`; `MoneyWidgets.java` tem os quatro widgets e `Tiles.java`
+os gráficos em `Charts.java`; `MoneyWidgets.java` tem os widgets, `PositionsListService.java` as linhas da lista do Investments e `Tiles.java`
 os dois botões. **Isto é a única coisa financeira guardada no telemóvel:** os últimos
 valores dos widgets.
 

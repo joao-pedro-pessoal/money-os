@@ -55,6 +55,8 @@ export interface WidgetPosition {
   value: number;
   /** Null when nothing measured a result: cash, an unknown cost, a price at cost. */
   pnl: number | null;
+  /** Return on cost, the Investments page's measure. Null without a positive cost. */
+  percent: number | null;
 }
 
 /**
@@ -63,13 +65,21 @@ export interface WidgetPosition {
  */
 export function topPositions(
   items: { name: string; value: number; pnl: number; measured: boolean }[],
-  count: number
+  count: number = Infinity
 ): WidgetPosition[] {
   return [...items]
     .filter((i) => i.value > 0)
     .sort((a, b) => b.value - a.value)
     .slice(0, count)
-    .map((i) => ({ name: i.name, value: round2(i.value), pnl: i.measured ? round2(i.pnl) : null }));
+    .map((i) => {
+      const cost = i.value - i.pnl;
+      return {
+        name: i.name,
+        value: round2(i.value),
+        pnl: i.measured ? round2(i.pnl) : null,
+        percent: i.measured && cost > 0 ? round2((i.pnl / cost) * 100) : null,
+      };
+    });
 }
 
 export interface WidgetMover {

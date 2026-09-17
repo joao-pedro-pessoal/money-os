@@ -92,9 +92,10 @@ public final class MoneyWidgets {
     static void drawAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         for (int kind = 0; kind < ALL.length; kind++) {
-            for (int id : manager.getAppWidgetIds(new ComponentName(context, ALL[kind]))) {
-                draw(context, manager, id, kind);
-            }
+            int[] ids = manager.getAppWidgetIds(new ComponentName(context, ALL[kind]));
+            for (int id : ids) draw(context, manager, id, kind);
+            // The Investments list reads the figures itself; tell it they changed.
+            if (kind == 4 && ids.length > 0) manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_items);
         }
     }
 
@@ -162,7 +163,7 @@ public final class MoneyWidgets {
         int heightDp = Math.max(90, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 140));
 
         RemoteViews views = new RemoteViews(context.getPackageName(),
-                isDonut(kind) ? R.layout.widget_where : R.layout.widget_money);
+                isDonut(kind) ? R.layout.widget_where : kind == 4 ? R.layout.widget_investments : R.layout.widget_money);
         views.setTextViewText(R.id.widget_title, TITLES[kind]);
         views.setOnClickPendingIntent(R.id.widget_root, openPage(context, PATHS[kind], kind));
         views.setOnClickPendingIntent(R.id.widget_refresh, refresh(context, ALL[kind], kind));
@@ -171,9 +172,21 @@ public final class MoneyWidgets {
         String problem = WidgetData.problem(context);
         views.setTextViewText(R.id.widget_status, status(context, data, problem));
 
+        if (kind == 4) {
+            // Every position, in a list that scrolls inside the widget.
+            Intent rows = new Intent(context, PositionsListService.class)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+            rows.setData(android.net.Uri.parse(rows.toUri(Intent.URI_INTENT_SCHEME)));
+            views.setRemoteAdapter(R.id.widget_items, rows);
+            views.setEmptyView(R.id.widget_items, R.id.widget_empty);
+            views.setPendingIntentTemplate(R.id.widget_items, rowTemplate(context));
+        }
+
         if (data == null) {
             views.setTextViewText(R.id.widget_value, "—");
-            if (!isDonut(kind)) {
+            if (kind == 4) {
+                views.setTextViewText(R.id.widget_sub, "");
+            } else if (!isDonut(kind)) {
                 views.setViewVisibility(R.id.widget_sub, View.GONE);
                 views.setViewVisibility(R.id.widget_chart, View.GONE);
                 views.setViewVisibility(R.id.widget_legend, View.GONE);
@@ -214,29 +227,18 @@ public final class MoneyWidgets {
             case 5: // Allocation: the portfolio by asset type.
                 donut(views, data.allocationNames, data.allocationValues, data.currency, "No positions yet", widthDp, heightDp, density);
                 break;
-            case 4: { // Investments: what is held, how it is doing, the largest positions.
+            case 4: { // Investments: what is held, how it is doing, and every position below.
                 views.setTextViewText(R.id.widget_value, WidgetData.money(data.investedValue, data.currency));
-                views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
-                CharSequence pnl = signed("Unrealized ", data.investedPnl, data.currency);
-                SpannableStringBuilder sub = new SpannableStringBuilder(pnl);
+                SpannableStringBuilder sub = new SpannableStringBuilder(signed("Unrealized ", data.investedPnl, data.currency));
                 if (data.investedPnl != 0) {
+                    int start = sub.length();
                     sub.append(String.format(java.util.Locale.ROOT, "  %+.2f%%", data.investedPnlPercent));
+                    sub.setSpan(new ForegroundColorSpan(data.investedPnl > 0 ? Charts.GREEN : Charts.RED),
+                            start, sub.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
+                sub.append("  ·  ").append(String.valueOf(data.positionCount))
+                        .append(data.positionCount == 1 ? " position" : " positions");
                 views.setTextViewText(R.id.widget_sub, sub);
-                views.setViewVisibility(R.id.widget_chart, View.GONE);
-                SpannableStringBuilder list = new SpannableStringBuilder();
-                // A taller widget lists more of them.
-                for (int i = 0; i < Math.min(rows(heightDp), data.topNames.size()); i++) {
-                    if (i > 0) list.append("\n");
-                    list.append(data.topNames.get(i)).append("  ");
-                    int valueStart = list.length();
-                    list.append(WidgetData.money(data.topValues.get(i), data.currency));
-                    list.setSpan(new ForegroundColorSpan(Charts.MUTED), valueStart, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    double result = data.topPnl.get(i);
-                    if (!Double.isNaN(result)) list.append("  ").append(signed("", result, data.currency));
-                }
-                if (data.topNames.isEmpty()) list.append(data.positionCount == 0 ? "No positions yet" : "");
-                showList(views, list, rows(heightDp));
                 break;
             }
             case 6: { // Winners & losers: return on cost, best and worst.
@@ -419,6 +421,19 @@ public final class MoneyWidgets {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return PendingIntent.getActivity(context, 100 + kind, intent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    /**
+     * What a tap on a row opens. Mutable because each row fills it in; the
+     * intent names its component, which Android requires of a mutable one.
+     */
+    private static PendingIntent rowTemplate(Context context) {
+        Intent intent = new Intent(context, MainActivity.class)
+                .setAction(MainActivity.ACTION_OPEN_PAGE)
+                .putExtra(MainActivity.EXTRA_PATH, "/investments")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        return PendingIntent.getActivity(context, 150, intent,
+                PendingIntent.FLAG_MUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private static PendingIntent refresh(Context context, Class<?> provider, int kind) {

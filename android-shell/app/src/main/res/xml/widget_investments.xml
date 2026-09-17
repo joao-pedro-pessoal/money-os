@@ -4,14 +4,14 @@
      itself has none until it has read them, and showed as an empty dark box. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_investments_description"
-    android:initialLayout="@layout/widget_money"
+    android:initialLayout="@layout/widget_investments"
     android:previewImage="@drawable/widget_preview_investments"
     android:minWidth="250dp"
-    android:minHeight="110dp"
+    android:minHeight="180dp"
     android:minResizeWidth="160dp"
     android:minResizeHeight="90dp"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"
-    android:targetCellHeight="2"
+    android:targetCellHeight="3"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen" />

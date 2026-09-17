@@ -696,7 +696,7 @@ export default function ManualPage() {
             over time, <strong className="text-[var(--foreground)]">Where the money is</strong>,{" "}
             <strong className="text-[var(--foreground)]">Cash flow</strong> and{" "}
             <strong className="text-[var(--foreground)]">Investments</strong> (portfolio value, unrealized
-            P&amp;L and the largest positions — more of them as you make it taller), and for investing{" "}
+            P&amp;L, and every position in a list you can scroll, each with its P&amp;L in euros and percent), and for investing{" "}
             <strong className="text-[var(--foreground)]">Allocation</strong>,{" "}
             <strong className="text-[var(--foreground)]">Winners &amp; losers</strong>,{" "}
             <strong className="text-[var(--foreground)]">Dividends</strong> and{" "}

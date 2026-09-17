@@ -70,8 +70,8 @@ export async function GET() {
         pnl: invested.pnl,
         pnlPercent: invested.pnlPercent,
         count: portfolio.items.length,
-        // Enough for the tallest widget; a short one shows the first few.
-        top: topPositions(measuredItems, 10),
+        // Every position: the widget scrolls.
+        top: topPositions(measuredItems),
         allocation: topSlices(
           groupItems(portfolio.items, "assetType").map((g) => ({
             name: g.key === "—" ? "Untagged" : tagLabel(g.key, "assetType") ?? g.key,

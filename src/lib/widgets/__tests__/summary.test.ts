@@ -73,9 +73,14 @@ describe("topPositions", () => {
         2
       )
     ).toEqual([
-      { name: "VWCE", value: 900, pnl: 42.46 },
-      { name: "Cash", value: 500, pnl: null },
+      { name: "VWCE", value: 900, pnl: 42.46, percent: 4.95 },
+      { name: "Cash", value: 500, pnl: null, percent: null },
     ]);
+  });
+
+  it("lists every position when no count is given", () => {
+    const many = Array.from({ length: 25 }, (_, i) => ({ name: `P${i}`, value: i + 1, pnl: 0, measured: true }));
+    expect(topPositions(many)).toHaveLength(25);
   });
 });
 
