@@ -391,12 +391,20 @@ export default function ManualPage() {
             What repeats: streaming, the gym, insurance. Tells you how much is
             already committed before you do anything else.
           </p>
-          <Note label="What it doesn't do yet" tone="care">
+          <p>
+            Give a subscription its charge date and, on that day, it appears under{" "}
+            <strong className="text-[var(--foreground)]">Subscription charges to confirm</strong> — at
+            the top of the dashboard and of this page. Choose <em>Record expense</em> to add it (change
+            the account, amount or date first if needed), <em>Yes, that&apos;s it</em> when an expense
+            already in your records is this charge, or <em>Skip this charge</em> when it did not happen.
+            Charges from the last month are offered; older ones are not.
+          </p>
+          <Note label="Why it asks instead of adding" tone="care">
             <p>
-              A subscription says what <em>will</em> go out — it does not create
-              the transaction. You still record it by hand, or wait for the
-              statement. That is deliberate for now: an invented transaction in a
-              financial record is worse than a missing one.
+              The same charge usually arrives another way too — a statement import, a connector, a
+              quick entry. Adding it automatically would count it twice when that happened, and an
+              invented transaction in a financial record is worse than a missing one. So nothing is
+              added until you choose, and each charge can only be answered once.
             </p>
           </Note>
         </Entry>
@@ -736,7 +744,7 @@ export default function ManualPage() {
           <Note label="Not built yet" tone="care">
             <p>
               Alerts outside the app — the bell only tells you while it is open.
-              Recurring transactions created automatically.
+              Recurring transactions created without asking — subscriptions propose theirs instead.
               Bonds modelled properly, with coupon and maturity. Attaching
               receipts.
             </p>

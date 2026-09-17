@@ -704,6 +704,32 @@ export const subscriptions = pgTable("subscriptions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * One charge of a subscription that has been dealt with.
+ *
+ * On the day a subscription is due the app proposes the expense; it never
+ * records it by itself. Each proposal ends here as `recorded` (the expense was
+ * created from it), `matched` (an expense already in the ledger — imported or
+ * typed — was this charge) or `skipped`. The unique pair is what stops a
+ * double tap, a second device or a reload from recording one charge twice.
+ */
+export const subscriptionCharges = pgTable(
+  "subscription_charges",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "cascade" }),
+    // The calendar day the charge fell due, YYYY-MM-DD.
+    dueOn: text("due_on").notNull(),
+    // "recorded" | "matched" | "skipped"
+    status: text("status").notNull(),
+    transactionId: text("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique("subscription_charges_subscription_due").on(t.subscriptionId, t.dueOn)]
+);
+
 // ---------- Expected money ----------
 /**
  * Money that is coming but has not arrived.

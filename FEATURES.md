@@ -109,6 +109,10 @@ O que sai todos os meses aconteça o que acontecer.
   lembra-te de confirmar no extrato daí a um mês.
 - Nada disto entra em nenhum total. Uma subscrição é uma *previsão*; a cobrança
   real chega como transação normal e é contada aí.
+- **Cobranças para confirmar** (17/09/2026): no dia de cada cobrança, a app
+  propõe a despesa no dashboard e em Subscriptions — registar, dizer que já está
+  registada (mostra a despesa parecida) ou saltar. Nunca cria nada sozinha, e cada
+  cobrança só pode ser respondida uma vez (`subscription_charges`, par único).
 
 ## Cash Flow
 

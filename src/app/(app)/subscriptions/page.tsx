@@ -14,13 +14,16 @@ import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { fmt } from "@/lib/format";
 import Section from "@/components/Section";
+import DueSubscriptionCharges from "@/components/DueSubscriptionCharges";
+import { getDueSubscriptionCharges } from "@/actions/subscriptionCharges";
 
 export default async function SubscriptionsPage() {
-  const [subs, totals, accounts, categories] = await Promise.all([
+  const [subs, totals, accounts, categories, due] = await Promise.all([
     listSubscriptions(),
     getSubscriptionTotals(),
     listAccountsWithState(),
     listCategories(),
+    getDueSubscriptionCharges(),
   ]);
 
   const expenseCategories = categories.filter((c) => c.kind === "expense");
@@ -37,6 +40,8 @@ export default async function SubscriptionsPage() {
           nothing on this page is added to your balances or your spending totals.
         </p>
       </div>
+
+      <DueSubscriptionCharges charges={due.charges} accounts={due.accounts} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card p-4">

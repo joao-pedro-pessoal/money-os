@@ -30,7 +30,9 @@ detects rows you have already imported. Budgets per category and period.
 Buckets — money set aside for a purpose, filled in priority order. A monthly
 report for any month — income, spending by category against the month before,
 budgets, largest expenses and what net worth did — as a page, a CSV or a PDF.
-Subscriptions, so you know what is already committed before you decide anything.
+Subscriptions, so you know what is already committed before you decide anything —
+and on each charge day the expense is proposed for you to record, match with one
+already imported, or skip; never added behind your back.
 
 **Money the market moves.** Holdings from eight platforms that sync themselves,
 plus anything you type in or import from a broker statement. Automatic prices
@@ -169,7 +171,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2360 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2372 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 
@@ -229,5 +231,5 @@ Next.js App Router, TypeScript, Drizzle ORM, PostgreSQL, Recharts, Tailwind.
 
 `src/lib/**` is pure logic — no database and no React, and no `fetch` outside
 the four connector/FX files that are the outbound edge. That discipline is why
-all 2360 tests run without Postgres. Every database call lives in
+all 2372 tests run without Postgres. Every database call lives in
 `src/actions/**`.

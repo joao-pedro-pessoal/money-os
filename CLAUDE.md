@@ -445,6 +445,20 @@ keys; desktop and complex mode keep the original keys. `MobileFold simpleOnly`
 must show its body in complex mode and on desktop even when its saved state is
 closed. Mode changes change visibility, never financial values or stored data.
 
+## A forecast proposes; it never writes the ledger
+
+Subscriptions (and Expected money) are forecasts. On a subscription's charge day
+`getDueSubscriptionCharges` proposes the expense, and only a person's answer
+writes anything: `recordSubscriptionCharge` creates the expense,
+`answerSubscriptionCharge` marks it `matched` (an expense already there) or
+`skipped`. Never create the transaction on a schedule: the same charge arrives by
+import or connector too, and an automatic one would be counted twice.
+
+The `subscription_charges` row is inserted first, in the same database
+transaction as the expense, and its unique `(subscription_id, due_on)` is the
+guard against a double tap or a second device. `likelyMatch` only suggests; an
+expense is claimed by one charge at most.
+
 ## A widget shows what a page shows, never a figure of its own
 
 The Android app's home-screen widgets and quick settings tiles

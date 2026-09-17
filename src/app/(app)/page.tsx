@@ -26,6 +26,8 @@ import CurrencySwitch from "@/components/CurrencySwitch";
 import Explain from "@/components/Explain";
 import SimpleOverview from "@/components/SimpleOverview";
 import MobileFold from "@/components/MobileFold";
+import DueSubscriptionCharges from "@/components/DueSubscriptionCharges";
+import { getDueSubscriptionCharges } from "@/actions/subscriptionCharges";
 
 export default async function DashboardPage({
   searchParams,
@@ -42,7 +44,7 @@ export default async function DashboardPage({
    */
   const [{ currency: requestedCurrency }, favouriteCurrencies, savedDashboardCurrency] =
     await Promise.all([searchParams, getFavouriteCurrencies(), getDashboardCurrency()]);
-  const accounts = await listAccountsWithState();
+  const [accounts, due] = await Promise.all([listAccountsWithState(), getDueSubscriptionCharges()]);
   const recentTxData = await listTransactions(8);
   const recentTx = recentTxData.rows;
   // Every money total on this page comes from one place — see
@@ -266,6 +268,9 @@ export default async function DashboardPage({
           hrefFor={(c) => `/?currency=${c}`}
         />
       </div>
+
+      {/* Only when a subscription has fallen due and nobody has answered it. */}
+      <DueSubscriptionCharges charges={due.charges} accounts={due.accounts} compact />
 
       <SimpleOverview>
         <StatCard

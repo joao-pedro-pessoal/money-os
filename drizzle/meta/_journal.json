@@ -309,6 +309,13 @@
       "when": 1789297214487,
       "tag": "0043_opposite_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1789662158685,
+      "tag": "0044_sparkling_supernaut",
+      "breakpoints": true
     }
   ]
 }
