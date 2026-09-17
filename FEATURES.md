@@ -406,6 +406,11 @@ sem tags nem preços para editar) e Connections (cartão curto com estado, valor
 Sync now; o resto, incluindo Remove, em Details). Playlists mostram as posições de
 cada playlist, no PC e no telemóvel.
 
+**Registar um gasto sem abrir a app primeiro** (app 0.2.0, 17 de setembro): widget
+no ecrã principal com Despesa e Receita, os mesmos dois atalhos ao tocar sem largar
+no ícone e uma notificação fixa opcional, ligada em Settings. Todos abrem a app
+diretamente no registo rápido do site; nada é gravado fora desse formulário.
+
 **Onde ficam as chaves das corretoras.** Na base de dados, cifradas; a chave que as
 decifra só existe no `.env` do PC. O telemóvel não guarda chaves. Chaves só num
 dispositivo existem apenas na app separada `mobile/` — é a tarefa E02.

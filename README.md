@@ -6,7 +6,8 @@ Project status and the single task list: [TAREFAS.md](TAREFAS.md).
 site from your own computer over your home Wi-Fi, with every feature. Below 768 px
 the site has its own layout: a bottom menu, cards instead of wide tables, panels
 that open only when they matter, and two modes — **Simple** (the essentials) and
-**Complex** (all options). On a computer nothing changes. How to install and run
+**Complex** (all options). A home-screen widget, icon shortcuts and an optional
+notification open the quick entry form in one tap. On a computer nothing changes. How to install and run
 it: [docs/APP_ANDROID.md](docs/APP_ANDROID.md) (in Portuguese).
 
 **Native mobile development:** [mobile/README.md](mobile/README.md) contains a

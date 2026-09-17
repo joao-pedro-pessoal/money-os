@@ -682,6 +682,14 @@ export default function ManualPage() {
             for — the charts, audits and forms around it are one tap away, and what
             you open stays open on that phone.
           </p>
+          <p>
+            To record an expense without opening the app first: add the{" "}
+            <strong className="text-[var(--foreground)]">Money OS widget</strong> to the home
+            screen (Despesa / Receita), touch and hold the app icon for the same two
+            shortcuts, or switch on the quick entry notification in Settings. Each opens
+            the app straight on the quick entry form; nothing is saved until you press
+            Save there, so the form&apos;s undo and duplicate protection still apply.
+          </p>
           <Note label="Plain http at home" tone="care">
             <p>
               On your home network the connection is not encrypted: anyone on the

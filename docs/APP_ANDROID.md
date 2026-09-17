@@ -138,6 +138,35 @@ chegar às colunas. No computador mantém-se a tabela completa.
   Sync now; o resto, incluindo Remove, em **Details**.
 - **Playlists:** cada playlist abre com as posições que tem.
 
+### Registar um gasto sem abrir a app primeiro (versão 0.2.0)
+
+- **Widget:** toca sem largar num espaço vazio do ecrã principal → **Widgets** →
+  **Money OS** → arrasta **Registo rápido** para o ecrã. Tem os botões **− Despesa** e
+  **+ Receita**.
+- **Atalhos:** toca sem largar no ícone da Money OS → **Despesa** ou **Receita**. Podes
+  arrastar um atalho para o ecrã principal.
+- **Notificação:** na app, **Settings → Quick entry notification**. Fica na barra de
+  notificações com **Despesa** e **Receita**. O Android pede autorização da primeira vez;
+  se a recusaste, a app abre as definições de notificações. Volta depois de reiniciar o
+  telemóvel; desliga-se no mesmo sítio.
+
+Todos abrem a app diretamente no formulário de registo rápido, já em despesa ou
+receita. Nada é gravado sem carregar em **Save**, por isso o desfazer e a proteção
+contra registos repetidos continuam a valer. Com a sessão terminada, abre o login.
+Continua a precisar do PC ligado e do mesmo Wi-Fi.
+
+Como funciona: `QuickEntry.java` cria os `PendingIntent` (ação
+`com.joaonovais.moneyos.site.QUICK_ENTRY`, extra `quick`), `QuickEntryWidget.java` é o
+widget, `res/xml/shortcuts.xml` os atalhos e `QuickEntryRestore.java` repõe a
+notificação no arranque. A `MainActivity` (agora `singleTask`) guarda o pedido e, quando
+a página do site acaba de carregar, deixa-o em `window.__moneyOsQuickEntry` e envia o
+evento `money-os:quick-entry`; o `QuickEntry.tsx` abre o formulário. O interruptor em
+Settings (`PhoneQuickEntrySettings.tsx`) só aparece dentro da app e usa a ponte
+`MoneyOSAndroid.setQuickNotification`.
+
+**Para atualizar a app no telemóvel** é preciso instalar o APK novo por cima do antigo
+(os passos 2 e 3 de "Como usar"); os dados e a sessão mantêm-se.
+
 ### Chaves das corretoras
 
 A app não guarda chaves. Estão na base de dados do site, cifradas, e só se decifram

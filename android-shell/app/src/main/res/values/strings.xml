@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Money OS</string>
+    <string name="widget_description">Registar uma despesa ou uma receita</string>
+    <string name="widget_expense">− Despesa</string>
+    <string name="widget_income">+ Receita</string>
+    <string name="shortcut_expense">Despesa</string>
+    <string name="shortcut_expense_long">Registar despesa</string>
+    <string name="shortcut_income">Receita</string>
+    <string name="shortcut_income_long">Registar receita</string>
 </resources>

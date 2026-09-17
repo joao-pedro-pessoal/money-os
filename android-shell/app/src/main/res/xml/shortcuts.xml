@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Touch and hold the app icon. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_quick_entry"
+        android:shortcutId="expense"
+        android:shortcutLongLabel="@string/shortcut_expense_long"
+        android:shortcutShortLabel="@string/shortcut_expense">
+        <intent
+            android:action="com.joaonovais.moneyos.site.QUICK_ENTRY"
+            android:targetClass="com.joaonovais.moneyos.shell.MainActivity"
+            android:targetPackage="com.joaonovais.moneyos.site">
+            <extra android:name="quick" android:value="expense" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_quick_entry"
+        android:shortcutId="income"
+        android:shortcutLongLabel="@string/shortcut_income_long"
+        android:shortcutShortLabel="@string/shortcut_income">
+        <intent
+            android:action="com.joaonovais.moneyos.site.QUICK_ENTRY"
+            android:targetClass="com.joaonovais.moneyos.shell.MainActivity"
+            android:targetPackage="com.joaonovais.moneyos.site">
+            <extra android:name="quick" android:value="income" />
+        </intent>
+    </shortcut>
+</shortcuts>

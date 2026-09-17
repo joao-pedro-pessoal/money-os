@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -12,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.text.InputType;
 import android.util.Base64;
 import android.util.TypedValue;
@@ -61,6 +63,7 @@ public class MainActivity extends Activity {
     private static final String PREFS = "money-os-shell";
     private static final String KEY_ADDRESS = "address";
     private static final int CHOOSE_FILE = 1;
+    private static final int ASK_NOTIFICATIONS = 2;
     private static final int MAX_SAVED_BYTES = 50 * 1024 * 1024;
 
     private static final int BACKGROUND = Color.rgb(15, 17, 21);
@@ -82,6 +85,11 @@ public class MainActivity extends Activity {
     /** The origin of the page on screen. The bridge answers only when the two agree. */
     private volatile String pageOrigin = "";
 
+    /** A quick entry asked for by the widget, a shortcut or the notification, not yet handed to the page. */
+    private String pendingQuick;
+    /** True between a page finishing and the next one starting. */
+    private boolean pageReady;
+
     private android.window.OnBackInvokedCallback backCallback;
     private boolean backRegistered;
 
@@ -94,6 +102,10 @@ public class MainActivity extends Activity {
         root.setOnApplyWindowInsetsListener(this::padForSystemBars);
         setContentView(root);
         shellScript = readAsset("shell.js");
+        pendingQuick = QuickEntry.kindOf(getIntent());
+        // Swiping an ongoing notification away is allowed since Android 14; it
+        // comes back the next time the app opens, for as long as it is switched on.
+        if (QuickEntry.active(this)) QuickEntry.show(this);
 
         String saved = prefs().getString(KEY_ADDRESS, null);
         if (saved == null) showAddressForm(null, null);
@@ -142,13 +154,18 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView v, String url, Bitmap favicon) {
+                pageReady = false;
                 String origin = originOf(url);
                 pageOrigin = origin == null ? "" : origin;
             }
 
             @Override
             public void onPageFinished(WebView v, String url) {
-                if (address.equals(pageOrigin)) v.evaluateJavascript(shellScript, null);
+                if (address.equals(pageOrigin)) {
+                    v.evaluateJavascript(shellScript, null);
+                    pageReady = true;
+                    deliverQuickEntry();
+                }
                 updateBackHandling();
             }
 
@@ -224,6 +241,17 @@ public class MainActivity extends Activity {
 
     private class Bridge {
         @JavascriptInterface
+        public boolean quickNotificationEnabled() {
+            return address.equals(pageOrigin) && QuickEntry.active(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public void setQuickNotification(boolean enabled) {
+            if (!address.equals(pageOrigin)) return;
+            runOnUiThread(() -> MainActivity.this.setQuickNotification(enabled));
+        }
+
+        @JavascriptInterface
         public void themeColor(String value) {
             if (value == null || !address.equals(pageOrigin)) return;
             runOnUiThread(() -> applyColor(value));
@@ -255,6 +283,82 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> toast("Não foi possível guardar " + fileName + "."));
             }
         }
+    }
+
+    // ------------------------------------------------------------ quick entry
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String kind = QuickEntry.kindOf(intent);
+        if (kind == null) return;
+        pendingQuick = kind;
+        deliverQuickEntry();
+    }
+
+    /**
+     * Opens the site's quick entry form, once the site is on screen.
+     *
+     * The request is left on `window` as well as sent as an event: after a cold
+     * start the page finishes loading before React has attached the listener,
+     * and the form picks the request up from there when it mounts.
+     */
+    private void deliverQuickEntry() {
+        if (pendingQuick == null || web == null || !pageReady || !address.equals(pageOrigin)) return;
+        String kind = QuickEntry.INCOME.equals(pendingQuick) ? QuickEntry.INCOME : QuickEntry.EXPENSE;
+        pendingQuick = null;
+        web.evaluateJavascript("window.__moneyOsQuickEntry='" + kind + "';"
+                + "window.dispatchEvent(new CustomEvent('money-os:quick-entry',{detail:'" + kind + "'}));", null);
+    }
+
+    private void setQuickNotification(boolean enabled) {
+        if (!enabled) {
+            QuickEntry.prefs(this).edit().putBoolean(QuickEntry.KEY_NOTIFICATION, false).apply();
+            QuickEntry.hide(this);
+            reportQuickNotification();
+            return;
+        }
+        QuickEntry.prefs(this).edit().putBoolean(QuickEntry.KEY_NOTIFICATION, true).apply();
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, ASK_NOTIFICATIONS);
+            return;
+        }
+        finishEnablingNotification();
+    }
+
+    private void finishEnablingNotification() {
+        if (QuickEntry.active(this)) {
+            QuickEntry.show(this);
+        } else {
+            // Refused now or earlier: only the system settings can allow it.
+            QuickEntry.prefs(this).edit().putBoolean(QuickEntry.KEY_NOTIFICATION, false).apply();
+            toast("As notificações da Money OS estão desligadas. Ativa-as nas definições do Android.");
+            try {
+                startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
+            } catch (ActivityNotFoundException ignored) {
+                // The toast already said where to go.
+            }
+        }
+        reportQuickNotification();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
+        if (request == ASK_NOTIFICATIONS) {
+            finishEnablingNotification();
+            return;
+        }
+        super.onRequestPermissionsResult(request, permissions, results);
+    }
+
+    /** Tells the settings page what the switch should now show. */
+    private void reportQuickNotification() {
+        if (web == null || !address.equals(pageOrigin)) return;
+        web.evaluateJavascript("window.dispatchEvent(new CustomEvent('money-os:quick-notification',{detail:"
+                + QuickEntry.active(this) + "}));", null);
     }
 
     static String cleanName(String name) {

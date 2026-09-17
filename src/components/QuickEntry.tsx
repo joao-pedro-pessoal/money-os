@@ -36,10 +36,40 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
     };
   }, []);
 
-  function open() {
-    if (dialog.current?.open) return;
+  // The Android app's widget, shortcuts and notification open this form
+  // directly. They ask by event when the page is already running, and leave the
+  // request on `window` when the tap started the page, because then it arrives
+  // before this component exists. `?quick=` does the same from a plain link.
+  useEffect(() => {
+    const kindOf = (value: unknown) => (value === "income" ? "income" : value === "expense" ? "expense" : null);
+    const pending = window as typeof window & { __moneyOsQuickEntry?: string };
+    const fromUrl = new URLSearchParams(window.location.search).get("quick");
+    const first = kindOf(pending.__moneyOsQuickEntry) ?? kindOf(fromUrl);
+    delete pending.__moneyOsQuickEntry;
+    if (fromUrl !== null) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("quick");
+      window.history.replaceState(window.history.state, "", url);
+    }
+    if (first) open(first);
+    const handle = (event: Event) => {
+      const kind = kindOf((event as CustomEvent<string>).detail);
+      delete pending.__moneyOsQuickEntry;
+      if (kind) open(kind);
+    };
+    window.addEventListener("money-os:quick-entry", handle);
+    return () => window.removeEventListener("money-os:quick-entry", handle);
+    // Runs once: `open` reads refs and resets state, so the first one is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function open(kind: "expense" | "income" = "expense") {
+    if (dialog.current?.open) {
+      setType(kind);
+      return;
+    }
     form.current?.reset();
-    setType("expense");
+    setType(kind);
     setDate(today());
     setError("");
     setSavedId(null);
@@ -106,7 +136,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
 
   return (
     <>
-      <button type="button" className="icon-btn quick-entry-trigger" aria-label="Quick entry" title="Add income or expense" onClick={open}>
+      <button type="button" className="icon-btn quick-entry-trigger" aria-label="Quick entry" title="Add income or expense" onClick={() => open()}>
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
         <span className="quick-entry-label"><span className="complex-visible">Add entry</span><span className="simple-only">Add entry</span></span>
       </button>
