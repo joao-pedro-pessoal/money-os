@@ -104,6 +104,54 @@
                 android:resource="@xml/widget_investments" />
         </receiver>
 
+        <receiver
+            android:name=".MoneyWidgets$Allocation"
+            android:exported="false"
+            android:label="Allocation">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_allocation" />
+        </receiver>
+
+        <receiver
+            android:name=".MoneyWidgets$Movers"
+            android:exported="false"
+            android:label="Winners &amp; losers">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_movers" />
+        </receiver>
+
+        <receiver
+            android:name=".MoneyWidgets$Dividends"
+            android:exported="false"
+            android:label="Dividends">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_dividends" />
+        </receiver>
+
+        <receiver
+            android:name=".MoneyWidgets$OpenTrades"
+            android:exported="false"
+            android:label="Open trades">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_open_trades" />
+        </receiver>
+
         <!-- Quick settings tiles, beside the torch and Wi-Fi. -->
         <service
             android:name=".Tiles$RecordExpense"

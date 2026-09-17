@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { downsample, topPositions, topSlices } from "../summary";
+import { downsample, movers, topPositions, topSlices } from "../summary";
 
 describe("downsample", () => {
   const series = Array.from({ length: 100 }, (_, i) => ({ date: `d${i}`, value: i + 0.004 }));
@@ -76,5 +76,31 @@ describe("topPositions", () => {
       { name: "VWCE", value: 900, pnl: 42.46 },
       { name: "Cash", value: 500, pnl: null },
     ]);
+  });
+});
+
+describe("movers", () => {
+  const items = [
+    { name: "Up", value: 150, pnl: 50, measured: true }, // +50%
+    { name: "Slightly up", value: 110, pnl: 10, measured: true }, // +10%
+    { name: "Down", value: 50, pnl: -50, measured: true }, // -50%
+    { name: "Cash", value: 500, pnl: 0, measured: false },
+    { name: "No cost", value: 10, pnl: 10, measured: true }, // cost 0
+  ];
+
+  it("ranks by return on cost and leaves out what has no measured cost", () => {
+    expect(movers(items, 2)).toEqual({
+      best: [
+        { name: "Up", pnl: 50, percent: 50 },
+        { name: "Slightly up", pnl: 10, percent: 10 },
+      ],
+      worst: [{ name: "Down", pnl: -50, percent: -50 }],
+    });
+  });
+
+  it("never lists a position as both a winner and a loser", () => {
+    const { best, worst } = movers([{ name: "Only", value: 90, pnl: -10, measured: true }], 3);
+    expect(best).toEqual([]);
+    expect(worst.map((m) => m.name)).toEqual(["Only"]);
   });
 });

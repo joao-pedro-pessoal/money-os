@@ -74,6 +74,35 @@
         BTC  <span class="muted">2 980,00 €</span>  <span class="green">+401,10 €</span><br>
         AAPL  <span class="muted">1 150,00 €</span>  <span class="red">−48,30 €</span></div>
       <div class="status">Updated 18:05</div></div>`,
+    allocation: `<div class="w">${head("Allocation")}<div class="value" style="font-size:20px">9 740,00 €</div>
+      <div class="grow row" style="align-items:center">
+        <svg viewBox="0 0 42 42" style="width:auto;height:100%;aspect-ratio:1">
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="#c9a86a" stroke-width="6" stroke-dasharray="50 50" stroke-dashoffset="25"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="#7aa2ff" stroke-width="6" stroke-dasharray="30 70" stroke-dashoffset="-26"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="#34d399" stroke-width="6" stroke-dasharray="12 88" stroke-dashoffset="-57"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="#f59e0b" stroke-width="6" stroke-dasharray="6 94" stroke-dashoffset="-70"/></svg>
+        <div class="list"><span style="color:#c9a86a">●</span> ETF <span class="muted">51%</span><br>
+          <span style="color:#7aa2ff">●</span> Crypto <span class="muted">31%</span><br>
+          <span style="color:#34d399">●</span> Stock <span class="muted">12%</span><br>
+          <span style="color:#f59e0b">●</span> Cash <span class="muted">6%</span></div></div>
+      <div class="status">Updated 18:05</div></div>`,
+    movers: `<div class="w">${head("Winners & losers")}<div class="value">BTC  +15.6%</div>
+      <div class="sub">Best and worst on what they cost</div>
+      <div class="grow list">BTC  <span class="green">+15.6%</span>  <span class="muted">+401,10 €</span><br>
+        VWCE  <span class="green">+13.9%</span>  <span class="muted">+512,40 €</span><br>
+        AAPL  <span class="red">−4.0%</span>  <span class="muted">−48,30 €</span></div>
+      <div class="status">Updated 18:05</div></div>`,
+    dividends: `<div class="w">${head("Dividends")}<div class="value">312,45 €</div>
+      <div class="sub">Received, all time</div>
+      <div class="grow list">This year  <span class="green">148,20 €</span>  ·  9 payments<br>
+        Next  Vanguard High Dividend  <span style="color:#c9a86a">~ October 2026</span></div>
+      <div class="status">Updated 18:05</div></div>`,
+    opentrades: `<div class="w">${head("Open trades")}<div class="value green">+86,40 €</div>
+      <div class="sub">3 open · margin 540,00 €</div>
+      <div class="grow list">BTC <span class="green">LONG</span> <span class="muted">5x</span>  <span class="green">+120,10 €</span><br>
+        ETH <span class="red">SHORT</span> <span class="muted">3x</span>  <span class="red">−41,20 €</span><br>
+        SOL <span class="green">LONG</span> <span class="muted">2x</span>  <span class="green">+7,50 €</span></div>
+      <div class="status">Updated 18:05</div></div>`,
   };
   document.body.innerHTML = html[kind] ?? "";
 </script>

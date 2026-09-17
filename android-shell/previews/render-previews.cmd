@@ -14,11 +14,16 @@ call :shot networth 300 170
 call :shot where 300 170
 call :shot cashflow 260 170
 call :shot investments 300 170
+call :shot allocation 300 170
+call :shot movers 300 170
+call :shot dividends 300 170
+call :shot opentrades 300 170
 echo Done.
 exit /b 0
 
 :shot
 "%EDGE%" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 ^
-  --default-background-color=00000000 --user-data-dir="%TEMP%\money-os-previews" ^
+  --default-background-color=00000000 --no-first-run --disable-extensions ^
+  --user-data-dir="%TEMP%\money-os-previews\%1" ^
   --window-size=%2,%3 --screenshot="%OUT%\widget_preview_%1.png" "%PAGE%?w=%1&width=%2&height=%3"
 exit /b 0

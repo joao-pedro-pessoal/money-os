@@ -71,3 +71,35 @@ export function topPositions(
     .slice(0, count)
     .map((i) => ({ name: i.name, value: round2(i.value), pnl: i.measured ? round2(i.pnl) : null }));
 }
+
+export interface WidgetMover {
+  name: string;
+  pnl: number;
+  /** On what the position cost: the same measure the Investments page uses. */
+  percent: number;
+}
+
+/**
+ * The best and the worst positions by return on cost.
+ *
+ * Only positions with a measured result and a positive cost take part: a
+ * percentage on an unknown or zero cost is not a small number, it is no number.
+ * A position appears in one list only, so a portfolio of three is not shown
+ * twice.
+ */
+export function movers(
+  items: { name: string; value: number; pnl: number; measured: boolean }[],
+  count: number
+): { best: WidgetMover[]; worst: WidgetMover[] } {
+  const ranked = items
+    .filter((i) => i.measured && i.value - i.pnl > 0)
+    .map((i) => ({ name: i.name, pnl: round2(i.pnl), percent: round2((i.pnl / (i.value - i.pnl)) * 100) }))
+    .sort((a, b) => b.percent - a.percent);
+  const best = ranked.slice(0, count).filter((m) => m.percent > 0);
+  const worst = ranked
+    .slice(best.length)
+    .reverse()
+    .slice(0, count)
+    .filter((m) => m.percent < 0);
+  return { best, worst };
+}

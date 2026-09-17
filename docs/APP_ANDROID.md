@@ -177,7 +177,11 @@ Settings (`PhoneQuickEntrySettings.tsx`) só aparece dentro da app e usa a ponte
 | **Net worth** | Património, variação desde o início do registo e o gráfico maior | Analytics |
 | **Where the money is** | Donut com os 4 sítios com mais dinheiro, o resto em "Other", e percentagens | Dashboard |
 | **Cash flow** | Saldo do mês, entradas e saídas, e as duas barras | Cash flow |
-| **Investments** (0.4.0) | Valor da carteira, P&L não realizado (e %) e as 3 maiores posições com o seu P&L | Investments |
+| **Investments** | Valor da carteira, P&L não realizado (e %) e as maiores posições com o seu P&L — quanto mais alto o widget, mais posições (até 10) | Investments |
+| **Allocation** (0.5.0) | Donut da carteira por tipo de ativo, com percentagens | Investment Analysis |
+| **Winners & losers** (0.5.0) | Melhores e piores posições pelo retorno sobre o custo, em % e em dinheiro; mais linhas quando o widget é mais alto | Investments |
+| **Dividends** (0.5.0) | Total recebido, este ano (valor e pagamentos) e o próximo pagamento estimado | Dividends |
+| **Open trades** (0.5.0) | P&L não realizado das posições alavancadas, número e margem usada, e cada trade com lado, alavancagem e P&L | Open positions |
 
 - Atualizam sozinhos de 30 em 30 minutos (o mínimo que o Android deixa), ao sair da
   app e ao tocar em **↻**.

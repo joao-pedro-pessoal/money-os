@@ -52,6 +52,29 @@ final class WidgetData {
     final List<Double> topValues = new ArrayList<>();
     /** NaN where no result was measured. */
     final List<Double> topPnl = new ArrayList<>();
+    final List<String> allocationNames = new ArrayList<>();
+    final List<Double> allocationValues = new ArrayList<>();
+    final List<String> bestNames = new ArrayList<>();
+    final List<Double> bestPnl = new ArrayList<>();
+    final List<Double> bestPercent = new ArrayList<>();
+    final List<String> worstNames = new ArrayList<>();
+    final List<Double> worstPnl = new ArrayList<>();
+    final List<Double> worstPercent = new ArrayList<>();
+    final boolean dividendsAny;
+    final double dividendsTotal;
+    final double dividendsThisYear;
+    final int dividendPaymentsThisYear;
+    /** Null when no payment is expected. */
+    final String nextDividendName;
+    final String nextDividendMonth;
+    final int tradeCount;
+    final double tradeUnrealized;
+    final double tradeMargin;
+    final List<String> tradeNames = new ArrayList<>();
+    final List<String> tradeSides = new ArrayList<>();
+    /** NaN where the platform states none. */
+    final List<Double> tradeLeverage = new ArrayList<>();
+    final List<Double> tradePnl = new ArrayList<>();
     final String monthLabel;
     final double income;
     final double expenses;
@@ -84,12 +107,54 @@ final class WidgetData {
             topValues.add(position.getDouble("value"));
             topPnl.add(position.isNull("pnl") ? Double.NaN : position.getDouble("pnl"));
         }
+        if (invested != null) {
+            JSONArray allocation = invested.optJSONArray("allocation");
+            for (int i = 0; allocation != null && i < allocation.length(); i++) {
+                allocationNames.add(allocation.getJSONObject(i).getString("name"));
+                allocationValues.add(allocation.getJSONObject(i).getDouble("value"));
+            }
+            JSONObject moved = invested.optJSONObject("movers");
+            if (moved != null) {
+                readMovers(moved.getJSONArray("best"), bestNames, bestPnl, bestPercent);
+                readMovers(moved.getJSONArray("worst"), worstNames, worstPnl, worstPercent);
+            }
+        }
+        JSONObject dividends = json.optJSONObject("dividends");
+        dividendsAny = dividends != null && dividends.getBoolean("any");
+        dividendsTotal = dividends == null ? 0 : dividends.getDouble("total");
+        dividendsThisYear = dividends == null ? 0 : dividends.getDouble("thisYear");
+        dividendPaymentsThisYear = dividends == null ? 0 : dividends.getInt("paymentsThisYear");
+        JSONObject next = dividends == null ? null : dividends.optJSONObject("next");
+        nextDividendName = next == null ? null : next.getString("name");
+        nextDividendMonth = next == null ? null : next.getString("month");
+        JSONObject trading = json.optJSONObject("trading");
+        tradeCount = trading == null ? 0 : trading.getInt("count");
+        tradeUnrealized = trading == null ? 0 : trading.getDouble("unrealized");
+        tradeMargin = trading == null ? 0 : trading.getDouble("margin");
+        JSONArray trades = trading == null ? new JSONArray() : trading.getJSONArray("top");
+        for (int i = 0; i < trades.length(); i++) {
+            JSONObject trade = trades.getJSONObject(i);
+            tradeNames.add(trade.getString("name"));
+            tradeSides.add(trade.optString("side", ""));
+            tradeLeverage.add(trade.isNull("leverage") ? Double.NaN : trade.getDouble("leverage"));
+            tradePnl.add(trade.isNull("pnl") ? Double.NaN : trade.getDouble("pnl"));
+        }
         JSONObject month = json.getJSONObject("month");
         monthLabel = month.getString("label");
         income = month.getDouble("income");
         expenses = month.getDouble("expenses");
         net = month.getDouble("net");
         this.readAt = readAt;
+    }
+
+    private static void readMovers(JSONArray list, List<String> names, List<Double> pnl, List<Double> percent)
+            throws JSONException {
+        for (int i = 0; i < list.length(); i++) {
+            JSONObject mover = list.getJSONObject(i);
+            names.add(mover.getString("name"));
+            pnl.add(mover.getDouble("pnl"));
+            percent.add(mover.getDouble("percent"));
+        }
     }
 
     private static SharedPreferences prefs(Context context) {

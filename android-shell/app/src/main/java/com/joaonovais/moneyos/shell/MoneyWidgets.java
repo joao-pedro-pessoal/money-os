@@ -16,7 +16,9 @@ import android.widget.RemoteViews;
 
 /**
  * The home-screen widgets with figures: dashboard, net worth over time, where
- * the money is, this month's cash flow, and investments.
+ * the money is, this month's cash flow, and five about investing: the
+ * portfolio, allocation by asset type, winners and losers, dividends and open
+ * trades.
  *
  * Each draws from the last figures read (see WidgetData) straight away, then
  * asks the site for new ones. Tapping a widget opens the matching page;
@@ -28,6 +30,7 @@ public final class MoneyWidgets {
 
     private static final Class<?>[] ALL = {
             Dashboard.class, NetWorth.class, WhereMoney.class, CashFlow.class, Investments.class,
+            Allocation.class, Movers.class, Dividends.class, OpenTrades.class,
     };
 
     private MoneyWidgets() {}
@@ -50,6 +53,22 @@ public final class MoneyWidgets {
 
     public static class Investments extends Base {
         @Override int kind() { return 4; }
+    }
+
+    public static class Allocation extends Base {
+        @Override int kind() { return 5; }
+    }
+
+    public static class Movers extends Base {
+        @Override int kind() { return 6; }
+    }
+
+    public static class Dividends extends Base {
+        @Override int kind() { return 7; }
+    }
+
+    public static class OpenTrades extends Base {
+        @Override int kind() { return 8; }
     }
 
     /** Reads new figures and redraws every widget. Returns at once. */
@@ -121,8 +140,20 @@ public final class MoneyWidgets {
 
     // ------------------------------------------------------------ drawing
 
-    private static final String[] TITLES = {"Money OS", "Net worth", "Where the money is", "Cash flow", "Investments"};
-    private static final String[] PATHS = {"/", "/analytics", "/", "/transactions", "/investments"};
+    private static final String[] TITLES = {"Money OS", "Net worth", "Where the money is", "Cash flow",
+            "Investments", "Allocation", "Winners & losers", "Dividends", "Open trades"};
+    private static final String[] PATHS = {"/", "/analytics", "/", "/transactions",
+            "/investments", "/investments/analysis", "/investments", "/investments/dividends", "/positions"};
+
+    /** Whether a kind uses the donut layout. */
+    private static boolean isDonut(int kind) {
+        return kind == 2 || kind == 5;
+    }
+
+    /** How many list rows fit under the headline at this height. */
+    private static int rows(int heightDp) {
+        return Math.max(1, Math.min(10, (heightDp - 96) / 19));
+    }
 
     private static void draw(Context context, AppWidgetManager manager, int id, int kind) {
         float density = context.getResources().getDisplayMetrics().density;
@@ -131,7 +162,7 @@ public final class MoneyWidgets {
         int heightDp = Math.max(90, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 140));
 
         RemoteViews views = new RemoteViews(context.getPackageName(),
-                kind == 2 ? R.layout.widget_where : R.layout.widget_money);
+                isDonut(kind) ? R.layout.widget_where : R.layout.widget_money);
         views.setTextViewText(R.id.widget_title, TITLES[kind]);
         views.setOnClickPendingIntent(R.id.widget_root, openPage(context, PATHS[kind], kind));
         views.setOnClickPendingIntent(R.id.widget_refresh, refresh(context, ALL[kind], kind));
@@ -142,7 +173,7 @@ public final class MoneyWidgets {
 
         if (data == null) {
             views.setTextViewText(R.id.widget_value, "—");
-            if (kind != 2) {
+            if (!isDonut(kind)) {
                 views.setViewVisibility(R.id.widget_sub, View.GONE);
                 views.setViewVisibility(R.id.widget_chart, View.GONE);
                 views.setViewVisibility(R.id.widget_legend, View.GONE);
@@ -177,30 +208,13 @@ public final class MoneyWidgets {
                 views.setImageViewBitmap(R.id.widget_chart, Charts.line(data.series, chartWidth, chartHeight, density));
                 break;
             }
-            case 2: { // Where the money is: a donut and the biggest places.
-                double total = 0;
-                for (double v : data.sliceValues) total += v;
-                views.setTextViewText(R.id.widget_value, WidgetData.money(total, data.currency));
-                int[] colors = new int[data.sliceValues.size()];
-                SpannableStringBuilder legend = new SpannableStringBuilder();
-                for (int i = 0; i < colors.length; i++) {
-                    colors[i] = Charts.sliceColor(i, "Other".equals(data.sliceNames.get(i)));
-                    int start = legend.length();
-                    legend.append("● ");
-                    legend.setSpan(new ForegroundColorSpan(colors[i]), start, legend.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    legend.append(data.sliceNames.get(i));
-                    int pctStart = legend.length();
-                    legend.append(total > 0 ? String.format(java.util.Locale.ROOT, "  %.0f%%", 100 * data.sliceValues.get(i) / total) : "");
-                    legend.setSpan(new ForegroundColorSpan(Charts.MUTED), pctStart, legend.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    if (i < colors.length - 1) legend.append("\n");
-                }
-                if (colors.length == 0) legend.append("Nothing held yet");
-                views.setTextViewText(R.id.widget_legend, legend);
-                int size = Math.round(Math.max(48, Math.min(heightDp - 60, widthDp / 2 - 20)) * density);
-                views.setImageViewBitmap(R.id.widget_chart, Charts.donut(data.sliceValues, colors, size, density));
+            case 2: // Where the money is: a donut and the biggest places.
+                donut(views, data.sliceNames, data.sliceValues, data.currency, "Nothing held yet", widthDp, heightDp, density);
                 break;
-            }
-            case 4: { // Investments: what is held, how it is doing, the largest three.
+            case 5: // Allocation: the portfolio by asset type.
+                donut(views, data.allocationNames, data.allocationValues, data.currency, "No positions yet", widthDp, heightDp, density);
+                break;
+            case 4: { // Investments: what is held, how it is doing, the largest positions.
                 views.setTextViewText(R.id.widget_value, WidgetData.money(data.investedValue, data.currency));
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
                 CharSequence pnl = signed("Unrealized ", data.investedPnl, data.currency);
@@ -211,7 +225,8 @@ public final class MoneyWidgets {
                 views.setTextViewText(R.id.widget_sub, sub);
                 views.setViewVisibility(R.id.widget_chart, View.GONE);
                 SpannableStringBuilder list = new SpannableStringBuilder();
-                for (int i = 0; i < data.topNames.size(); i++) {
+                // A taller widget lists more of them.
+                for (int i = 0; i < Math.min(rows(heightDp), data.topNames.size()); i++) {
                     if (i > 0) list.append("\n");
                     list.append(data.topNames.get(i)).append("  ");
                     int valueStart = list.length();
@@ -221,8 +236,80 @@ public final class MoneyWidgets {
                     if (!Double.isNaN(result)) list.append("  ").append(signed("", result, data.currency));
                 }
                 if (data.topNames.isEmpty()) list.append(data.positionCount == 0 ? "No positions yet" : "");
-                views.setViewVisibility(R.id.widget_legend, View.VISIBLE);
-                views.setTextViewText(R.id.widget_legend, list);
+                showList(views, list, rows(heightDp));
+                break;
+            }
+            case 6: { // Winners & losers: return on cost, best and worst.
+                views.setViewVisibility(R.id.widget_chart, View.GONE);
+                int room = rows(heightDp + 19);
+                int bestRows = Math.min(data.bestNames.size(), Math.max(1, (room + 1) / 2));
+                int worstRows = Math.min(data.worstNames.size(), room - bestRows);
+                if (!data.bestNames.isEmpty()) {
+                    views.setTextViewText(R.id.widget_value, data.bestNames.get(0) + "  "
+                            + String.format(java.util.Locale.ROOT, "%+.1f%%", data.bestPercent.get(0)));
+                } else {
+                    views.setTextViewText(R.id.widget_value, "—");
+                }
+                views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
+                views.setTextViewText(R.id.widget_sub, "Best and worst on what they cost");
+                SpannableStringBuilder list = new SpannableStringBuilder();
+                for (int i = 0; i < bestRows; i++) moverRow(list, data.bestNames.get(i), data.bestPercent.get(i), data.bestPnl.get(i), data.currency);
+                for (int i = 0; i < worstRows; i++) moverRow(list, data.worstNames.get(i), data.worstPercent.get(i), data.worstPnl.get(i), data.currency);
+                if (list.length() == 0) list.append("No measured results yet");
+                showList(views, list, room);
+                break;
+            }
+            case 7: { // Dividends: all received, this year, and what should come next.
+                views.setViewVisibility(R.id.widget_chart, View.GONE);
+                views.setTextViewText(R.id.widget_value, WidgetData.money(data.dividendsTotal, data.currency));
+                views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
+                views.setTextViewText(R.id.widget_sub, "Received, all time");
+                SpannableStringBuilder list = new SpannableStringBuilder();
+                if (!data.dividendsAny) {
+                    list.append("No distributions on record yet");
+                } else {
+                    list.append("This year  ");
+                    int start = list.length();
+                    list.append(WidgetData.money(data.dividendsThisYear, data.currency));
+                    list.setSpan(new ForegroundColorSpan(Charts.GREEN), start, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    list.append("  ·  ").append(String.valueOf(data.dividendPaymentsThisYear))
+                            .append(data.dividendPaymentsThisYear == 1 ? " payment" : " payments");
+                    if (data.nextDividendName != null) {
+                        list.append("\nNext  ").append(data.nextDividendName);
+                        int when = list.length();
+                        list.append("  ~ ").append(monthOf(data.nextDividendMonth));
+                        list.setSpan(new ForegroundColorSpan(Charts.ACCENT), when, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                }
+                showList(views, list, 3);
+                break;
+            }
+            case 8: { // Open trades: what the leveraged positions are doing now.
+                views.setViewVisibility(R.id.widget_chart, View.GONE);
+                views.setTextViewText(R.id.widget_value, signed("", data.tradeUnrealized, data.currency));
+                views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
+                views.setTextViewText(R.id.widget_sub, data.tradeCount + (data.tradeCount == 1 ? " open · margin " : " open · margin ")
+                        + WidgetData.money(data.tradeMargin, data.currency));
+                SpannableStringBuilder list = new SpannableStringBuilder();
+                for (int i = 0; i < Math.min(rows(heightDp), data.tradeNames.size()); i++) {
+                    if (i > 0) list.append("\n");
+                    list.append(data.tradeNames.get(i)).append(" ");
+                    String side = data.tradeSides.get(i);
+                    int sideStart = list.length();
+                    list.append(side.toUpperCase(java.util.Locale.ROOT));
+                    list.setSpan(new ForegroundColorSpan("long".equals(side) ? Charts.GREEN : Charts.RED),
+                            sideStart, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    double leverage = data.tradeLeverage.get(i);
+                    if (!Double.isNaN(leverage)) {
+                        int levStart = list.length();
+                        list.append(String.format(java.util.Locale.ROOT, " %.0fx", leverage));
+                        list.setSpan(new ForegroundColorSpan(Charts.MUTED), levStart, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    double result = data.tradePnl.get(i);
+                    if (!Double.isNaN(result)) list.append("  ").append(signed("", result, data.currency));
+                }
+                if (data.tradeNames.isEmpty()) list.append("No open trades");
+                showList(views, list, rows(heightDp));
                 break;
             }
             default: { // Cash flow: this month in, out, and what is left.
@@ -246,6 +333,59 @@ public final class MoneyWidgets {
             }
         }
         manager.updateAppWidget(id, views);
+    }
+
+    private static void showList(RemoteViews views, CharSequence text, int lines) {
+        views.setViewVisibility(R.id.widget_legend, View.VISIBLE);
+        views.setInt(R.id.widget_legend, "setMaxLines", Math.max(1, lines));
+        views.setTextViewText(R.id.widget_legend, text);
+    }
+
+    private static void moverRow(SpannableStringBuilder list, String name, double percent, double pnl, String currency) {
+        if (list.length() > 0) list.append("\n");
+        list.append(name).append("  ");
+        int start = list.length();
+        list.append(String.format(java.util.Locale.ROOT, "%+.1f%%", percent));
+        list.setSpan(new ForegroundColorSpan(percent >= 0 ? Charts.GREEN : Charts.RED), start, list.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        int money = list.length();
+        list.append("  ").append(WidgetData.money(pnl, currency));
+        list.setSpan(new ForegroundColorSpan(Charts.MUTED), money, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    }
+
+    /** "October 2026" from the site's ISO date, in the phone's time zone. */
+    private static String monthOf(String iso) {
+        try {
+            return java.time.Instant.parse(iso).atZone(java.time.ZoneId.systemDefault())
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", java.util.Locale.ENGLISH));
+        } catch (RuntimeException e) {
+            return "";
+        }
+    }
+
+    /** A donut with the total above it and a legend of names and shares beside it. */
+    private static void donut(RemoteViews views, java.util.List<String> names, java.util.List<Double> values,
+                              String currency, String empty, int widthDp, int heightDp, float density) {
+        double total = 0;
+        for (double v : values) total += v;
+        views.setTextViewText(R.id.widget_value, WidgetData.money(total, currency));
+        int[] colors = new int[values.size()];
+        SpannableStringBuilder legend = new SpannableStringBuilder();
+        for (int i = 0; i < colors.length; i++) {
+            colors[i] = Charts.sliceColor(i, "Other".equals(names.get(i)));
+            int start = legend.length();
+            legend.append("● ");
+            legend.setSpan(new ForegroundColorSpan(colors[i]), start, legend.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            legend.append(names.get(i));
+            int pctStart = legend.length();
+            legend.append(total > 0 ? String.format(java.util.Locale.ROOT, "  %.0f%%", 100 * values.get(i) / total) : "");
+            legend.setSpan(new ForegroundColorSpan(Charts.MUTED), pctStart, legend.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (i < colors.length - 1) legend.append("\n");
+        }
+        if (colors.length == 0) legend.append(empty);
+        views.setTextViewText(R.id.widget_legend, legend);
+        int size = Math.round(Math.max(48, Math.min(heightDp - 60, widthDp / 2 - 20)) * density);
+        views.setImageViewBitmap(R.id.widget_chart, Charts.donut(values, colors, size, density));
     }
 
     /** "+1 234,00 €" in green or "−56,00 €" in red, after an optional label. */

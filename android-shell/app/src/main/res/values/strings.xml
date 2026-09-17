@@ -13,4 +13,8 @@
     <string name="widget_where_money_description">Where the money is, as a donut with percentages</string>
     <string name="widget_cash_flow_description">This month: money in, money out and what is left</string>
     <string name="widget_investments_description">Portfolio value, unrealized P&amp;L and the largest positions</string>
+    <string name="widget_allocation_description">The portfolio by asset type, as a donut with percentages</string>
+    <string name="widget_movers_description">The best and worst positions by return on cost</string>
+    <string name="widget_dividends_description">Dividends received, this year, and the next expected payment</string>
+    <string name="widget_open_trades_description">Open leveraged positions: unrealized P&amp;L, margin and each trade</string>
 </resources>

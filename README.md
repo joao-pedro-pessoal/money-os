@@ -7,7 +7,8 @@ site from your own computer over your home Wi-Fi, with every feature. Below 768 
 the site has its own layout: a bottom menu, cards instead of wide tables, panels
 that open only when they matter, and two modes — **Simple** (the essentials) and
 **Complex** (all options). Home-screen widgets show net worth, its line over
-time, where the money is, this month's cash flow and investments; a widget, icon shortcuts,
+time, where the money is, this month's cash flow, the portfolio, allocation,
+winners and losers, dividends and open trades; a widget, icon shortcuts,
 a quick settings tile and an optional notification open the quick entry form in
 one tap. On a computer nothing changes. How to install and run
 it: [docs/APP_ANDROID.md](docs/APP_ANDROID.md) (in Portuguese).
