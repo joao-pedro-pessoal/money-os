@@ -759,6 +759,18 @@ quem estiver a ler ao lado do ecrã.
   como grátis. TER em `asset_profiles.expense_ratio`; `version` faz reler perfis
   antigos (migration 0047). Lógica em `src/lib/portfolio/costs.ts` (testada).
 
+## Bens avaliados à mão
+
+(18 de setembro) Tipos de ativo novos: **Startups & private companies**, **Art**,
+**Collectibles** e **Vehicles**, ao lado de Real estate. Entram como posição manual
+(quantidade 1, quanto pagaste e quanto vale agora; startups por ação ao preço da
+última ronda) e contam no património com a data em que o valor foi posto. Como nada os
+atualiza, a app acompanha a idade da avaliação (`src/lib/portfolio/valuation.ts`,
+testada): a página da posição diz "Valued … ago" e o sino — e o telemóvel, com os
+alertas ligados — pede nova avaliação ao fim de 12 meses (imóveis, arte,
+colecionáveis) ou 6 meses (veículos, que desvalorizam, e startups, que valem o que a
+última ronda disse). Não entram em setores/países (não são ações nem ETFs).
+
 ## Kraken
 
 O quinto connector, e o primeiro construído sem uma conta por trás. Lê saldos

@@ -1,7 +1,8 @@
 "use server";
 
 import { db } from "@/db/client";
-import { subscriptions, watchlistItems, accounts, bucketAllocations } from "@/db/schema";
+import { subscriptions, watchlistItems, accounts, bucketAllocations, holdings } from "@/db/schema";
+import { valuationAge } from "@/lib/portfolio/valuation";
 import { eq } from "drizzle-orm";
 import { listBudgets } from "./budgets";
 import { listConnections } from "./connections";
@@ -14,6 +15,7 @@ import {
   budgetAlerts,
   subscriptionAlerts,
   chargeToConfirmAlerts,
+  valuationAlerts,
   accountAlerts,
   connectionAlerts,
   watchlistAlerts,
@@ -36,7 +38,7 @@ import {
 export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }> {
   const today = new Date();
 
-  const [budgets, connections, portfolio, base, subs, watch, accountRows, allocations, due] =
+  const [budgets, connections, portfolio, base, subs, watch, accountRows, allocations, due, holdingRows] =
     await Promise.all([
       listBudgets(),
       listConnections(),
@@ -48,6 +50,7 @@ export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }
       db.select().from(bucketAllocations),
       // The same list the dashboard and Subscriptions page ask you to answer.
       getDueSubscriptionCharges(),
+      db.select().from(holdings),
     ]);
 
   const alerts: Alert[] = [];
@@ -89,6 +92,18 @@ export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }
   );
 
   alerts.push(...chargeToConfirmAlerts(due.charges));
+
+  alerts.push(
+    ...valuationAlerts(
+      holdingRows.flatMap((h) => {
+        const age = valuationAge(
+          { assetType: h.assetType, quoteSymbol: h.quoteSymbol, lastPriceUpdate: h.lastPriceUpdate },
+          today
+        );
+        return age ? [{ id: h.id, name: h.name ?? h.symbol, days: age.days, limit: age.limit }] : [];
+      })
+    )
+  );
 
   alerts.push(
     ...accountAlerts(

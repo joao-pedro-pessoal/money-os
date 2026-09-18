@@ -40,6 +40,11 @@ export const ASSET_TYPES = [
   { value: "etf", label: "ETF" },
   { value: "bond", label: "Bonds" },
   { value: "real_estate", label: "Real estate" },
+  // Valued by hand, with a date: see lib/portfolio/valuation.
+  { value: "private_equity", label: "Startups & private companies" },
+  { value: "art", label: "Art" },
+  { value: "collectible", label: "Collectibles" },
+  { value: "vehicle", label: "Vehicles" },
   // A perp on gold is not crypto and not "other" — it tracks a commodity, and
   // that is what the risk analysis should see.
   { value: "commodity", label: "Commodities" },

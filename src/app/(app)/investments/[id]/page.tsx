@@ -21,6 +21,7 @@ import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ageLabel, valuationAge } from "@/lib/portfolio/valuation";
 
 export default async function HoldingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -38,6 +39,14 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
   const holdingAccount = accountList.find((a) => a.id === holding.accountId);
   const pnl = unrealizedPnL(h);
   const pnlColor = pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
+  const valuation = valuationAge(
+    {
+      assetType: holding.assetType,
+      quoteSymbol: holding.quoteSymbol,
+      lastPriceUpdate: holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate) : null,
+    },
+    new Date()
+  );
 
   return (
     <div className="space-y-8">
@@ -101,13 +110,32 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section
-          title="Update price"
+          title={valuation ? "Update value" : "Update price"}
           defaultOpen
           persistKey="holding:price"
           summary={holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleDateString("pt-PT") : "never updated"}
         >
           <form action={updateHoldingPrice} className="space-y-3">
             <input type="hidden" name="id" value={holding.id} />
+            {valuation && (
+              <p
+                className="text-xs rounded-lg border p-2"
+                style={{ borderColor: valuation.due ? "var(--amber)" : "var(--border)" }}
+              >
+                {valuation.due ? (
+                  <span className="text-[var(--amber)]">
+                    Valued {ageLabel(valuation.days)} ago — time to look again.
+                  </span>
+                ) : (
+                  <>Valued {ageLabel(valuation.days)} ago.</>
+                )}{" "}
+                <span className="text-[var(--muted)]">
+                  Nothing prices this from a market, so what you enter is what counts in your net
+                  worth. Worth checking every {ageLabel(valuation.limit)}: a recent sale nearby, an
+                  auction result, a funding round, a used-car listing.
+                </span>
+              </p>
+            )}
             <input
               name="currentPrice"
               type="number"

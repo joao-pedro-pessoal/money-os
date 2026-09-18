@@ -385,3 +385,33 @@ export function portfolioAlerts(input: PortfolioAlertInput): Alert[] {
 
   return alerts;
 }
+
+// ---------------------------------------------------------------------------
+// Hand-valued things
+// ---------------------------------------------------------------------------
+
+export interface ValuationAlertInput {
+  id: string;
+  name: string;
+  /** Days since the value was set, and the type's limit (lib/portfolio/valuation). */
+  days: number;
+  limit: number;
+}
+
+/**
+ * A flat, a painting, a car or a startup share whose value nobody has looked
+ * at in longer than its kind allows. Its figure is in net worth as if it were
+ * today's; only you can say what it is worth now.
+ */
+export function valuationAlerts(items: ValuationAlertInput[]): Alert[] {
+  return items
+    .filter((i) => i.days > i.limit)
+    .map((i) => ({
+      id: `portfolio:valuation:${i.id}`,
+      severity: "warning" as const,
+      kind: "portfolio" as const,
+      title: `${i.name} was last valued ${Math.round(i.days / 30.44)} months ago`,
+      detail: "Its value in your net worth is only as current as the last one you entered.",
+      href: `/investments/${i.id}`,
+    }));
+}

@@ -671,6 +671,24 @@ export default function ManualPage() {
           </p>
         </Entry>
 
+        <Entry id="valued-by-hand" title="Things valued by hand" where="Investments → Add position">
+          <p>
+            A flat, a painting, a watch, a car or shares in a private company have no market price.
+            Add them as a position with the type <em>Real estate</em>, <em>Art</em>,{" "}
+            <em>Collectibles</em>, <em>Vehicles</em> or <em>Startups &amp; private companies</em>:
+            quantity 1 with what you paid and what it is worth now (for startup shares, the number of
+            shares and the last round&apos;s price). The value counts in your net worth, dated the day
+            you entered it.
+          </p>
+          <p>
+            Because nothing updates it, the app keeps track of its age: the position&apos;s page says
+            when it was last valued, and the bell (and the phone, if alerts are on) asks you to look
+            again after a year for property, art and collectibles, and after six months for cars,
+            which lose value, and startups, which are worth what the last round said. Enter the new
+            value under <em>Update value</em>.
+          </p>
+        </Entry>
+
         <Entry id="dividends" title="Dividends" where="Investments → Dividends tab">
           <p>
             What your instruments paid, by holding and by year, with the yield

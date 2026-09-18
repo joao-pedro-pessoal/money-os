@@ -10,6 +10,7 @@ import {
   EXPECTED_RETURNS,
   LIQUIDITY_LEVELS,
 } from "@/lib/portfolio/tags";
+import { isManuallyValued } from "@/lib/portfolio/valuation";
 
 /**
  * The parts of the position form that depend on the asset type.
@@ -48,6 +49,7 @@ export default function HoldingFormFields({
   const [assetType, setAssetType] = useState(defaultAssetType);
   const isStable = assetType === "stablecoin" || assetType === "cash";
   const yieldLabel = annualYieldLabel(assetType);
+  const handValued = isManuallyValued(assetType);
 
   return (
     <>
@@ -99,7 +101,7 @@ export default function HoldingFormFields({
                 name="avgEntryPrice"
                 type="number"
                 step="0.0001"
-                placeholder="Avg entry price"
+                placeholder={handValued ? "What you paid" : "Avg entry price"}
                 className="input"
                 required
               />
@@ -107,10 +109,18 @@ export default function HoldingFormFields({
                 name="currentPrice"
                 type="number"
                 step="0.0001"
-                placeholder="Current price"
+                placeholder={handValued ? "What it is worth now" : "Current price"}
                 className="input"
               />
             </div>
+          )}
+          {showPriceFields && handValued && (
+            <p className="text-xs text-[var(--muted)]">
+              No market prices this, so its value is what you enter, dated today. For one flat,
+              painting, watch or car, use quantity 1 and whole amounts; for startup shares, the
+              number of shares and the price per share of the last round. The app will ask you to
+              look at the value again when it gets old.
+            </p>
           )}
 
           {playlistOptions.length > 0 && (

@@ -9,6 +9,7 @@ import {
   sortAlerts,
   chargeToConfirmAlerts,
   shouldNotify,
+  valuationAlerts,
 } from "../rules";
 
 /**
@@ -230,5 +231,15 @@ describe("shouldNotify", () => {
     expect(shouldNotify(alert("info", "subscription"))).toBe(true);
     expect(shouldNotify(alert("info", "watchlist"))).toBe(true);
     expect(shouldNotify(alert("info", "portfolio"))).toBe(false);
+  });
+});
+
+describe("hand-valued things", () => {
+  it("asks for a new value once one is older than its kind allows, and says nothing before", () => {
+    const [a] = valuationAlerts([{ id: "car", name: "Car", days: 200, limit: 180 }]);
+    expect(a).toMatchObject({ severity: "warning", href: "/investments/car" });
+    expect(a.title).toContain("7 months");
+    expect(shouldNotify(a)).toBe(true);
+    expect(valuationAlerts([{ id: "flat", name: "Flat", days: 200, limit: 365 }])).toEqual([]);
   });
 });
