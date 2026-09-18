@@ -15,7 +15,9 @@ import {
   yahooSymbolFor,
   type AssetProfile,
   type Exposure,
+  type FundHolding,
 } from "@/lib/portfolio/exposure";
+import { lookThrough, type LookThrough } from "@/lib/portfolio/lookThrough";
 
 async function requireSession() {
   if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== (await expectedSessionValue())) {
@@ -36,13 +38,34 @@ type ProfileRow = typeof assetProfiles.$inferSelect;
 
 function toProfile(row: ProfileRow): AssetProfile | null {
   if (!row.symbol) return null;
-  let sectorWeights: Record<string, number> | null = null;
+  return {
+    symbol: row.symbol,
+    quoteType: row.quoteType,
+    sector: row.sector,
+    country: row.country,
+    sectorWeights: readJson<Record<string, number>>(row.sectorWeights),
+    name: row.name,
+    topHoldings: readJson<FundHolding[]>(row.topHoldings),
+  };
+}
+
+function readJson<T>(value: string | null): T | null {
+  if (!value) return null;
   try {
-    sectorWeights = row.sectorWeights ? (JSON.parse(row.sectorWeights) as Record<string, number>) : null;
+    return JSON.parse(value) as T;
   } catch {
-    sectorWeights = null;
+    return null;
   }
-  return { symbol: row.symbol, quoteType: row.quoteType, sector: row.sector, country: row.country, sectorWeights };
+}
+
+/**
+ * Whether a saved profile should be read again: never read, old, or a fund
+ * saved before its largest holdings were kept.
+ */
+function isDue(row: ProfileRow | undefined, now: number): boolean {
+  if (!row) return true;
+  if (row.symbol && row.quoteType === "ETF" && row.topHoldings === null) return true;
+  return now - row.fetchedAt.getTime() > (row.symbol ? FRESH_DAYS : RETRY_DAYS) * DAY_MS;
 }
 
 /** The stocks and ETFs held, each with the listing to ask the data source about. */
@@ -65,6 +88,8 @@ export interface ExposureView {
   sector: Exposure;
   country: Exposure;
   region: Exposure;
+  /** Companies held directly and through funds' reported largest holdings. */
+  inside: LookThrough;
   /** What each stock or ETF was matched to, so a wrong match can be seen. */
   matches: { name: string; lookup: string; symbol: string | null; quoteType: string | null; value: number; looked: boolean }[];
   /** Stocks and ETFs never looked up, or due to be read again. */
@@ -84,14 +109,10 @@ export async function getExposure(): Promise<ExposureView> {
 
   const withProfiles = lookups.map((l) => {
     const row = l.lookup ? byLookup.get(l.lookup) : undefined;
-    return { value: l.item.value, assetType: l.item.assetType, profile: row ? toProfile(row) : null };
+    return { label: l.item.symbol, value: l.item.value, assetType: l.item.assetType, profile: row ? toProfile(row) : null };
   });
 
-  const due = keys.filter((k) => {
-    const row = byLookup.get(k);
-    if (!row) return true;
-    return now - row.fetchedAt.getTime() > (row.symbol ? FRESH_DAYS : RETRY_DAYS) * DAY_MS;
-  }).length;
+  const due = keys.filter((k) => isDue(byLookup.get(k), now)).length;
 
   const matches = lookups
     .filter((l) => l.lookup !== null && l.item.value > 0)
@@ -112,6 +133,7 @@ export async function getExposure(): Promise<ExposureView> {
     sector: exposure(withProfiles, "sector"),
     country: exposure(withProfiles, "country"),
     region: exposure(withProfiles, "region"),
+    inside: lookThrough(withProfiles),
     matches,
     due,
   };
@@ -168,6 +190,11 @@ async function searchListing(query: string): Promise<{ symbol: string; name: str
   return hit?.symbol ? { symbol: hit.symbol, name: hit.longname ?? hit.shortname ?? null } : null;
 }
 
+/** A profile that says something: a sector, a country, or what a fund holds. */
+function hasFacts(profile: AssetProfile | null): profile is AssetProfile {
+  return Boolean(profile && (profile.sector || profile.country || profile.sectorWeights || profile.topHoldings?.length));
+}
+
 export interface ProfileRefresh {
   looked: number;
   found: number;
@@ -191,10 +218,7 @@ export async function refreshAssetProfiles(): Promise<ProfileRefresh> {
   const rows = keys.length === 0 ? [] : await db.select().from(assetProfiles).where(inArray(assetProfiles.lookup, keys));
   const byLookup = new Map(rows.map((r) => [r.lookup, r]));
   const now = Date.now();
-  const due = keys.filter((k) => {
-    const row = byLookup.get(k);
-    return !row || now - row.fetchedAt.getTime() > (row.symbol ? FRESH_DAYS : RETRY_DAYS) * DAY_MS;
-  });
+  const due = keys.filter((k) => isDue(byLookup.get(k), now));
   const batch = due.slice(0, BATCH);
   const result: ProfileRefresh = { looked: 0, found: 0, notFound: [], problem: null, remaining: due.length };
   if (batch.length === 0) return result;
@@ -206,21 +230,23 @@ export async function refreshAssetProfiles(): Promise<ProfileRefresh> {
     try {
       let profile = looksLikeSymbol(lookup) ? await readProfile(lookup, session) : null;
       let name: string | null = null;
-      if (!profile || (!profile.sector && !profile.country && !profile.sectorWeights)) {
+      if (!hasFacts(profile)) {
         const listing = await searchListing(lookup);
         if (listing) {
           profile = await readProfile(listing.symbol, session);
           name = listing.name;
         }
       }
-      const found = profile && (profile.sector || profile.country || profile.sectorWeights) ? profile : null;
+      const found = hasFacts(profile) ? profile : null;
       const values = {
         symbol: found?.symbol ?? null,
-        name,
+        name: found?.name ?? name,
         quoteType: found?.quoteType ?? null,
         sector: found?.sector ?? null,
         country: found?.country ?? null,
         sectorWeights: found?.sectorWeights ? JSON.stringify(found.sectorWeights) : null,
+        // A fund keeps "[]" when it reports no holdings, so it is not asked again tomorrow.
+        topHoldings: found?.topHoldings ? JSON.stringify(found.topHoldings) : found?.quoteType === "ETF" ? "[]" : null,
         fetchedAt: new Date(),
       };
       await db

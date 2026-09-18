@@ -735,6 +735,13 @@ quem estiver a ler ao lado do ecrã.
   encontrado" repetido ao fim de 7), pedidos num botão, 25 de cada vez. Lista de
   correspondências para verificar e esquecer uma errada. Lógica em
   `src/lib/portfolio/exposure.ts` (testada).
+- **Dentro dos ETFs** (18 de setembro): tabela das empresas que tens, somando às
+  ações diretas o que os teus ETFs têm delas (valor do ETF × peso). A mesma empresa
+  em listagens diferentes ("AAPL" no fundo, "APC.DE" em Frankfurt) junta-se pelo nome
+  sem forma jurídica (`companyKey`). O Yahoo só dá as ~10 maiores posições de cada
+  fundo: a página diz quanto dos fundos isso cobre e o resto não é repartido por
+  palpite. Guardado em `asset_profiles.top_holdings` (migration 0046). Lógica em
+  `src/lib/portfolio/lookThrough.ts` (testada).
 
 ## Kraken
 

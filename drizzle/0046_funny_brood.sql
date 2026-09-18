@@ -1,0 +1,1 @@
+ALTER TABLE "asset_profiles" ADD COLUMN "top_holdings" text;

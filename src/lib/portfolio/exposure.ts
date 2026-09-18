@@ -32,6 +32,19 @@ export interface AssetProfile {
   country: string | null;
   /** A fund's sector weights, 0–1, by sector key. Null for a stock. */
   sectorWeights: Record<string, number> | null;
+  /** The listing's own name, such as "Apple Inc.". */
+  name?: string | null;
+  /**
+   * A fund's largest holdings as reported (usually ten), weights 0–1 of the
+   * fund. An empty list when the fund reports none; null for a stock.
+   */
+  topHoldings?: FundHolding[] | null;
+}
+
+export interface FundHolding {
+  symbol: string | null;
+  name: string;
+  weight: number;
 }
 
 const SECTOR_LABELS: Record<string, string> = {
@@ -171,6 +184,17 @@ export function parseYahooProfile(symbol: string, payload: unknown): AssetProfil
   }
 
   const sector = text(profile?.sectorKey) ?? text(profile?.sector);
+  const top = obj(r.topHoldings);
+  let topHoldings: FundHolding[] | null = null;
+  if (top && Array.isArray(top.holdings)) {
+    topHoldings = [];
+    for (const entry of top.holdings) {
+      const h = obj(entry);
+      const name = text(h?.holdingName) ?? text(h?.symbol);
+      const weight = raw(h?.holdingPercent);
+      if (name && weight !== null && weight > 0) topHoldings.push({ symbol: text(h?.symbol), name, weight });
+    }
+  }
   return {
     symbol,
     quoteType,
@@ -179,6 +203,8 @@ export function parseYahooProfile(symbol: string, payload: unknown): AssetProfil
     sector: sectorWeights ? null : sector ? sectorKey(sector) : null,
     country: sectorWeights ? null : text(profile?.country),
     sectorWeights,
+    name: text(obj(r.quoteType)?.longName) ?? text(obj(r.quoteType)?.shortName),
+    topHoldings,
   };
 }
 

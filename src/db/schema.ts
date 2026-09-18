@@ -749,6 +749,9 @@ export const assetProfiles = pgTable("asset_profiles", {
   country: text("country"),
   // JSON: { sectorKey: weight 0–1 } for a fund.
   sectorWeights: text("sector_weights"),
+  // JSON: [{ symbol, name, weight 0–1 }] — a fund's largest holdings, as
+  // reported (usually ten). "[]" when the fund reports none; null when not read yet.
+  topHoldings: text("top_holdings"),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

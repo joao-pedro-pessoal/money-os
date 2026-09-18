@@ -592,6 +592,13 @@ export default function ManualPage() {
             <em> What each position was matched to</em> to check the matches; a wrong one can be
             forgotten.
           </p>
+          <p>
+            <strong className="text-[var(--foreground)]">Inside your ETFs</strong> adds what your
+            funds hold of each company to the shares you own directly — Apple through three ETFs and
+            Apple bought in Frankfurt become one row. Only a fund&apos;s largest holdings are
+            reported (usually ten); the page says how much of your funds that covers, and the rest
+            is not spread over companies by guess, so a real total can be higher than shown.
+          </p>
         </Entry>
 
         <Entry id="history" title="Trade history" where="Investments → Trade history tab">

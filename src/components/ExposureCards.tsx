@@ -3,6 +3,8 @@ import ProfileLookup from "@/components/ProfileLookup";
 import { Money } from "@/components/PrivacyContext";
 import { forgetAssetProfile, type ExposureView } from "@/actions/exposure";
 import { UNCLASSIFIED, type Exposure } from "@/lib/portfolio/exposure";
+import type { LookThrough } from "@/lib/portfolio/lookThrough";
+import ResponsiveTable from "@/components/ResponsiveTable";
 import { shortName } from "@/lib/portfolio/shortName";
 
 /**
@@ -10,7 +12,7 @@ import { shortName } from "@/lib/portfolio/shortName";
  * out and what each position was matched to. Values in the base currency.
  */
 export default function ExposureCards({ view }: { view: ExposureView }) {
-  const { sector, country, region, matches, due } = view;
+  const { sector, country, region, inside, matches, due } = view;
 
   if (sector.total === 0 && matches.length === 0) {
     return (
@@ -45,6 +47,8 @@ export default function ExposureCards({ view }: { view: ExposureView }) {
         <ExposureCard title="By country" data={country} />
         <ExposureCard title="By region" data={region} />
       </div>
+
+      <InsideFunds data={inside} />
 
       {matches.length > 0 && (
         <details className="card p-4">
@@ -112,6 +116,85 @@ function ExposureCard({ title, data }: { title: string; data: Exposure }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * The companies you hold, adding what sits inside your ETFs to the shares held
+ * directly. Only a fund's reported largest holdings can be seen; the rest of
+ * each fund is stated as unseen, not spread over companies.
+ */
+function InsideFunds({ data }: { data: LookThrough }) {
+  if (data.fundValue === 0) return null;
+  const unseen = Math.max(0, data.fundValue - data.fundSeen);
+  const seenPercent = data.fundValue > 0 ? (data.fundSeen / data.fundValue) * 100 : 0;
+
+  return (
+    <div className="card p-4 space-y-3">
+      <div>
+        <div className="text-sm font-medium">Inside your ETFs</div>
+        <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl">
+          The companies you hold, adding what your ETFs hold of them to the shares you own directly.
+          Only each fund&apos;s largest holdings are reported (usually ten), which covers{" "}
+          <Money value={data.fundSeen} /> ({seenPercent.toFixed(0)}%) of the{" "}
+          <Money value={data.fundValue} /> in funds. The other <Money value={unseen} /> is spread
+          over companies this cannot see, so a company&apos;s real total can be higher than shown.
+          {data.fundsWithoutHoldings > 0 && (
+            <>
+              {" "}
+              <Money value={data.fundsWithoutHoldings} /> is in funds whose holdings were not read
+              or not reported.
+            </>
+          )}
+        </p>
+      </div>
+      {data.companies.length === 0 ? (
+        <p className="text-sm text-[var(--muted)]">
+          No fund holdings read yet. Press <em>Look up sectors &amp; countries</em> above.
+        </p>
+      ) : (
+        <div className="table-scroll" role="region" aria-label="Companies inside your ETFs" tabIndex={0}>
+          <ResponsiveTable className="data-table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th className="text-right">Directly</th>
+                <th className="text-right">Through ETFs</th>
+                <th className="text-right">Total</th>
+                <th className="text-right">Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.companies.map((c) => (
+                <tr key={c.name}>
+                  <td>
+                    <div>{c.name}</div>
+                    {c.funds.length > 0 && (
+                      <div className="text-[11px] text-[var(--muted)]">via {c.funds.map(shortName).join(", ")}</div>
+                    )}
+                  </td>
+                  <td className="text-right">
+                    {c.direct > 0 ? <Money value={c.direct} /> : <span className="text-[var(--muted)]">—</span>}
+                  </td>
+                  <td className="text-right">
+                    {c.viaFunds > 0 ? <Money value={c.viaFunds} /> : <span className="text-[var(--muted)]">—</span>}
+                  </td>
+                  <td className="text-right font-medium">
+                    <Money value={c.total} />
+                  </td>
+                  <td className="text-right text-[var(--muted)]">
+                    {c.percent.toFixed(1)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </ResponsiveTable>
+        </div>
+      )}
+      <p className="text-[11px] text-[var(--muted)]">
+        Share is of the stocks and ETFs you hold. Source: Yahoo Finance, read with the button above.
+      </p>
     </div>
   );
 }

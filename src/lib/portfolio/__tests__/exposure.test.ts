@@ -73,7 +73,7 @@ describe("parseYahooProfile", () => {
         ],
       },
     });
-    expect(p).toEqual({ symbol: "SAP.DE", quoteType: "EQUITY", sector: "technology", country: "Germany", sectorWeights: null });
+    expect(p).toMatchObject({ symbol: "SAP.DE", quoteType: "EQUITY", sector: "technology", country: "Germany", sectorWeights: null, topHoldings: null });
   });
 
   it("reads a fund's sector weights on its shares, and no country", () => {
