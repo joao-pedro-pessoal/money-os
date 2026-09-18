@@ -151,6 +151,26 @@ export function detectTrading212(assetClass: string | null): Detection {
   return hit;
 }
 
+/**
+ * SnapTrade's `instrument.kind`, which it states for every position. A fund is
+ * filed with ETFs, which is where every other screen puts funds.
+ */
+const SNAPTRADE_KINDS: Record<string, { value: AssetTypeValue | null; reason: string }> = {
+  stock: { value: "stock", reason: "SnapTrade lists this as a stock." },
+  adr: { value: "stock", reason: "SnapTrade lists this as an ADR — a foreign company's shares." },
+  etf: { value: "etf", reason: "SnapTrade lists this as an ETF." },
+  mutualfund: { value: "etf", reason: "SnapTrade lists this as a fund." },
+  cef: { value: "etf", reason: "SnapTrade lists this as a closed-end fund." },
+  crypto: { value: "crypto", reason: "SnapTrade lists this as crypto." },
+  bond: { value: "bond", reason: "SnapTrade lists this as a bond." },
+};
+
+export function detectSnapTrade(kind: string | null): Detection {
+  if (!kind) return { value: null, reason: "SnapTrade didn't say what this is." };
+  const hit = SNAPTRADE_KINDS[kind.trim().toLowerCase()];
+  return hit ?? { value: null, reason: `SnapTrade calls this "${kind}", which we don't recognise.` };
+}
+
 export function detectIbkr(assetClass: string | null): Detection {
   if (!assetClass) {
     return { value: null, reason: "IBKR didn't say what this is." };
@@ -178,6 +198,8 @@ export function suggestAssetType(input: {
         return detectHyperliquid(input.coin);
       case "trading212":
         return detectTrading212(input.assetClass);
+      case "snaptrade":
+        return detectSnapTrade(input.assetClass);
       case "bybit":
         // Bybit lists crypto derivatives and nothing else.
         return { value: "crypto", reason: "Bybit lists crypto only." };

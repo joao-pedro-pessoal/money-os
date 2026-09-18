@@ -23,6 +23,7 @@ import { createHyperliquidConnector } from "@/lib/connectors/hyperliquid";
 import { createBybitConnector } from "@/lib/connectors/bybit";
 import { createIbkrConnector, discoverIbkrAccounts } from "@/lib/connectors/ibkr";
 import { createTrading212Connector } from "@/lib/connectors/trading212";
+import { createSnapTradeConnector } from "@/lib/connectors/snaptrade";
 import { createKrakenConnector } from "@/lib/connectors/kraken";
 import { createBinanceConnector } from "@/lib/connectors/binance";
 import { createOkxConnector } from "@/lib/connectors/okx";
@@ -103,13 +104,16 @@ function connectorFor(
       // the first sync with an authentication error that says nothing useful.
       if (!secret) throw new Error("This Trading 212 connection has no stored API secret");
       return createTrading212Connector({ apiKey: externalId, apiSecret: secret });
+    case "snaptrade":
+      if (!secret) throw new Error("This SnapTrade connection has no stored Consumer Key");
+      return createSnapTradeConnector({ clientId: externalId, consumerKey: secret });
     default:
       throw new Error(`No connector for platform "${platform}"`);
   }
 }
 
 /** Platforms whose credentials must be encrypted before being stored. */
-const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken", "binance", "okx", "mexc"]);
+const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken", "binance", "okx", "mexc", "snaptrade"]);
 
 /**
  * Whether secret storage is usable at all.

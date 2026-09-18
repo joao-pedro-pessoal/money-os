@@ -19,6 +19,7 @@ export const PLATFORM_LABELS: Record<string, string> = {
   binance: "Binance",
   okx: "OKX",
   mexc: "MEXC",
+  snaptrade: "SnapTrade Personal (your own account)",
 };
 
 /**
@@ -195,6 +196,22 @@ export const PLATFORM_SETUP: Record<
     ],
     warning:
       "Works only for Invest and Stocks ISA accounts — not for SIPP. The API is in beta and the account summary allows one call every five seconds per account, so syncing repeatedly returns an error rather than data.",
+  },
+  snaptrade: {
+    identifierLabel: "Client ID",
+    identifierHint: "from your SnapTrade Personal dashboard",
+    needsSecret: true,
+    help:
+      "SnapTrade is an aggregator: one account of yours that reaches brokers without an API of their own. The SnapTrade account is yours — you create it, you link your brokers in SnapTrade's dashboard, and this app only reads what it can see. Free for personal use. The Consumer Key is encrypted before it is stored and never shown again.",
+    steps: [
+      "Set ENCRYPTION_KEY in .env and restart the app, or the key cannot be stored.",
+      "Create a free SnapTrade Personal account at snaptrade.com/personal.",
+      "In SnapTrade's dashboard, connect your broker. You sign in on the broker's own page; SnapTrade never gives this app that password.",
+      "In the dashboard, create a Personal API key and copy the Client ID and the Consumer Key.",
+      "Paste the Client ID in the first box and the Consumer Key in the second.",
+    ],
+    warning:
+      "Unlike an exchange's read-only key, a SnapTrade key can place orders at brokers that allow it. This app never calls those endpoints — they are not in its code — but anyone who got the key could, so keep it as safe as a password. Your data passes through SnapTrade, under your own agreement with them. All accounts must be in one currency: accounts in euros and dollars together are refused rather than added without a rate.",
   },
 };
 
