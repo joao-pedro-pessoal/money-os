@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **17 de setembro de 2026**.
+Atualizado em **18 de setembro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -52,6 +52,28 @@ não significa que todas tenham sido pedidas para implementação imediata.
 | F07 | Implementar BloFin | Desenho documentado, conector por construir. Confirmar o âmbito e validar com uma chave de leitura real; seguir os pontos de integração do plano técnico. |
 | F08 | Widgets e ações em notificações | **Feito a 17/09/2026, app 0.6.0** (H09–H13 na secção 5): widget, atalhos, botão nas definições rápidas e notificação abrem o registo rápido; nove widgets com valores. Falta validar no telemóvel real e, se pedido, registar o valor diretamente na notificação sem abrir a app (exige uma rota de escrita própria, sessão e proteção contra duplicados). |
 
+### Comparação com o getquin (18/09/2026)
+
+O que o getquin oferece e a Money OS ainda não. Ordem = prioridade proposta: as
+primeiras usam a fonte de preços que já existe (Yahoo) e não precisam de contas
+novas. Fontes consultadas: site do getquin e análises de 2026 (Capitally, EU
+Investing Hub, Fight to FIRE).
+
+| ID | Tarefa | Resultado esperado / dependências |
+| --- | --- | --- |
+| F09 | Distribuição por setor, país e região | Para ações e ETFs, ler setor e país da fonte de preços e mostrar a carteira por setor, país e região (Investment Analysis e widget Allocation). O que não tiver classificação aparece como "Unclassified", nunca repartido por palpite. ETFs sem dados de composição contam pelo país/região declarado ou ficam por classificar. |
+| F10 | Ver dentro dos ETFs (look-through) | Somar as maiores posições de cada ETF às ações detidas diretamente, para mostrar a concentração real (ex.: Apple em três ETFs). A fonte só dá as maiores posições (top 10): mostrar a parte coberta e a parte desconhecida, sem extrapolar. Depende de F09 para a mesma leitura de dados. |
+| F11 | Custos dos investimentos | Custo anual dos ETFs/fundos (TER) × valor detido, e comissões pagas por ano a partir das execuções importadas; total em € por ano e por conta. TER em falta fica "unknown", não 0. |
+| F12 | Calendário de dividendos com datas do mercado | Juntar às estimativas pelo ritmo dos pagamentos as datas anunciadas (ex-dividend e pagamento) quando a fonte as dá, indicando qual é anunciada e qual é estimada; previsão de rendimento para os próximos 12 meses. |
+| F13 | Plano de reforma / independência financeira | A partir do património, poupança mensal real (Cash flow) e retorno assumido, a idade ou data em que se atinge um objetivo, com cenários; hipóteses sempre visíveis e editáveis. Reaproveitar "Future scenarios" de Analytics e os objetivos dos buckets. |
+| F14 | Mais tipos de ativos alternativos | Arte, colecionáveis, participações em startups, veículos: tipo de ativo próprio, avaliação manual com data e aviso de avaliação antiga (como os saldos manuais). |
+| F15 | Análise assistida por IA | Perguntas sobre a carteira e resumo de risco/custos. Exige uma chave de API paga e enviar dados para fora do PC: só com decisão explícita do utilizador; nunca recomendações de compra/venda (ver "What it deliberately won't do"). |
+| F16 | Comunidade e partilha | Partilhar uma vista da carteira (percentagens, sem valores) por link. Depende de E01 (acesso fora de casa) e de publicação; comunidade/fórum fica fora do âmbito de uma app pessoal. |
+
+Já coberto noutras tarefas: ligações a milhares de bancos e corretoras (F06/F07;
+bancos exigem Open Banking, que exige licença — decisão registada) e usar a app fora
+de casa (E01–E05).
+
 ## 4. Acesso fora de casa e evolução independente do PC
 
 ### O que já existe nesta área
@@ -97,6 +119,7 @@ ser apresentadas como propriedades já demonstradas do site atual.
 | Área | Entregue | Limite relevante |
 | --- | --- | --- |
 | Adaptação móvel | Páginas responsivas, navegação inferior, painéis recolhíveis, modos Simple/Complex e tabelas compactas | Verificações em navegador não substituem A01/A04. |
+| H17 — Revisão de bugs (18/09/2026) | Corrigido: o alerta "charges in N days" lia a data guardada sem a avançar e deixava de avisar a partir do segundo mês (e inventava datas a partir da criação); Record expense numa conta de outra moeda gravava o valor da subscrição como se fosse na moeda da conta; confirmar/saltar uma cobrança cuja despesa ou subscrição desapareceu lançava erro; data da despesa sugerida em UTC; mudar o dia da subscrição depois de responder voltava a propor a mesma cobrança; relatório com mês futuro ou mês vazio no endereço. Revistos sem erros novos: playlists, widgets, registo rápido, app Android (lint só com os 2 erros antigos) | TypeScript, build e 2377 testes. Não visto com sessão iniciada. Fica registado, sem correção: meses contados em UTC na página de despesas e no relatório; valores sem taxa de câmbio contam 0 nos totais de Open positions e no widget. |
 | H16 — Alertas no telemóvel (17/09/2026) | App Android 0.7.0: Settings → **Alert notifications** (só dentro da app). A app pede `GET /api/alerts` (atrás da sessão) de ~30 em 30 minutos com `JobScheduler` e notifica cada alerta uma vez; retira os que o site deixa de reportar; tocar abre a página do alerta; no ecrã bloqueado só "Something needs your attention". O site decide com `shouldNotify` (crítico e aviso; subscrições e watchlist também). Novo alerta por cobrança de subscrição por confirmar (também no sino); "charges today" deixa de aparecer para subscrições com data, que já pedem confirmação. Sem push externo nem email | Site: TypeScript, lint, build e 2376 testes (4 novos); `/api/alerts` sem sessão redireciona para o login. App compilada. Não visto num telemóvel. Exige reinstalar o APK e reiniciar o site. |
 | H15 — Cobranças de subscrições para confirmar (17/09/2026) | Na data de cada subscrição ativa com data, “Subscription charges to confirm” aparece no dashboard (os 3 primeiros) e em Subscriptions (todos): **Record expense** (conta, valor e data editáveis; na moeda da conta), **Yes, that's it** quando uma despesa já registada parece ser essa cobrança (mesma moeda, ±10%, ±5 dias, mesma conta se definida; o nome conta a favor) ou **Skip**. Nada é criado sem escolha. Tabela nova `subscription_charges` (migration 0044, aplicada) com par único subscrição+dia: um duplo toque ou outro aparelho não regista duas vezes. Só cobranças dos últimos 31 dias e depois da subscrição existir. Lógica em `src/lib/accounting/subscriptionCharges.ts` (12 testes) | TypeScript, lint, build e 2372 testes; migration aplicada à base real e `db:generate` sem diferenças. Não visto com sessão iniciada. |
 | H14 — Relatório mensal (17/09/2026) | Analytics → **Monthly report** (`/analytics/report`): escolher o mês; receitas, despesas, saldo e taxa de poupança com comparação ao mês anterior e média de até 3 meses anteriores com dados; despesas por categoria com variação ("new" sem mês anterior); fixo vs variável; orçamentos mensais do mês; maiores despesas; património no início e no fim do mês; dinheiro movido para investimentos à parte. **Download CSV** (também na app, para Transferências) e **Print / save as PDF** (escondido na app). Lógica em `src/lib/reports/monthly.ts` sobre as funções de Where it goes (13 testes) | TypeScript, lint dos ficheiros, build e 2360 testes. Não visto com sessão iniciada. |
@@ -132,7 +155,7 @@ ser apresentadas como propriedades já demonstradas do site atual.
 | Instalação atual | App Android que abre o site do PC | Exige PC ligado e acesso ao servidor. |
 | Cofre futuro | Armazenamento local e partes de identidade/sincronização implementados | Consultar a secção 4; integração com a experiência atual incompleta. |
 
-Validação da última alteração (17/09/2026, alertas na app 0.7.0): **2376 testes
+Validação da última alteração (18/09/2026, revisão de bugs): **2377 testes
 aprovados**, build e TypeScript aprovados, sem alterações de esquema. `npx eslint src`
 tem um erro anterior a estas alterações em `src/components/LanguageContext.tsx`
 (setState dentro de um efeito) e os três avisos Bybit. A app Android compila; o
