@@ -69,10 +69,11 @@ export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }
     ...subscriptionAlerts(
       subs.map((s) => {
         const cadence = isCadence(s.cadence) ? s.cadence : "monthly";
-        // The stored date if the app has one, otherwise worked out from the
-        // cadence. `nextCharge` returns null when there is no anchor, and a
-        // subscription with no date deliberately produces no alert.
-        const next = s.nextChargeAt ?? nextCharge(s.createdAt ?? null, cadence, today);
+        // The stored date is the anchor, rolled forward as the Subscriptions
+        // page rolls it — read raw, it sat in the past from the second month on
+        // and no charge was ever announced again. No date, no alert: the day
+        // the subscription was created is not a charge day.
+        const next = nextCharge(s.nextChargeAt, cadence, today);
         return {
           id: s.id,
           name: s.name,

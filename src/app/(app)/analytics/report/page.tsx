@@ -44,7 +44,9 @@ export default async function MonthlyReportPage({
   const currentMonth = monthOf(new Date());
   const available = reportMonths(spending.rows);
   if (!available.includes(currentMonth)) available.unshift(currentMonth);
-  const month = requested && /^\d{4}-(0[1-9]|1[0-2])$/.test(requested) ? requested : currentMonth;
+  // A month still to come has no report; one typed into the address opens this one.
+  const month =
+    requested && /^\d{4}-(0[1-9]|1[0-2])$/.test(requested) && requested <= currentMonth ? requested : currentMonth;
 
   // Budgets are periods counted from today; a month back is offset -1.
   const [cy, cm] = currentMonth.split("-").map(Number);

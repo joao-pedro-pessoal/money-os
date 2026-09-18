@@ -10,6 +10,7 @@ import { isCadence } from "@/lib/accounting/subscriptions";
 import {
   LOOKBACK_DAYS,
   MATCH_DAYS,
+  dayKey,
   likelyMatch,
   pendingCharges,
 } from "@/lib/accounting/subscriptionCharges";
@@ -115,7 +116,8 @@ export async function getDueSubscriptionCharges(): Promise<{ charges: DueCharge[
       match: found
         ? {
             id: found.id,
-            date: found.date.toISOString().slice(0, 10),
+            // The local day, as the match was judged; the UTC one can be the day before.
+            date: dayKey(found.date),
             amount: Math.abs(found.amount),
             currency: found.currency,
             label: found.merchant || found.description || "Expense",
@@ -227,18 +229,34 @@ export async function answerSubscriptionCharge(formData: FormData): Promise<Resu
   if (answer !== "matched" && answer !== "skipped") return { error: "Unknown answer." };
   if (answer === "matched" && !transactionId) return { error: "Choose the expense it was." };
 
-  const [row] = await db
-    .insert(subscriptionCharges)
-    .values({ subscriptionId, dueOn, status: answer, transactionId: answer === "matched" ? transactionId : null })
-    .onConflictDoNothing()
-    .returning();
-  if (!row) return { error: "This charge was already answered." };
-  await db.insert(auditLog).values({
-    entityType: "subscription",
-    entityId: subscriptionId,
-    action: answer === "matched" ? "subscription_charge_matched" : "subscription_charge_skipped",
-    details: JSON.stringify({ dueOn, transactionId }),
-  });
+  try {
+    await db.transaction(async (store) => {
+      const [sub] = await store.select({ id: subscriptions.id }).from(subscriptions).where(eq(subscriptions.id, subscriptionId));
+      if (!sub) throw new Error("Subscription not found.");
+      if (answer === "matched") {
+        // The expense may have been deleted since the page was drawn.
+        const [expense] = await store
+          .select({ id: transactions.id })
+          .from(transactions)
+          .where(and(eq(transactions.id, transactionId!), eq(transactions.type, "expense")));
+        if (!expense) throw new Error("That expense is no longer there. Reload and choose again.");
+      }
+      const [row] = await store
+        .insert(subscriptionCharges)
+        .values({ subscriptionId, dueOn, status: answer, transactionId: answer === "matched" ? transactionId : null })
+        .onConflictDoNothing()
+        .returning();
+      if (!row) throw new Error("This charge was already answered.");
+      await store.insert(auditLog).values({
+        entityType: "subscription",
+        entityId: subscriptionId,
+        action: answer === "matched" ? "subscription_charge_matched" : "subscription_charge_skipped",
+        details: JSON.stringify({ dueOn, transactionId }),
+      });
+    });
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
   revalidate();
   return { ok: true };
 }

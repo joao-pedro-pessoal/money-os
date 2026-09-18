@@ -87,6 +87,13 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
       setError("Choose the account it was charged to.");
       return;
     }
+    // The amount starts in the subscription's currency. Recorded as it is on an
+    // account in another currency, 10 USD would become 10 EUR.
+    if (otherCurrency && !editing) {
+      setEditing(true);
+      setError(`Enter the amount in ${accountCurrency}, as the account was charged.`);
+      return;
+    }
     return run(recordSubscriptionCharge, { accountId, amount, date });
   };
 
