@@ -10,10 +10,11 @@ import {
   investmentActivities,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { incomeForecast, upcomingDividends } from "@/lib/portfolio/dividendCalendar";
+import { getAnnouncedDividends, heldSymbols } from "./exposure";
 import {
   summariseByTicker,
   summariseByYear,
-  upcomingEstimates,
   trailingYield,
   isInterest,
   type DividendPayment,
@@ -175,7 +176,12 @@ async function loadPayments(): Promise<{
  * payer.
  */
 export async function getDividendOverview() {
-  const [loaded, fx] = await Promise.all([loadPayments(), converter()]);
+  const [loaded, fx, announced, held] = await Promise.all([
+    loadPayments(),
+    converter(),
+    getAnnouncedDividends(),
+    heldSymbols(),
+  ]);
   const payments = loaded.counted;
 
   const distributions = payments.filter((p) => !isInterest(p.type));
@@ -231,7 +237,24 @@ export async function getDividendOverview() {
         valueByTicker.get(t.ticker) ?? null
       ),
     })),
-    upcoming: upcomingEstimates(byTicker),
+    /**
+     * The next dividend per instrument: the company's announced date while it
+     * is still ahead, else the estimate from your own payments' rhythm — each
+     * labelled with which it is. The widget reads this same list.
+     */
+    upcoming: upcomingDividends(byTicker, announced),
+    /**
+     * What the payers still held paid over the last twelve months, in the base
+     * currency: the next twelve months if nothing changes. Rows no rate could
+     * convert are left out, like everywhere else.
+     */
+    forecast: incomeForecast(
+      distributions.flatMap((p) => {
+        const amount = fx.convert(p.amount, p.currency);
+        return amount === null ? [] : [{ ticker: p.ticker, instrumentName: p.instrumentName ?? null, paidOn: p.paidOn, amount }];
+      }),
+      held
+    ),
     // Distributions only. Sixty-five daily interest credits of a cent each
     // would bury the three dividends that the page is actually about; the
     // interest total is still shown above, where it belongs.

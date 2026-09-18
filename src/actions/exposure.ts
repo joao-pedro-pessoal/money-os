@@ -21,6 +21,7 @@ import {
 import { lookThrough, type LookThrough } from "@/lib/portfolio/lookThrough";
 import { feesByYear, fundCosts, type FeeYear, type FundCosts } from "@/lib/portfolio/costs";
 import { getTradeAnalysis } from "./investmentActivity";
+import type { Announced } from "@/lib/portfolio/dividendCalendar";
 
 async function requireSession() {
   if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== (await expectedSessionValue())) {
@@ -34,9 +35,12 @@ const FRESH_DAYS = 30;
 const RETRY_DAYS = 7;
 /**
  * What a saved profile holds. 1: sector and country (F09). 2: also a fund's
- * largest holdings and TER. A row read by an older version is read again.
+ * largest holdings and TER. 3: also announced dividend dates. A row read by an
+ * older version is read again.
  */
-const PROFILE_VERSION = 2;
+const PROFILE_VERSION = 3;
+/** Announced dividend dates move every quarter; a passed one is checked weekly. */
+const CALENDAR_DAYS = 7;
 /** Per press of the button, so one visit never waits on dozens of requests. */
 const BATCH = 25;
 
@@ -55,6 +59,8 @@ function toProfile(row: ProfileRow): AssetProfile | null {
     name: row.name,
     topHoldings: readJson<FundHolding[]>(row.topHoldings),
     expenseRatio: row.expenseRatio === null ? null : Number(row.expenseRatio),
+    exDividendDate: row.exDividendDate,
+    dividendDate: row.dividendDate,
   };
 }
 
@@ -74,6 +80,11 @@ function readJson<T>(value: string | null): T | null {
 function isDue(row: ProfileRow | undefined, now: number): boolean {
   if (!row) return true;
   if (row.symbol && row.version < PROFILE_VERSION) return true;
+  // A company whose announced dividend has passed may have announced the next.
+  const passed = row.dividendDate ?? row.exDividendDate;
+  if (row.symbol && passed && new Date(`${passed}T23:59:59Z`).getTime() < now) {
+    if (now - row.fetchedAt.getTime() > CALENDAR_DAYS * DAY_MS) return true;
+  }
   return now - row.fetchedAt.getTime() > (row.symbol ? FRESH_DAYS : RETRY_DAYS) * DAY_MS;
 }
 
@@ -188,7 +199,7 @@ async function yahooSession(): Promise<{ cookie: string; crumb: string } | null>
 async function readProfile(symbol: string, session: { cookie: string; crumb: string }): Promise<AssetProfile | null> {
   const url =
     `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}` +
-    `?modules=assetProfile,quoteType,topHoldings,fundProfile,summaryDetail&crumb=${encodeURIComponent(session.crumb)}`;
+    `?modules=assetProfile,quoteType,topHoldings,fundProfile,summaryDetail,calendarEvents&crumb=${encodeURIComponent(session.crumb)}`;
   const response = await fetch(url, { headers: { ...HEADERS, Cookie: session.cookie }, cache: "no-store" });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Yahoo answered ${response.status}.`);
@@ -263,6 +274,8 @@ export async function refreshAssetProfiles(): Promise<ProfileRefresh> {
         // A fund keeps "[]" when it reports no holdings, so it is not asked again tomorrow.
         topHoldings: found?.topHoldings ? JSON.stringify(found.topHoldings) : found?.quoteType === "ETF" ? "[]" : null,
         expenseRatio: found?.expenseRatio == null ? null : String(found.expenseRatio),
+        exDividendDate: found?.exDividendDate ?? null,
+        dividendDate: found?.dividendDate ?? null,
         version: PROFILE_VERSION,
         fetchedAt: new Date(),
       };
@@ -288,6 +301,7 @@ export async function refreshAssetProfiles(): Promise<ProfileRefresh> {
     details: JSON.stringify({ looked: result.looked, found: result.found }),
   });
   revalidatePath("/investments/analysis");
+  revalidatePath("/investments/dividends");
   return result;
 }
 
@@ -307,4 +321,29 @@ export async function forgetAssetProfile(formData: FormData): Promise<void> {
 export async function getFeesByYear(): Promise<{ years: FeeYear[]; unconvertible: number; currency: string }> {
   const analysis = await getTradeAnalysis();
   return { years: feesByYear(analysis.rows), unconvertible: analysis.unconvertible, currency: analysis.baseCurrency };
+}
+
+/**
+ * Announced dividend dates of the stocks held, keyed by the position's own
+ * symbol (the ticker a dividend is recorded under). From saved profiles only.
+ */
+export async function getAnnouncedDividends(): Promise<Map<string, Announced>> {
+  const { lookups } = await equityLookups();
+  const keys = [...new Set(lookups.map((l) => l.lookup).filter((k): k is string => k !== null))];
+  const rows = keys.length === 0 ? [] : await db.select().from(assetProfiles).where(inArray(assetProfiles.lookup, keys));
+  const byLookup = new Map(rows.map((r) => [r.lookup, r]));
+  const out = new Map<string, Announced>();
+  for (const l of lookups) {
+    const row = l.lookup ? byLookup.get(l.lookup) : undefined;
+    if (row && (row.exDividendDate || row.dividendDate)) {
+      out.set(l.item.symbol, { exDividendDate: row.exDividendDate, dividendDate: row.dividendDate });
+    }
+  }
+  return out;
+}
+
+/** The symbols of everything held now, for telling a current payer from a sold one. */
+export async function heldSymbols(): Promise<Set<string>> {
+  const { items } = await getPortfolioItems();
+  return new Set(items.filter((i) => i.value > 0).map((i) => i.symbol));
 }

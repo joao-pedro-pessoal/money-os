@@ -3,6 +3,7 @@ import { getDividendOverview } from "@/actions/dividends";
 import { Money } from "@/components/PrivacyContext";
 import Section from "@/components/Section";
 import Link from "next/link";
+import ProfileLookup from "@/components/ProfileLookup";
 
 // No PageTabs here: everything under /investments already gets them from
 // investments/layout.tsx, and rendering them again drew the bar twice.
@@ -150,14 +151,17 @@ export default async function DividendsPage() {
             </details>
           )}
 
-          {/* Estimates first, and labelled as estimates in the heading itself. */}
+          {/* Announced and estimated dates side by side, each labelled as which it is. */}
           {o.upcoming.length > 0 && (
             <div className="dividends-expected card p-4">
               <div className="text-sm font-medium">Expected next</div>
               <p className="dividends-long-note text-xs text-[var(--muted)] mt-1 mb-3 max-w-2xl">
-                Worked out from the rhythm of your own payments. No platform publishes a forward
-                dividend calendar through its API, so these are patterns, not announcements — a
-                company can cut, delay or stop a dividend without warning.
+                <strong className="text-[var(--foreground)]">Announced</strong> dates are the ones the
+                company has published (payment day, or the ex-dividend day until the payment day is
+                out): own the shares before the ex-date to be paid.{" "}
+                <strong className="text-[var(--foreground)]">Estimated</strong> ones are the rhythm of
+                your own payments carried forward — a pattern, not an announcement. Funds rarely
+                publish dates, so theirs are estimates.
               </p>
               <div className="space-y-2">
                 {o.upcoming.map((t) => (
@@ -170,19 +174,59 @@ export default async function DividendsPage() {
                       </div>
                     </div>
                     <div className="text-right whitespace-nowrap">
-                      <div style={{ color: "var(--amber)" }}>
-                        ~ {monthLabel(t.rhythm.estimatedNext!)}
-                      </div>
-                      <div className="text-[10px] text-[var(--muted)]">
-                        {CONFIDENCE_NOTE[t.rhythm.confidence]}
-                      </div>
+                      {t.kind === "announced" ? (
+                        <>
+                          <div style={{ color: "var(--green)" }}>
+                            {t.payDateAnnounced ? `Paid ${dateLabel(t.date)}` : `Ex-date ${dateLabel(t.date)}`}
+                          </div>
+                          <div className="text-[10px] text-[var(--muted)]">
+                            announced
+                            {t.payDateAnnounced && t.exDividendDate ? ` · ex-date ${dateLabel(new Date(`${t.exDividendDate}T00:00:00Z`))}` : ""}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ color: "var(--amber)" }}>~ {monthLabel(t.date)}</div>
+                          <div className="text-[10px] text-[var(--muted)]">
+                            estimated, {CONFIDENCE_NOTE[t.confidence ?? "none"]}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="dividends-phone-only text-[10px] text-[var(--muted)] mt-3">
-                Estimates from the rhythm of past payments, not announcements.
+              <div className="mt-3">
+                <ProfileLookup label="Check announced dates" />
+              </div>
+            </div>
+          )}
+
+          {o.forecast.total > 0 && (
+            <div className="card p-4">
+              <div className="text-sm font-medium">The next twelve months, if nothing changes</div>
+              <div className="text-xl font-semibold mt-2">
+                <Money value={o.forecast.total} currency={o.currency} />
+              </div>
+              <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
+                What the positions you still hold paid over the last twelve months. Not a promise: a
+                company can raise, cut or stop its dividend, and buying or selling changes it.
+                {o.forecast.leftOut > 0 && (
+                  <>
+                    {" "}
+                    <Money value={o.forecast.leftOut} currency={o.currency} /> paid by positions you no
+                    longer hold is left out.
+                  </>
+                )}
               </p>
+              <ul className="mt-3 space-y-1 text-xs">
+                {o.forecast.byTicker.map((t) => (
+                  <li key={t.ticker} className="flex justify-between gap-3">
+                    <span className="min-w-0 break-words">{t.instrumentName ?? t.ticker}</span>
+                    <span className="shrink-0"><Money value={t.amount} currency={o.currency} /></span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

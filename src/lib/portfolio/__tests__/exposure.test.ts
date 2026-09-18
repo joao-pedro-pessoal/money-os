@@ -95,6 +95,38 @@ describe("parseYahooProfile", () => {
     expect(p?.sectorWeights).toEqual({ technology: 0.45, financial_services: 0.45 });
   });
 
+  it("reads a company's announced dividend dates, and a fund's TER", () => {
+    const stockProfile = parseYahooProfile("KO", {
+      quoteSummary: {
+        result: [
+          {
+            assetProfile: { country: "United States", sectorKey: "consumer-defensive" },
+            quoteType: { quoteType: "EQUITY" },
+            calendarEvents: { exDividendDate: { raw: 1789430400 }, dividendDate: { raw: 1790812800 } },
+          },
+        ],
+      },
+    });
+    expect(stockProfile).toMatchObject({ exDividendDate: "2026-09-15", dividendDate: "2026-10-01" });
+    const fundProfile = parseYahooProfile("SXR8.DE", {
+      quoteSummary: {
+        result: [
+          {
+            quoteType: { quoteType: "ETF" },
+            fundProfile: { feesExpensesInvestment: { annualReportExpenseRatio: { raw: 0.0007 } } },
+            topHoldings: { holdings: [], sectorWeightings: [{ technology: { raw: 1 } }] },
+          },
+        ],
+      },
+    });
+    expect(fundProfile?.expenseRatio).toBe(0.0007);
+    // A TER outside 0–5% is a unit mix-up in the source, not a fund.
+    const odd = parseYahooProfile("X", {
+      quoteSummary: { result: [{ quoteType: { quoteType: "ETF" }, fundProfile: { feesExpensesInvestment: { annualReportExpenseRatio: { raw: 20 } } } }] },
+    });
+    expect(odd?.expenseRatio).toBeNull();
+  });
+
   it("gives nothing for an error answer", () => {
     expect(parseYahooProfile("X", { quoteSummary: { result: null, error: { code: "Not Found" } } })).toBeNull();
   });

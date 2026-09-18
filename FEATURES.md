@@ -742,6 +742,15 @@ quem estiver a ler ao lado do ecrã.
   fundo: a página diz quanto dos fundos isso cobre e o resto não é repartido por
   palpite. Guardado em `asset_profiles.top_holdings` (migration 0046). Lógica em
   `src/lib/portfolio/lookThrough.ts` (testada).
+- **Calendário de dividendos** (18 de setembro): na página Dividends, "Expected next"
+  mostra por instrumento a data **anunciada** pela empresa (dia de pagamento, ou o
+  ex-dividendo enquanto o pagamento não sai; Yahoo `calendarEvents`) ou, sem ela, a
+  **estimada** pelo ritmo dos teus pagamentos, sempre a dizer qual é. Uma data
+  anunciada que já passou não conta; relê-se ao fim de uma semana. "The next twelve
+  months": o que as posições ainda detidas pagaram nos últimos 12 meses, na moeda
+  base, com as vendidas deixadas de fora e o valor dito. O widget Dividends usa a
+  mesma lista. Datas em `asset_profiles` (migration 0048). Lógica em
+  `src/lib/portfolio/dividendCalendar.ts` (testada).
 - **O que custa investir** (18 de setembro): quanto os fundos levam por ano (valor ×
   TER publicado pelo fornecedor, lido do Yahoo `fundProfile`) com o TER médio
   ponderado, e as comissões pagas por ano e por conta — as de cada compra/venda

@@ -754,6 +754,10 @@ export const assetProfiles = pgTable("asset_profiles", {
   topHoldings: text("top_holdings"),
   // A fund's yearly cost (TER) as a fraction: 0.002 is 0.20%. Null when not reported.
   expenseRatio: numeric("expense_ratio", { precision: 10, scale: 6 }),
+  // A company's announced dividend dates, YYYY-MM-DD, as last read. Past ones
+  // are kept but not shown as upcoming (see lib/portfolio/dividendCalendar).
+  exDividendDate: text("ex_dividend_date"),
+  dividendDate: text("dividend_date"),
   // Which reading of the profile this is; a lower one is read again for what
   // later versions keep (see PROFILE_VERSION in actions/exposure.ts).
   version: integer("version").notNull().default(1),

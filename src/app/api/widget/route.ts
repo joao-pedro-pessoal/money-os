@@ -87,7 +87,7 @@ export async function GET() {
         thisYear: round2(thisYear?.total ?? 0),
         paymentsThisYear: thisYear?.payments ?? 0,
         next: next
-          ? { name: next.instrumentName ?? next.ticker, month: next.rhythm.estimatedNext!.toISOString() }
+          ? { name: next.instrumentName ?? next.ticker, month: next.date.toISOString() }
           : null,
       },
       trading: {

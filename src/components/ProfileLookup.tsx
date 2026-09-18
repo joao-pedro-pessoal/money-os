@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { refreshAssetProfiles } from "@/actions/exposure";
 
 /**
- * Reads sector and country for the stocks and ETFs that have none yet.
+ * Reads sector, country, fund holdings, TER and announced dividend dates for
+ * the stocks and ETFs that have none yet or whose profile is due again.
  *
  * On a button rather than on every visit: it asks an outside service about
  * each listing, which takes a few seconds and should happen when you choose.
  */
-export default function ProfileLookup({ due }: { due: number }) {
+export default function ProfileLookup({ due = 0, label }: { due?: number; label?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export default function ProfileLookup({ due }: { due: number }) {
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <button type="button" className="btn" onClick={run} disabled={busy}>
-        {busy ? "Looking up…" : due > 0 ? `Look up sectors & countries (${due})` : "Refresh sectors & countries"}
+        {busy ? "Looking up…" : label ?? (due > 0 ? `Look up sectors & countries (${due})` : "Refresh sectors & countries")}
       </button>
       {message && (
         <span role="status" className="text-xs text-[var(--muted)]">

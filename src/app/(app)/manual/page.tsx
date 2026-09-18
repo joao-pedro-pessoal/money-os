@@ -669,6 +669,16 @@ export default function ManualPage() {
             cash</strong> is kept apart from distributions: both are income, but
             only one says anything about what a holding yields.
           </p>
+          <p>
+            <strong className="text-[var(--foreground)]">Expected next</strong> shows, per
+            instrument, the date the company has <em>announced</em> — the payment day, or the
+            ex-dividend day until the payment day is out — or, without one, an <em>estimate</em>{" "}
+            from the rhythm of your own payments; each line says which. Press{" "}
+            <em>Check announced dates</em> to read them (Yahoo Finance; funds rarely publish
+            dates). <strong className="text-[var(--foreground)]">The next twelve months</strong>{" "}
+            is what the positions you still hold paid over the last twelve — not a promise, and
+            positions sold since are left out.
+          </p>
         </Entry>
 
         <Entry id="import" title="Importing statements" where="From the page whose data the statement changes">

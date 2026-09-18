@@ -18,6 +18,7 @@
  */
 
 import { YAHOO_PREFIX } from "@/lib/quotes/symbolSource";
+import { calendarDay } from "./dividendCalendar";
 
 export const UNCLASSIFIED = "Unclassified";
 
@@ -41,6 +42,9 @@ export interface AssetProfile {
   topHoldings?: FundHolding[] | null;
   /** A fund's yearly cost (TER) as a fraction, 0.002 for 0.20%. Null when not reported. */
   expenseRatio?: number | null;
+  /** Announced dividend dates, YYYY-MM-DD, as the company published them. */
+  exDividendDate?: string | null;
+  dividendDate?: string | null;
 }
 
 export interface FundHolding {
@@ -223,6 +227,8 @@ export function parseYahooProfile(symbol: string, payload: unknown): AssetProfil
     name: text(obj(r.quoteType)?.longName) ?? text(obj(r.quoteType)?.shortName),
     topHoldings,
     expenseRatio: expenseRatioOf(r),
+    exDividendDate: calendarDay(obj(r.calendarEvents)?.exDividendDate),
+    dividendDate: calendarDay(obj(r.calendarEvents)?.dividendDate),
   };
 }
 
