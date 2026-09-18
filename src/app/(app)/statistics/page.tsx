@@ -7,6 +7,7 @@ import BenchmarkCard from "@/components/BenchmarkCard";
 import Section from "@/components/Section";
 import TrendsViews from "@/components/TrendsViews";
 import ProjectionScenario from "@/components/ProjectionScenario";
+import IndependencePlan from "@/components/IndependencePlan";
 
 export default async function StatisticsPage() {
   const s = await getStatistics();
@@ -215,6 +216,13 @@ export default async function StatisticsPage() {
       </>} scenarios={<>
         <p className="text-sm text-[var(--muted)]">Explore assumptions about the future. These examples are separate from your recorded progress.</p>
         <ProjectionScenario current={s.netWorth.total} monthlySaving={s.flows.length > 0 ? s.avgMonthlySaving : null} basis={basis} currency={c} />
+        <IndependencePlan
+          current={s.netWorth.total}
+          monthlySaving={s.flows.length > 0 ? s.avgMonthlySaving : null}
+          monthlySpending={s.flows.length > 0 ? s.avgMonthlyExpenses : null}
+          basis={basis}
+          currency={c}
+        />
       {/* ---- Bucket goals ---- */}
       {s.bucketProgress.length > 0 && (
         <Section

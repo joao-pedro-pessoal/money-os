@@ -943,6 +943,14 @@ moedas sem taxa são deixadas de fora **e nomeadas**, nunca contadas como zero.
 - Retornos por período, maior queda até hoje, poupança e gasto mensais,
   projeções, e quando cada objetivo chega ao fim.
 - Concentração e runway.
+- **Plano de independência financeira** (18/09/2026, Analytics → Future scenarios →
+  "When is it enough?"): objetivo = gasto anual ÷ taxa de levantamento (3%, 3,5% ou 4%);
+  tempo até lá com o património atual, a poupança média e um retorno depois da
+  inflação (0/2/4/6%), mês a mês; data e idade (opcional); quanto mais cedo com mais
+  100 €/mês poupados ou menos 100 €/mês gastos; gráfico contra a linha do objetivo.
+  Preenchido com os teus números e todos editáveis; nada gravado. "Not within 100
+  years" em vez de uma data inventada. Lógica em `src/lib/stats/independence.ts`
+  (testada).
 - **Relatório mensal** (17/09/2026, `/analytics/report`): um mês lido de ponta a ponta —
   receitas, despesas, saldo e taxa de poupança contra o mês anterior, categorias com
   variação, fixo e variável, orçamentos mensais, maiores despesas e património no

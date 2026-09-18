@@ -435,6 +435,15 @@ export default function ManualPage() {
             These examples do not change your records or predict actual returns.
           </p>
           <p>
+            <strong className="text-[var(--foreground)]">When is it enough?</strong>, in Future
+            scenarios, is a financial-independence plan: the money that could pay for your life (a
+            year of spending ÷ the share you would spend each year, 4% by default — about 25 times
+            it) and when your net worth gets there at your average saving and an assumed return
+            after inflation. It is filled from your own figures, every one editable, and says how
+            much sooner €100 more saved or €100 less spent a month would make it. Nothing is saved,
+            and it is arithmetic on assumptions, not advice.
+          </p>
+          <p>
             <strong className="text-[var(--foreground)]">Monthly report</strong> reads one month back as
             a whole: income, spending, net and savings rate against the month before, spending by
             category with the change, fixed against variable, monthly budgets, the largest expenses and
