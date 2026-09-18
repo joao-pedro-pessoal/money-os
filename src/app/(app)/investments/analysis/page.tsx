@@ -30,7 +30,8 @@ import { Fragment } from "react";
 import { getDashboardWindowPreferences } from "@/actions/settings";
 import Section from "@/components/Section";
 import ExposureCards from "@/components/ExposureCards";
-import { getExposure } from "@/actions/exposure";
+import { getExposure, getFeesByYear } from "@/actions/exposure";
+import InvestmentCosts from "@/components/InvestmentCosts";
 
 export default async function PortfolioAnalysisPage({
   searchParams,
@@ -66,6 +67,7 @@ export default async function PortfolioAnalysisPage({
   const returns = await getPortfolioReturns();
   const windowPreferences = await getDashboardWindowPreferences();
   const exposure = await getExposure();
+  const fees = await getFeesByYear();
   const grouped = await getGroupedPerformance(groupBy, sort, dir, includeSynced, status);
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
   const best = [...grouped].filter((g) => g.cost > 0).sort((x, y) => y.pnlPercent - x.pnlPercent)[0];
@@ -509,6 +511,10 @@ export default async function PortfolioAnalysisPage({
 
       <Section title="Sectors, countries and regions" persistKey="analysis-exposure">
         <ExposureCards view={exposure} />
+      </Section>
+
+      <Section title="What investing costs" persistKey="analysis-costs">
+        <InvestmentCosts costs={exposure.costs} fees={fees.years} unconvertible={fees.unconvertible} currency={fees.currency} />
       </Section>
 
       {windowPreferences["portfolio-returns"] !== "hidden" && <Section title="Investment returns" essential defaultOpen={windowPreferences["portfolio-returns"] === "visible"}>

@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { getPortfolioItems } from "./dashboard";
+import { getBaseCurrency } from "./settings";
 import {
   exposure,
   isEquity,
@@ -18,6 +19,8 @@ import {
   type FundHolding,
 } from "@/lib/portfolio/exposure";
 import { lookThrough, type LookThrough } from "@/lib/portfolio/lookThrough";
+import { feesByYear, fundCosts, type FeeYear, type FundCosts } from "@/lib/portfolio/costs";
+import { getTradeAnalysis } from "./investmentActivity";
 
 async function requireSession() {
   if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== (await expectedSessionValue())) {
@@ -29,6 +32,11 @@ async function requireSession() {
 const FRESH_DAYS = 30;
 /** A lookup that found nothing is tried again after this long. */
 const RETRY_DAYS = 7;
+/**
+ * What a saved profile holds. 1: sector and country (F09). 2: also a fund's
+ * largest holdings and TER. A row read by an older version is read again.
+ */
+const PROFILE_VERSION = 2;
 /** Per press of the button, so one visit never waits on dozens of requests. */
 const BATCH = 25;
 
@@ -46,6 +54,7 @@ function toProfile(row: ProfileRow): AssetProfile | null {
     sectorWeights: readJson<Record<string, number>>(row.sectorWeights),
     name: row.name,
     topHoldings: readJson<FundHolding[]>(row.topHoldings),
+    expenseRatio: row.expenseRatio === null ? null : Number(row.expenseRatio),
   };
 }
 
@@ -64,7 +73,7 @@ function readJson<T>(value: string | null): T | null {
  */
 function isDue(row: ProfileRow | undefined, now: number): boolean {
   if (!row) return true;
-  if (row.symbol && row.quoteType === "ETF" && row.topHoldings === null) return true;
+  if (row.symbol && row.version < PROFILE_VERSION) return true;
   return now - row.fetchedAt.getTime() > (row.symbol ? FRESH_DAYS : RETRY_DAYS) * DAY_MS;
 }
 
@@ -90,10 +99,14 @@ export interface ExposureView {
   region: Exposure;
   /** Companies held directly and through funds' reported largest holdings. */
   inside: LookThrough;
+  /** What the funds held take each year, by their reported TER. */
+  costs: FundCosts;
   /** What each stock or ETF was matched to, so a wrong match can be seen. */
   matches: { name: string; lookup: string; symbol: string | null; quoteType: string | null; value: number; looked: boolean }[];
   /** Stocks and ETFs never looked up, or due to be read again. */
   due: number;
+  /** The base currency every value here is in. */
+  currency: string;
 }
 
 /**
@@ -134,8 +147,10 @@ export async function getExposure(): Promise<ExposureView> {
     country: exposure(withProfiles, "country"),
     region: exposure(withProfiles, "region"),
     inside: lookThrough(withProfiles),
+    costs: fundCosts(withProfiles),
     matches,
     due,
+    currency: await getBaseCurrency(),
   };
 }
 
@@ -173,7 +188,7 @@ async function yahooSession(): Promise<{ cookie: string; crumb: string } | null>
 async function readProfile(symbol: string, session: { cookie: string; crumb: string }): Promise<AssetProfile | null> {
   const url =
     `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}` +
-    `?modules=assetProfile,quoteType,topHoldings&crumb=${encodeURIComponent(session.crumb)}`;
+    `?modules=assetProfile,quoteType,topHoldings,fundProfile,summaryDetail&crumb=${encodeURIComponent(session.crumb)}`;
   const response = await fetch(url, { headers: { ...HEADERS, Cookie: session.cookie }, cache: "no-store" });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Yahoo answered ${response.status}.`);
@@ -247,6 +262,8 @@ export async function refreshAssetProfiles(): Promise<ProfileRefresh> {
         sectorWeights: found?.sectorWeights ? JSON.stringify(found.sectorWeights) : null,
         // A fund keeps "[]" when it reports no holdings, so it is not asked again tomorrow.
         topHoldings: found?.topHoldings ? JSON.stringify(found.topHoldings) : found?.quoteType === "ETF" ? "[]" : null,
+        expenseRatio: found?.expenseRatio == null ? null : String(found.expenseRatio),
+        version: PROFILE_VERSION,
         fetchedAt: new Date(),
       };
       await db
@@ -281,4 +298,13 @@ export async function forgetAssetProfile(formData: FormData): Promise<void> {
   if (!lookup) return;
   await db.delete(assetProfiles).where(inArray(assetProfiles.lookup, [lookup]));
   revalidatePath("/investments/analysis");
+}
+
+/**
+ * Fees paid by year, from the same converted rows Trade history charts, in the
+ * base currency. Rows no rate could convert are left out there and here alike.
+ */
+export async function getFeesByYear(): Promise<{ years: FeeYear[]; unconvertible: number; currency: string }> {
+  const analysis = await getTradeAnalysis();
+  return { years: feesByYear(analysis.rows), unconvertible: analysis.unconvertible, currency: analysis.baseCurrency };
 }

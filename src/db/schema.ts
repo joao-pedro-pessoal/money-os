@@ -752,6 +752,11 @@ export const assetProfiles = pgTable("asset_profiles", {
   // JSON: [{ symbol, name, weight 0–1 }] — a fund's largest holdings, as
   // reported (usually ten). "[]" when the fund reports none; null when not read yet.
   topHoldings: text("top_holdings"),
+  // A fund's yearly cost (TER) as a fraction: 0.002 is 0.20%. Null when not reported.
+  expenseRatio: numeric("expense_ratio", { precision: 10, scale: 6 }),
+  // Which reading of the profile this is; a lower one is read again for what
+  // later versions keep (see PROFILE_VERSION in actions/exposure.ts).
+  version: integer("version").notNull().default(1),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

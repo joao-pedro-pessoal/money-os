@@ -12,7 +12,7 @@ import { shortName } from "@/lib/portfolio/shortName";
  * out and what each position was matched to. Values in the base currency.
  */
 export default function ExposureCards({ view }: { view: ExposureView }) {
-  const { sector, country, region, inside, matches, due } = view;
+  const { sector, country, region, inside, matches, due, currency } = view;
 
   if (sector.total === 0 && matches.length === 0) {
     return (
@@ -27,11 +27,11 @@ export default function ExposureCards({ view }: { view: ExposureView }) {
     <div className="space-y-4">
       <div className="space-y-2">
         <p className="text-xs text-[var(--muted)] max-w-3xl">
-          Stocks and ETFs only: <Money value={sector.total} /> of what you hold.
+          Stocks and ETFs only: <Money value={sector.total} currency={currency} /> of what you hold.
           {sector.excluded > 0 && (
             <>
               {" "}
-              <Money value={sector.excluded} /> in crypto, cash and other assets has no sector or
+              <Money value={sector.excluded} currency={currency} /> in crypto, cash and other assets has no sector or
               country, so it is left out.
             </>
           )}{" "}
@@ -43,12 +43,12 @@ export default function ExposureCards({ view }: { view: ExposureView }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ExposureCard title="By sector" data={sector} />
-        <ExposureCard title="By country" data={country} />
-        <ExposureCard title="By region" data={region} />
+        <ExposureCard title="By sector" data={sector} currency={currency} />
+        <ExposureCard title="By country" data={country} currency={currency} />
+        <ExposureCard title="By region" data={region} currency={currency} />
       </div>
 
-      <InsideFunds data={inside} />
+      <InsideFunds data={inside} currency={currency} />
 
       {matches.length > 0 && (
         <details className="card p-4">
@@ -87,7 +87,7 @@ export default function ExposureCards({ view }: { view: ExposureView }) {
   );
 }
 
-function ExposureCard({ title, data }: { title: string; data: Exposure }) {
+function ExposureCard({ title, data, currency }: { title: string; data: Exposure; currency: string }) {
   return (
     <div className="card p-4">
       <div className="text-sm font-medium mb-3">{title}</div>
@@ -102,7 +102,7 @@ function ExposureCard({ title, data }: { title: string; data: Exposure }) {
                 <div className="flex justify-between gap-3 text-sm mb-1">
                   <span className={s.name === UNCLASSIFIED ? "text-[var(--muted)]" : undefined}>{s.name}</span>
                   <span className="text-[var(--muted)] shrink-0">
-                    <Money value={s.value} /> · {s.percent.toFixed(1)}%
+                    <Money value={s.value} currency={currency} /> · {s.percent.toFixed(1)}%
                   </span>
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-[var(--surface-2)] overflow-hidden">
@@ -125,7 +125,7 @@ function ExposureCard({ title, data }: { title: string; data: Exposure }) {
  * directly. Only a fund's reported largest holdings can be seen; the rest of
  * each fund is stated as unseen, not spread over companies.
  */
-function InsideFunds({ data }: { data: LookThrough }) {
+function InsideFunds({ data, currency }: { data: LookThrough; currency: string }) {
   if (data.fundValue === 0) return null;
   const unseen = Math.max(0, data.fundValue - data.fundSeen);
   const seenPercent = data.fundValue > 0 ? (data.fundSeen / data.fundValue) * 100 : 0;
@@ -137,13 +137,13 @@ function InsideFunds({ data }: { data: LookThrough }) {
         <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl">
           The companies you hold, adding what your ETFs hold of them to the shares you own directly.
           Only each fund&apos;s largest holdings are reported (usually ten), which covers{" "}
-          <Money value={data.fundSeen} /> ({seenPercent.toFixed(0)}%) of the{" "}
-          <Money value={data.fundValue} /> in funds. The other <Money value={unseen} /> is spread
+          <Money value={data.fundSeen} currency={currency} /> ({seenPercent.toFixed(0)}%) of the{" "}
+          <Money value={data.fundValue} currency={currency} /> in funds. The other <Money value={unseen} currency={currency} /> is spread
           over companies this cannot see, so a company&apos;s real total can be higher than shown.
           {data.fundsWithoutHoldings > 0 && (
             <>
               {" "}
-              <Money value={data.fundsWithoutHoldings} /> is in funds whose holdings were not read
+              <Money value={data.fundsWithoutHoldings} currency={currency} /> is in funds whose holdings were not read
               or not reported.
             </>
           )}
@@ -175,13 +175,13 @@ function InsideFunds({ data }: { data: LookThrough }) {
                     )}
                   </td>
                   <td className="text-right">
-                    {c.direct > 0 ? <Money value={c.direct} /> : <span className="text-[var(--muted)]">—</span>}
+                    {c.direct > 0 ? <Money value={c.direct} currency={currency} /> : <span className="text-[var(--muted)]">—</span>}
                   </td>
                   <td className="text-right">
-                    {c.viaFunds > 0 ? <Money value={c.viaFunds} /> : <span className="text-[var(--muted)]">—</span>}
+                    {c.viaFunds > 0 ? <Money value={c.viaFunds} currency={currency} /> : <span className="text-[var(--muted)]">—</span>}
                   </td>
                   <td className="text-right font-medium">
-                    <Money value={c.total} />
+                    <Money value={c.total} currency={currency} />
                   </td>
                   <td className="text-right text-[var(--muted)]">
                     {c.percent.toFixed(1)}%

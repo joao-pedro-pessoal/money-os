@@ -599,6 +599,14 @@ export default function ManualPage() {
             reported (usually ten); the page says how much of your funds that covers, and the rest
             is not spread over companies by guess, so a real total can be higher than shown.
           </p>
+          <p>
+            <strong className="text-[var(--foreground)]">What investing costs</strong> shows what your
+            funds take each year — what you hold × the TER the provider reports, a cost that never
+            appears on a statement because it is taken inside the fund&apos;s price — and the fees
+            you paid by year: on each buy and sell (the same figure Trade history charts) and fee
+            movements such as custody. A fund whose TER is not reported is listed as unknown, never
+            counted as free.
+          </p>
         </Entry>
 
         <Entry id="history" title="Trade history" where="Investments → Trade history tab">

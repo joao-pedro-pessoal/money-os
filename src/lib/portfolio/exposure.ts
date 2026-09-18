@@ -39,6 +39,8 @@ export interface AssetProfile {
    * fund. An empty list when the fund reports none; null for a stock.
    */
   topHoldings?: FundHolding[] | null;
+  /** A fund's yearly cost (TER) as a fraction, 0.002 for 0.20%. Null when not reported. */
+  expenseRatio?: number | null;
 }
 
 export interface FundHolding {
@@ -155,6 +157,21 @@ const raw = (v: unknown): number | null => {
   return typeof n === "number" && Number.isFinite(n) ? n : null;
 };
 
+/**
+ * A fund's TER. Yahoo states it in `fundProfile` as the annual report's
+ * figure, else the net ratio, else in `summaryDetail`. Anything outside 0–5%
+ * is a unit mix-up or a typo in the source, and is refused rather than shown.
+ */
+function expenseRatioOf(r: Json): number | null {
+  const fees = obj(obj(r.fundProfile)?.feesExpensesInvestment);
+  const candidates = [fees?.annualReportExpenseRatio, fees?.netExpRatio, obj(r.summaryDetail)?.expenseRatio];
+  for (const c of candidates) {
+    const v = raw(c);
+    if (v !== null && v > 0 && v < 0.05) return v;
+  }
+  return null;
+}
+
 /** A profile from Yahoo's quoteSummary (modules assetProfile, quoteType, topHoldings), or null. */
 export function parseYahooProfile(symbol: string, payload: unknown): AssetProfile | null {
   const result = obj(payload)?.quoteSummary;
@@ -205,6 +222,7 @@ export function parseYahooProfile(symbol: string, payload: unknown): AssetProfil
     sectorWeights,
     name: text(obj(r.quoteType)?.longName) ?? text(obj(r.quoteType)?.shortName),
     topHoldings,
+    expenseRatio: expenseRatioOf(r),
   };
 }
 

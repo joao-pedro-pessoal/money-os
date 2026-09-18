@@ -742,6 +742,13 @@ quem estiver a ler ao lado do ecrã.
   fundo: a página diz quanto dos fundos isso cobre e o resto não é repartido por
   palpite. Guardado em `asset_profiles.top_holdings` (migration 0046). Lógica em
   `src/lib/portfolio/lookThrough.ts` (testada).
+- **O que custa investir** (18 de setembro): quanto os fundos levam por ano (valor ×
+  TER publicado pelo fornecedor, lido do Yahoo `fundProfile`) com o TER médio
+  ponderado, e as comissões pagas por ano e por conta — as de cada compra/venda
+  (somadas como no gráfico do Trade history, com teste que o garante) e os movimentos
+  FEE (custódia, etc.). Fundo sem TER publicado aparece como "TER unknown", nunca
+  como grátis. TER em `asset_profiles.expense_ratio`; `version` faz reler perfis
+  antigos (migration 0047). Lógica em `src/lib/portfolio/costs.ts` (testada).
 
 ## Kraken
 
