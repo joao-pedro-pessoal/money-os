@@ -580,6 +580,18 @@ export default function ManualPage() {
             flattens every risk breakdown it sits in. Switched off, you see only
             what is actually exposed.
           </p>
+          <p>
+            <strong className="text-[var(--foreground)]">Sectors, countries and regions</strong>{" "}
+            splits the stocks and ETFs you hold (positions typed Stocks or ETF) by what they are
+            exposed to. Press <em>Look up sectors &amp; countries</em>: it asks Yahoo Finance about
+            each listing — only the listing, nothing about your money — and keeps the answer for a
+            month. A company counts once, by its sector and head office; a fund is spread by the
+            sector weights its provider reports. Yahoo does not report where a fund&apos;s companies
+            are, so a fund stays <em>Unclassified</em> by country and region instead of being
+            guessed. Crypto, cash and other assets are left out and the page says how much. Open
+            <em> What each position was matched to</em> to check the matches; a wrong one can be
+            forgotten.
+          </p>
         </Entry>
 
         <Entry id="history" title="Trade history" where="Investments → Trade history tab">

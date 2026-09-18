@@ -29,6 +29,8 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { getDashboardWindowPreferences } from "@/actions/settings";
 import Section from "@/components/Section";
+import ExposureCards from "@/components/ExposureCards";
+import { getExposure } from "@/actions/exposure";
 
 export default async function PortfolioAnalysisPage({
   searchParams,
@@ -63,6 +65,7 @@ export default async function PortfolioAnalysisPage({
   const a = await getPortfolioAnalysis(includeSynced);
   const returns = await getPortfolioReturns();
   const windowPreferences = await getDashboardWindowPreferences();
+  const exposure = await getExposure();
   const grouped = await getGroupedPerformance(groupBy, sort, dir, includeSynced, status);
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
   const best = [...grouped].filter((g) => g.cost > 0).sort((x, y) => y.pnlPercent - x.pnlPercent)[0];
@@ -502,6 +505,10 @@ export default async function PortfolioAnalysisPage({
         <BreakdownCard title="By account / wallet" rows={a.byAccount} donut />
         <BreakdownCard title="By asset type" rows={a.byAssetType} axis="assetType" translate donut />
       </div>
+      </Section>
+
+      <Section title="Sectors, countries and regions" persistKey="analysis-exposure">
+        <ExposureCards view={exposure} />
       </Section>
 
       {windowPreferences["portfolio-returns"] !== "hidden" && <Section title="Investment returns" essential defaultOpen={windowPreferences["portfolio-returns"] === "visible"}>

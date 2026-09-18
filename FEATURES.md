@@ -724,6 +724,17 @@ quem estiver a ler ao lado do ecrã.
 - **Avisos de desencontro horizonte/risco**: dinheiro de curto prazo numa
   posição volátil.
 - Botão para incluir ou excluir spot e stablecoins da análise.
+- **Setores, países e regiões** (18 de setembro): as ações e ETFs detidos por setor,
+  país e região, com dados do Yahoo Finance (`quoteSummary`, lido com cookie e
+  "crumb"; só os símbolos saem do PC). Uma ação conta pelo seu setor e sede; um ETF
+  é repartido pelos pesos por setor que o fornecedor publica (sobre a parte em ações;
+  dinheiro e obrigações do fundo ficam "Unclassified"). O Yahoo não dá os países das
+  empresas de um fundo, por isso um ETF fica "Unclassified" em país e região em vez
+  de ser adivinhado. Cripto, dinheiro e outros ficam de fora e a página diz quanto.
+  Os perfis ficam na tabela `asset_profiles` (relidos ao fim de 30 dias; "não
+  encontrado" repetido ao fim de 7), pedidos num botão, 25 de cada vez. Lista de
+  correspondências para verificar e esquecer uma errada. Lógica em
+  `src/lib/portfolio/exposure.ts` (testada).
 
 ## Kraken
 

@@ -730,6 +730,28 @@ export const subscriptionCharges = pgTable(
   (t) => [unique("subscription_charges_subscription_due").on(t.subscriptionId, t.dueOn)]
 );
 
+/**
+ * What a stock or fund is exposed to, as the data source reports it: sector and
+ * country for a company, sector weights for a fund (see lib/portfolio/exposure).
+ *
+ * Keyed by what was asked for (the Yahoo listing worked out from the position),
+ * so a lookup that found nothing is remembered too and not repeated on every
+ * visit. Reference data about a listing, never about your money.
+ */
+export const assetProfiles = pgTable("asset_profiles", {
+  // The listing asked about, such as "SAP.DE".
+  lookup: text("lookup").primaryKey(),
+  // The listing the answer is for; null when nothing was found.
+  symbol: text("symbol"),
+  name: text("name"),
+  quoteType: text("quote_type"),
+  sector: text("sector"),
+  country: text("country"),
+  // JSON: { sectorKey: weight 0–1 } for a fund.
+  sectorWeights: text("sector_weights"),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ---------- Expected money ----------
 /**
  * Money that is coming but has not arrived.
