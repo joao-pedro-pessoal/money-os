@@ -57,6 +57,15 @@ export function chargeDays(anchor: Date, cadence: Cadence, from: Date, to: Date)
   return days;
 }
 
+/** Under half a period apart, two charge days are the same charge. */
+const NEAR_DAYS: Record<Cadence, number> = { weekly: 4, monthly: 15, quarterly: 45, yearly: 180 };
+
+/** Whole days since the epoch for a YYYY-MM-DD, for comparing days apart. */
+function dayNumber(day: string): number {
+  const [y, m, d] = day.split("-").map(Number);
+  return Math.round(Date.UTC(y, m - 1, d) / 86_400_000);
+}
+
 export interface ChargeSubscription {
   id: string;
   name: string;
@@ -89,13 +98,26 @@ export function pendingCharges(
   lookbackDays: number = LOOKBACK_DAYS
 ): PendingCharge[] {
   const windowStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - lookbackDays);
+  const answered = new Map<string, number[]>();
+  for (const key of handled) {
+    const [id, day] = key.split("|");
+    if (!id || !day) continue;
+    answered.set(id, [...(answered.get(id) ?? []), dayNumber(day)]);
+  }
   const out: PendingCharge[] = [];
   for (const s of subs) {
     if (!s.active || !s.nextChargeAt || Number.isNaN(s.nextChargeAt.getTime())) continue;
     const created = startOfDay(s.createdAt);
     const from = created > windowStart ? created : windowStart;
+    const near = NEAR_DAYS[s.cadence];
     for (const dueOn of chargeDays(s.nextChargeAt, s.cadence, from, today)) {
-      if (!handled.has(`${s.id}|${dueOn}`)) out.push({ subscriptionId: s.id, dueOn });
+      // An answer a few days away is this same charge under an older date: the
+      // subscription's day was edited after it was answered. Proposing it again
+      // would let it be recorded twice.
+      const day = dayNumber(dueOn);
+      if (!(answered.get(s.id) ?? []).some((d) => Math.abs(d - day) < near)) {
+        out.push({ subscriptionId: s.id, dueOn });
+      }
     }
   }
   return out.sort((a, b) => a.dueOn.localeCompare(b.dueOn));

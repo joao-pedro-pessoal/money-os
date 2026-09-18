@@ -65,6 +65,16 @@ describe("pendingCharges", () => {
     expect(pendingCharges([netflix], new Set(["n|2026-09-05"]), today)).toEqual([]);
   });
 
+  it("does not propose a charge again after its day was edited", () => {
+    // Answered on the 5th, then the date moved to the 7th: the same charge.
+    const moved = { ...netflix, nextChargeAt: day(2026, 1, 7) };
+    expect(pendingCharges([moved], new Set(["n|2026-09-05"]), today)).toEqual([]);
+    // Last month's answer does not hide this month's charge.
+    expect(pendingCharges([netflix], new Set(["n|2026-08-05"]), today, 60)).toEqual([
+      { subscriptionId: "n", dueOn: "2026-09-05" },
+    ]);
+  });
+
   it("proposes nothing for a cancelled subscription, one with no date, or before it existed", () => {
     expect(pendingCharges([{ ...netflix, active: false }], new Set(), today)).toEqual([]);
     expect(pendingCharges([{ ...netflix, nextChargeAt: null }], new Set(), today)).toEqual([]);

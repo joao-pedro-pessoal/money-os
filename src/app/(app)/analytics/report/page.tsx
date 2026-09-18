@@ -47,6 +47,11 @@ export default async function MonthlyReportPage({
   // A month still to come has no report; one typed into the address opens this one.
   const month =
     requested && /^\d{4}-(0[1-9]|1[0-2])$/.test(requested) && requested <= currentMonth ? requested : currentMonth;
+  // An empty month from the address still has to be the one the picker shows.
+  if (!available.includes(month)) {
+    available.push(month);
+    available.sort().reverse();
+  }
 
   // Budgets are periods counted from today; a month back is offset -1.
   const [cy, cm] = currentMonth.split("-").map(Number);
