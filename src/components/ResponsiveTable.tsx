@@ -60,7 +60,7 @@ export default function ResponsiveTable({ children, className, ...props }: Table
       if (cell.type === "th") return cell;
       return cloneElement(cell, {
         "data-label": span > 1 ? undefined : label,
-        ...{ "data-wide-cell": span > 1 || /^(Name|Symbol|Coin|Instrument|Asset|Description|Tags|Actions)$/i.test(label) || undefined },
+        ...{ "data-wide-cell": span > 1 || /^(Name|Symbol|Coin|Company|Instrument|Asset|Description|Tags|Actions)$/i.test(label) || undefined },
       });
     });
     return cloneElement(node, {}, cells);

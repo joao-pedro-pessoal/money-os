@@ -19,6 +19,7 @@
 
 import { YAHOO_PREFIX } from "@/lib/quotes/symbolSource";
 import { calendarDay } from "./dividendCalendar";
+import { tagLabel } from "./tags";
 
 export const UNCLASSIFIED = "Unclassified";
 
@@ -29,6 +30,12 @@ export interface AssetProfile {
   quoteType: string | null;
   /** Sector key, such as "technology". A stock's own; null for a fund. */
   sector: string | null;
+  /**
+   * The industry inside the sector, such as "semiconductors". A sector is
+   * eleven buckets; an industry is what a company actually does, and it is
+   * the level at which "how much of my technology is chips" has an answer.
+   */
+  industry?: string | null;
   /** Country of a company's head office, as the source spells it. */
   country: string | null;
   /** A fund's sector weights, 0–1, by sector key. Null for a stock. */
@@ -42,6 +49,12 @@ export interface AssetProfile {
   topHoldings?: FundHolding[] | null;
   /** A fund's yearly cost (TER) as a fraction, 0.002 for 0.20%. Null when not reported. */
   expenseRatio?: number | null;
+  /**
+   * What the fund says it holds: shares, bonds, cash, other. Null when it
+   * reports none — a physical-metal ETC listed as a share reports nothing at
+   * all, and that is left as unknown rather than filled in.
+   */
+  assetAllocation?: AssetAllocation | null;
   /** Announced dividend dates, YYYY-MM-DD, as the company published them. */
   exDividendDate?: string | null;
   dividendDate?: string | null;
@@ -51,6 +64,21 @@ export interface FundHolding {
   symbol: string | null;
   name: string;
   weight: number;
+}
+
+/**
+ * A fund's own split of what it holds, as fractions of the fund.
+ *
+ * Preferred shares count as shares and convertibles as bonds, which is what
+ * each one is: a preferred share is equity that pays a fixed dividend, a
+ * convertible is a bond until someone converts it. They are folded in rather
+ * than shown apart because no fund held here reports either.
+ */
+export interface AssetAllocation {
+  shares: number;
+  bonds: number;
+  cash: number;
+  other: number;
 }
 
 const SECTOR_LABELS: Record<string, string> = {
@@ -78,6 +106,16 @@ const SECTOR_LABELS: Record<string, string> = {
 export function sectorKey(raw: string): string {
   const key = raw.trim().toLowerCase().replace(/[\s-]+/g, "_");
   return key === "real_estate" ? "realestate" : key;
+}
+
+/**
+ * An industry's name for a screen: "semiconductor-equipment-materials" from
+ * the source reads as "Semiconductor equipment materials". There is no table
+ * of these — there are over a hundred and they are already words.
+ */
+export function industryLabel(raw: string): string {
+  const words = raw.replace(/[_-]+/g, " ").trim();
+  return words === "" ? raw : words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export function sectorLabel(raw: string): string {
@@ -176,6 +214,30 @@ function expenseRatioOf(r: Json): number | null {
   return null;
 }
 
+/**
+ * What a fund says it holds, from `topHoldings`.
+ *
+ * Null when it reports nothing — the case that matters here is iShares
+ * Physical Gold, listed as a share and carrying no holdings block at all.
+ * Reporting zeros for it would say "holds nothing", which is a claim; saying
+ * nothing is the truth. A set of figures that adds to nothing is the same
+ * case and is refused too.
+ */
+function allocationOf(top: Json | null): AssetAllocation | null {
+  if (!top) return null;
+  const part = (key: string) => raw(top[key]) ?? 0;
+  const allocation = {
+    shares: part("stockPosition") + part("preferredPosition"),
+    bonds: part("bondPosition") + part("convertiblePosition"),
+    cash: part("cashPosition"),
+    other: part("otherPosition"),
+  };
+  const sum = allocation.shares + allocation.bonds + allocation.cash + allocation.other;
+  // Yahoo states these as fractions of the fund. Anything far from 1 is a unit
+  // mix-up rather than a portfolio, and is refused.
+  return sum > 0.5 && sum <= 1.5 ? allocation : null;
+}
+
 /** A profile from Yahoo's quoteSummary (modules assetProfile, quoteType, topHoldings), or null. */
 export function parseYahooProfile(symbol: string, payload: unknown): AssetProfile | null {
   const result = obj(payload)?.quoteSummary;
@@ -205,6 +267,7 @@ export function parseYahooProfile(symbol: string, payload: unknown): AssetProfil
   }
 
   const sector = text(profile?.sectorKey) ?? text(profile?.sector);
+  const industry = text(profile?.industryKey) ?? text(profile?.industry);
   const top = obj(r.topHoldings);
   let topHoldings: FundHolding[] | null = null;
   if (top && Array.isArray(top.holdings)) {
@@ -222,10 +285,12 @@ export function parseYahooProfile(symbol: string, payload: unknown): AssetProfil
     // A fund's profile can name its own "sector" (the manager's); only a
     // company's counts as the holding's sector.
     sector: sectorWeights ? null : sector ? sectorKey(sector) : null,
+    industry: sectorWeights ? null : industry ? sectorKey(industry) : null,
     country: sectorWeights ? null : text(profile?.country),
     sectorWeights,
     name: text(obj(r.quoteType)?.longName) ?? text(obj(r.quoteType)?.shortName),
     topHoldings,
+    assetAllocation: allocationOf(top),
     expenseRatio: expenseRatioOf(r),
     exDividendDate: calendarDay(obj(r.calendarEvents)?.exDividendDate),
     dividendDate: calendarDay(obj(r.calendarEvents)?.dividendDate),
@@ -266,14 +331,27 @@ export function isEquity(assetType: string | null): boolean {
 /**
  * The stocks and ETFs held, split by sector, country or region.
  *
- * A fund's sector weights are applied to its value; what they do not cover
- * (cash inside the fund, bonds, a remainder the provider leaves out) is
- * Unclassified. Shorts and anything valued at zero or less are left out, as
- * the allocation charts leave them out: a slice cannot be negative.
+ * **Only the shares inside a fund take part.** A sector of a government bond
+ * is no more a number than a sector of bitcoin, so where a fund publishes its
+ * split — iShares Global Govt Bond says 99.67% bonds — the rest of it leaves
+ * this breakdown entirely and is counted by kind instead. It used to stay here
+ * as Unclassified, which put 106 EUR of bonds and silver in the same pile as
+ * things whose sector is genuinely unknown, and made the pile look like a gap
+ * in the data rather than a portfolio that holds more than shares.
+ *
+ * A fund that publishes no split is left whole, and unclassified: not knowing
+ * is not the same as knowing it is all shares.
+ *
+ * Of the part that does take part, a fund's sector weights are applied to its
+ * value and whatever they do not cover is Unclassified. Shorts and anything
+ * valued at zero or less are left out, as the allocation charts leave them
+ * out: a slice cannot be negative.
  */
 export function exposure(items: readonly ExposureItem[], dimension: ExposureDimension): Exposure {
   const byName = new Map<string, number>();
-  const add = (name: string, value: number) => byName.set(name, (byName.get(name) ?? 0) + value);
+  const add = (name: string, value: number) => {
+    if (value > 0) byName.set(name, (byName.get(name) ?? 0) + value);
+  };
   let total = 0;
   let excluded = 0;
 
@@ -283,28 +361,35 @@ export function exposure(items: readonly ExposureItem[], dimension: ExposureDime
       excluded += item.value;
       continue;
     }
-    total += item.value;
     const p = item.profile;
+    // What of this position is shares: all of it unless the fund says
+    // otherwise. The weights below are fractions of the whole fund, so they
+    // are comparable with this without rescaling.
+    const shareOfShares = p?.assetAllocation ? Math.min(1, Math.max(0, p.assetAllocation.shares)) : 1;
+    const inShares = item.value * shareOfShares;
+    excluded += item.value - inShares;
+    if (inShares <= 0) continue;
+    total += inShares;
     if (!p) {
-      add(UNCLASSIFIED, item.value);
+      add(UNCLASSIFIED, inShares);
       continue;
     }
     if (dimension === "sector") {
       if (p.sectorWeights) {
         let covered = 0;
         for (const [key, weight] of Object.entries(p.sectorWeights)) {
-          const share = Math.min(weight, Math.max(0, 1 - covered));
+          const share = Math.min(weight, Math.max(0, shareOfShares - covered));
           covered += share;
           add(sectorLabel(key), item.value * share);
         }
-        if (covered < 1) add(UNCLASSIFIED, item.value * (1 - covered));
+        if (covered < shareOfShares) add(UNCLASSIFIED, item.value * (shareOfShares - covered));
       } else {
-        add(p.sector ? sectorLabel(p.sector) : UNCLASSIFIED, item.value);
+        add(p.sector ? sectorLabel(p.sector) : UNCLASSIFIED, inShares);
       }
     } else if (p.country) {
-      add(dimension === "country" ? p.country : regionOf(p.country), item.value);
+      add(dimension === "country" ? p.country : regionOf(p.country), inShares);
     } else {
-      add(UNCLASSIFIED, item.value);
+      add(UNCLASSIFIED, inShares);
     }
   }
 
@@ -313,4 +398,74 @@ export function exposure(items: readonly ExposureItem[], dimension: ExposureDime
     .map(([name, value]) => ({ name, value: round2(value), percent: total > 0 ? (value / total) * 100 : 0 }))
     .sort((a, b) => Number(a.name === UNCLASSIFIED) - Number(b.name === UNCLASSIFIED) || b.value - a.value);
   return { slices, total: round2(total), excluded: round2(excluded) };
+}
+
+export const SHARES = "Shares";
+export const BONDS = "Bonds";
+export const CASH = "Idle cash";
+export const OTHER_INSIDE_FUNDS = "Other, as the fund reports it";
+
+/**
+ * Everything held, by what kind of thing it is.
+ *
+ * The sector and country breakdowns above cover shares and funds alone,
+ * because a sector of bitcoin is no number. This one covers the whole
+ * portfolio, which is the only way the money left out of those has anywhere to
+ * appear: bonds, gold and silver, crypto, cash.
+ *
+ * Two sources, in this order, and neither of them a guess:
+ *
+ * - **What you typed.** An asset type set on a position is a statement about
+ *   what it is, and it wins. It is also the only thing that can classify a
+ *   physical-metal ETC, which reports no holdings to read.
+ * - **What the fund reports.** A fund typed as an ETF is split by its own
+ *   published allocation — iShares Global Govt Bond reports 99.67% bonds and
+ *   0.34% cash, so that is where its value goes. A fund that reports nothing
+ *   stays Unclassified rather than being filed under shares.
+ *
+ * Shorts and anything valued at zero or less are left out, as everywhere a
+ * slice cannot be negative.
+ */
+export function assetClasses(items: readonly ExposureItem[]): Exposure {
+  const byName = new Map<string, number>();
+  const add = (name: string, value: number) => {
+    if (value > 0) byName.set(name, (byName.get(name) ?? 0) + value);
+  };
+  let total = 0;
+
+  for (const item of items) {
+    if (item.value <= 0) continue;
+    total += item.value;
+    const type = item.assetType;
+
+    // A fund: split by what it says it holds. "stock_etf" is the retired type
+    // that meant either, and is read the same way.
+    if (type === "etf" || type === "stock_etf") {
+      const a = item.profile?.assetAllocation ?? null;
+      if (!a) {
+        add(UNCLASSIFIED, item.value);
+        continue;
+      }
+      add(SHARES, item.value * a.shares);
+      add(BONDS, item.value * a.bonds);
+      add(CASH, item.value * a.cash);
+      add(OTHER_INSIDE_FUNDS, item.value * a.other);
+      const covered = a.shares + a.bonds + a.cash + a.other;
+      if (covered < 1) add(UNCLASSIFIED, item.value * (1 - covered));
+      continue;
+    }
+
+    if (type === "stock") add(SHARES, item.value);
+    else if (type === "bond") add(BONDS, item.value);
+    else if (type === "cash") add(CASH, item.value);
+    else if (type) add(tagLabel(type, "assetType") ?? type, item.value);
+    else add(UNCLASSIFIED, item.value);
+  }
+
+  const slices = [...byName]
+    .filter(([, value]) => round2(value) > 0)
+    .map(([name, value]) => ({ name, value: round2(value), percent: total > 0 ? (value / total) * 100 : 0 }))
+    .sort((a, b) => Number(a.name === UNCLASSIFIED) - Number(b.name === UNCLASSIFIED) || b.value - a.value);
+  // Nothing is excluded here: that is the point of this breakdown.
+  return { slices, total: round2(total), excluded: 0 };
 }

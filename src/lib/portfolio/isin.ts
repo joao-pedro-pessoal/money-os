@@ -50,3 +50,17 @@ export function normaliseIsin(raw: string | null | undefined): string | null {
   const isin = (raw ?? "").trim().toUpperCase();
   return isValidIsin(isin) ? isin : null;
 }
+
+/**
+ * The ISIN a holding carries, whichever column it landed in.
+ *
+ * Either one can hold it: an imported statement writes the fund's legal name
+ * into `symbol` and its ISIN into `name`, and a position typed by hand does
+ * the opposite. Checking both and keeping whichever validates is the only
+ * reading that works for a portfolio holding some of each — and it is one
+ * function rather than a line repeated in every action that needs it, because
+ * the day the two spellings disagree they must disagree everywhere at once.
+ */
+export function isinOfHolding(row: { symbol?: string | null; name?: string | null }): string | null {
+  return normaliseIsin(row.symbol) ?? normaliseIsin(row.name);
+}

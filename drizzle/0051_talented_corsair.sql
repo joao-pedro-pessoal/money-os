@@ -1,0 +1,1 @@
+ALTER TABLE "asset_profiles" ADD COLUMN "asset_allocation" text;

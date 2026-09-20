@@ -21,7 +21,8 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
   "investment_contribution",
 ]);
 
-export const importSourceEnum = pgEnum("import_source", ["manual", "csv"]);
+// "bank": read from a bank connection (Enable Banking), with the bank's id in externalId.
+export const importSourceEnum = pgEnum("import_source", ["manual", "csv", "bank"]);
 
 // ---------- Account ----------
 export const accounts = pgTable("accounts", {
@@ -469,6 +470,17 @@ export const accountConnections = pgTable("account_connections", {
    * Null for the platforms that issue two parts, which is most of them.
    */
   encryptedPassphrase: text("encrypted_passphrase"),
+  /**
+   * A bank connection's link (Enable Banking): the session, encrypted like a
+   * credential; the bank account chosen; the bank's name; when the consent
+   * ends; and the day after which movements are imported — the last one the
+   * account already had when it was linked, fixed then and never moved.
+   */
+  encryptedSession: text("encrypted_session"),
+  bankAccountUid: text("bank_account_uid"),
+  bankName: text("bank_name"),
+  consentUntil: timestamp("consent_until", { withTimezone: true }),
+  bankImportFrom: text("bank_import_from"),
   active: boolean("active").notNull().default(true),
   lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
   lastSyncStatus: text("last_sync_status"), // "ok" | "error"
@@ -646,18 +658,30 @@ export const positionMeta = pgTable(
     playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
     notes: text("notes"),
     /**
-     * What you say the position actually cost, per unit.
+     * What you say the spot balance of this coin actually cost, per unit.
      *
      * A venue's average entry is not always the one you mean: coins moved in
      * from elsewhere arrive with the venue's own basis, a rebuilt position
      * carries whatever the statement said, and some venues exclude fees. This
-     * lives here, beside the tags, because `positions` is replaced wholesale on
-     * every sync and anything written there is gone by the next one.
+     * lives here, beside the tags, because `positions` and `platform_balances`
+     * are replaced wholesale on every sync and anything written there is gone
+     * by the next one.
      *
      * In the same currency the venue quotes the instrument in, which is the
      * number you see on its own screen. Null means "use theirs".
      */
     entryPriceOverride: numeric("entry_price_override", { precision: 20, scale: 8 }),
+    /**
+     * The same, for an open position on this coin — kept apart from the spot
+     * balance's because one connection can hold both, and they did not cost
+     * the same.
+     *
+     * They shared one field until they collided: HYPE held on Hyperliquid spot
+     * had its entry set to 32.21, and a 10x HYPE long opened later at 82.47 on
+     * the same connection picked it up. Its P&L was recomputed from 32.21 and
+     * read +109.83 USD where the venue said +19.36.
+     */
+    positionEntryPriceOverride: numeric("position_entry_price_override", { precision: 20, scale: 8 }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [primaryKey({ columns: [t.connectionId, t.coin] })]
@@ -746,12 +770,19 @@ export const assetProfiles = pgTable("asset_profiles", {
   name: text("name"),
   quoteType: text("quote_type"),
   sector: text("sector"),
+  // The industry inside that sector ("semiconductors"), which is the level
+  // the question "how much of my technology is chips" is asked at.
+  industry: text("industry"),
   country: text("country"),
   // JSON: { sectorKey: weight 0–1 } for a fund.
   sectorWeights: text("sector_weights"),
   // JSON: [{ symbol, name, weight 0–1 }] — a fund's largest holdings, as
   // reported (usually ten). "[]" when the fund reports none; null when not read yet.
   topHoldings: text("top_holdings"),
+  // JSON: { shares, bonds, cash, other } as fractions of the fund — its own
+  // split of what it holds, which is what puts a bond fund under bonds instead
+  // of under Unclassified. Null when the listing reports none.
+  assetAllocation: text("asset_allocation"),
   // A fund's yearly cost (TER) as a fraction: 0.002 is 0.20%. Null when not reported.
   expenseRatio: numeric("expense_ratio", { precision: 10, scale: 6 }),
   // A company's announced dividend dates, YYYY-MM-DD, as last read. Past ones
@@ -761,6 +792,94 @@ export const assetProfiles = pgTable("asset_profiles", {
   // Which reading of the profile this is; a lower one is read again for what
   // later versions keep (see PROFILE_VERSION in actions/exposure.ts).
   version: integer("version").notNull().default(1),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------- Fund holdings ----------
+/**
+ * Everything a fund holds, as its manager publishes it.
+ *
+ * The price source names a fund's ten largest positions, which is 19% of an
+ * S&P 500 tracker and almost nothing of a small-cap one. BlackRock publishes
+ * the whole list daily; `lib/funds/ishares.ts` reads it. Keyed by the same
+ * lookup as `asset_profiles`, so the two describe one fund.
+ *
+ * Reference data about a fund, never about your money — what you hold of it
+ * is not here. Not in backups for the same reason profiles are not: it is
+ * re-read on a button.
+ */
+export const fundHoldings = pgTable("fund_holdings", {
+  lookup: text("lookup").primaryKey(),
+  // The fund this is, as identified when the file was fetched.
+  isin: text("isin"),
+  fundName: text("fund_name"),
+  // Who published it, so a second provider can be added without guessing
+  // which shape the rows are in.
+  source: text("source").notNull(),
+  // The day the manager states the file is for, YYYY-MM-DD. Null when the
+  // file names none — never today's date, which would claim it is current.
+  asOf: text("as_of"),
+  // JSON: [{ ticker, exchange, symbol, name, sector, kind, weight, country }],
+  // weights 0–1.
+  rows: text("rows").notNull(),
+  rowCount: integer("row_count").notNull(),
+  // Which reading this is; a lower one is read again for what later versions
+  // keep (see FILE_VERSION in actions/exposure.ts). 1 had no listing worked
+  // out per company, so nothing could be asked about their prices.
+  version: integer("version").notNull().default(1),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------- Company moves ----------
+/**
+ * How a company's own share price has moved, as the price source states it.
+ *
+ * Deliberately **not** your gain. What a fund's slice of NVIDIA cost you is
+ * not knowable — you bought the fund, not the company, and the fund has been
+ * buying and selling it all along. The company's own move over a year is a
+ * different claim, it is a fact the source publishes, and the screen says
+ * which of the two it is showing.
+ *
+ * Keyed by the listing (`NVDA`, `VNA.DE`). Reference data about a company,
+ * never about your money.
+ */
+export const companyMoves = pgTable("company_moves", {
+  symbol: text("symbol").primaryKey(),
+  name: text("name"),
+  // JSON: { m1, m3, m6, y1, y3, y5 } in percent, from one weekly series —
+  // see lib/funds/priceMoves.ts. A window the listing is younger than is
+  // absent, never 0, which would claim a price that has not moved.
+  changes: text("changes"),
+  // The weekly closes themselves, JSON [[seconds, close], …]: what makes
+  // "since you bought" answerable for any date without asking again.
+  series: text("series"),
+  // What the price is quoted in, kept so a change is never read as money.
+  currency: text("currency"),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------- Asset logos ----------
+/**
+ * The mark drawn beside a company, a fund or a coin.
+ *
+ * Decoration, and the only table here that is: nothing in it is counted,
+ * converted or totalled, and a screen missing every row of it shows the same
+ * figures it always showed.
+ *
+ * Keyed by the listing, as `company_moves` is, because a name is spelled a
+ * dozen ways and matching on one would eventually draw Apple's mark beside
+ * somebody else's row. The image itself is stored — not the address it came
+ * from — so that opening a page never tells a logo service what the reader
+ * holds. A null image is an answer too: it records that the source was asked
+ * and has no mark, so it is not asked again tomorrow.
+ */
+export const assetLogos = pgTable("asset_logos", {
+  symbol: text("symbol").primaryKey(),
+  // A data URI ready for an <img src>, or null where there is no mark.
+  image: text("image"),
+  bytes: integer("bytes"),
+  // Which service answered, stored so a screen can say where marks come from.
+  source: text("source"),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

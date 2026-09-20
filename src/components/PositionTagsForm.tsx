@@ -33,6 +33,7 @@ export default function PositionTagsForm({
   playlists,
   entryPriceOverride,
   venueEntryPrice,
+  entryFor,
 }: {
   action: (formData: FormData) => Promise<void>;
   connectionId: string;
@@ -52,6 +53,11 @@ export default function PositionTagsForm({
   entryPriceOverride?: number | null;
   /** The platform's own average, shown so you can see what you are replacing. */
   venueEntryPrice?: number | null;
+  /**
+   * Whose entry this is. A spot balance and an open position on the same coin
+   * share their tags but keep separate entries, so the form has to say.
+   */
+  entryFor: "position" | "balance";
 }) {
   const [open, setOpen] = useState(false);
   // Controlled so the rate field can be named after the type as you change it.
@@ -106,6 +112,7 @@ export default function PositionTagsForm({
     <form action={action} className="space-y-2 min-w-[15rem]">
       <input type="hidden" name="connectionId" value={connectionId} />
       <input type="hidden" name="coin" value={coin} />
+      <input type="hidden" name="entryFor" value={entryFor} />
 
       <select
         name="assetType"

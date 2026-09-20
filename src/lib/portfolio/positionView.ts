@@ -14,6 +14,16 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export interface PositionItem {
   id: string;
   symbol: string;
+  /**
+   * The listing it trades under, where that is not the name above.
+   *
+   * A statement writes a fund's legal name into the symbol — "iShares VII plc
+   * - iShares Core S&P 500 UCITS ETF USD (Acc)" — so the table showed the one
+   * thing you cannot type into a broker. The listing chosen for its price
+   * ("SXR8.DE") is that thing, and it is already stored beside the holding.
+   * Null for a synced position, whose symbol is the ticker already.
+   */
+  listing?: string | null;
   side: "long" | "short" | null;
   /**
    * The account this sits in, or null when nothing links it to one.

@@ -119,6 +119,34 @@ export function applyEntryOverride(
   };
 }
 
+/** The two entry fields stored beside a coin's tags, as they come off the row. */
+export interface StoredEntryOverrides {
+  entryPriceOverride: string | number | null;
+  positionEntryPriceOverride: string | number | null;
+}
+
+/**
+ * Which stored entry applies to what is being valued.
+ *
+ * One connection can hold a coin on spot and trade it on perps at the same
+ * time, and the tags for both live on one row keyed by (connection, coin).
+ * The tags are rightly shared — HYPE is the same asset either way — but what
+ * each one cost is not. When the two shared a field, a spot entry of 32.21 was
+ * applied to a 10x long opened at 82.47 and reported +109.83 USD of P&L on a
+ * position the venue put at +19.36.
+ *
+ * Absent means "use the venue's", never a price of zero.
+ */
+export function entryOverrideFor(
+  meta: StoredEntryOverrides | null | undefined,
+  kind: "position" | "balance"
+): number | null {
+  const raw = kind === "position" ? meta?.positionEntryPriceOverride : meta?.entryPriceOverride;
+  if (raw === null || raw === undefined) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /** What the screen says about where a figure came from. */
 export function describePnlSource(source: PnlSource): string | null {
   switch (source) {
@@ -135,7 +163,8 @@ export function describePnlSource(source: PnlSource): string | null {
  * What a spot balance cost, given what you said and what the venue said.
  *
  * The override is stored per unit — the same shape as the one on an open
- * position, so one field means one thing everywhere — and multiplied out here.
+ * position, though in a field of its own (see `entryOverrideFor`) — and
+ * multiplied out here.
  *
  * A spot balance is the easy case, and worth saying why: it has no leverage, no
  * funding and no entry-date exchange rate hiding inside a figure. Value minus

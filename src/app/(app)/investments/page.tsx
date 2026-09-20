@@ -7,6 +7,8 @@ import {
 } from "@/actions/investments";
 import { listPlaylists } from "@/actions/playlists";
 import { getPortfolioItems } from "@/actions/dashboard";
+import { logosFor } from "@/actions/logos";
+import { holdingLogoSymbol } from "@/lib/logos";
 import PortfolioTable from "@/components/PortfolioTable";
 import { portfolioSummary } from "@/lib/portfolio/positionView";
 import { getPortfolioContribution } from "@/actions/investments";
@@ -59,6 +61,13 @@ export default async function InvestmentsPage() {
   // Manual holdings, open trades and coin balances in one shape, so one table
   // can group them and one chart can measure what that table is showing.
   const portfolioItems = await getPortfolioItems();
+  /**
+   * Each position's mark, from what has already been asked for. Decoration —
+   * see `actions/logos.ts` — and read here rather than inside
+   * `getPortfolioItems` so the dashboard, which shows no logos, does not pay
+   * for a page of images it will not draw.
+   */
+  const logos = await logosFor(portfolioItems.items.map(holdingLogoSymbol));
 
 
 
@@ -246,6 +255,7 @@ export default async function InvestmentsPage() {
         <PortfolioTable
           items={portfolioItems.items}
           currency={portfolioItems.baseCurrency}
+          logos={logos.images}
         />
       </div>
 

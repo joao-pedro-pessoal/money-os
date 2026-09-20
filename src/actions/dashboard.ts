@@ -1,7 +1,8 @@
 "use server";
 
 import { db } from "@/db/client";
-import { applyEntryOverride, spotCostBasis } from "@/lib/portfolio/entryOverride";
+import { applyEntryOverride, entryOverrideFor, spotCostBasis } from "@/lib/portfolio/entryOverride";
+import { displaySymbol } from "@/lib/quotes/symbolSource";
 import {
   accounts,
   holdings,
@@ -167,9 +168,7 @@ export async function getPortfolioItems() {
     return spotCostBasis(
       Number(b.total),
       b.costBasis === null ? null : Number(b.costBasis),
-      m?.entryPriceOverride === null || m?.entryPriceOverride === undefined
-        ? null
-        : Number(m.entryPriceOverride)
+      entryOverrideFor(m, "balance")
     );
   };
   const meaningByAccount = new Map(accountRows.map((a) => [a.id, meaningOf(a.balanceMeaning)]));
@@ -204,6 +203,7 @@ export async function getPortfolioItems() {
     items.push({
       id: `h:${h.id}`,
       symbol: h.symbol,
+      listing: displaySymbol(h.quoteSymbol),
       side: h.direction === "short" ? "short" : "long",
       accountId: h.accountId ?? null,
       accountName: (h.accountId ? accountName.get(h.accountId) : null) ?? h.platform ?? "—",
@@ -249,7 +249,7 @@ export async function getPortfolioItems() {
       entryPrice: p.entryPrice === null ? null : Number(p.entryPrice),
       markPrice: p.markPrice === null ? null : Number(p.markPrice),
       unrealizedPnl: p.unrealizedPnl === null ? null : Number(p.unrealizedPnl),
-    }, meta?.entryPriceOverride == null ? null : Number(meta.entryPriceOverride));
+    }, entryOverrideFor(meta, "position"));
     const risk = capitalAtRisk({
       positionValue: p.positionValue === null ? null : Number(p.positionValue),
       marginUsed: p.marginUsed === null ? null : Number(p.marginUsed),

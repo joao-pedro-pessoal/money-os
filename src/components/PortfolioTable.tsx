@@ -14,6 +14,8 @@ import {
 } from "react";
 import Link from "next/link";
 import DonutChart from "@/components/DonutChart";
+import AssetLogo from "@/components/AssetLogo";
+import { holdingLogoSymbol } from "@/lib/logos";
 import { fmt } from "@/lib/format";
 import { tagLabel, type TagAxis } from "@/lib/portfolio/tags";
 import { shortName } from "@/lib/portfolio/shortName";
@@ -129,12 +131,31 @@ function subscribeToColumns(callback: () => void) {
  * The chart is driven by the same filtered set as the table, so what you see
  * and what it measures can't drift apart.
  */
+/**
+ * The mark stored for a position, where there is one.
+ *
+ * The key is worked out by the same function that decided what to ask the logo
+ * service about, so this cannot look under a name nothing was ever stored
+ * under — the whole reason that decision is one function in `lib/logos`.
+ */
+function logoOf(item: PositionItem, logos: Record<string, string>): string | null {
+  const symbol = holdingLogoSymbol(item);
+  return symbol ? logos[symbol] ?? null : null;
+}
+
 export default function PortfolioTable({
   items,
   currency,
+  logos = {},
 }: {
   items: PositionItem[];
   currency: string;
+  /**
+   * Each position's mark, by the listing it was asked for under — see
+   * `actions/logos.ts`. Decoration: every figure in this table is the same
+   * whether it is empty or full.
+   */
+  logos?: Record<string, string>;
 }) {
   /**
    * Which columns are shown, remembered between visits.
@@ -494,8 +515,19 @@ export default function PortfolioTable({
                               // The full stored name stays on hover, which is
                               // what makes shortening it safe.
                               <td key={c.key} className="font-medium" title={i.symbol}>
-                                <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-words hover:underline">{shortName(i.symbol)}</Link>
-                                {badges}
+                                <span className="flex items-start gap-2">
+                                  <AssetLogo image={logoOf(i, logos)} name={i.symbol} />
+                                  <span className="min-w-0">
+                                    <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-words hover:underline">{shortName(i.symbol)}</Link>
+                                    {/* The listing, where the name is not already
+                                        one: a fund stored by its legal name is not
+                                        something you can type into a broker. */}
+                                    {i.listing && i.listing !== i.symbol && (
+                                      <span className="text-[10px] text-[var(--muted)] ml-2">{i.listing}</span>
+                                    )}
+                                    {badges}
+                                  </span>
+                                </span>
                               </td>
                             );
                           case "symbol":

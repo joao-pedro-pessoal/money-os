@@ -31,6 +31,7 @@ import { getDashboardWindowPreferences } from "@/actions/settings";
 import Section from "@/components/Section";
 import ExposureCards from "@/components/ExposureCards";
 import { getExposure, getFeesByYear } from "@/actions/exposure";
+import { logosFor } from "@/actions/logos";
 import InvestmentCosts from "@/components/InvestmentCosts";
 
 export default async function PortfolioAnalysisPage({
@@ -43,6 +44,7 @@ export default async function PortfolioAnalysisPage({
     synced?: string;
     open?: string;
     status?: string;
+    companies?: string;
   }>;
 }) {
   const sp = await searchParams;
@@ -66,7 +68,29 @@ export default async function PortfolioAnalysisPage({
   const a = await getPortfolioAnalysis(includeSynced);
   const returns = await getPortfolioReturns();
   const windowPreferences = await getDashboardWindowPreferences();
-  const exposure = await getExposure();
+  /**
+   * The look-through table lists the largest companies unless asked for all of
+   * them: a fund's published file names every position, and a small-cap fund
+   * alone holds 3 582 of them.
+   */
+  const allCompanies = sp.companies === "all";
+  const exposure = await getExposure(allCompanies ? 0 : 250);
+  /**
+   * The companies' marks, asked for by listing and stored here. Read after the
+   * exposure because it is the exposure that decides which companies there are
+   * — and only the ones on the page, so a picture is never fetched for a row
+   * nobody sees.
+   *
+   * The funds held are in the list beside the companies, and not because they
+   * are drawn here — they are not. It is the count of what is missing that
+   * needs them: a fund bought today is not a company inside a fund, so without
+   * this the button would say there is nothing to read while the new holding
+   * sat in *What you hold* with a letter where its mark belongs.
+   */
+  const logos = await logosFor([
+    ...exposure.inside.companies.map((c) => c.symbol),
+    ...exposure.matches.map((m) => m.lookup),
+  ]);
   const fees = await getFeesByYear();
   const grouped = await getGroupedPerformance(groupBy, sort, dir, includeSynced, status);
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
@@ -510,7 +534,13 @@ export default async function PortfolioAnalysisPage({
       </Section>
 
       <Section title="Sectors, countries and regions" persistKey="analysis-exposure">
-        <ExposureCards view={exposure} />
+        <ExposureCards
+          view={exposure}
+          logos={logos.images}
+          logosDue={logos.due}
+          showAllHref={allCompanies ? null : qs({ companies: "all" })}
+          showFewerHref={allCompanies ? qs({ companies: "top" }) : null}
+        />
       </Section>
 
       <Section title="What investing costs" persistKey="analysis-costs">

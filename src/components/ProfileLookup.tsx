@@ -23,7 +23,10 @@ export default function ProfileLookup({ due = 0, label }: { due?: number; label?
       const r = await refreshAssetProfiles();
       const parts: string[] = [];
       if (r.looked > 0) parts.push(`${r.found} of ${r.looked} found.`);
-      if (r.notFound.length > 0) parts.push(`Not found: ${r.notFound.join(", ")}.`);
+      if (r.nothingPublished.length > 0) {
+        parts.push(`Found, but with no sector or country published: ${r.nothingPublished.join(", ")}.`);
+      }
+      if (r.notFound.length > 0) parts.push(`Nothing answered to: ${r.notFound.join(", ")}.`);
       if (r.remaining > 0) parts.push(`${r.remaining} still to look up — press again.`);
       if (r.problem) parts.push(r.problem);
       setMessage(parts.join(" ") || "Everything is up to date.");

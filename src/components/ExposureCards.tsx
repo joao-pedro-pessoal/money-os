@@ -3,18 +3,30 @@ import ProfileLookup from "@/components/ProfileLookup";
 import { Money } from "@/components/PrivacyContext";
 import { forgetAssetProfile, type ExposureView } from "@/actions/exposure";
 import { UNCLASSIFIED, type Exposure } from "@/lib/portfolio/exposure";
-import type { LookThrough } from "@/lib/portfolio/lookThrough";
-import ResponsiveTable from "@/components/ResponsiveTable";
+import InsideFunds from "@/components/InsideFunds";
 import { shortName } from "@/lib/portfolio/shortName";
 
 /**
  * The stocks and ETFs held, by sector, country and region, with what was left
  * out and what each position was matched to. Values in the base currency.
  */
-export default function ExposureCards({ view }: { view: ExposureView }) {
-  const { sector, country, region, inside, matches, due, currency } = view;
+export default function ExposureCards({
+  view,
+  logos,
+  logosDue,
+  showAllHref,
+  showFewerHref,
+}: {
+  view: ExposureView;
+  /** Each company's mark, by listing — see `actions/logos.ts`. */
+  logos: Record<string, string>;
+  logosDue: number;
+  showAllHref?: string | null;
+  showFewerHref?: string | null;
+}) {
+  const { sector, country, region, classes, inside, matches, due, files, filesDue, sectors, movesDue, detailsDue, currency } = view;
 
-  if (sector.total === 0 && matches.length === 0) {
+  if (sector.total === 0 && classes.total === 0 && matches.length === 0) {
     return (
       <p className="text-sm text-[var(--muted)]">
         No stocks or ETFs held. This breakdown covers positions typed as Stocks or ETF; set the asset
@@ -27,28 +39,43 @@ export default function ExposureCards({ view }: { view: ExposureView }) {
     <div className="space-y-4">
       <div className="space-y-2">
         <p className="text-xs text-[var(--muted)] max-w-3xl">
-          Stocks and ETFs only: <Money value={sector.total} currency={currency} /> of what you hold.
+          <strong className="text-[var(--foreground)]">By kind</strong> covers everything you hold,{" "}
+          <Money value={classes.total} currency={currency} />. The three breakdowns beside it cover the shares and funds
+          alone, <Money value={sector.total} currency={currency} />
           {sector.excluded > 0 && (
             <>
               {" "}
-              <Money value={sector.excluded} currency={currency} /> in crypto, cash and other assets has no sector or
-              country, so it is left out.
+              — a sector of bitcoin or a country of idle cash is no number, so the other{" "}
+              <Money value={sector.excluded} currency={currency} /> appears by kind and not there
             </>
-          )}{" "}
-          A fund is spread by the sector weights its provider reports. Countries of a fund&apos;s
-          companies are not reported, so a fund stays Unclassified by country and region rather
-          than being guessed. Source: Yahoo Finance.
+          )}
+          . A fund is spread by the sector weights and the share/bond/cash split its provider reports. Countries of a
+          fund&apos;s companies are not reported, so a fund stays Unclassified by country and region rather than being
+          guessed. Source: Yahoo Finance.
         </p>
         <ProfileLookup due={due} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ExposureCard title="By kind" data={classes} currency={currency} />
         <ExposureCard title="By sector" data={sector} currency={currency} />
         <ExposureCard title="By country" data={country} currency={currency} />
         <ExposureCard title="By region" data={region} currency={currency} />
       </div>
 
-      <InsideFunds data={inside} currency={currency} />
+      <InsideFunds
+        data={inside}
+        currency={currency}
+        filesDue={filesDue}
+        files={files}
+        sectors={sectors}
+        movesDue={movesDue}
+        detailsDue={detailsDue}
+        logos={logos}
+        logosDue={logosDue}
+        showAllHref={showAllHref}
+        showFewerHref={showFewerHref}
+      />
 
       {matches.length > 0 && (
         <details className="card p-4">
@@ -116,85 +143,6 @@ function ExposureCard({ title, data, currency }: { title: string; data: Exposure
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-/**
- * The companies you hold, adding what sits inside your ETFs to the shares held
- * directly. Only a fund's reported largest holdings can be seen; the rest of
- * each fund is stated as unseen, not spread over companies.
- */
-function InsideFunds({ data, currency }: { data: LookThrough; currency: string }) {
-  if (data.fundValue === 0) return null;
-  const unseen = Math.max(0, data.fundValue - data.fundSeen);
-  const seenPercent = data.fundValue > 0 ? (data.fundSeen / data.fundValue) * 100 : 0;
-
-  return (
-    <div className="card p-4 space-y-3">
-      <div>
-        <div className="text-sm font-medium">Inside your ETFs</div>
-        <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl">
-          The companies you hold, adding what your ETFs hold of them to the shares you own directly.
-          Only each fund&apos;s largest holdings are reported (usually ten), which covers{" "}
-          <Money value={data.fundSeen} currency={currency} /> ({seenPercent.toFixed(0)}%) of the{" "}
-          <Money value={data.fundValue} currency={currency} /> in funds. The other <Money value={unseen} currency={currency} /> is spread
-          over companies this cannot see, so a company&apos;s real total can be higher than shown.
-          {data.fundsWithoutHoldings > 0 && (
-            <>
-              {" "}
-              <Money value={data.fundsWithoutHoldings} currency={currency} /> is in funds whose holdings were not read
-              or not reported.
-            </>
-          )}
-        </p>
-      </div>
-      {data.companies.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">
-          No fund holdings read yet. Press <em>Look up sectors &amp; countries</em> above.
-        </p>
-      ) : (
-        <div className="table-scroll" role="region" aria-label="Companies inside your ETFs" tabIndex={0}>
-          <ResponsiveTable className="data-table">
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th className="text-right">Directly</th>
-                <th className="text-right">Through ETFs</th>
-                <th className="text-right">Total</th>
-                <th className="text-right">Share</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.companies.map((c) => (
-                <tr key={c.name}>
-                  <td>
-                    <div>{c.name}</div>
-                    {c.funds.length > 0 && (
-                      <div className="text-[11px] text-[var(--muted)]">via {c.funds.map(shortName).join(", ")}</div>
-                    )}
-                  </td>
-                  <td className="text-right">
-                    {c.direct > 0 ? <Money value={c.direct} currency={currency} /> : <span className="text-[var(--muted)]">—</span>}
-                  </td>
-                  <td className="text-right">
-                    {c.viaFunds > 0 ? <Money value={c.viaFunds} currency={currency} /> : <span className="text-[var(--muted)]">—</span>}
-                  </td>
-                  <td className="text-right font-medium">
-                    <Money value={c.total} currency={currency} />
-                  </td>
-                  <td className="text-right text-[var(--muted)]">
-                    {c.percent.toFixed(1)}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </ResponsiveTable>
-        </div>
-      )}
-      <p className="text-[11px] text-[var(--muted)]">
-        Share is of the stocks and ETFs you hold. Source: Yahoo Finance, read with the button above.
-      </p>
     </div>
   );
 }

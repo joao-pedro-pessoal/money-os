@@ -5,6 +5,7 @@ import {
   describePnlSource,
   spotCostBasis,
   venueEntryPerUnit,
+  entryOverrideFor,
 } from "../entryOverride";
 
 /** Trading 212's IPRP: price and value in the same currency, exact. */
@@ -183,5 +184,49 @@ describe("what the venue said a unit cost", () => {
   /** Dividing by an empty balance would render an infinity as a price. */
   it("has no answer when nothing is held", () => {
     expect(venueEntryPerUnit(0, 81.74)).toBeNull();
+  });
+});
+
+/**
+ * Hyperliquid, September 2026: 1.116 HYPE on spot with its entry set to 32.21,
+ * and a 10x long of 1.8 HYPE opened at 82.471 on the same connection. Both
+ * read their entry from one row.
+ */
+describe("which entry applies to a spot balance and which to a position", () => {
+  const HYPE = { entryPriceOverride: "32.21000000", positionEntryPriceOverride: null };
+  const LONG = { size: 1.8, entryPrice: 82.471, markPrice: 93.228, unrealizedPnl: 19.3626, side: "long" };
+
+  it("keeps the spot entry off an open position on the same coin", () => {
+    expect(entryOverrideFor(HYPE, "position")).toBeNull();
+    const out = applyEntryOverride(LONG, entryOverrideFor(HYPE, "position"));
+    expect(out.unrealizedPnl).toBe(19.3626);
+    expect(out.pnlSource).toBe("venue");
+  });
+
+  /** What the screen showed while the two shared a field. */
+  it("would have recomputed the long from the spot entry", () => {
+    expect(applyEntryOverride(LONG, 32.21).unrealizedPnl).toBe(109.83);
+  });
+
+  it("still gives the spot balance its own entry", () => {
+    expect(entryOverrideFor(HYPE, "balance")).toBe(32.21);
+    expect(spotCostBasis(1.11598249, 81.74, entryOverrideFor(HYPE, "balance"))).toBe(35.95);
+  });
+
+  it("gives a position its own entry when one is set", () => {
+    const both = { ...HYPE, positionEntryPriceOverride: "80" };
+    expect(entryOverrideFor(both, "position")).toBe(80);
+    expect(entryOverrideFor(both, "balance")).toBe(32.21);
+  });
+
+  it("has no entry where no tags were ever saved", () => {
+    expect(entryOverrideFor(undefined, "position")).toBeNull();
+    expect(entryOverrideFor(null, "balance")).toBeNull();
+  });
+
+  /** A zero is not a price; `value − 0` would report the holding as profit. */
+  it("ignores a stored zero rather than treating it as free", () => {
+    expect(entryOverrideFor({ entryPriceOverride: "0", positionEntryPriceOverride: 0 }, "balance")).toBeNull();
+    expect(entryOverrideFor({ entryPriceOverride: "0", positionEntryPriceOverride: 0 }, "position")).toBeNull();
   });
 });

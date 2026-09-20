@@ -1,0 +1,1 @@
+ALTER TABLE "position_meta" ADD COLUMN "position_entry_price_override" numeric(20, 8);

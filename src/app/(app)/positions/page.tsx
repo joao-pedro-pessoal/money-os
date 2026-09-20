@@ -27,6 +27,9 @@ import { getRates } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
 import { toBase } from "@/lib/fx";
 import { displaySymbol } from "@/lib/quotes/symbolSource";
+import { logosFor } from "@/actions/logos";
+import { holdingLogoSymbol } from "@/lib/logos";
+import AssetLogo from "@/components/AssetLogo";
 import Link from "next/link";
 import MobileFold from "@/components/MobileFold";
 
@@ -89,6 +92,18 @@ export default async function PositionsPage() {
     getRates(),
     getBaseCurrency(),
   ]);
+  /** Each position's mark, from what has already been asked for — see `actions/logos.ts`. */
+  const logoKeys = new Map(
+    manual.holdings.map((h) => [
+      h.id,
+      holdingLogoSymbol({ assetType: h.assetType, listing: displaySymbol(h.quoteSymbol), symbol: h.symbol }),
+    ])
+  );
+  const logos = await logosFor([...logoKeys.values()]);
+  const logoOf = (id: string) => {
+    const key = logoKeys.get(id);
+    return key ? logos.images[key] ?? null : null;
+  };
 
   const lastSyncAt = connections
     .map((c) => c.lastSyncAt)
@@ -248,6 +263,7 @@ export default async function PositionsPage() {
                       playlists={playlistList}
                       entryPriceOverride={g.parts[0].entryPriceOverride}
                       venueEntryPrice={g.parts[0].venueEntryPrice}
+                      entryFor="balance"
                     />
                   </div>
                 ) : (
@@ -280,6 +296,7 @@ export default async function PositionsPage() {
                           playlists={playlistList}
                           entryPriceOverride={b.entryPriceOverride}
                           venueEntryPrice={b.venueEntryPrice}
+                          entryFor="balance"
                         />
                       </div>
                     </div>
@@ -338,6 +355,7 @@ export default async function PositionsPage() {
                             playlists={playlistList}
                             entryPriceOverride={g.parts[0].entryPriceOverride}
                             venueEntryPrice={g.parts[0].venueEntryPrice}
+                            entryFor="balance"
                           />
                         ) : (
                           <span className="text-[10px] text-[var(--muted)]">
@@ -394,6 +412,7 @@ export default async function PositionsPage() {
                               playlists={playlistList}
                               entryPriceOverride={b.entryPriceOverride}
                               venueEntryPrice={b.venueEntryPrice}
+                              entryFor="balance"
                             />
                           </td>
                           <td>{b.accountName}</td>
@@ -455,7 +474,9 @@ export default async function PositionsPage() {
             {manual.holdings.map((h) => (
               <article key={h.id} className="position-card">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex items-start gap-2">
+                    <AssetLogo image={logoOf(h.id)} name={h.symbol} size={20} />
+                    <div className="min-w-0">
                     <Link href={`/investments/asset/${encodeURIComponent(h.symbol)}?type=${encodeURIComponent(h.assetType ?? "")}&name=${encodeURIComponent(h.name ?? "")}`} className="font-semibold hover:underline break-words">
                       {h.symbol}
                     </Link>
@@ -463,6 +484,7 @@ export default async function PositionsPage() {
                       <div className="text-[11px] text-[var(--muted)] break-words">{h.name}</div>
                     )}
                     <div className="text-xs text-[var(--muted)] break-words">{h.accountName ?? "No account"}</div>
+                    </div>
                   </div>
                   <div className="text-right shrink-0">
                     <div className="font-semibold"><Money value={h.marketValue} currency={h.currency} /></div>
@@ -526,13 +548,18 @@ export default async function PositionsPage() {
                 {manual.holdings.map((h) => (
                   <tr key={h.id}>
                     <td className="font-medium">
-                      <Link href={`/investments/asset/${encodeURIComponent(h.symbol)}?type=${encodeURIComponent(h.assetType ?? "")}&name=${encodeURIComponent(h.name ?? "")}`} className="hover:underline">
-                        {h.symbol}
-                      </Link>
-                      {/* The ISIN, when a statement supplied one. */}
-                      {h.name && h.name !== h.symbol && (
-                        <div className="text-[10px] text-[var(--muted)]">{h.name}</div>
-                      )}
+                      <span className="flex items-start gap-2">
+                        <AssetLogo image={logoOf(h.id)} name={h.symbol} />
+                        <span className="min-w-0">
+                          <Link href={`/investments/asset/${encodeURIComponent(h.symbol)}?type=${encodeURIComponent(h.assetType ?? "")}&name=${encodeURIComponent(h.name ?? "")}`} className="hover:underline">
+                            {h.symbol}
+                          </Link>
+                          {/* The ISIN, when a statement supplied one. */}
+                          {h.name && h.name !== h.symbol && (
+                            <span className="block text-[10px] text-[var(--muted)]">{h.name}</span>
+                          )}
+                        </span>
+                      </span>
                     </td>
                     <td>
                       <HoldingTagsForm
@@ -727,6 +754,7 @@ export default async function PositionsPage() {
                       playlists={playlistList}
                       entryPriceOverride={p.entryPriceOverride}
                       venueEntryPrice={p.venueEntryPrice}
+                      entryFor="position"
                     />
                   </div>
                 </article>
@@ -781,6 +809,7 @@ export default async function PositionsPage() {
                           playlists={playlistList}
                           entryPriceOverride={p.entryPriceOverride}
                           venueEntryPrice={p.venueEntryPrice}
+                          entryFor="position"
                         />
                       </td>
                       <td>
