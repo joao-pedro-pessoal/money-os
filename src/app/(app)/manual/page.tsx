@@ -106,7 +106,7 @@ function Part({
       {/* PanelFrame without a title: the h2 above already names this part, and
           the individual entries keep their own h3 so the manual's heading
           structure and its contents anchors survive folding. */}
-      <PanelFrame persistKey={`manual:${title}`} className="card p-5 space-y-8">
+      <PanelFrame persistKey={`manual:${title}`} className="card p-5" contentClassName="space-y-8">
         {children}
       </PanelFrame>
     </div>
@@ -213,7 +213,7 @@ export default function ManualPage() {
       </Section>
 
       {/* ---- Getting started ---- */}
-      <Section title="Getting started" defaultOpen persistKey="manual:getting-started" className="space-y-8">
+      <Section title="Getting started" defaultOpen persistKey="manual:getting-started" contentClassName="space-y-8">
         <Entry id="setup" title="Setting up, in order" where="The order matters — each step needs the one before it">
           <ol className="list-decimal pl-5 space-y-2">
             <li>
@@ -640,7 +640,7 @@ export default function ManualPage() {
       </Part>
 
       {/* ============ THE REST ============ */}
-      <Section title="Settings and the rest" defaultOpen persistKey="manual:the-rest" className="space-y-8">
+      <Section title="Settings and the rest" defaultOpen persistKey="manual:the-rest" contentClassName="space-y-8">
         <Entry id="settings" title="Settings" where="Sidebar, at the bottom → Settings">
           <ul className="list-disc pl-5 space-y-1">
             <li><strong className="text-[var(--foreground)]">Base currency</strong> — the currency of every total. Change it and the whole app reconverts.</li>
