@@ -139,6 +139,55 @@ export async function refreshLogos(): Promise<LogoRefresh> {
   return result;
 }
 
+/** Marks read per automatic top-up. A handful: this runs beside a price refresh. */
+const TOP_UP = 10;
+
+/**
+ * Reads the marks of things you hold that have none yet, a few at a time.
+ *
+ * This is the half of the button that can be automatic. Buying a fund is the
+ * moment a mark is missing, and pressing a button to fetch a picture for
+ * something you just added is a chore nobody should be given; the companies
+ * *inside* the funds stay behind the button, because there are 250 of them and
+ * they only change when a fund does.
+ *
+ * **Never throws.** It runs on the back of the automatic price refresh, and a
+ * logo service being unreachable must not stop prices arriving — one of the
+ * two is money and the other is decoration.
+ */
+export async function topUpLogos(): Promise<void> {
+  try {
+    const { items } = await getPortfolioItems();
+    const wanted = new Map<string, Wanted>();
+    for (const i of items) {
+      const symbol = holdingLogoSymbol(i);
+      if (symbol && !wanted.has(symbol)) wanted.set(symbol, { symbol, isin: null, coin: isCoin(i.assetType) });
+    }
+    if (wanted.size === 0) return;
+
+    // Only what has never been asked about. A listing the source answered
+    // nothing for is left to the button's own retry clock, so a portfolio
+    // holding one of those does not ask again every five minutes forever.
+    const stored = await allLogos();
+    const due = [...wanted.values()].filter((w) => !stored.has(w.symbol)).slice(0, TOP_UP);
+    if (due.length === 0) return;
+
+    for (const item of due) {
+      const found = await readLogo(candidatesFor(item));
+      const image = found?.image ?? null;
+      const values = { image, bytes: image === null ? null : image.length, source: found?.source ?? null, fetchedAt: new Date() };
+      await db
+        .insert(assetLogos)
+        .values({ symbol: item.symbol, ...values })
+        .onConflictDoUpdate({ target: assetLogos.symbol, set: values });
+    }
+    cached = null;
+  } catch {
+    // Decoration. What could not be read is read on the next refresh, or by
+    // the button, and nothing on any screen is missing a figure meanwhile.
+  }
+}
+
 /**
  * Everywhere worth asking about one thing, in the order to ask.
  *

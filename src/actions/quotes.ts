@@ -27,6 +27,7 @@ import {
 } from "@/lib/quotes/yahoo";
 import { wasFoundAutomatically } from "@/lib/quotes/symbolSource";
 import { normaliseIsin } from "@/lib/portfolio/isin";
+import { topUpLogos } from "./logos";
 import { knownListingFor } from "@/lib/quotes/knownListings";
 import { crossCheckPricing } from "@/lib/portfolio/reconstruct";
 import { marketValue, isUnpriced } from "@/lib/portfolio";
@@ -871,6 +872,10 @@ export async function forgetFoundPrices() {
 export async function autoRefreshPricesAction(): Promise<void> {
   "use server";
   await refreshQuotedPrices({ olderThanMinutes: REPRICE_AFTER_MINUTES });
+  // And the logo of anything bought since the last one, which is the moment a
+  // position has none. It cannot throw and it cannot delay a price: see
+  // `topUpLogos`. Prices first, so a slow logo service never holds them up.
+  await topUpLogos();
 }
 
 /** When any quoted price was last fetched, for `AutoSync` to judge staleness. */
