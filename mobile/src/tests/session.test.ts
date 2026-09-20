@@ -3,6 +3,8 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { LocalVault, type SyncBaseRecord } from '../storage/repository';
 import { VaultServerError } from '../services/vault-client';
 import { account, stateWithAccounts } from './fixtures';
+import { generateSeed, seedEntropy } from '../../../src/lib/vault/seed';
+import { encryptVault } from '../../../src/lib/vault/cipher';
 
 const mocks = vi.hoisted(() => ({
   save: vi.fn(), load: vi.fn(), remove: vi.fn(), prune: vi.fn(), clear: vi.fn(), state: vi.fn(),
@@ -98,6 +100,62 @@ describe('sync account on this device', () => {
     await expect(session.startSync({ server: 'http://10.0.2.2:3000', email: 'a@b.pt', password: 'x', deviceName: 'Pixel',
       mode: 'login', seedWords: 'abandon abandon abandon' })).rejects.toThrow('escreveste 3');
     expect(login).not.toHaveBeenCalled();
+    await session.close();
+  });
+
+  /**
+   * The seed's checksum accepts about one mistyped word in sixteen. Joining
+   * used to write the words down as confirmed on the strength of that alone,
+   * and the first sync then sealed the account's vault under the wrong key.
+   */
+  it('refuses a seed that does not open the account it is joining', async () => {
+    const { session } = await setup();
+    const words = await generateSeed(async (n: number) => new Uint8Array(randomBytes(n)));
+    const other = seedEntropy(await generateSeed(async (n: number) => new Uint8Array(randomBytes(n))));
+    const stored = await encryptVault({ plaintext: new TextEncoder().encode('{}'), entropy: other,
+      userId: signedIn.userId, vaultVersion: 1, random: async (n: number) => new Uint8Array(randomBytes(n)) });
+    const latest = vi.fn().mockResolvedValue({ vaultVersion: 1, text: stored });
+    mocks.client.mockReturnValue({ register: vi.fn(), login: vi.fn().mockResolvedValue(signedIn),
+      transport: () => ({ latest, put: vi.fn() }) });
+    mocks.loadSync.mockResolvedValue(null);
+
+    await expect(session.startSync({ server: 'http://10.0.2.2:3000', email: 'a@b.pt', password: 'x',
+      deviceName: 'Pixel', mode: 'login', seedWords: words })).rejects.toThrow('não abrem o cofre');
+    // Nothing kept: a device that cannot read the account must not be able to
+    // write to it either.
+    expect(mocks.saveSync).not.toHaveBeenCalled();
+    await session.close();
+  });
+
+  it('joins when the words open the account, and counts them as confirmed', async () => {
+    const { session } = await setup();
+    const words = await generateSeed(async (n: number) => new Uint8Array(randomBytes(n)));
+    const stored = await encryptVault({ plaintext: new TextEncoder().encode('{}'), entropy: seedEntropy(words),
+      userId: signedIn.userId, vaultVersion: 1, random: async (n: number) => new Uint8Array(randomBytes(n)) });
+    mocks.client.mockReturnValue({ register: vi.fn(), login: vi.fn().mockResolvedValue(signedIn),
+      transport: () => ({ latest: vi.fn().mockResolvedValue({ vaultVersion: 1, text: stored }), put: vi.fn() }) });
+    mocks.loadSync.mockResolvedValue(null);
+
+    await session.startSync({ server: 'http://10.0.2.2:3000', email: 'a@b.pt', password: 'x',
+      deviceName: 'Pixel', mode: 'login', seedWords: words });
+    expect(mocks.saveSync.mock.calls[0][0]).toMatchObject({ userId: 'user_1', seedConfirmed: true });
+    await session.close();
+  });
+
+  /**
+   * Nothing stored is nothing to check against, and a seed nobody can check is
+   * a seed that must not seal the first vault.
+   */
+  it('refuses to join an account that has stored no vault yet', async () => {
+    const { session } = await setup();
+    const words = await generateSeed(async (n: number) => new Uint8Array(randomBytes(n)));
+    mocks.client.mockReturnValue({ register: vi.fn(), login: vi.fn().mockResolvedValue(signedIn),
+      transport: () => ({ latest: vi.fn().mockResolvedValue(null), put: vi.fn() }) });
+    mocks.loadSync.mockResolvedValue(null);
+
+    await expect(session.startSync({ server: 'http://10.0.2.2:3000', email: 'a@b.pt', password: 'x',
+      deviceName: 'Pixel', mode: 'login', seedWords: words })).rejects.toThrow('Sincronizar uma vez');
+    expect(mocks.saveSync).not.toHaveBeenCalled();
     await session.close();
   });
 

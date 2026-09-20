@@ -8,10 +8,56 @@ import { createDirectConnector, clearConnectorMemory, SyncError } from './connec
 import { addAccount, applyReading } from '../domain/operations';
 import { syncVault, type SyncOutcome } from '../domain/sync';
 import { generateSeed, seedEntropy, seedFromEntropy, SeedError } from '../../../src/lib/vault/seed';
+import { decryptVault, VaultError } from '../../../src/lib/vault/cipher';
 import { phoneVaultClient } from './vault-http';
 import { VaultServerError, type VaultDevice } from './vault-client';
 
 const VAULT_SYNC = 'vault-sync';
+
+/**
+ * Proves that the typed seed is this account's seed, by opening what the
+ * account has stored.
+ *
+ * The words carry a checksum, and passing it is not proof of anything: it
+ * catches about fifteen mistyped words in sixteen, which is a spell-checker,
+ * not a key. The sixteenth used to be accepted and written down as confirmed.
+ *
+ * What that cost: the other phone registers, writes its words down and has not
+ * pressed Sync yet, so the account holds no vault. This phone joins with one
+ * word wrong, syncs, and seals **version 1 under the wrong key**. From then on
+ * the phone holding the real words gets "unreadable" on every sync and cannot
+ * push past it, and the twelve words on the paper open nothing. Nothing says
+ * anything is wrong until the day they are needed.
+ *
+ * So the seed is checked against the only thing that can answer — the stored
+ * vault — before this device is allowed to keep it. Where there is no vault
+ * yet, there is no answer, and an unanswerable question gets "not yet" rather
+ * than a guess: the other device syncs once, and then this one joins.
+ */
+async function proveSeed(
+  transport: { latest(): Promise<{ text: string } | null> },
+  userId: string,
+  entropy: Uint8Array
+): Promise<void> {
+  const stored = await transport.latest();
+  if (!stored) {
+    throw new Error(
+      'Esta conta ainda não tem nenhum cofre guardado, por isso não há aqui nada contra o que verificar as 12 palavras. '
+        + 'Abre a app no outro dispositivo e carrega em Sincronizar uma vez; depois liga este.'
+    );
+  }
+  try {
+    decryptVault({ text: stored.text, entropy, userId, minVaultVersion: 0 });
+  } catch (error) {
+    if (error instanceof VaultError && error.reason === 'key-or-damage') {
+      throw new Error(
+        'Estas 12 palavras não abrem o cofre desta conta: alguma está mal escrita ou trocada de ordem. '
+          + 'Nada foi alterado — corrige-as e tenta outra vez.'
+      );
+    }
+    throw error;
+  }
+}
 
 /** A seed refusal in the app's language, keeping which rule it broke. */
 function seedProblem(error: unknown): Error {
@@ -111,8 +157,11 @@ export class MobileSession {
    *
    * Creating one issues a new seed and returns its words; they stay available on
    * this device only until `confirmSeedSaved`, and a sync is refused before that.
-   * Joining one needs the words typed in, checked before the server is contacted —
-   * a mistyped word is the person's to correct, not a failed sign-in.
+   * Joining one needs the words typed in. Their spelling is checked before the
+   * server is contacted — a mistyped word is the person's to correct, not a
+   * failed sign-in — and then, once signed in, the words themselves are checked
+   * against the account's stored vault, which is the only thing that can tell a
+   * seed from a seed that merely spells correctly. See `proveSeed`.
    */
   async startSync(input: { server: string; email: string; password: string; deviceName: string;
     mode: 'register' | 'login'; seedWords?: string }): Promise<{ seedWords: string | null }> {
@@ -132,6 +181,10 @@ export class MobileSession {
     try {
       const body = { email: input.email, password: input.password, deviceName: input.deviceName };
       const account = input.mode === 'register' ? await client.register(body) : await client.login(body);
+      this.assertLive();
+      // Joining: the words are checked against the account's own vault before
+      // this device keeps them, and before it is allowed to seal anything.
+      if (input.mode === 'login') await proveSeed(client.transport(account.token), account.userId, entropy);
       this.assertLive();
       // A base left from an earlier account must never be merged against this one.
       await this.vault.forgetSync();
