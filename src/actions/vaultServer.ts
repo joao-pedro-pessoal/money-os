@@ -5,6 +5,7 @@ import { and, desc, eq, gt, isNull, max, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { syncDevices, syncLoginMethods, syncSessions, syncUsers, syncVaultVersions } from "@/db/schema";
 import { hashPassword, needsRehash, verifyPassword } from "@/lib/vault/password";
+import { createGate } from "@/lib/vault/gate";
 import { hashSessionToken, newSessionToken, sessionExpiry } from "@/lib/vault/session";
 import {
   LoginRequest,
@@ -29,6 +30,20 @@ import {
  */
 
 const random = (n: number) => new Uint8Array(randomBytes(n));
+
+/**
+ * How many password hashes may be computed at once, and how many may wait.
+ *
+ * Two at a time is 64 MB and two cores; eight more may queue, which at about
+ * half a second each is a five-second wait in the worst case and nobody
+ * arrives in that state legitimately. Everything past it is told the server is
+ * busy — see `lib/vault/gate.ts` for why this exists at all. The numbers are
+ * small on purpose: this is one person's app on one machine, and the real
+ * ceiling is how many sign-ins a second a household needs, which is not two.
+ */
+const passwords = createGate({ running: 2, waiting: 8 });
+
+const BUSY = "The server is busy checking other sign-ins. Try again in a moment.";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Refusal = { ok: false; status: 400 | 401 | 403 | 404 | 409 | 429; reason: string };
@@ -110,8 +125,12 @@ export async function registerSyncAccount(raw: unknown) {
   const { email, password, deviceName } = parsed.data;
 
   // Hashed before the transaction: a slow step inside it would hold locks for
-  // most of a second on every registration.
-  const secretHash = await hashPassword(password, random);
+  // most of a second on every registration. Through the gate, because this
+  // runs before anything has been checked — an address nobody owns costs a
+  // full hash here, which is the cheapest attack on this server there is.
+  const hashed = await passwords.run(() => hashPassword(password, random));
+  if (!hashed.ok) return refusal(429, BUSY);
+  const secretHash = hashed.value;
   try {
     return await db.transaction(async (tx) => {
       const [user] = await tx.insert(syncUsers).values({ email }).returning({ id: syncUsers.id });
@@ -138,7 +157,16 @@ export async function loginSyncAccount(raw: unknown) {
     .where(and(eq(syncLoginMethods.kind, "password"), eq(syncLoginMethods.subject, email)));
 
   if (!method || method.secretHash === null) {
-    await verifyPassword(password, await decoyHash());
+    /**
+     * The decoy keeps a wrong address and a wrong password the same length of
+     * time, and it is also the one expensive thing on this server that needs
+     * no account to trigger — the lockout below counts wrong passwords per
+     * account, and an address that does not exist has none. It goes through
+     * the same gate as a real check, so a flood of unknown addresses is
+     * refused rather than served.
+     */
+    const decoy = await passwords.run(async () => verifyPassword(password, await decoyHash()));
+    if (!decoy.ok) return refusal(429, BUSY);
     return refusal(401, WRONG_LOGIN);
   }
 
@@ -147,7 +175,12 @@ export async function loginSyncAccount(raw: unknown) {
     return refusal(429, `Too many wrong passwords. Try again after ${until.toISOString()}.`);
   }
 
-  if (!(await verifyPassword(password, method.secretHash))) {
+  // Held in a const: the check above proved it is there, and a closure would
+  // not carry that proof.
+  const stored = method.secretHash;
+  const checked = await passwords.run(() => verifyPassword(password, stored));
+  if (!checked.ok) return refusal(429, BUSY);
+  if (!checked.value) {
     /**
      * Counted in SQL, not from the row just read.
      *
@@ -168,7 +201,12 @@ export async function loginSyncAccount(raw: unknown) {
     return refusal(401, WRONG_LOGIN);
   }
 
-  const secretHash = needsRehash(method.secretHash) ? await hashPassword(password, random) : method.secretHash;
+  // A rehash is the same cost again, and it happens on a correct password —
+  // the one case worth waiting for. When the gate is full the old hash is kept
+  // and the next sign-in upgrades it; refusing a good password to reword a
+  // stored hash would be the wrong thing to lose.
+  const rehashed = needsRehash(method.secretHash) ? await passwords.run(() => hashPassword(password, random)) : null;
+  const secretHash = rehashed?.ok ? rehashed.value : method.secretHash;
   return db.transaction(async (tx) => {
     await tx
       .update(syncLoginMethods)
