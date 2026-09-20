@@ -27,39 +27,11 @@ import { parseCsvLine } from "@/lib/library/covers-import";
 import { parseAmount } from "@/lib/csv";
 import { sectorKey } from "@/lib/portfolio/exposure";
 import { yahooListing } from "./listing";
+import { addsUp, type FundHoldingRow, type FundHoldings, type HoldingKind } from "./holdings";
 
-/** One line of the file: a company, a bond, a cash balance or a future. */
-export interface FundHoldingRow {
-  /** The issuer ticker as the file writes it ("AAPL", "VNA"), or null. */
-  ticker: string | null;
-  /** The exchange as the file names it, which is what identifies the listing. */
-  exchange: string | null;
-  /**
-   * The listing to ask a price source about ("VNA.DE"), or null where the
-   * market is one `lib/funds/listing.ts` does not know. Worked out when the
-   * file is read, so a screen never has to.
-   */
-  symbol: string | null;
-  name: string;
-  /** In the app's sector vocabulary, or null where the file names no sector. */
-  sector: string | null;
-  /** What kind of thing the line is, in the file's own terms. */
-  kind: HoldingKind;
-  /** Fraction of the fund, 0–1. */
-  weight: number;
-  /** Country in English, or null when the file says none or names one not in the map. */
-  country: string | null;
-}
+// The shape every reader produces, so a caller needs one import for any of them.
+export type { FundHoldingRow, FundHoldings, HoldingKind } from "./holdings";
 
-export type HoldingKind = "equity" | "bond" | "cash" | "derivative" | "other";
-
-export interface FundHoldings {
-  /** The day the fund states the file is for, as YYYY-MM-DD, or null. */
-  asOf: string | null;
-  rows: FundHoldingRow[];
-  /** What the weights add up to, 0–1. A file that does not add up is refused. */
-  weight: number;
-}
 
 const SECTORS: Record<string, string> = {
   "informationstechnologie": "technology",
@@ -257,7 +229,7 @@ export function parseIsharesHoldings(csv: string): FundHoldings | null {
     });
   }
 
-  if (rows.length === 0 || weight < 0.9 || weight > 1.1) return null;
+  if (rows.length === 0 || !addsUp(weight)) return null;
   return { asOf: parseGermanDay(lines[0] ?? ""), rows, weight };
 }
 

@@ -21,7 +21,9 @@ import {
   type FundHolding,
 } from "@/lib/portfolio/exposure";
 import { limitCompanies, lookThrough, sectorMoves, type LookThrough, type SectorMove } from "@/lib/portfolio/lookThrough";
-import { isharesHoldingsUrl, parseIsharesHoldings, type FundHoldingRow } from "@/lib/funds/ishares";
+import { isharesHoldingsUrl, parseIsharesHoldings } from "@/lib/funds/ishares";
+import { parseXtrackersHoldings, xtrackersHoldingsUrl } from "@/lib/funds/xtrackers";
+import type { FundHoldingRow, FundHoldings } from "@/lib/funds/holdings";
 import { listingAlternatives } from "@/lib/funds/listing";
 import { isinOfHolding, normaliseIsin } from "@/lib/portfolio/isin";
 import { parsePriceSeries, priceChanges, WINDOWS, type PriceChanges, type WindowKey } from "@/lib/funds/priceMoves";
@@ -310,7 +312,11 @@ export async function getExposure(companyLimit = 250): Promise<ExposureView> {
       .sort((a, b) => b.total - a.total)
       .slice(0, MOVE_LIMIT)
       .filter((c) => !c.sector || !c.country || !c.industry).length,
+    // A fund whose manager publishes nothing this can read is stored as a file
+    // of no positions, so it is not asked for again every visit. It is not a
+    // source, so it is not listed as one.
     files: fundRows
+      .filter((r) => r.rowCount > 0)
       .map((r) => ({ lookup: r.lookup, fundName: r.fundName, asOf: r.asOf, rowCount: r.rowCount }))
       .sort((a, b) => b.rowCount - a.rowCount),
     filesDue: lookups.filter((l) => l.lookup && l.isin && !publishedBy.has(l.lookup) && isFundRow(byLookup.get(l.lookup)))
@@ -542,6 +548,47 @@ async function isharesPages(): Promise<Map<string, { page: string; ticker: strin
   return out;
 }
 
+/** A file that was read, and which manager published it. */
+interface ReadFile {
+  holdings: FundHoldings;
+  source: string;
+}
+
+/**
+ * BlackRock's file for a fund on their product list.
+ *
+ * A failure here is thrown, not swallowed: the fund is on the list, so its
+ * file exists, and "could not read it" is a different thing from "nobody
+ * publishes one" — the screen says which.
+ */
+async function readIsharesFile(entry: { page: string; ticker: string }): Promise<ReadFile> {
+  const response = await fetch(isharesHoldingsUrl(entry.page, entry.ticker), {
+    headers: ISHARES_UA,
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`answered ${response.status}`);
+  const holdings = parseIsharesHoldings(await response.text());
+  if (!holdings) throw new Error("the file did not read as a list of holdings");
+  return { holdings, source: "ishares" };
+}
+
+/**
+ * DWS's file for an Xtrackers fund, or null when this ISIN is not one of
+ * theirs.
+ *
+ * Their endpoint is keyed by the fund's own ISIN and answers 500 with a web
+ * page for a fund that is not theirs, so asking is how you find out — there is
+ * no product list to read first. That is why a refusal here is null rather
+ * than an error: for every fund from another manager, this is the ordinary
+ * answer, not a failure.
+ */
+async function readXtrackersFile(isin: string): Promise<ReadFile | null> {
+  const response = await fetch(xtrackersHoldingsUrl(isin), { headers: ISHARES_UA, cache: "no-store" });
+  if (!response.ok) return null;
+  const holdings = parseXtrackersHoldings(await response.text(), isin);
+  return holdings ? { holdings, source: "xtrackers" } : null;
+}
+
 export interface FundFileRefresh {
   read: number;
   /** Funds whose file could not be read, and why, in the user's words. */
@@ -601,28 +648,26 @@ export async function refreshFundFiles(): Promise<FundFileRefresh> {
 
   for (const fund of due.slice(0, FILE_BATCH)) {
     const entry = pages.get(fund.isin);
-    if (!entry) {
-      // Amundi, HSBC, UBS, Xtrackers and the rest publish their own files in
-      // their own shapes. Until one is read, that fund keeps its ten largest.
-      result.unsupported++;
-      result.remaining--;
-      continue;
-    }
     try {
-      const response = await fetch(isharesHoldingsUrl(entry.page, entry.ticker), {
-        headers: ISHARES_UA,
-        cache: "no-store",
-      });
-      if (!response.ok) throw new Error(`answered ${response.status}`);
-      const file = parseIsharesHoldings(await response.text());
-      if (!file) throw new Error("the file did not read as a list of holdings");
+      const file = entry
+        ? await readIsharesFile(entry)
+        : await readXtrackersFile(fund.isin);
+      // Amundi, HSBC, UBS and the rest publish their own files in their own
+      // shapes — and Amundi's S&P 500 is a swap, so what it publishes is the
+      // collateral it holds rather than the companies you are exposed to.
+      // Until a reader exists, that fund keeps its ten largest.
+      //
+      // **That answer is written down**, as a file of no positions: otherwise
+      // the button counts those funds as still to read on every visit and can
+      // never reach zero, which is a number that trains you to ignore it. The
+      // row expires like any other, so a reader added later is tried.
       const values = {
         isin: fund.isin,
-        fundName: entry.name,
-        source: "ishares",
-        asOf: file.asOf,
-        rows: JSON.stringify(file.rows),
-        rowCount: file.rows.length,
+        fundName: entry?.name ?? fund.name,
+        source: file?.source ?? "none",
+        asOf: file?.holdings.asOf ?? null,
+        rows: JSON.stringify(file?.holdings.rows ?? []),
+        rowCount: file?.holdings.rows.length ?? 0,
         version: FILE_VERSION,
         fetchedAt: new Date(),
       };
@@ -630,7 +675,8 @@ export async function refreshFundFiles(): Promise<FundFileRefresh> {
         .insert(fundHoldings)
         .values({ lookup: fund.lookup, ...values })
         .onConflictDoUpdate({ target: fundHoldings.lookup, set: values });
-      result.read++;
+      if (file) result.read++;
+      else result.unsupported++;
       result.remaining--;
     } catch (error) {
       result.failed.push({ fund: fund.name, reason: (error as Error).message });
