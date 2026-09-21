@@ -9,6 +9,7 @@ import { encryptVault } from '../../../src/lib/vault/cipher';
 const mocks = vi.hoisted(() => ({
   save: vi.fn(), load: vi.fn(), remove: vi.fn(), prune: vi.fn(), clear: vi.fn(), state: vi.fn(),
   saveSync: vi.fn(), loadSync: vi.fn(), deleteSync: vi.fn(), client: vi.fn(),
+  loadPending: vi.fn(), savePending: vi.fn(),
 }));
 vi.mock('expo-crypto', () => ({
   randomUUID: () => globalThis.crypto.randomUUID(),
@@ -16,7 +17,8 @@ vi.mock('expo-crypto', () => ({
 }));
 vi.mock('../storage/secrets', () => ({ saveCredentials: mocks.save, loadCredentials: mocks.load,
   deleteCredentials: mocks.remove, pruneUnusedCredentials: mocks.prune,
-  saveSyncSecrets: mocks.saveSync, loadSyncSecrets: mocks.loadSync, deleteSyncSecrets: mocks.deleteSync }));
+  saveSyncSecrets: mocks.saveSync, loadSyncSecrets: mocks.loadSync, deleteSyncSecrets: mocks.deleteSync,
+  loadPendingSignOuts: mocks.loadPending, savePendingSignOuts: mocks.savePending }));
 vi.mock('../services/connectors', () => ({
   SyncError: class extends Error {}, clearConnectorMemory: mocks.clear,
   createDirectConnector: () => ({ validateIdentifier: () => ({ ok: true }), getAccountState: mocks.state }),
@@ -32,8 +34,13 @@ async function setup() {
   await vault.replace(stateWithAccounts(a));
   return { vault, a, session: new MobileSession(vault) };
 }
+/** The pending sign-outs, kept in memory the way SecureStore keeps them on a phone. */
+let pending: { server: string; deviceId: string; token: string }[] = [];
 beforeEach(() => {
   vi.resetAllMocks(); mocks.load.mockResolvedValue(credentials);
+  pending = [];
+  mocks.loadPending.mockImplementation(async () => [...pending]);
+  mocks.savePending.mockImplementation(async (list: typeof pending) => { pending = [...list]; });
 });
 describe('connection lifecycle', () => {
   it('does not overwrite a reading or expose broker error contents when a sync fails', async () => {
@@ -186,6 +193,93 @@ describe('sync account on this device', () => {
 
     await session.stopSync();
     expect(forget.mock.invocationCallOrder[0]).toBeLessThan(mocks.deleteSync.mock.invocationCallOrder[0]);
+    await session.close();
+  });
+});
+
+describe('ending the session on the server when this device stops syncing', () => {
+  /**
+   * Stopping used to forget the token here and leave it valid on the server
+   * until it expired: a token that fetches the account's ciphertext.
+   */
+  it('revokes this device on the server, and keeps nothing waiting', async () => {
+    const { session } = await setup();
+    mocks.loadSync.mockResolvedValue(confirmed);
+    const revoke = vi.fn().mockResolvedValue(undefined);
+    mocks.client.mockReturnValue({ revoke });
+    expect(await session.stopSync()).toEqual({ endedOnServer: true });
+    expect(revoke).toHaveBeenCalledWith(confirmed.token, confirmed.deviceId);
+    expect(mocks.deleteSync).toHaveBeenCalled();
+    expect(pending).toEqual([]);
+    await session.close();
+  });
+
+  it('stops anyway without network, and keeps the session to end later', async () => {
+    const { session } = await setup();
+    mocks.loadSync.mockResolvedValue(confirmed);
+    mocks.client.mockReturnValue({ revoke: vi.fn().mockRejectedValue(new VaultServerError(null, 'Sem ligação')) });
+    expect(await session.stopSync()).toEqual({ endedOnServer: false });
+    expect(mocks.deleteSync).toHaveBeenCalled();
+    expect(pending).toEqual([{ server: confirmed.server, deviceId: confirmed.deviceId, token: confirmed.token }]);
+    await session.close();
+  });
+
+  /** Written down first, so an interruption between the two can never lose it. */
+  it('records the session as waiting before it forgets it', async () => {
+    const { session } = await setup();
+    mocks.loadSync.mockResolvedValue(confirmed);
+    mocks.client.mockReturnValue({ revoke: vi.fn().mockResolvedValue(undefined) });
+    await session.stopSync();
+    expect(mocks.savePending.mock.invocationCallOrder[0]).toBeLessThan(mocks.deleteSync.mock.invocationCallOrder[0]);
+    await session.close();
+  });
+
+  it('ends a waiting session once the server answers, and counts an already-ended one as done', async () => {
+    const { session } = await setup();
+    mocks.loadSync.mockResolvedValue(null);
+    pending = [
+      { server: confirmed.server, deviceId: 'device_1', token: 'c'.repeat(64) },
+      { server: confirmed.server, deviceId: 'device_2', token: 'd'.repeat(64) },
+      { server: confirmed.server, deviceId: 'device_3', token: 'e'.repeat(64) },
+    ];
+    const revoke = vi.fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new VaultServerError(401, 'O servidor recusou (HTTP 401)'))
+      .mockRejectedValueOnce(new VaultServerError(null, 'Sem ligação'));
+    mocks.client.mockReturnValue({ revoke });
+    expect(await session.finishPendingSignOuts()).toBe(1);
+    expect(pending.map(p => p.deviceId)).toEqual(['device_3']);
+    await session.close();
+  });
+
+  /** A stop interrupted before it forgot the session never happened. */
+  it('never ends the session this device is still syncing with', async () => {
+    const { session } = await setup();
+    mocks.loadSync.mockResolvedValue(confirmed);
+    pending = [{ server: confirmed.server, deviceId: confirmed.deviceId, token: confirmed.token }];
+    const revoke = vi.fn();
+    mocks.client.mockReturnValue({ revoke });
+    expect(await session.finishPendingSignOuts()).toBe(0);
+    expect(revoke).not.toHaveBeenCalled();
+    expect(pending).toEqual([]);
+    await session.close();
+  });
+
+  it('does not lose a stop made while a retry is still running', async () => {
+    const { session } = await setup();
+    pending = [{ server: confirmed.server, deviceId: 'device_9', token: 'f'.repeat(64) }];
+    let release!: () => void;
+    const revoke = vi.fn()
+      .mockImplementationOnce(() => new Promise<void>((_, reject) => { release = () => reject(new VaultServerError(null, 'Sem ligação')); }))
+      .mockRejectedValue(new VaultServerError(null, 'Sem ligação'));
+    mocks.client.mockReturnValue({ revoke });
+    mocks.loadSync.mockResolvedValueOnce(null).mockResolvedValue(confirmed);
+    const retry = session.finishPendingSignOuts();
+    await vi.waitFor(() => expect(revoke).toHaveBeenCalledTimes(1));
+    const stopping = session.stopSync();
+    release();
+    await retry; await stopping;
+    expect(pending.map(p => p.token).sort()).toEqual([confirmed.token, 'f'.repeat(64)].sort());
     await session.close();
   });
 });

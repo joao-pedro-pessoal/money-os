@@ -66,8 +66,12 @@ export function SyncSettings({ session, run, busy }: { session: MobileSession; r
   const [devices, setDevices] = useState<VaultDevice[] | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [stop, setStop] = useState('');
+  const [stopped, setStopped] = useState('');
+  const [waitingSignOuts, setWaitingSignOuts] = useState(0);
 
   const refresh = useCallback(async () => {
+    // Sessions stopped without network are ended here once the server answers.
+    setWaitingSignOuts(await session.finishPendingSignOuts());
     const next = await session.syncStatus();
     setStatus(next);
     setPendingWords(next && !next.seedConfirmed ? await session.pendingSeedWords() : null);
@@ -94,6 +98,8 @@ export function SyncSettings({ session, run, busy }: { session: MobileSession; r
   </Card>;
 
   if (!status) return <Card title="Sincronizar entre dispositivos">
+    {stopped ? <Note>{stopped}</Note> : null}
+    {waitingSignOuts > 0 && !stopped ? <Note>Uma sessão antiga deste dispositivo ainda não foi terminada no servidor, porque não havia ligação. É terminada quando a app voltar a chegar ao servidor.</Note> : null}
     <Note>Saldos, movimentos, posições e planos são cifrados neste telemóvel antes de saírem. O servidor guarda-os sem os conseguir ler. As chaves das corretoras nunca saem deste dispositivo: em cada dispositivo novo voltas a ligá-las.</Note>
     <Note danger>A seed de 12 palavras é a única forma de abrir os dados noutro dispositivo. Se perderes todos os dispositivos e a seed, ninguém os consegue recuperar — nem o Money OS.</Note>
     <Choices value={mode} values={[{ value: 'register', label: 'Criar conta' }, { value: 'login', label: 'Já tenho conta' }]} onChange={setMode} />
@@ -146,7 +152,12 @@ export function SyncSettings({ session, run, busy }: { session: MobileSession; r
       <Note>Os dados deste telemóvel ficam todos, e a conta e os outros dispositivos não são afetados. Para voltar a sincronizar vais precisar da seed.</Note>
       <Field label="Escreve PARAR para confirmar" value={stop} onChangeText={setStop} autoCapitalize="characters" />
       <Button title="Deixar de sincronizar" danger disabled={busy || stop !== 'PARAR'} onPress={() => void run(async () => {
-        await session.stopSync(); setStop(''); setResult(''); setDevices(null); await refresh();
+        const { endedOnServer } = await session.stopSync();
+        setStop(''); setResult(''); setDevices(null);
+        setStopped(endedOnServer
+          ? 'Este dispositivo deixou de sincronizar, e a sessão foi terminada também no servidor.'
+          : 'Este dispositivo deixou de sincronizar. Sem ligação ao servidor, a sessão ainda não foi terminada lá: é terminada quando a app voltar a chegar ao servidor.');
+        await refresh();
       })} />
     </Card>
   </>;

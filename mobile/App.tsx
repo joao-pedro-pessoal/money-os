@@ -100,6 +100,8 @@ export default function App() {
       if (AppState.currentState !== 'active') { await vault.close(); return; }
       const next = new MobileSession(vault);
       current.current = next; setSession(next); setCovered(false);
+      // A session stopped while offline is ended on the server now that the app is open.
+      void next.finishPendingSignOuts();
     } catch (error) { Alert.alert('Cofre bloqueado', error instanceof Error ? error.message : 'Não foi possível abrir o cofre.'); }
     finally { setOpening(false); openingRef.current = false; }
   };

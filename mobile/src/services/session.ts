@@ -3,7 +3,8 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { emptyState, type LocalState, type LocalAccount, type PlatformId } from '../domain/model';
 import { LocalVault } from '../storage/repository';
 import { type Credentials, saveCredentials, loadCredentials, deleteCredentials, pruneUnusedCredentials,
-  saveSyncSecrets, loadSyncSecrets, deleteSyncSecrets, type SyncSecrets } from '../storage/secrets';
+  saveSyncSecrets, loadSyncSecrets, deleteSyncSecrets, type SyncSecrets,
+  loadPendingSignOuts, savePendingSignOuts, type PendingSignOut } from '../storage/secrets';
 import { createDirectConnector, clearConnectorMemory, SyncError } from './connectors';
 import { addAccount, applyReading } from '../domain/operations';
 import { syncVault, type SyncOutcome } from '../domain/sync';
@@ -57,6 +58,11 @@ async function proveSeed(
     }
     throw error;
   }
+}
+
+/** The sessions waiting to be ended; a list that cannot be read never stops a stop. */
+async function pendingOrNone(): Promise<PendingSignOut[]> {
+  try { return await loadPendingSignOuts(); } catch { return []; }
 }
 
 /** A seed refusal in the app's language, keeping which rule it broke. */
@@ -262,17 +268,85 @@ export class MobileSession {
   }
 
   /**
-   * Stops syncing on this device and keeps every local record.
+   * Stops syncing on this device, keeps every local record, and ends the session
+   * on the server.
    *
    * The base is forgotten before the session. The other order, interrupted between
    * the two, could leave a base with no account — and a later sign-in to a different
    * account would merge against it.
+   *
+   * The session used to be only forgotten here, and stayed valid on the server
+   * until it expired. It is now written down as pending *before* it is forgotten,
+   * so no interruption can lose it, and ended by revoking this device — the same
+   * call "Revogar" makes for another one. Without network it stays pending, and
+   * `finishPendingSignOuts` ends it the next time the app can reach the server.
    */
-  async stopSync(): Promise<void> {
+  async stopSync(): Promise<{ endedOnServer: boolean }> {
     this.assertLive();
     if (this.busy.has(VAULT_SYNC)) throw new Error('Aguarda que a sincronização termine.');
+    const secrets = await loadSyncSecrets();
     await this.vault.forgetSync();
-    await deleteSyncSecrets();
+    if (!secrets) {
+      await deleteSyncSecrets();
+      return { endedOnServer: true };
+    }
+    const entry: PendingSignOut = { server: secrets.server, deviceId: secrets.deviceId, token: secrets.token };
+    return this.withSignOuts(async () => {
+      await savePendingSignOuts([...(await pendingOrNone()), entry]);
+      await deleteSyncSecrets();
+      const ended = await this.endOnServer(entry);
+      if (ended) await savePendingSignOuts((await pendingOrNone()).filter(p => p.token !== entry.token));
+      return { endedOnServer: ended };
+    });
+  }
+
+  /**
+   * One change to the pending list at a time. A retry reading the list while a
+   * stop adds to it would save its own copy over the stop's, and the session
+   * just stopped would be forgotten without being ended.
+   */
+  private signOuts: Promise<unknown> = Promise.resolve();
+  private withSignOuts<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.signOuts.then(task, task);
+    this.signOuts = run.catch(() => undefined);
+    return run;
+  }
+
+  /**
+   * Ends on the server every session this device stopped using while it could not
+   * reach it. Called when the app opens and when the sync screen does; it never
+   * throws, because nothing the person is doing depends on it. Returns how many
+   * are still waiting.
+   */
+  async finishPendingSignOuts(): Promise<number> {
+    if (!this.live) return 0;
+    return this.withSignOuts(async () => {
+      const live = await loadSyncSecrets();
+      const remaining: PendingSignOut[] = [];
+      for (const entry of await loadPendingSignOuts()) {
+        // Still this device's live session: a stop interrupted before it forgot the
+        // session never happened, and ending it would cut off a syncing device.
+        if (live?.token === entry.token) continue;
+        if (!(await this.endOnServer(entry))) remaining.push(entry);
+      }
+      await savePendingSignOuts(remaining);
+      return remaining.length;
+    }).catch(() => 0);
+  }
+
+  /**
+   * True once the server no longer accepts this session. A 401 says it already
+   * does not (expired, or revoked from another device), a 404 that the device is
+   * already revoked; both are the outcome wanted. Anything else — no network, a
+   * server error — leaves it to try again.
+   */
+  private async endOnServer(entry: PendingSignOut): Promise<boolean> {
+    try {
+      await phoneVaultClient(entry.server, this.controller.signal).revoke(entry.token, entry.deviceId);
+      return true;
+    } catch (error) {
+      return error instanceof VaultServerError && (error.status === 401 || error.status === 404);
+    }
   }
 
   async close(): Promise<void> {

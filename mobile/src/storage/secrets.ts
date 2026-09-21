@@ -87,3 +87,27 @@ export async function loadSyncSecrets(): Promise<SyncSecrets | null> {
 export async function deleteSyncSecrets(): Promise<void> {
   await SecureStore.deleteItemAsync(SYNC_KEY, options);
 }
+
+/**
+ * Sessions this device stopped using and has not yet ended on the server.
+ *
+ * Stopping sync used to forget the token here and leave it valid there until it
+ * expired — a token that fetches the account's ciphertext, sitting in a backup
+ * of the phone or a copy of its storage. Stopping now ends it on the server, and
+ * when there is no network the token is kept here, as a device secret like the
+ * one it came from, until an attempt gets through.
+ */
+export const PendingSignOutSchema = SyncSecretsSchema.pick({ server: true, deviceId: true, token: true }).strict();
+export type PendingSignOut = z.infer<typeof PendingSignOutSchema>;
+const PENDING_SIGN_OUT_KEY = 'sync.pending-sign-out';
+/** More than this and the oldest is dropped: it has long expired on the server anyway. */
+const MAX_PENDING_SIGN_OUTS = 8;
+export async function loadPendingSignOuts(): Promise<PendingSignOut[]> {
+  const raw = await SecureStore.getItemAsync(PENDING_SIGN_OUT_KEY, options);
+  return raw ? z.array(PendingSignOutSchema).parse(JSON.parse(raw)) : [];
+}
+export async function savePendingSignOuts(list: readonly PendingSignOut[]): Promise<void> {
+  const unique = [...new Map(list.map(entry => [entry.token, PendingSignOutSchema.parse(entry)])).values()];
+  if (unique.length === 0) await SecureStore.deleteItemAsync(PENDING_SIGN_OUT_KEY, options);
+  else await SecureStore.setItemAsync(PENDING_SIGN_OUT_KEY, JSON.stringify(unique.slice(-MAX_PENDING_SIGN_OUTS)), options);
+}
