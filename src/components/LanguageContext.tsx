@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 
 export const LANGUAGES = [
   ["en", "English"], ["pt", "Português"], ["es", "Español"], ["fr", "Français"],
@@ -47,11 +47,48 @@ const translations: Partial<Record<Language, Partial<Labels>>> = {
 const Ctx = createContext<{ language: Language; setLanguage: (language: Language) => void; t: Labels }>({ language: "en", setLanguage: () => {}, t: english });
 const valid = (value: string | null): Language => LANGUAGES.some(([code]) => code === value) ? value as Language : "en";
 
+const KEY = "moneyos_language";
+
+/**
+ * The saved choice, read the way `PrivacyContext` reads its own: as an outside
+ * store rather than copied into state by an effect, which rendered English
+ * first and then rendered again. The current choice still holds for this
+ * session when storage is blocked.
+ */
+const listeners = new Set<() => void>();
+let sessionLanguage: Language | undefined;
+
+function subscribe(onChange: () => void): () => void {
+  listeners.add(onChange);
+  // Another tab choosing a language should be reflected here too.
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== KEY && event.key !== null) return;
+    sessionLanguage = valid(event.newValue);
+    onChange();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(onChange);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function readLanguage(): Language {
+  if (sessionLanguage !== undefined) return sessionLanguage;
+  try { return valid(window.localStorage.getItem(KEY)); } catch { return "en"; }
+}
+
+/** The server has no storage, so it always renders English. */
+const serverLanguage = (): Language => "en";
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
-  useEffect(() => { try { setLanguageState(valid(localStorage.getItem("moneyos_language"))); } catch {} }, []);
+  const language = useSyncExternalStore(subscribe, readLanguage, serverLanguage);
   useEffect(() => { document.documentElement.lang = language; }, [language]);
-  const setLanguage = (next: Language) => { setLanguageState(next); try { localStorage.setItem("moneyos_language", next); } catch {} };
+  const setLanguage = (next: Language) => {
+    sessionLanguage = next;
+    try { window.localStorage.setItem(KEY, next); } catch {}
+    for (const listener of listeners) listener();
+  };
   const t = useMemo(() => ({ ...english, ...(translations[language] ?? {}) }), [language]);
   return <Ctx.Provider value={{ language, setLanguage, t }}>{children}</Ctx.Provider>;
 }

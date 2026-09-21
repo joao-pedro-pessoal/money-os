@@ -1,5 +1,6 @@
 package com.joaonovais.moneyos.shell;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
@@ -645,8 +646,15 @@ public class MainActivity extends Activity {
         backRegistered = wanted;
     }
 
+    /**
+     * Back below Android 13 only. From 13 on, with enableOnBackInvokedCallback,
+     * the system never calls this — gestures included — and the dispatcher in
+     * updateBackHandling answers instead, which is what the lint check asks for
+     * without AndroidX.
+     */
     @Override
     @SuppressWarnings("deprecation")
+    @SuppressLint("GestureBackNavigation")
     public void onBackPressed() {
         if (overlay == null && web != null && web.canGoBack()) {
             web.goBack();
