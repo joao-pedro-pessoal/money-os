@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **18 de setembro de 2026**.
+Atualizado em **21 de setembro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -31,7 +31,7 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 | A02 | Reconciliar a Interactive Brokers | **Concluído pelo utilizador (17/09/2026).** Critério original: A auditoria de 15/09 voltou a encontrar um movimento de 100 EUR numa conta USD, saldo guardado de 134,24 USD e leitura do conector de 34,24 USD. Investigar a origem e preparar a correção antes de modificar dados. Concluir quando moeda, saldo e dinheiro livre estiverem reconciliados. A nota antiga de “resolvido” não descreve os dados atuais. |
 | A03 | Atualizar saldo e valor investido da Trade Republic | **Concluído pelo utilizador (17/09/2026).** Critério original: Depende dos valores atuais da corretora. A última auditoria encontrou 450,83 EUR declarados como investidos e 456,09 EUR em holdings: diferença de 5,26 EUR. Reconciliar sem somar investimentos já incluídos no saldo. |
 | A04 | Completar a validação funcional por área | Existem testes e verificações parciais. Testar receitas/despesas, transferências, subscrições, objetivos e orçamentos: criar, editar, cancelar, repetir pedidos, desfazer e persistência. Incluir várias moedas, falhas de rede e estados preenchidos. |
-| A05 | Corrigir totais de extratos com várias moedas | Documentado como pendente em `getStatementBreakdown`: custos, juros, dividendos e taxas ainda podem ser somados em bruto. Converter com taxas adequadas antes de totalizar; nomear o que não pode ser convertido. Confirmar o caminho atual antes de editar. |
+| A05 | Corrigir totais de extratos com várias moedas | **Feito a 21/09/2026** (H26 na secção 5). Critério original: custos, juros, dividendos e taxas somados em bruto em `getStatementBreakdown`; converter antes de totalizar e nomear o que não pode ser convertido. |
 | A06 | Unificar as preferências de painéis | Definir a precedência entre preferências no servidor e escolhas no browser, incluindo Simple/Complex. Preservar escolhas guardadas e verificar recarregamento e mudança de dispositivo. |
 | A07 | Afinar os ecrãs que ainda apresentam dificuldades no telemóvel | Trabalho contínuo orientado pelos problemas reportados. As correções recentes de menu, símbolo USD e ordem dos gráficos estão concluídas na secção 5. |
 | A08 | Confirmar o destino das contas arquivadas com saldo | A auditoria recente ainda nomeia contas antigas arquivadas. Confirmar se são histórico, duplicados ou contas a reativar; continuam fora dos totais. Não apagar nem reativar com base apenas nas notas antigas de consolidação. |
@@ -118,6 +118,9 @@ ser apresentadas como propriedades já demonstradas do site atual.
 
 | Área | Entregue | Limite relevante |
 | --- | --- | --- |
+| H26 — Erros conhecidos (21/09/2026) | **Open positions e widget Open trades:** um valor numa moeda sem taxa de câmbio deixava de contar como 0 e passa a ficar de fora com "Left out — USD: no exchange rate" (ou "N positions with no figure") por baixo do cartão; página e widget leem a mesma função (`lib/trading/openTotals.ts`); no widget uma posição sem conversão mostra "—". **Extratos (A05):** cada moeda somada à parte e só depois convertida (à taxa de hoje, dito no ecrã); cada instrumento e pagamento na sua moeda; moeda sem taxa fica de fora e nomeada; o gráfico "Before tracking started" segue a mesma regra. **Hoje em hora local:** relatório mensal, "Last month", datas por defeito dos formulários, registo rápido e poupanças já não usam o dia UTC (errado na primeira hora de cada dia de verão). **Preço de entrada:** o de uma posição passa a gravar-se no campo da posição, não no do saldo (estava por gravar desde f0939f1). **Lint:** 0 erros no site e na app Android. App Android 0.7.1 | TypeScript, lint, build e 2562 testes (19 novos); `db:generate` sem alterações; app compilada e `lintDebug` sem erros. Os extratos reais estão todos em EUR, por isso os números atuais não mudam. Não visto com sessão iniciada. Exige reinstalar o APK para ver a linha "Left out" no widget. |
+| H25 — Dentro dos fundos, ficheiro completo (20–21/09/2026) | Inside your ETFs lê a lista completa publicada pela gestora: iShares (CSV), Xtrackers/DWS (CSV) e HSBC (Excel, com SheetJS 0.20.3 oficial); o Amundi S&P 500 (swap sintético) é visto pelo índice que segue, através do iShares Core S&P 500, e o ecrã diz que é exposição por swap. As dez maiores devolvem o código às linhas sem ticker (TSMC, Samsung…). Cobertura na carteira real: 49,9% → 84,4%, 3 873 empresas. UBS não publica ficheiro legível | Botão *Read what the funds hold*; versão dos ficheiros 3 (os fundos já lidos são relidos uma vez). Não visto com sessão iniciada. |
+| H24 — Logótipos (20/09/2026) | Logótipos de ações, ETFs e moedas em Investments, Open positions e Inside your ETFs (Parqet por símbolo ou ISIN; moedas pelo ícone do próprio site, lista verificada à mão). Guardados na base de dados (`asset_logos`, migration 0057, aplicada), por isso a página não pede nada lá fora; letra quando não há logótipo; os novos são pedidos com os preços | 264 de 278 encontrados na carteira real. Não visto com sessão iniciada. |
 | Adaptação móvel | Páginas responsivas, navegação inferior, painéis recolhíveis, modos Simple/Complex e tabelas compactas | Verificações em navegador não substituem A01/A04. |
 | H23 — Bens avaliados à mão (18/09/2026) | Tipos de ativo **Startups & private companies**, **Art**, **Collectibles** e **Vehicles** (além de Real estate). No formulário, para estes tipos, "What you paid" / "What it is worth now" e explicação. Página da posição: "Valued … ago", a âmbar quando passou do prazo, e "Update value". Alerta (aviso, também no telemóvel) ao fim de 12 meses (imóveis, arte, colecionáveis) ou 6 meses (veículos, startups); some quando o valor é atualizado | TypeScript, lint, build e 2421 testes (5 novos). Sem alterações à base de dados (o tipo é texto; a data é a da última atualização do preço). Não visto com sessão iniciada. |
 | H22 — Plano de independência financeira (18/09/2026) | Analytics → Future scenarios → **When is it enough?**: quanto chega (gasto anual ÷ 3/3,5/4%), percentagem já feita, tempo e data até lá (idade opcional) com retorno depois da inflação 0/2/4/6%, efeito de +100 €/mês poupados e −100 €/mês gastos, gráfico com a linha do objetivo. Campos preenchidos com património, poupança média e gasto médio reais, editáveis; nada gravado; escondidos no modo privacidade | TypeScript, lint, build e testes (9 novos). Não visto com sessão iniciada. |
@@ -161,12 +164,16 @@ ser apresentadas como propriedades já demonstradas do site atual.
 | Instalação atual | App Android que abre o site do PC | Exige PC ligado e acesso ao servidor. |
 | Cofre futuro | Armazenamento local e partes de identidade/sincronização implementados | Consultar a secção 4; integração com a experiência atual incompleta. |
 
-Validação da última alteração (18/09/2026, revisão de bugs): **2377 testes
-aprovados**, build e TypeScript aprovados, sem alterações de esquema. `npx eslint src`
-tem um erro anterior a estas alterações em `src/components/LanguageContext.tsx`
-(setState dentro de um efeito) e os três avisos Bybit. A app Android compila; o
-`lintDebug` tem dois erros antigos (`onBackPressed`, `local.properties`). Auditoria com a inconsistência de A02. Estes resultados
-não certificam os fluxos futuros da secção 4.
+Validação da última alteração (21/09/2026, H26): **2562 testes aprovados**, build e
+TypeScript aprovados, sem alterações de esquema. `npx eslint src` sem erros, com os
+três avisos Bybit. A app Android 0.7.1 compila e o `lintDebug` não tem erros. Estes
+resultados não certificam os fluxos futuros da secção 4.
+
+**Posto de parte (21/09/2026):** a ligação a bancos pela Enable Banking, começada
+noutra sessão a 18/09 e deixada a meio (conector e sincronização feitos; sem entrada
+no seletor de plataformas nem ecrãs de ligação; nunca testada com uma conta real),
+está no ramo local `wip/enable-banking`, intacta. Não está no `main` nem no GitHub.
+Ver também "Bancos/Open Banking" na secção 6 antes de a retomar.
 
 ## 6. Limites e decisões que não são tarefas de implementação
 
