@@ -24,7 +24,9 @@ import { limitCompanies, lookThrough, sectorMoves, type LookThrough, type Sector
 import { isharesHoldingsUrl, parseIsharesHoldings } from "@/lib/funds/ishares";
 import { parseXtrackersHoldings, xtrackersHoldingsUrl } from "@/lib/funds/xtrackers";
 import { indexProxyFor, indexSource, isIndexSource } from "@/lib/funds/indexProxy";
-import type { FundHoldingRow, FundHoldings } from "@/lib/funds/holdings";
+import { hsbcHoldingsUrl, isLegacyWorkbook, parseHsbcHoldings, type SheetRows } from "@/lib/funds/hsbc";
+import { withTopTenSymbols, type FundHoldingRow, type FundHoldings } from "@/lib/funds/holdings";
+import * as XLSX from "xlsx";
 import { listingAlternatives } from "@/lib/funds/listing";
 import { isinOfHolding, normaliseIsin } from "@/lib/portfolio/isin";
 import { parsePriceSeries, priceChanges, WINDOWS, type PriceChanges, type WindowKey } from "@/lib/funds/priceMoves";
@@ -600,6 +602,38 @@ async function readXtrackersFile(isin: string): Promise<ReadFile | null> {
   return holdings ? { holdings, source: "xtrackers" } : null;
 }
 
+/**
+ * HSBC's workbook for one of their funds, or null when this ISIN is not theirs.
+ *
+ * They answer 404 with a web page for a fund that is not theirs, and an Excel
+ * library reads a web page as a table without complaint — so the bytes are
+ * checked to be a workbook before anything opens them. `holdsShares` is the
+ * fund's own statement that it holds shares; the file cannot tell a share from
+ * a bond, so without it nothing is read (see `funds/hsbc.ts`).
+ */
+async function readHsbcFile(isin: string, holdsShares: boolean): Promise<ReadFile | null> {
+  const response = await fetch(hsbcHoldingsUrl(isin), { headers: ISHARES_UA, cache: "no-store" });
+  if (!response.ok) return null;
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (!isLegacyWorkbook(bytes)) return null;
+  const book = XLSX.read(bytes, { type: "array" });
+  const sheet = book.Sheets[book.SheetNames[0] ?? ""];
+  if (!sheet) return null;
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, blankrows: false }) as SheetRows;
+  const holdings = parseHsbcHoldings(rows, { holdsShares });
+  return holdings ? { holdings, source: "hsbc" } : null;
+}
+
+/**
+ * What a fund says it is mostly made of, from its saved profile: at least nine
+ * tenths shares is a fund of companies. Nine tenths and not all, because an
+ * equity fund keeps a little cash and a future or two.
+ */
+function holdsShares(row: ProfileRow | undefined): boolean {
+  const allocation = readJson<AssetAllocation>(row?.assetAllocation ?? null);
+  return (allocation?.shares ?? 0) >= 0.9;
+}
+
 export interface FundFileRefresh {
   read: number;
   /** Funds whose file could not be read, and why, in the user's words. */
@@ -665,17 +699,30 @@ export async function refreshFundFiles(): Promise<FundFileRefresh> {
     const proxy = indexProxyFor(fund.isin);
     const proxyEntry = proxy ? pages.get(proxy.proxyIsin) : undefined;
     try {
+      const own = proxy
+        ? null
+        : entry
+          ? await readIsharesFile(entry)
+          : ((await readXtrackersFile(fund.isin)) ??
+            (await readHsbcFile(fund.isin, holdsShares(profileBy.get(fund.lookup)))));
       const file = proxy
         ? proxyEntry
           ? { ...(await readIsharesFile(proxyEntry)), source: indexSource(proxy) }
           : null
-        : entry
-          ? await readIsharesFile(entry)
-          : await readXtrackersFile(fund.isin);
-      // Amundi, HSBC, UBS and the rest publish their own files in their own
-      // shapes — and Amundi's S&P 500 is a swap, so what it publishes is the
-      // collateral it holds rather than the companies you are exposed to.
-      // Until a reader exists, that fund keeps its ten largest.
+        : own && {
+            ...own,
+            // The managers that name no ticker lose nothing their ten largest
+            // already gave: the largest companies keep their listing.
+            holdings: {
+              ...own.holdings,
+              rows: withTopTenSymbols(
+                own.holdings.rows,
+                readJson<FundHolding[]>(profileBy.get(fund.lookup)?.topHoldings ?? null)
+              ),
+            },
+          };
+      // UBS and the rest publish their own files in their own shapes, or none
+      // this can reach. Until a reader exists, that fund keeps its ten largest.
       //
       // **That answer is written down**, as a file of no positions: otherwise
       // the button counts those funds as still to read on every visit and can
