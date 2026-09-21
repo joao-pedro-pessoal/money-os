@@ -444,14 +444,16 @@ export default function ManualPage() {
             and it is arithmetic on assumptions, not advice.
           </p>
           <p>
-            <strong className="text-[var(--foreground)]">Monthly report</strong> reads one month back as
-            a whole: income, spending, net and savings rate against the month before, spending by
-            category with the change, fixed against variable, monthly budgets, the largest expenses and
-            what net worth did. Pick the month at the top. <em>Download CSV</em> saves it for a
-            spreadsheet (on the phone, to Downloads); <em>Print / save as PDF</em> prints it without the
-            menus. The current month is marked as still open. Transfers and money moved into
-            investments are never counted as spending, and a month with no income shows no savings
-            rate rather than 0%.
+            <strong className="text-[var(--foreground)]">Reports</strong> read one week, month or year back
+            as a whole: income, spending, net and savings rate against the period before, spending by
+            category with the change, fixed against variable, the budgets of that length, the largest
+            expenses and what net worth did. A year also lists each month, and a month with nothing
+            recorded says so instead of showing zeros. Pick <em>Week</em>, <em>Month</em> or{" "}
+            <em>Year</em> and then the period at the top; weeks run Monday to Sunday.{" "}
+            <em>Download CSV</em> saves it for a spreadsheet (on the phone, to Downloads);{" "}
+            <em>Print / save as PDF</em> prints it without the menus. The current period is marked as
+            still open. Transfers and money moved into investments are never counted as spending, and a
+            period with no income shows no savings rate rather than 0%.
           </p>
         </Entry>
       </Part>

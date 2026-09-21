@@ -1,11 +1,15 @@
 /**
- * The monthly report: one closed (or current) month, read back as a whole.
+ * The weekly, monthly and annual report: one period, read back as a whole.
  *
  * Nothing here is a new definition. Income, spending, categories and the
  * fixed/variable split come from src/lib/spending/analyse.ts, the same functions
  * Where it goes uses; net worth comes from the series the dashboard draws. This
- * file only chooses the month, sets it beside the one before, and names what it
- * could not measure instead of printing a zero for it.
+ * file only chooses the period, sets it beside the one before, and names what
+ * it could not measure instead of printing a zero for it. What a week, a month
+ * and a year are is `periods.ts`.
+ *
+ * It began as the monthly report, and the month functions below remain as the
+ * month case of the general ones rather than a second copy of them.
  */
 import {
   byCategory,
@@ -16,28 +20,28 @@ import {
   type SpendingRow,
   type SpendingTotals,
 } from "@/lib/spending/analyse";
+import { monthsOfYear, periodLabel, periodOf, previousPeriod, type ReportPeriod } from "./periods";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 /** "2026-09" → the month before, "2026-08". */
 export function previousMonth(month: string): string {
-  const [y, m] = month.split("-").map(Number);
-  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+  return previousPeriod("month", month);
 }
 
 /** "September 2026". */
 export function monthLabel(month: string): string {
-  const [y, m] = month.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-GB", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return periodLabel("month", month);
+}
+
+/** Every period of `kind` that has at least one movement, newest first. */
+export function reportPeriods(rows: readonly SpendingRow[], kind: ReportPeriod): string[] {
+  return [...new Set(rows.map((r) => periodOf(kind, r.date)))].sort().reverse();
 }
 
 /** Every month that has at least one movement, newest first. */
 export function reportMonths(rows: readonly SpendingRow[]): string[] {
-  return [...new Set(rows.map((r) => r.date.slice(0, 7)))].sort().reverse();
+  return reportPeriods(rows, "month");
 }
 
 export interface CategoryLine {
@@ -45,9 +49,9 @@ export interface CategoryLine {
   spent: number;
   share: number;
   count: number;
-  /** Spent in the month before; 0 when nothing was. */
+  /** Spent in the period before; 0 when nothing was. */
   previous: number;
-  /** Change against the month before, or null when there was nothing to compare with. */
+  /** Change against the period before, or null when there was nothing to compare with. */
   changePercent: number | null;
 }
 
@@ -67,15 +71,17 @@ export interface BudgetLine {
   status: string;
 }
 
-export interface MonthlyReport {
-  month: string;
+export interface PeriodReport {
+  kind: ReportPeriod;
+  /** "2026-W38", "2026-09" or "2026". */
+  key: string;
   label: string;
   totals: SpendingTotals;
-  /** Share of income kept, or null in a month with no income: 0% would claim a measurement. */
+  /** Share of income kept, or null in a period with no income: 0% would claim a measurement. */
   savingsRate: number | null;
-  previous: { month: string; label: string; totals: SpendingTotals } | null;
-  /** Average spending over up to three earlier months that have data, or null with none. */
-  averageSpent: { amount: number; months: number } | null;
+  previous: { key: string; label: string; totals: SpendingTotals } | null;
+  /** Average spending over up to three earlier periods that have data, or null with none. */
+  averageSpent: { amount: number; periods: number } | null;
   categories: CategoryLine[];
   split: CommittedSplit;
   topExpenses: ReportExpense[];
@@ -83,28 +89,37 @@ export interface MonthlyReport {
   invested: number;
   netWorth: { start: number; end: number; change: number } | null;
   budgets: BudgetLine[];
+  /**
+   * A year's report only: each month, with null for a month with no movement
+   * rather than a row of zeros that would read as a month of nothing spent.
+   */
+  months: { key: string; label: string; totals: SpendingTotals | null }[] | null;
 }
 
-function inMonth(rows: readonly SpendingRow[], month: string): SpendingRow[] {
-  return rows.filter((r) => r.date.slice(0, 7) === month);
+/** The monthly report is the report of a month. */
+export type MonthlyReport = PeriodReport;
+
+function inPeriod(rows: readonly SpendingRow[], kind: ReportPeriod, key: string): SpendingRow[] {
+  return rows.filter((r) => periodOf(kind, r.date) === key);
 }
 
 /**
- * Net worth at the start and the end of the month.
+ * Net worth at the start and the end of the period.
  *
- * The start is the last recorded point before the month began, falling back to
+ * The start is the last recorded point before the period began, falling back to
  * the first point inside it; the end is the last point inside it. Without a
- * point inside the month there is nothing to report, and the section says so
- * rather than repeating an older figure as if it were this month's.
+ * point inside the period there is nothing to report, and the section says so
+ * rather than repeating an older figure as if it were this period's.
  */
 export function netWorthChange(
   series: readonly { date: string; netWorth: number }[],
-  month: string
+  key: string,
+  kind: ReportPeriod = "month"
 ): { start: number; end: number; change: number } | null {
   const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
-  const inside = sorted.filter((p) => p.date.slice(0, 7) === month);
+  const inside = sorted.filter((p) => periodOf(kind, p.date) === key);
   if (inside.length === 0) return null;
-  const before = sorted.filter((p) => p.date.slice(0, 7) < month).at(-1);
+  const before = sorted.filter((p) => periodOf(kind, p.date) < key).at(-1);
   const start = (before ?? inside[0]).netWorth;
   const end = inside.at(-1)!.netWorth;
   return { start: round2(start), end: round2(end), change: round2(end - start) };
@@ -117,20 +132,31 @@ export function buildMonthlyReport(input: {
   budgets?: readonly BudgetLine[];
   topCount?: number;
 }): MonthlyReport {
-  const { rows, month } = input;
-  const current = inMonth(rows, month);
+  return buildReport({ ...input, kind: "month", key: input.month });
+}
+
+export function buildReport(input: {
+  kind: ReportPeriod;
+  key: string;
+  rows: readonly SpendingRow[];
+  netWorthSeries: readonly { date: string; netWorth: number }[];
+  budgets?: readonly BudgetLine[];
+  topCount?: number;
+}): PeriodReport {
+  const { rows, kind, key } = input;
+  const current = inPeriod(rows, kind, key);
   const totals = spendingTotals(current);
 
-  const before = previousMonth(month);
-  const previousRows = inMonth(rows, before);
+  const before = previousPeriod(kind, key);
+  const previousRows = inPeriod(rows, kind, before);
   const previousTotals = previousRows.length > 0 ? spendingTotals(previousRows) : null;
 
   const earlier: number[] = [];
   let cursor = before;
   for (let i = 0; i < 3; i++) {
-    const monthRows = inMonth(rows, cursor);
-    if (monthRows.some(isSpending)) earlier.push(spendingTotals(monthRows).spent);
-    cursor = previousMonth(cursor);
+    const periodRows = inPeriod(rows, kind, cursor);
+    if (periodRows.some(isSpending)) earlier.push(spendingTotals(periodRows).spent);
+    cursor = previousPeriod(kind, cursor);
   }
 
   const previousByName = new Map(byCategory(previousRows).map((c) => [c.name, c.spent]));
@@ -165,22 +191,39 @@ export function buildMonthlyReport(input: {
   );
 
   return {
-    month,
-    label: monthLabel(month),
+    kind,
+    key,
+    label: periodLabel(kind, key),
     totals,
     savingsRate: totals.income > 0 ? round2((totals.net / totals.income) * 100) : null,
-    previous: previousTotals ? { month: before, label: monthLabel(before), totals: previousTotals } : null,
+    previous: previousTotals ? { key: before, label: periodLabel(kind, before), totals: previousTotals } : null,
     averageSpent:
       earlier.length === 0
         ? null
-        : { amount: round2(earlier.reduce((s, n) => s + n, 0) / earlier.length), months: earlier.length },
+        : { amount: round2(earlier.reduce((s, n) => s + n, 0) / earlier.length), periods: earlier.length },
     categories,
     split: fixedVsVariable(current),
     topExpenses,
     invested,
-    netWorth: netWorthChange(input.netWorthSeries, month),
+    netWorth: netWorthChange(input.netWorthSeries, key, kind),
     budgets: [...(input.budgets ?? [])],
+    months:
+      kind === "year"
+        ? monthsOfYear(key).map((month) => {
+            const monthRows = inPeriod(current, "month", month);
+            return {
+              key: month,
+              label: periodLabel("month", month),
+              totals: monthRows.length > 0 ? spendingTotals(monthRows) : null,
+            };
+          })
+        : null,
   };
+}
+
+/** "weekly", "monthly", "annual" — what the report is called. */
+export function reportName(kind: ReportPeriod): string {
+  return kind === "week" ? "weekly" : kind === "month" ? "monthly" : "annual";
 }
 
 /** Commas, quotes and line breaks inside a field would split it; quote those. */
@@ -194,12 +237,13 @@ function csvField(value: string | number | null): string {
  * accountant. Amounts are plain numbers with a dot, in `currency`, so a
  * spreadsheet reads them as numbers in any locale's import dialog.
  */
-export function reportToCsv(report: MonthlyReport, currency: string): string {
+export function reportToCsv(report: PeriodReport, currency: string): string {
+  const noun = report.kind;
   const lines: (string | number | null)[][] = [
-    ["Money OS monthly report", report.label],
+    [`Money OS ${reportName(report.kind)} report`, report.label],
     ["Currency", currency],
     [],
-    ["Summary", "This month", report.previous ? report.previous.label : "Month before"],
+    ["Summary", `This ${noun}`, report.previous ? report.previous.label : `The ${noun} before`],
     ["Income", report.totals.income, report.previous?.totals.income ?? null],
     ["Spent", report.totals.spent, report.previous?.totals.spent ?? null],
     ["Net", report.totals.net, report.previous?.totals.net ?? null],
@@ -216,7 +260,13 @@ export function reportToCsv(report: MonthlyReport, currency: string): string {
       ["Net worth change", report.netWorth.change, null]
     );
   }
-  lines.push([], ["Category", "Spent", "Share %", "Transactions", "Month before", "Change %"]);
+  if (report.months) {
+    lines.push([], ["Month", "Income", "Spent", "Net"]);
+    for (const m of report.months) {
+      lines.push([m.label, m.totals?.income ?? null, m.totals?.spent ?? null, m.totals?.net ?? null]);
+    }
+  }
+  lines.push([], ["Category", "Spent", "Share %", "Transactions", `The ${noun} before`, "Change %"]);
   for (const c of report.categories) {
     lines.push([c.name, c.spent, c.share, c.count, c.previous, c.changePercent]);
   }

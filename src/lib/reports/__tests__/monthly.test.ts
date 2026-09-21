@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { SpendingRow } from "@/lib/spending/analyse";
 import {
   buildMonthlyReport,
+  buildReport,
   monthLabel,
   netWorthChange,
   previousMonth,
   reportMonths,
+  reportPeriods,
   reportToCsv,
 } from "../monthly";
 
@@ -76,7 +78,7 @@ describe("buildMonthlyReport", () => {
 
   it("averages only earlier months that have spending", () => {
     // August (700) and June (200); July has nothing and is not a zero.
-    expect(report.averageSpent).toEqual({ amount: 450, months: 2 });
+    expect(report.averageSpent).toEqual({ amount: 450, periods: 2 });
   });
 
   it("lists the largest expenses first", () => {
@@ -119,5 +121,51 @@ describe("reportToCsv", () => {
     const csv = reportToCsv(withComma, "EUR");
     expect(csv).toContain('"Bread, milk",2026-09-02');
     expect(csv.split("\n")[0]).toBe("Money OS monthly report,September 2026");
+  });
+});
+
+describe("the same report for a week and for a year", () => {
+  it("reads a week Monday to Sunday, against the week before", () => {
+    // 7–13 September: Food 150 on the 10th and 50 uncategorised on the 12th.
+    const week = buildReport({ kind: "week", key: "2026-W37", rows, netWorthSeries: [] });
+    expect(week.label).toBe("7–13 Sep 2026");
+    expect(week.totals.spent).toBe(200);
+    // 31 August – 6 September: the rent on the 3rd.
+    expect(week.previous).toMatchObject({ key: "2026-W36", totals: { spent: 600, income: 2000 } });
+    expect(week.months).toBeNull();
+  });
+
+  it("reads a year with each month, and no row of zeros for a month with nothing", () => {
+    const year = buildReport({ kind: "year", key: "2026", rows, netWorthSeries: [] });
+    expect(year.totals).toMatchObject({ income: 3800, spent: 1700 });
+    expect(year.months).toHaveLength(12);
+    expect(year.months?.[0].totals).toBeNull();
+    expect(year.months?.[6].totals).toBeNull(); // July
+    expect(year.months?.[5].totals?.spent).toBe(200); // June
+    expect(year.months?.[8].totals).toMatchObject({ income: 2000, spent: 800 }); // September
+    expect(year.previous).toBeNull();
+  });
+
+  it("names itself in the CSV and gives a year's months their own section", () => {
+    const csv = reportToCsv(buildReport({ kind: "year", key: "2026", rows, netWorthSeries: [] }), "EUR");
+    expect(csv.split("\n")[0]).toBe("Money OS annual report,2026");
+    expect(csv).toContain("Month,Income,Spent,Net");
+    expect(csv).toContain("July 2026,,,");
+    expect(reportToCsv(buildReport({ kind: "week", key: "2026-W37", rows, netWorthSeries: [] }), "EUR").split("\n")[0])
+      .toBe("Money OS weekly report,7–13 Sep 2026");
+  });
+
+  it("offers every week or year with a movement, newest first", () => {
+    expect(reportPeriods(rows, "year")).toEqual(["2026"]);
+    expect(reportPeriods(rows, "week")[0]).toBe("2026-W38");
+  });
+
+  it("takes net worth over the period asked for", () => {
+    const series = [
+      { date: "2025-12-20", netWorth: 900 },
+      { date: "2026-03-01", netWorth: 1000 },
+      { date: "2026-11-30", netWorth: 1400 },
+    ];
+    expect(netWorthChange(series, "2026", "year")).toEqual({ start: 900, end: 1400, change: 500 });
   });
 });

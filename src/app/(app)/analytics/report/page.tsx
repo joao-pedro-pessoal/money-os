@@ -7,8 +7,17 @@ import ReportActions from "@/components/ReportActions";
 import FilterSelect from "@/components/FilterSelect";
 import { Money } from "@/components/PrivacyContext";
 import { ANALYTICS_TABS } from "@/lib/navigation";
-import { buildMonthlyReport, monthLabel, reportMonths, reportToCsv } from "@/lib/reports/monthly";
-import { localMonth } from "@/lib/calendar/localDay";
+import { buildReport, reportPeriods, reportToCsv } from "@/lib/reports/monthly";
+import {
+  isPeriodKey,
+  periodLabel,
+  periodOf,
+  periodsBetween,
+  REPORT_PERIODS,
+  type ReportPeriod,
+} from "@/lib/reports/periods";
+import { localDay } from "@/lib/calendar/localDay";
+import FilterLink from "@/components/FilterLink";
 import Link from "next/link";
 
 const tone = (n: number) => (n > 0 ? "text-[var(--green)]" : n < 0 ? "text-[var(--red)]" : "");
@@ -26,49 +35,61 @@ function Change({ now, before, lowerIsBetter = false }: { now: number; before: n
   );
 }
 
+/** What a budget of each report's length is called in `envelopes.ts`. */
+const BUDGET_PERIOD: Record<ReportPeriod, string> = { week: "weekly", month: "monthly", year: "yearly" };
+
+const REPORT_TITLE: Record<ReportPeriod, string> = { week: "Weekly report", month: "Monthly report", year: "Annual report" };
+
 /**
- * The monthly report: one month read back as a whole — what came in, what went
- * out and where, against the month before and the budgets, and what it did to
- * net worth. Downloadable as CSV and printable as PDF.
+ * The weekly, monthly and annual report: one period read back as a whole —
+ * what came in, what went out and where, against the period before and the
+ * budgets of that length, and what it did to net worth. A year also shows each
+ * month. Downloadable as CSV and printable as PDF.
  */
-export default async function MonthlyReportPage({
+export default async function ReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ period?: string; at?: string; month?: string }>;
 }) {
-  const [{ month: requested }, spending, netWorthSeries] = await Promise.all([
+  const [params, spending, netWorthSeries] = await Promise.all([
     searchParams,
     getSpendingAnalysis(),
     getTotalNetWorthOverTime(),
   ]);
 
-  // The month on the wall, not in UTC: see `localDay`.
-  const currentMonth = localMonth();
-  const available = reportMonths(spending.rows);
-  if (!available.includes(currentMonth)) available.unshift(currentMonth);
-  // A month still to come has no report; one typed into the address opens this one.
-  const month =
-    requested && /^\d{4}-(0[1-9]|1[0-2])$/.test(requested) && requested <= currentMonth ? requested : currentMonth;
-  // An empty month from the address still has to be the one the picker shows.
-  if (!available.includes(month)) {
-    available.push(month);
+  const kind: ReportPeriod = REPORT_PERIODS.some((p) => p.value === params.period)
+    ? (params.period as ReportPeriod)
+    : "month";
+  // The period on the wall, not in UTC: see `localDay`.
+  const current = periodOf(kind, localDay());
+  // `?month=` is the address the monthly report had before it had siblings.
+  const requested = params.at ?? (kind === "month" ? params.month : undefined);
+  // A period still to come has no report; one typed into the address opens this one.
+  const key = requested && isPeriodKey(kind, requested) && requested <= current ? requested : current;
+
+  const available = reportPeriods(spending.rows, kind);
+  if (!available.includes(current)) available.unshift(current);
+  // An empty period from the address still has to be the one the picker shows.
+  if (!available.includes(key)) {
+    available.push(key);
     available.sort().reverse();
   }
 
-  // Budgets are periods counted from today; a month back is offset -1.
-  const [cy, cm] = currentMonth.split("-").map(Number);
-  const [sy, sm] = month.split("-").map(Number);
-  const offset = (sy - cy) * 12 + (sm - cm);
-  const budgets = await listBudgets(offset);
+  // Budgets are periods counted from today; one back is offset -1, whatever its length.
+  const budgets = await listBudgets(periodsBetween(kind, current, key));
 
-  const report = buildMonthlyReport({
+  const report = buildReport({
+    kind,
+    key,
     rows: spending.rows,
-    month,
     netWorthSeries,
     budgets: budgets.items
-      .filter((b) => b.period === "monthly")
+      .filter((b) => b.period === BUDGET_PERIOD[kind])
       .map((b) => ({ name: b.name, limit: b.limit, spent: b.spent, percent: b.percent, status: b.status })),
   });
+  const noun = kind;
+  const Noun = noun[0].toUpperCase() + noun.slice(1);
+  const href = (period: ReportPeriod, at?: string) => `/analytics/report?period=${period}${at ? `&at=${at}` : ""}`;
   const base = spending.baseCurrency;
   const csv = reportToCsv(report, base);
   const hasAnything = report.totals.transactions > 0;
@@ -80,28 +101,34 @@ export default async function MonthlyReportPage({
 
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-semibold">Monthly report · {report.label}</h2>
+          <h2 className="text-xl font-semibold">{REPORT_TITLE[kind]} · {report.label}</h2>
           <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
-            {month === currentMonth
-              ? "This month so far — the figures change until it closes."
-              : "A closed month, as recorded."}{" "}
+            {key === current
+              ? `This ${noun} so far — the figures change until it closes.`
+              : `A closed ${noun}, as recorded.`}{" "}
             Transfers between your own accounts and money moved into investments are not spending.
           </p>
         </div>
         <div className="report-actions flex gap-2 flex-wrap items-center">
           <FilterSelect
-            label="Month"
-            value={month}
+            label="Report"
+            value={kind}
             className="input"
-            options={available.map((m) => ({ value: m, label: monthLabel(m), href: `/analytics/report?month=${m}` }))}
+            options={REPORT_PERIODS.map((p) => ({ value: p.value, label: p.label, href: href(p.value) }))}
           />
-          <ReportActions csv={csv} filename={`money-os-report-${month}.csv`} />
+          <FilterSelect
+            label={Noun}
+            value={key}
+            className="input"
+            options={available.map((k) => ({ value: k, label: periodLabel(kind, k), href: href(kind, k) }))}
+          />
+          <ReportActions csv={csv} filename={`money-os-report-${key}.csv`} />
         </div>
       </div>
 
       {(spending.approximate || spending.unconverted.length > 0) && (
         <p className="text-xs text-[var(--muted)]">
-          {spending.approximate && "Amounts in other currencies use today's rates, so earlier months are approximate. "}
+          {spending.approximate && `Amounts in other currencies use today's rates, so earlier ${noun}s are approximate. `}
           {spending.unconverted.length > 0 &&
             `Left out, no exchange rate: ${spending.unconverted.join(", ")}.`}
         </p>
@@ -120,7 +147,7 @@ export default async function MonthlyReportPage({
               <div className="text-xs text-[var(--muted)]">Income</div>
               <div className="text-xl font-semibold mt-1 text-[var(--green)]"><Money value={report.totals.income} currency={base} /></div>
               <div className="text-[11px] text-[var(--muted)] mt-1">
-                vs {report.previous?.label ?? "month before"}{" "}
+                vs {report.previous?.label ?? `${noun} before`}{" "}
                 {report.previous ? <Change now={report.totals.income} before={report.previous.totals.income} /> : "—"}
               </div>
             </div>
@@ -128,13 +155,13 @@ export default async function MonthlyReportPage({
               <div className="text-xs text-[var(--muted)]">Spent</div>
               <div className="text-xl font-semibold mt-1 text-[var(--red)]"><Money value={report.totals.spent} currency={base} /></div>
               <div className="text-[11px] text-[var(--muted)] mt-1">
-                vs month before{" "}
+                vs {noun} before{" "}
                 {report.previous ? <Change now={report.totals.spent} before={report.previous.totals.spent} lowerIsBetter /> : "—"}
               </div>
               {report.averageSpent && (
                 <div className="text-[11px] text-[var(--muted)]">
-                  average of {report.averageSpent.months} earlier{" "}
-                  {report.averageSpent.months === 1 ? "month" : "months"}{" "}
+                  average of {report.averageSpent.periods} earlier{" "}
+                  {report.averageSpent.periods === 1 ? noun : `${noun}s`}{" "}
                   <Money value={report.averageSpent.amount} currency={base} />
                 </div>
               )}
@@ -154,7 +181,7 @@ export default async function MonthlyReportPage({
                 {report.savingsRate === null ? "—" : `${report.savingsRate.toFixed(1)}%`}
               </div>
               <div className="text-[11px] text-[var(--muted)] mt-1">
-                {report.savingsRate === null ? "no income recorded this month" : "of income kept"}
+                {report.savingsRate === null ? `no income recorded this ${noun}` : "of income kept"}
               </div>
             </div>
           </div>
@@ -173,17 +200,17 @@ export default async function MonthlyReportPage({
                     <Money value={report.netWorth.end} currency={base} />
                   </div>
                   <p className="text-[11px] text-[var(--muted)] mt-2">
-                    Includes what markets did, so it can differ from the month&apos;s net.
+                    Includes what markets did, so it can differ from the {noun}&apos;s net.
                   </p>
                 </>
               ) : (
-                <p className="text-xs text-[var(--muted)] mt-2">No net worth snapshot inside this month.</p>
+                <p className="text-xs text-[var(--muted)] mt-2">No net worth snapshot inside this {noun}.</p>
               )}
             </div>
             <div className="card p-4">
               <div className="text-sm font-medium">Fixed and variable</div>
               {report.split.fixedShare === null ? (
-                <p className="text-xs text-[var(--muted)] mt-2">No spending this month.</p>
+                <p className="text-xs text-[var(--muted)] mt-2">No spending this {noun}.</p>
               ) : (
                 <>
                   <div className="h-3 rounded-full bg-[var(--surface-2)] overflow-hidden flex mt-3" aria-hidden="true">
@@ -201,6 +228,43 @@ export default async function MonthlyReportPage({
             </div>
           </div>
 
+          {report.months && (
+            <div className="card p-4">
+              <div className="text-sm font-medium mb-3">Month by month</div>
+              <div className="table-scroll" role="region" aria-label="Month by month" tabIndex={0}>
+                <ResponsiveTable className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th className="text-right">Income</th>
+                      <th className="text-right">Spent</th>
+                      <th className="text-right">Net</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.months.map((m) => (
+                      <tr key={m.key}>
+                        <td>
+                          <FilterLink href={href("month", m.key)} className="hover:underline">{m.label}</FilterLink>
+                        </td>
+                        {m.totals === null ? (
+                          // Nothing recorded is not a month of nothing spent.
+                          <td className="text-right text-[var(--muted)]" colSpan={3}>nothing recorded</td>
+                        ) : (
+                          <>
+                            <td className="text-right text-[var(--green)]"><Money value={m.totals.income} currency={base} /></td>
+                            <td className="text-right text-[var(--red)]"><Money value={m.totals.spent} currency={base} /></td>
+                            <td className={`text-right ${tone(m.totals.net)}`}><Money value={m.totals.net} currency={base} /></td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </ResponsiveTable>
+              </div>
+            </div>
+          )}
+
           {report.categories.length > 0 && (
             <div className="card p-4">
               <div className="text-sm font-medium mb-3">Where it went</div>
@@ -211,7 +275,7 @@ export default async function MonthlyReportPage({
                       <th>Category</th>
                       <th className="text-right">Spent</th>
                       <th className="text-right">Share</th>
-                      <th className="text-right">Month before</th>
+                      <th className="text-right">{Noun} before</th>
                       <th className="text-right">Change</th>
                     </tr>
                   </thead>
@@ -253,7 +317,7 @@ export default async function MonthlyReportPage({
 
           {report.budgets.length > 0 && (
             <div className="card p-4">
-              <div className="text-sm font-medium mb-3">Monthly budgets</div>
+              <div className="text-sm font-medium mb-3">{kind === "week" ? "Weekly" : kind === "month" ? "Monthly" : "Yearly"} budgets</div>
               <div className="space-y-3">
                 {report.budgets.map((b) => (
                   <div key={b.name}>
