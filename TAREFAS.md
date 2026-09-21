@@ -84,7 +84,7 @@ de casa (E01–E05).
   backups, conectores de leitura e implementação de sincronização manual do cofre.
 - O servidor `/api/vault` tem tabelas separadas, registo/login por email e
   palavra-passe, sessões, revogação por dispositivo e controlo de versões.
-- O login do **cofre** já limita tentativas; o login do **site** ainda não.
+- O login do **cofre** e o login do **site** limitam tentativas (10 erradas bloqueiam 15 minutos; o do site desde 21/09/2026).
 - O protocolo e o servidor têm testes documentados. Isto não significa que o
   site atual use o cofre, que haja paridade funcional ou que a experiência final
   entre dispositivos tenha sido validada em hardware.
@@ -93,7 +93,7 @@ de casa (E01–E05).
 
 | ID | Tarefa | Estado e critério de conclusão |
 | --- | --- | --- |
-| E01 | Preparar o site para acesso fora da rede de casa | Configurar HTTPS e limitar tentativas no login do site. Verificar sessões e acesso real. A publicação é uma etapa separada, quando solicitada. |
+| E01 | Preparar o site para acesso fora da rede de casa | **Limite de tentativas feito a 21/09/2026:** 10 palavras-passe erradas bloqueiam o login do site 15 minutos (a mesma regra do cofre), contadas na base de dados; o ecrã diz a que horas reabre. Como a palavra-passe é uma só, o bloqueio também trava o dono — o custo já aceite no cofre. Falta: HTTPS, e sessões que expirem ou se possam terminar no servidor (hoje o cookie é o mesmo valor para todas as sessões e sair só o apaga no aparelho). Verificar acesso real. A publicação é uma etapa separada, quando solicitada. |
 | E02 | Integrar a experiência web com o cofre local | Preservar as funcionalidades e o design escolhidos, definir a migração dos dados do site e a decifragem no browser do PC. Não importar a base/ações web para o bundle nativo nem duplicar regras financeiras. |
 | E03 | Completar identidade e isolamento | Acrescentar Google/Apple e associação segura de métodos à conta existente. Link por email permanece uma opção por configurar; email com palavra-passe já existe no cofre. Validar duas pessoas sem acesso cruzado e a migração do atual utilizador único. |
 | E04 | Sincronizar ao abrir a aplicação | A sincronização do cofre é manual. Automatizar receção e leituras das corretoras nos dispositivos com chaves, com intervalo mínimo, data/origem e estados de progresso/erro; preservar a última leitura válida. |
