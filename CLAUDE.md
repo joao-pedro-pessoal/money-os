@@ -1028,6 +1028,25 @@ the one connector holding credentials that can move money. The official CSV
 export covers it instead, and automatic syncing is reserved for a licensed
 aggregator.
 
+## Every export of a "use server" module is an endpoint
+
+Not just the ones a form uses. Next makes each exported async function of a
+`"use server"` file callable by a POST from anyone who can reach the site, and
+`src/proxy.ts` lets `/login` through without a session. So a helper there is
+public API the moment it is exported.
+
+It nearly happened with sessions. `actions/session.ts` has a function that
+issues a session cookie; exported, it would have handed one to whoever called
+it, password or not. It is module-private, the login form issues its own after
+`attemptSiteLogin`, and `src/lib/__tests__/site-login.test.ts` fails if a
+fourth file sets the cookie, if that helper becomes an export, or if anything
+but the limited login calls `checkPassword`.
+
+What a session *is* lives in `readSession` (`lib/auth.ts`) and the question
+"is this request signed in" in `hasSession` (`actions/session.ts`). Eight
+actions used to compare the cookie inline; a ninth copy is the second-definition
+bug again, with a lock instead of a number.
+
 ## Secrets
 
 `.env` holds `DATABASE_URL` (Neon), `APP_PASSWORD`, and `ENCRYPTION_KEY`.

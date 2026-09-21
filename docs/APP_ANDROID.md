@@ -10,10 +10,17 @@ cifrados só lá) continua no [PLANO_MOBILE.md](PLANO_MOBILE.md), e a app em `mo
 é a base dele. As duas apps têm identificadores diferentes e podem estar instaladas ao
 mesmo tempo.
 
-**Versão atual da app: 0.7.0** (17 de setembro de 2026). Resumo do que tem: o site
+**Versão atual da app: 0.7.2** (21 de setembro de 2026). Resumo do que tem: o site
 completo, disposição própria no telemóvel com modos Simple e Complex, registo rápido
 a partir de widget, atalhos do ícone, definições rápidas e notificação, nove
 widgets com valores e alertas como notificações. Detalhes nas secções abaixo.
+
+- **0.7.2:** a sessão do site passou a expirar ao fim de 30 dias sem uso e a ser
+  renovada todos os dias em que é usada; a app guarda a sessão renovada que chega com
+  a resposta de um widget, para os widgets não a perderem entre visitas. **Depois desta
+  atualização do site é preciso entrar uma vez com a palavra-passe** (no PC e na app).
+- **0.7.1:** o widget Open trades diz o que ficou de fora do total (uma moeda sem taxa
+  de câmbio) e mostra "—" numa posição que não consegue converter, em vez de 0.
 
 **Para atualizar a app no telemóvel:** reinicia o site no PC (`SITE_PARA_TELEMOVEL.cmd`)
 e instala o APK novo por cima do antigo (passos 2 e 3). Mantém-se o endereço, a sessão

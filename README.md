@@ -70,7 +70,7 @@ There is a manual inside the app, at `/manual`.
 <a name="on-your-phone"></a>
 ### On your phone
 
-The Android app (version 0.7.0, [android-shell/](android-shell/)) is this same site
+The Android app (version 0.7.2, [android-shell/](android-shell/)) is this same site
 in a full-screen WebView, reached on the computer that runs it over home Wi-Fi. It
 adds what a browser tab would: choosing files to import, saving exports to
 Downloads, the back gesture.
