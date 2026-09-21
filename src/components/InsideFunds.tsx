@@ -13,6 +13,7 @@ import { sectorLabel, industryLabel, regionOf, UNCLASSIFIED } from "@/lib/portfo
 import { WINDOWS, type WindowKey } from "@/lib/funds/priceMoves";
 import type { CompanyExposure, LookThrough, SectorMove } from "@/lib/portfolio/lookThrough";
 import { shortName } from "@/lib/portfolio/shortName";
+import { isIndexSource } from "@/lib/funds/indexProxy";
 import { useMobileMode } from "@/components/MobileMode";
 import MobileFold from "@/components/MobileFold";
 
@@ -69,7 +70,7 @@ export default function InsideFunds({
   data: LookThrough;
   currency: string;
   filesDue: number;
-  files: { lookup: string; fundName: string | null; asOf: string | null; rowCount: number }[];
+  files: { lookup: string; fundName: string | null; asOf: string | null; rowCount: number; source: string }[];
   /** Each company's mark, by listing. Decoration: no figure here depends on it. */
   logos: Record<string, string>;
   /** Companies whose mark has never been looked for. */
@@ -170,6 +171,13 @@ export default function InsideFunds({
         <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl">
           The companies you hold, adding what your funds hold of them to the shares you own directly. Every position of{" "}
           <Money value={data.fundsFromFile} currency={currency} /> in funds comes from the file their manager publishes;{" "}
+          {data.fundsFromIndex > 0 && (
+            <>
+              <Money value={data.fundsFromIndex} currency={currency} /> is in a fund that follows its index by swap and
+              owns none of those companies — they are the index&apos;s, from the file of a fund that does hold them, so
+              they are your exposure rather than your shares;{" "}
+            </>
+          )}
           <Money value={data.fundsFromTopTen} currency={currency} /> is known only by its ten largest holdings, and{" "}
           <Money value={data.fundsWithoutHoldings} currency={currency} /> by neither. That covers{" "}
           <Money value={data.fundSeen} currency={currency} /> ({seenPercent.toFixed(0)}%) of the{" "}
@@ -468,7 +476,16 @@ export default function InsideFunds({
         {files.length > 0 && (
           <>
             {" "}
-            ({files.map((f) => `${shortName(f.fundName ?? f.lookup)}: ${f.rowCount} positions${f.asOf ? `, ${f.asOf}` : ""}`).join("; ")})
+            (
+            {files
+              .map(
+                (f) =>
+                  `${shortName(f.fundName ?? f.lookup)}: ${f.rowCount} positions${
+                    isIndexSource(f.source) ? " of the index it follows by swap" : ""
+                  }${f.asOf ? `, ${f.asOf}` : ""}`
+              )
+              .join("; ")}
+            )
           </>
         )}
         , Yahoo Finance for sectors, countries and prices, and Parqet for the logos — each one asked for once, by

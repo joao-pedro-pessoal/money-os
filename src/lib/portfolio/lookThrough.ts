@@ -73,6 +73,13 @@ export interface LookThroughItem {
    * falls back to the price source's largest holdings.
    */
   published?: LookThroughHolding[] | null;
+  /**
+   * Whose file `published` is. "index" means the fund holds none of these
+   * companies — it follows their index by swap, and the list is read from a
+   * physical fund tracking the same index (see `funds/indexProxy.ts`). Counted
+   * apart, so the screen can say it is the index's list and not the fund's.
+   */
+  publishedFrom?: "manager" | "index";
 }
 
 export interface CompanyExposure {
@@ -119,6 +126,12 @@ export interface LookThrough {
   fundsWithoutHoldings: number;
   /** Value in funds read from the manager's own complete file. */
   fundsFromFile: number;
+  /**
+   * Value in funds that follow an index by swap, seen through the index's
+   * companies as a physical fund publishes them. Exposure to those companies,
+   * not ownership of them: the fund owns a collateral basket instead.
+   */
+  fundsFromIndex: number;
   /** Value in funds known only by their ten largest holdings. */
   fundsFromTopTen: number;
   /** Stocks and ETFs held, the base of every percentage. */
@@ -178,6 +191,7 @@ export function lookThrough(
   let fundSeen = 0;
   let fundsWithoutHoldings = 0;
   let fundsFromFile = 0;
+  let fundsFromIndex = 0;
   let fundsFromTopTen = 0;
 
   for (const item of items) {
@@ -205,7 +219,8 @@ export function lookThrough(
       fundsWithoutHoldings += item.value;
       continue;
     }
-    if (published) fundsFromFile += item.value;
+    if (published && item.publishedFrom === "index") fundsFromIndex += item.value;
+    else if (published) fundsFromFile += item.value;
     else fundsFromTopTen += item.value;
     const fundName = p?.name ?? item.label;
     for (const h of holdings) {
@@ -249,6 +264,7 @@ export function lookThrough(
       fundSeen: round2(fundSeen),
       fundsWithoutHoldings: round2(fundsWithoutHoldings),
       fundsFromFile: round2(fundsFromFile),
+      fundsFromIndex: round2(fundsFromIndex),
       fundsFromTopTen: round2(fundsFromTopTen),
       total: round2(total),
       hiddenCompanies: 0,

@@ -103,6 +103,23 @@ describe("a fund read from the manager's own file", () => {
     expect([nvidia?.sector, nvidia?.country]).toEqual(["technology", "United States"]);
   });
 
+  /**
+   * A swap fund owns none of its index's companies. Seen through a physical
+   * fund's list, it is exposure to them — true, and a different claim from a
+   * manager's own file, so it is counted apart and never added to that total.
+   */
+  it("counts a fund seen through its index apart from one read from its own file", () => {
+    const swap = { ...fund, symbol: "AUM5.DE", name: "Amundi S&P 500 Swap" };
+    const out = lookThrough([
+      { label: "AUM5", value: 100, assetType: "etf", profile: swap, published, publishedFrom: "index" },
+    ]);
+    expect(out.fundsFromIndex).toBe(100);
+    expect(out.fundsFromFile).toBe(0);
+    expect(out.fundSeen).toBe(100);
+    // Reached through the fund you hold, not through the one whose list was read.
+    expect(out.companies.find((c) => c.name === "NVIDIA")?.funds).toEqual(["Amundi S&P 500 Swap"]);
+  });
+
   it("falls back to the ten largest for a fund whose file was not read", () => {
     const out = lookThrough([{ label: "SXR8", value: 100, assetType: "etf", profile: fund }]);
     expect(out.fundsFromTopTen).toBe(100);

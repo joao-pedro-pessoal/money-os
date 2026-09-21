@@ -23,6 +23,7 @@ import {
 import { limitCompanies, lookThrough, sectorMoves, type LookThrough, type SectorMove } from "@/lib/portfolio/lookThrough";
 import { isharesHoldingsUrl, parseIsharesHoldings } from "@/lib/funds/ishares";
 import { parseXtrackersHoldings, xtrackersHoldingsUrl } from "@/lib/funds/xtrackers";
+import { indexProxyFor, indexSource, isIndexSource } from "@/lib/funds/indexProxy";
 import type { FundHoldingRow, FundHoldings } from "@/lib/funds/holdings";
 import { listingAlternatives } from "@/lib/funds/listing";
 import { isinOfHolding, normaliseIsin } from "@/lib/portfolio/isin";
@@ -168,7 +169,7 @@ export interface ExposureView {
   /** Stocks and ETFs never looked up, or due to be read again. */
   due: number;
   /** The funds whose own published file has been read, and when for. */
-  files: { lookup: string; fundName: string | null; asOf: string | null; rowCount: number }[];
+  files: { lookup: string; fundName: string | null; asOf: string | null; rowCount: number; source: string }[];
   /** Funds held whose file could be read and has not been. */
   filesDue: number;
   /** How the sectors you hold have moved, per window, largest rise first. */
@@ -232,6 +233,7 @@ export async function getExposure(companyLimit = 250): Promise<ExposureView> {
       assetType: l.item.assetType,
       profile: row ? toProfile(row) : null,
       published: published && published.length > 0 ? published : null,
+      publishedFrom: isIndexSource(file?.source) ? ("index" as const) : ("manager" as const),
       /**
        * Your gain on this position, from the figures the app already holds:
        * value less P&L is what it cost, and the P&L over that is the gain.
@@ -317,10 +319,16 @@ export async function getExposure(companyLimit = 250): Promise<ExposureView> {
     // source, so it is not listed as one.
     files: fundRows
       .filter((r) => r.rowCount > 0)
-      .map((r) => ({ lookup: r.lookup, fundName: r.fundName, asOf: r.asOf, rowCount: r.rowCount }))
+      .map((r) => ({ lookup: r.lookup, fundName: r.fundName, asOf: r.asOf, rowCount: r.rowCount, source: r.source }))
       .sort((a, b) => b.rowCount - a.rowCount),
-    filesDue: lookups.filter((l) => l.lookup && l.isin && !publishedBy.has(l.lookup) && isFundRow(byLookup.get(l.lookup)))
-      .length,
+    // A file read by an older reading is as due as one never read: the button
+    // would otherwise show nothing to do while the next press re-read them all.
+    filesDue: new Set(
+      lookups
+        .filter((l) => l.lookup && l.isin && isFundRow(byLookup.get(l.lookup)))
+        .filter((l) => (publishedBy.get(l.lookup!)?.version ?? 0) < FILE_VERSION)
+        .map((l) => l.lookup)
+    ).size,
     currency: await getBaseCurrency(),
   };
 }
@@ -502,9 +510,12 @@ const FILE_DAYS = 7;
 /**
  * What a saved holdings file holds. 1: the companies and their weights.
  * 2: also the exchange each trades on and the listing to ask a price source
- * about. A file read by an older version is read again.
+ * about. 3: a fund that follows its index by swap is read through a physical
+ * fund tracking the same index — which is also what makes the funds saved as
+ * "nothing published" under 2 get asked again. A file read by an older
+ * version is read again.
  */
-const FILE_VERSION = 2;
+const FILE_VERSION = 3;
 /** Files per press. Each is up to half a megabyte, so a few at a time. */
 const FILE_BATCH = 8;
 
@@ -648,10 +659,19 @@ export async function refreshFundFiles(): Promise<FundFileRefresh> {
 
   for (const fund of due.slice(0, FILE_BATCH)) {
     const entry = pages.get(fund.isin);
+    // Before the fund's own file, not after: a swap fund's own file is its
+    // collateral, which is a real list of real shares and exactly the wrong
+    // answer. See `funds/indexProxy.ts`.
+    const proxy = indexProxyFor(fund.isin);
+    const proxyEntry = proxy ? pages.get(proxy.proxyIsin) : undefined;
     try {
-      const file = entry
-        ? await readIsharesFile(entry)
-        : await readXtrackersFile(fund.isin);
+      const file = proxy
+        ? proxyEntry
+          ? { ...(await readIsharesFile(proxyEntry)), source: indexSource(proxy) }
+          : null
+        : entry
+          ? await readIsharesFile(entry)
+          : await readXtrackersFile(fund.isin);
       // Amundi, HSBC, UBS and the rest publish their own files in their own
       // shapes — and Amundi's S&P 500 is a swap, so what it publishes is the
       // collateral it holds rather than the companies you are exposed to.
