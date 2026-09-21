@@ -14,7 +14,7 @@ export default async function StatementHistory() {
   const data = await getStatementHistory();
   if (data === null || data.history.length < 2) return null;
 
-  const { history, from, to, currency } = data;
+  const { history, from, to, currency, converted, unconverted } = data;
   const last = history[history.length - 1];
 
   const max = Math.max(
@@ -44,6 +44,13 @@ export default async function StatementHistory() {
         purchases cost, and income received. What those holdings were <em>worth</em> on any day
         before tracking began isn&apos;t in the statement, and the app won&apos;t make it up.
       </p>
+
+      {(converted || unconverted.length > 0) && (
+        <p className="text-xs mb-3" style={{ color: "var(--amber)" }}>
+          {converted && `Converted into ${currency} at today's rates, so approximate.`}
+          {unconverted.length > 0 && ` Left out, with no exchange rate: ${unconverted.join(", ")}.`}
+        </p>
+      )}
 
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height: 120 }}>
         <path

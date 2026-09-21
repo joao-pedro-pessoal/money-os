@@ -20,6 +20,8 @@ import { fmt } from "@/lib/format";
  */
 type Holding = {
   key: string;
+  /** The currency this instrument was traded in; its figures are in it. */
+  currency: string;
   isin: string | null;
   symbol: string | null;
   quantity: number;
@@ -39,14 +41,18 @@ export default function StatementBreakdown({
 }: {
   data: {
     currency: string;
-    /** Every currency in the file. More than one and the totals are unlike things. */
-    currencies?: string[];
+    /** Every currency in the file. */
+    currencies: string[];
+    /** True when the totals were converted into `currency` at today's rate. */
+    converted: boolean;
+    /** Currencies with no exchange rate, left out of every total. */
+    unconverted: string[];
     flows: { deposits: number | null; withdrawals: number | null; net: number | null };
     holdings: Holding[];
     stillInvested: number;
     realizedPnl: number;
-    interest: { payments: { date: string; amount: number; description: string | null }[]; total: number };
-    dividends: { payments: { date: string; amount: number; symbol: string | null }[]; total: number };
+    interest: { payments: { date: string; amount: number; currency: string; description: string | null }[]; total: number };
+    dividends: { payments: { date: string; amount: number; currency: string; symbol: string | null }[]; total: number };
     fees: number;
     lastEvent: string | null;
     events: number;
@@ -65,24 +71,21 @@ export default function StatementBreakdown({
   const held = data.holdings.filter((h) => h.quantity > 0);
   const closed = data.holdings.filter((h) => h.quantity === 0);
 
-  const mixedCurrencies = (data.currencies ?? []).length > 1;
-
   return (
     <div className="space-y-4">
-      {/* Costs, income and fees below are still summed straight across the
-          file, so in a mixed-currency statement each is a total of unlike
-          things. Converting them properly means threading a rate through the
-          reconstruction; until that exists, the page says so rather than
-          letting the currency symbol imply otherwise. */}
-      {mixedCurrencies && (
+      {/* Each currency is added up on its own and only then converted, so no
+          total here is a sum of two kinds of money. Converted at today's rate,
+          which is not the rate of the day each thing was bought or paid. */}
+      {(data.converted || data.unconverted.length > 0) && (
         <div
           className="rounded-lg border p-3 text-xs leading-relaxed"
           style={{ borderColor: "var(--amber)", color: "var(--amber)" }}
         >
-          <strong>This statement is in {(data.currencies ?? []).join(", ")}.</strong> The deposits
-          and withdrawals are reported as unmeasured because they cannot be added into one
-          figure. The cost, income and fee totals below are still sums across all of those
-          currencies — read them per instrument, not as a total.
+          <strong>This statement is in {data.currencies.join(", ")}.</strong>{" "}
+          {data.converted &&
+            `The totals are converted into ${c} at today's rates, so they are approximate; each instrument and payment is shown in its own currency.`}
+          {data.unconverted.length > 0 &&
+            ` Left out of every total, with no exchange rate: ${data.unconverted.join(", ")}.`}
         </div>
       )}
 
@@ -171,7 +174,7 @@ export default function StatementBreakdown({
             </thead>
             <tbody>
               {held.map((h) => (
-                <tr key={h.key} className="border-t border-[var(--border)]">
+                <tr key={`${h.currency}:${h.key}`} className="border-t border-[var(--border)]">
                   <td className="py-1.5">
                     <div>{h.symbol ?? h.key}</div>
                     {h.isin && <div className="text-[10px] text-[var(--muted)]">{h.isin}</div>}
@@ -183,16 +186,16 @@ export default function StatementBreakdown({
                   </td>
                   <td className="py-1.5 text-right tabular-nums">{h.quantity}</td>
                   <td className="py-1.5 text-right tabular-nums text-[var(--muted)]">
-                    {h.averageCost === null ? "—" : fmt(h.averageCost, c)}
+                    {h.averageCost === null ? "—" : fmt(h.averageCost, h.currency)}
                   </td>
                   <td className="py-1.5 text-right tabular-nums">
-                    <Money value={h.costBasis} currency={c} />
+                    <Money value={h.costBasis} currency={h.currency} />
                   </td>
                   <td
                     className="py-1.5 text-right tabular-nums"
                     style={{ color: h.incomeReceived > 0 ? "var(--green)" : undefined }}
                   >
-                    {h.incomeReceived > 0 ? fmt(h.incomeReceived, c) : "—"}
+                    {h.incomeReceived > 0 ? fmt(h.incomeReceived, h.currency) : "—"}
                   </td>
                 </tr>
               ))}
@@ -206,14 +209,14 @@ export default function StatementBreakdown({
               Closed — sold in full, kept here because the profit is yours either way
             </div>
             {closed.map((h) => (
-              <div key={h.key} className="flex justify-between text-xs py-0.5">
+              <div key={`${h.currency}:${h.key}`} className="flex justify-between text-xs py-0.5">
                 <span>{h.symbol ?? h.key}</span>
                 <span
                   className="tabular-nums"
                   style={{ color: h.realizedPnl >= 0 ? "var(--green)" : "var(--red)" }}
                 >
                   {h.realizedPnl >= 0 ? "+" : "−"}
-                  {fmt(Math.abs(h.realizedPnl), c)}
+                  {fmt(Math.abs(h.realizedPnl), h.currency)}
                 </span>
               </div>
             ))}
@@ -231,9 +234,10 @@ export default function StatementBreakdown({
           count={data.interest.payments.length}
           note="Money the account paid you for cash sitting there. It is realised profit — you have it, and it cannot be given back by a falling market."
           rows={data.interest.payments.map((p) => ({
-            key: `${p.date}-${p.amount}`,
+            key: `${p.date}-${p.amount}-${p.currency}`,
             left: p.date,
             right: p.amount,
+            currency: p.currency,
           }))}
         />
         <PaymentList
@@ -245,9 +249,10 @@ export default function StatementBreakdown({
           count={data.dividends.payments.length}
           note="Distributions from what you hold, as recorded in the statement."
           rows={data.dividends.payments.map((p) => ({
-            key: `${p.date}-${p.symbol}-${p.amount}`,
+            key: `${p.date}-${p.symbol}-${p.amount}-${p.currency}`,
             left: `${p.date}${p.symbol ? ` · ${p.symbol}` : ""}`,
             right: p.amount,
+            currency: p.currency,
           }))}
         />
       </div>
@@ -308,7 +313,8 @@ function PaymentList({
   currency: string;
   count: number;
   note: string;
-  rows: { key: string; left: string; right: number }[];
+  /** Each payment in the currency it was paid in. */
+  rows: { key: string; left: string; right: number; currency: string }[];
   open: boolean;
   onToggle: () => void;
 }) {
@@ -339,7 +345,7 @@ function PaymentList({
               {rows.map((r) => (
                 <div key={r.key} className="flex justify-between text-[11px]">
                   <span className="text-[var(--muted)]">{r.left}</span>
-                  <span className="tabular-nums">{fmt(r.right, currency)}</span>
+                  <span className="tabular-nums">{fmt(r.right, r.currency)}</span>
                 </div>
               ))}
             </div>

@@ -12,10 +12,10 @@ import {
   summariseCashFlows,
   growthBreakdown,
   checkOpeningBalance,
-  cumulativeHistory,
   type BrokerEvent,
 } from "@/lib/csv/broker";
-import { reconstructHoldings, gainAgainstCost } from "@/lib/portfolio/reconstruct";
+import { reconstructHoldings } from "@/lib/portfolio/reconstruct";
+import { statementHistory, summariseStatement } from "@/lib/portfolio/statementSummary";
 import { sumInBase, toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
@@ -513,9 +513,6 @@ export async function getStatementBreakdown() {
     line: 0,
   }));
 
-  const reconstruction = reconstructHoldings(events);
-  const flows = summariseCashFlows(events);
-
   /**
    * The other half of the subtraction.
    *
@@ -527,84 +524,34 @@ export async function getStatementBreakdown() {
    * the two sides describe the same holdings.
    */
   const accountIds = [...new Set(rows.map((r) => r.accountId))];
-  const declaringAccounts = (await db.select().from(accounts)).filter(
-    (a) =>
-      accountIds.includes(a.id) &&
-      a.balanceMeaning === "bank_and_broker" &&
-      a.investedValue !== null
-  );
-
-  const declaredValue =
-    declaringAccounts.length === 0
-      ? null
-      : Math.round(
-          declaringAccounts.reduce(
-            (sum, a) => sum + Math.min(Number(a.investedValue ?? 0), Number(a.balance)),
-            0
-          ) * 100
-        ) / 100;
-
-  const gain = gainAgainstCost(declaredValue, reconstruction.totalCostBasis);
+  const [accountRows, rates, base] = await Promise.all([db.select().from(accounts), getRates(), getBaseCurrency()]);
+  const declared = accountRows
+    .filter((a) => accountIds.includes(a.id) && a.balanceMeaning === "bank_and_broker" && a.investedValue !== null)
+    .map((a) => ({ amount: Math.min(Number(a.investedValue ?? 0), Number(a.balance)), currency: a.currency }));
 
   /**
-   * Interest is listed payment by payment, not as one total.
+   * Every total, added up one currency at a time.
    *
-   * It arrives in small amounts on a rhythm, and the rhythm is the useful part:
-   * a total says you earned €1.34, a list says whether it is still arriving.
+   * This used to label every figure with `rows[0].currency` while each was
+   * summed across currencies — costs, interest, dividends, fees, realised P&L.
+   * `summariseStatement` adds each currency on its own, converts only when the
+   * file has more than one, and names what it could not convert.
    */
-  const interest = events
-    .filter((e) => e.kind === "INTEREST")
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .map((e) => ({
-      date: e.date.toISOString().slice(0, 10),
-      amount: e.amount,
-      currency: e.currency,
-      description: e.description,
-    }));
-
-  const dividends = events
-    .filter((e) => e.kind === "DIVIDEND")
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .map((e) => ({
-      date: e.date.toISOString().slice(0, 10),
-      amount: e.amount,
-      currency: e.currency,
-      symbol: e.symbol,
-    }));
-
-  const sum = (list: { amount: number }[]) =>
-    Math.round(list.reduce((s, e) => s + e.amount, 0) * 100) / 100;
-
-  const fees =
-    Math.round(
-      events.reduce(
-        (s, e) => s + (e.fees ?? 0) + (e.kind === "FEE" ? Math.abs(e.amount) : 0),
-        0
-      ) * 100
-    ) / 100;
-
-  /**
-   * Every currency in the file, not just the first row's.
-   *
-   * This used to be `rows[0].currency`, applied as the label to every figure
-   * below — costs, interest, dividends, fees, realised P&L — each of which is
-   * still summed across currencies inside `reconstructHoldings`. Converting all
-   * of those properly means threading a rate through the reconstruction, which
-   * is a larger job than this one; naming the currencies at least stops a
-   * mixed-currency statement from being presented as though it were in euros.
-   * The UI warns when there is more than one.
-   */
-  const currencies = [...new Set(rows.map((r) => r.currency))].sort();
+  const s = summariseStatement(events, rates, base, declared.length === 0 ? null : declared);
 
   return {
-    currency: currencies[0] ?? "EUR",
-    /** More than one means every total below is a sum of unlike things. */
-    currencies,
+    currency: s.currency,
+    currencies: s.currencies,
+    /** True when the totals were converted at today's rate. */
+    converted: s.converted,
+    /** Currencies with no rate, left out of every total. */
+    unconverted: s.unconverted,
     /** What you put in and took out across the account boundary. */
-    flows,
-    /** Where it ended up: one row per instrument, at what it cost. */
-    holdings: reconstruction.holdings.map((h) => ({
+    flows: s.flows,
+    /** Where it ended up: one row per instrument, at what it cost, in its own currency. */
+    holdings: s.holdings.map((h) => ({
       key: h.key,
+      currency: h.currency,
       isin: h.isin,
       symbol: h.symbol,
       quantity: h.quantity,
@@ -618,22 +565,28 @@ export async function getStatementBreakdown() {
       firstBought: h.firstBought === null ? null : h.firstBought.toISOString().slice(0, 10),
       lastTraded: h.lastTraded === null ? null : h.lastTraded.toISOString().slice(0, 10),
     })),
-    stillInvested: reconstruction.totalCostBasis,
+    stillInvested: s.stillInvested,
     /**
      * Value today against cost, when an account has said what it is worth.
      * Null when nothing declares a value — silence, not a gain of zero.
      */
-    gain,
+    gain: s.gain,
     /**
      * Realised profit on sales, computed by this app under the average-cost
      * method — Trading 212 publishes its own figure and it may differ. Kept
      * separate from income for that reason.
      */
-    realizedPnl: reconstruction.totalRealizedPnl,
-    interest: { payments: interest, total: sum(interest) },
-    dividends: { payments: dividends, total: sum(dividends) },
-    fees,
-    lastEvent: reconstruction.lastEventDate?.toISOString().slice(0, 10) ?? null,
+    realizedPnl: s.realizedPnl,
+    /**
+     * Interest is listed payment by payment, not as one total.
+     *
+     * It arrives in small amounts on a rhythm, and the rhythm is the useful part:
+     * a total says you earned €1.34, a list says whether it is still arriving.
+     */
+    interest: s.interest,
+    dividends: s.dividends,
+    fees: s.fees,
+    lastEvent: s.lastEventDate?.toISOString().slice(0, 10) ?? null,
     events: events.length,
   };
 }
@@ -665,11 +618,15 @@ export async function getStatementHistory() {
     line: 0,
   }));
 
-  const history = cumulativeHistory(events);
+  // One currency, or each row converted into the base first — see `statementHistory`.
+  const [rates, base] = await Promise.all([getRates(), getBaseCurrency()]);
+  const { history, currency, converted, unconverted } = statementHistory(events, rates, base);
   return {
     history,
     from: history[0]?.date ?? null,
     to: history[history.length - 1]?.date ?? null,
-    currency: rows[0]?.currency ?? "EUR",
+    currency,
+    converted,
+    unconverted,
   };
 }
