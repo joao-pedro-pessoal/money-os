@@ -311,6 +311,11 @@ public final class MoneyWidgets {
                     if (!Double.isNaN(result)) list.append("  ").append(signed("", result, data.currency));
                 }
                 if (data.tradeNames.isEmpty()) list.append("No open trades");
+                // A total that is short says so, first, rather than passing for the whole.
+                if (data.tradeLeftOut != null) {
+                    list.insert(0, data.tradeLeftOut + "\n");
+                    list.setSpan(new ForegroundColorSpan(Charts.ACCENT), 0, data.tradeLeftOut.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
                 showList(views, list, rows(heightDp));
                 break;
             }

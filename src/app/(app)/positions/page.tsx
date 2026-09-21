@@ -25,7 +25,7 @@ import PageTabs from "@/components/PageTabs";
 import { INVESTMENT_TABS } from "@/lib/navigation";
 import { getRates } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
-import { toBase } from "@/lib/fx";
+import { leftOut, openTotals, type BaseTotal } from "@/lib/trading/openTotals";
 import { displaySymbol } from "@/lib/quotes/symbolSource";
 import { logosFor } from "@/actions/logos";
 import { holdingLogoSymbol } from "@/lib/logos";
@@ -62,6 +62,12 @@ function Fact({ label, children, className = "", detail = false }: {
       <div className={`text-sm tabular-nums break-words ${className}`}>{children}</div>
     </div>
   );
+}
+
+/** What a total could not include, under the figure it is missing from. */
+function LeftOut({ total, noun }: { total: BaseTotal; noun: string | null }) {
+  const line = leftOut(total, noun);
+  return line === null ? null : <div className="text-[10px] text-[var(--amber)] mt-1">{line}</div>;
 }
 
 function SideBadge({ side }: { side: string }) {
@@ -111,37 +117,15 @@ export default async function PositionsPage() {
     .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
   /**
-   * These four totals used to add every platform's figures together and label
-   * the result "USD".
+   * These totals used to add every platform's figures together and label the
+   * result "USD".
    *
    * Trading 212 reports euros and Hyperliquid reports dollars, so the sum was
    * euros added to dollars — a number in no currency at all, displayed with a
    * dollar sign. Everything is converted to the base currency first, and the
-   * cards say which currency that is.
+   * cards say which currency that is — and what they could not convert.
    */
-  function sumInBaseCurrency<T extends { currency: string }>(
-    rows: T[],
-    pick: (row: T) => number
-  ): number {
-    const total = rows.reduce(
-      (s, r) => s + (toBase(pick(r), r.currency, rates, base) ?? 0),
-      0
-    );
-    return Math.round((total + Number.EPSILON) * 100) / 100;
-  }
-
-  const connectionTotals = connections.map((c) => ({
-    currency: c.reportingCurrency ?? "USD",
-    equity: Number(c.lastEquity ?? 0),
-    spot: Number(c.lastSpotValue ?? 0),
-    free: Number(c.lastWithdrawable ?? 0),
-    margin: Number(c.lastMarginUsed ?? 0),
-  }));
-
-  const totalEquity = sumInBaseCurrency(connectionTotals, (c) => c.equity);
-  const totalSpot = sumInBaseCurrency(connectionTotals, (c) => c.spot);
-  const totalFree = sumInBaseCurrency(connectionTotals, (c) => c.free);
-  const totalMargin = sumInBaseCurrency(connectionTotals, (c) => c.margin);
+  const totals = openTotals(positions, connections, rates, base);
 
   /**
    * Coins the platform holds and nothing could price.
@@ -153,8 +137,6 @@ export default async function PositionsPage() {
    */
   const unpricedCoins = balances.filter((b) => b.price === null).map((b) => b.coin);
 
-  const totalUnrealized = sumInBaseCurrency(positions, (p) => p.unrealizedPnl ?? 0);
-  const totalNotional = sumInBaseCurrency(positions, (p) => p.positionValue ?? 0);
 
   return (
     <div className="positions-page space-y-6">
@@ -179,32 +161,37 @@ export default async function PositionsPage() {
           <div className="card p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Perps equity</div>
             <div className="text-xl font-semibold truncate">
-              <Money value={totalEquity} currency={base} />
+              <Money value={totals.equity.total} currency={base} />
             </div>
             <div className="text-[10px] text-[var(--muted)] mt-1">includes open position P&amp;L</div>
+            <LeftOut total={totals.equity} noun="platform" />
           </div>
           <div className="card p-4 positions-simple-hide">
             <div className="text-xs text-[var(--muted)] mb-1">Spot balances</div>
             <div className="text-xl font-semibold truncate">
-              <Money value={totalSpot} currency={base} />
+              <Money value={totals.spot.total} currency={base} />
             </div>
             <div className="text-[10px] text-[var(--muted)] mt-1">
               {unpricedCoins.length === 0
                 ? "counted in Investments, not here"
                 : `${unpricedCoins.join(", ")} not priced, so not in this figure`}
             </div>
+            <LeftOut total={totals.spot} noun="platform" />
           </div>
           <div className="card p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Free / withdrawable</div>
             <div className="text-xl font-semibold truncate text-[var(--green)]">
-              <Money value={totalFree} currency={base} />
+              <Money value={totals.free.total} currency={base} />
             </div>
+            <LeftOut total={totals.free} noun="platform" />
           </div>
           <div className="card p-4 positions-simple-hide">
             <div className="text-xs text-[var(--muted)] mb-1">Margin in use</div>
             <div className="text-xl font-semibold truncate text-[var(--amber)]">
-              <Money value={totalMargin} currency={base} />
+              <Money value={totals.margin.total} currency={base} />
             </div>
+            {/* A spot-only venue states no margin because it has none. */}
+            <LeftOut total={totals.margin} noun={null} />
           </div>
         </div>
       )}
@@ -668,18 +655,20 @@ export default async function PositionsPage() {
             <div className="card p-4 positions-simple-hide">
               <div className="text-xs text-[var(--muted)] mb-1">Total notional</div>
               <div className="text-xl font-semibold truncate">
-                <Money value={totalNotional} currency={base} />
+                <Money value={totals.notional.total} currency={base} />
               </div>
+              <LeftOut total={totals.notional} noun="position" />
             </div>
             <div className="card p-4">
               <div className="text-xs text-[var(--muted)] mb-1">Unrealized P&amp;L</div>
               <div
                 className={`text-xl font-semibold truncate ${
-                  totalUnrealized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"
+                  totals.unrealized.total >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"
                 }`}
               >
-                <Money value={totalUnrealized} currency={base} />
+                <Money value={totals.unrealized.total} currency={base} />
               </div>
+              <LeftOut total={totals.unrealized} noun="position" />
             </div>
           </div>
 

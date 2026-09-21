@@ -5,7 +5,7 @@ import { getAccountComposition, getMonthShape, getPortfolioItems } from "@/actio
 import { getDividendOverview } from "@/actions/dividends";
 import { listAllPositions, listConnections } from "@/actions/connections";
 import { getRates } from "@/actions/fx";
-import { toBase } from "@/lib/fx";
+import { leftOut, openTotals, resultInBase } from "@/lib/trading/openTotals";
 import { groupItems, hasPnl, portfolioSummary } from "@/lib/portfolio/positionView";
 import { shortName } from "@/lib/portfolio/shortName";
 import { tagLabel } from "@/lib/portfolio/tags";
@@ -39,7 +39,8 @@ export async function GET() {
       getRates(),
     ]);
   const base = nw.baseCurrency;
-  const inBase = (amount: number, currency: string) => toBase(amount, currency, rates, base) ?? 0;
+  // The same totals as the Open positions page, from the same function.
+  const trading = openTotals(open, connections, rates, base);
 
   const invested = portfolioSummary(portfolio.items);
   const measuredItems = portfolio.items.map((i) => ({
@@ -92,19 +93,16 @@ export async function GET() {
       },
       trading: {
         count: open.length,
-        unrealized: round2(open.reduce((s, p) => s + inBase(p.unrealizedPnl ?? 0, p.currency), 0)),
-        margin: round2(
-          connections.reduce((s, c) => s + inBase(Number(c.lastMarginUsed ?? 0), c.reportingCurrency ?? "USD"), 0)
-        ),
-        top: [...open]
-          .sort((a, b) => Math.abs(inBase(b.unrealizedPnl ?? 0, b.currency)) - Math.abs(inBase(a.unrealizedPnl ?? 0, a.currency)))
+        unrealized: trading.unrealized.total,
+        margin: trading.margin.total,
+        /** What the result above could not include, or null. The 0.7.0 app ignores it. */
+        leftOut: leftOut(trading.unrealized, "position"),
+        top: open
+          .map((p) => ({ p, pnl: resultInBase(p, rates, base) }))
+          // Largest move first; a result that could not be measured last.
+          .sort((a, b) => (b.pnl === null ? -1 : Math.abs(b.pnl)) - (a.pnl === null ? -1 : Math.abs(a.pnl)))
           .slice(0, 8)
-          .map((p) => ({
-            name: p.coin,
-            side: p.side,
-            leverage: p.leverage,
-            pnl: p.unrealizedPnl === null ? null : round2(inBase(p.unrealizedPnl, p.currency)),
-          })),
+          .map(({ p, pnl }) => ({ name: p.coin, side: p.side, leverage: p.leverage, pnl })),
       },
       month: {
         label: now.toLocaleDateString("en-GB", { month: "long", year: "numeric" }),

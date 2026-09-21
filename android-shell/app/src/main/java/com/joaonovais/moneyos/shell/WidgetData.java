@@ -64,6 +64,8 @@ final class WidgetData {
     final int tradeCount;
     final double tradeUnrealized;
     final double tradeMargin;
+    /** What the result could not include, as the site says it; null when nothing. */
+    final String tradeLeftOut;
     final List<String> tradeNames = new ArrayList<>();
     final List<String> tradeSides = new ArrayList<>();
     /** NaN where the platform states none. */
@@ -127,6 +129,8 @@ final class WidgetData {
         tradeCount = trading == null ? 0 : trading.getInt("count");
         tradeUnrealized = trading == null ? 0 : trading.getDouble("unrealized");
         tradeMargin = trading == null ? 0 : trading.getDouble("margin");
+        // Absent in figures saved before the site sent it.
+        tradeLeftOut = trading == null || trading.isNull("leftOut") ? null : trading.optString("leftOut", null);
         JSONArray trades = trading == null ? new JSONArray() : trading.getJSONArray("top");
         for (int i = 0; i < trades.length(); i++) {
             JSONObject trade = trades.getJSONObject(i);
