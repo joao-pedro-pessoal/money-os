@@ -25,11 +25,6 @@ export function previousMonth(month: string): string {
   return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
 }
 
-/** "2026-09" for a date, in UTC like every other date grouping in the app. */
-export function monthOf(date: Date): string {
-  return date.toISOString().slice(0, 7);
-}
-
 /** "September 2026". */
 export function monthLabel(month: string): string {
   const [y, m] = month.split("-").map(Number);

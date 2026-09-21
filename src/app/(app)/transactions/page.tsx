@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getDefaultAccountId } from "@/actions/settings";
 import PurchaseSavingsFields from '@/components/PurchaseSavingsFields';
 import MobileFold from "@/components/MobileFold";
+import { localDay } from "@/lib/calendar/localDay";
 
 export default async function TransactionsPage() {
   const [txData, accounts, categories, defaultAccountId] = await Promise.all([
@@ -14,7 +15,7 @@ export default async function TransactionsPage() {
     getDefaultAccountId(),
   ]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDay();
 
   return (
     <div className="cash-flow-page space-y-8">

@@ -12,13 +12,14 @@
  * `nextCharge` uses, so "due today" here and on the subscriptions page agree.
  */
 import type { Cadence } from "./subscriptions";
+import { localDay } from "../calendar/localDay";
 
 /** How far back an unanswered charge is still proposed. */
 export const LOOKBACK_DAYS = 31;
 
 /** A day as YYYY-MM-DD in local time. */
 export function dayKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return localDay(date);
 }
 
 function startOfDay(date: Date): Date {

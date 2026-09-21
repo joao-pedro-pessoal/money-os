@@ -14,6 +14,7 @@ import { getRates } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
 import { toBase } from "@/lib/fx";
 import Section from "@/components/Section";
+import { localDay } from "@/lib/calendar/localDay";
 
 export default async function InterestPage() {
   const payments = await db
@@ -57,7 +58,7 @@ export default async function InterestPage() {
   );
 
   const accountList = await listAccountsWithState();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDay();
 
   const yearStart = new Date(new Date().getFullYear(), 0, 1);
   const ytd = usable

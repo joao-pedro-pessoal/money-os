@@ -7,7 +7,8 @@ import ReportActions from "@/components/ReportActions";
 import FilterSelect from "@/components/FilterSelect";
 import { Money } from "@/components/PrivacyContext";
 import { ANALYTICS_TABS } from "@/lib/navigation";
-import { buildMonthlyReport, monthLabel, monthOf, reportMonths, reportToCsv } from "@/lib/reports/monthly";
+import { buildMonthlyReport, monthLabel, reportMonths, reportToCsv } from "@/lib/reports/monthly";
+import { localMonth } from "@/lib/calendar/localDay";
 import Link from "next/link";
 
 const tone = (n: number) => (n > 0 ? "text-[var(--green)]" : n < 0 ? "text-[var(--red)]" : "");
@@ -41,7 +42,8 @@ export default async function MonthlyReportPage({
     getTotalNetWorthOverTime(),
   ]);
 
-  const currentMonth = monthOf(new Date());
+  // The month on the wall, not in UTC: see `localDay`.
+  const currentMonth = localMonth();
   const available = reportMonths(spending.rows);
   if (!available.includes(currentMonth)) available.unshift(currentMonth);
   // A month still to come has no report; one typed into the address opens this one.

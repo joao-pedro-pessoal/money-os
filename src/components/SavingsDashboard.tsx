@@ -8,6 +8,7 @@ import PurchaseSavingsFields from './PurchaseSavingsFields';
 import PanelFrame from './PanelFrame';
 import { newQuickEntryId } from '@/lib/money/quickEntryId';
 import { Money, usePrivacy } from './PrivacyContext';
+import { localDay, localMonth } from "@/lib/calendar/localDay";
 
 type Data = Awaited<ReturnType<typeof getSavingsData>>;
 type FormProps = { action: (form: FormData) => Promise<void>; children: ReactNode; label: string; once?: boolean };
@@ -33,7 +34,7 @@ function ActionAttempt({ action, children, label, once, restart }: FormProps & {
 export default function SavingsDashboard({ data, initialPurchase = '' }: { data: Data; initialPurchase?: string }) {
   const { hidden } = usePrivacy();
   const [period, setPeriod] = useState('all');
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(localMonth());
   const [year, setYear] = useState(new Date().getFullYear().toString());
   const [from, setFrom] = useState(''), [to, setTo] = useState('');
   const [accountId, setAccountId] = useState(''), [categoryId, setCategoryId] = useState('');
@@ -101,7 +102,7 @@ export default function SavingsDashboard({ data, initialPurchase = '' }: { data:
               <label className="block text-sm">Movement<select aria-label="Movement" name="type" className="input"><option value="income">Received</option><option value="expense">Reversed / taken back</option></select></label>
               <label className="block text-sm">Receipt account<select aria-label="Receipt account" name="accountId" className="input" required defaultValue={purchase.accountId}>{data.accounts.filter(a => a.active && a.currency === purchase.currency).map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</select></label>
               <label className="block text-sm">Amount ({purchase.currency})<input name="amount" className="input" inputMode="decimal" required /></label>
-              <label className="block text-sm">Receipt date<input name="date" className="input" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required /></label>
+              <label className="block text-sm">Receipt date<input name="date" className="input" type="date" defaultValue={localDay()} required /></label>
             </ActionForm>
           </details>
           {linked.map(receipt => <div key={receipt.id} className="border-t border-[var(--border)] pt-3 space-y-2">

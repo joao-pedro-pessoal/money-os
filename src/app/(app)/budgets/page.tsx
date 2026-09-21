@@ -12,6 +12,7 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Section from "@/components/Section";
 import Link from "next/link";
 import FilterLink from "@/components/FilterLink";
+import { localDay } from "@/lib/calendar/localDay";
 
 const STATUS_COLOR: Record<string, string> = {
   under: "var(--green)",
@@ -29,7 +30,7 @@ export default async function BudgetsPage({
   const offset = Number(sp.offset ?? 0) || 0;
 
   const [data, unbudgeted] = await Promise.all([listBudgets(offset), getUnbudgetedSpending()]);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDay();
 
   return (
     <div className="space-y-6">

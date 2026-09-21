@@ -154,8 +154,11 @@ export function presetRange(
   preset: "last-month" | "last-3-months" | "last-12-months" | "this-year",
   today: Date = new Date()
 ): { from: string; to: string } {
-  const y = today.getUTCFullYear();
-  const m = today.getUTCMonth();
+  // Which month it is now is read in local time — at 00:30 on the 1st it is
+  // already the new month here and still the old one in UTC. The ranges are
+  // then built as UTC days, which is how stored dates are written.
+  const y = today.getFullYear();
+  const m = today.getMonth();
   const iso = (d: Date) => d.toISOString().slice(0, 10);
 
   if (preset === "last-month") {

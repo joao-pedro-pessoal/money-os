@@ -7,11 +7,9 @@ import { createQuickTransaction, undoQuickTransaction } from "@/actions/transact
 import type { QuickEntryOptions } from "@/lib/money/manualEntry";
 import { newQuickEntryId } from "@/lib/money/quickEntryId";
 import PurchaseSavingsFields from './PurchaseSavingsFields';
+import { localDay } from "@/lib/calendar/localDay";
 
-function today() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
+const today = () => localDay();
 
 export default function QuickEntry({ accounts, categories, defaultAccountId }: QuickEntryOptions) {
   const dialog = useRef<HTMLDialogElement>(null);
