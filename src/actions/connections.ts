@@ -40,6 +40,7 @@ import { suggestAssetType, assetTypeOnSync } from "@/lib/portfolio/assetType";
 import { pickReusable, isAbandoned } from "@/lib/accounting/abandoned";
 import {
   applyEntryOverride,
+  entryOverrideFor,
   spotCostBasis,
   venueEntryPerUnit,
 } from "@/lib/portfolio/entryOverride";
@@ -214,10 +215,7 @@ export async function listAllPositions() {
      * against it first — see `entryOverride.ts`. Applied here rather than on the
      * page so every reader gets the same answer.
      */
-    const override =
-      m?.entryPriceOverride === null || m?.entryPriceOverride === undefined
-        ? null
-        : Number(m.entryPriceOverride);
+    const override = entryOverrideFor(m, "position");
     const effective = applyEntryOverride(
       {
         size: parsed.size,
@@ -269,7 +267,32 @@ export async function setPositionTags(formData: FormData) {
 
   const assetType = value("assetType");
 
+  /**
+   * The entry goes to the field of whatever the form was saved from, and the
+   * other is left alone: a spot balance and an open position on the same coin
+   * share these tags but not their cost. A form that says neither, or carries
+   * no entry field, touches no entry at all.
+   *
+   * Empty clears it, so there is a way back to the platform's own figure.
+   * A zero entry is not a price and is rejected the same way.
+   */
+  const entryFor = formData.get("entryFor");
+  const entry = formData.has("entryPriceOverride")
+    ? (() => {
+        const raw = String(formData.get("entryPriceOverride") ?? "").trim().replace(",", ".");
+        if (raw === "") return null;
+        const n = Number(raw);
+        return Number.isFinite(n) && n > 0 ? String(n) : null;
+      })()
+    : undefined;
+  const entryField =
+    entry === undefined ? {}
+      : entryFor === "position" ? { positionEntryPriceOverride: entry }
+        : entryFor === "balance" ? { entryPriceOverride: entry }
+          : {};
+
   const values = {
+    ...entryField,
     riskLevel: value("riskLevel"),
     expectedReturn: value("expectedReturn"),
     timeHorizon: value("timeHorizon"),
@@ -300,16 +323,6 @@ export async function setPositionTags(formData: FormData) {
     assetTypeAuto: assetType === null,
     playlistId: value("playlistId"),
     notes: value("notes"),
-    /**
-     * Empty clears it, so there is a way back to the platform's own figure.
-     * A zero entry is not a price and is rejected the same way.
-     */
-    entryPriceOverride: (() => {
-      const raw = String(formData.get("entryPriceOverride") ?? "").trim().replace(",", ".");
-      if (raw === "") return null;
-      const n = Number(raw);
-      return Number.isFinite(n) && n > 0 ? String(n) : null;
-    })(),
     updatedAt: new Date(),
   };
 
@@ -413,13 +426,10 @@ export async function listBalances() {
     costBasis: spotCostBasis(
       Number(b.total),
       b.costBasis === null ? null : Number(b.costBasis),
-      m?.entryPriceOverride === null || m?.entryPriceOverride === undefined
-        ? null
-        : Number(m.entryPriceOverride)
+      entryOverrideFor(m, "balance")
     ),
     /** True while the cost above is yours rather than the platform's. */
-    costOverridden:
-      m?.entryPriceOverride !== null && m?.entryPriceOverride !== undefined,
+    costOverridden: entryOverrideFor(m, "balance") !== null,
     /**
      * What the venue said each unit cost, or null when it said nothing —
      * shown beside the field so you can see what you are replacing.
@@ -428,10 +438,7 @@ export async function listBalances() {
       Number(b.total),
       b.costBasis === null ? null : Number(b.costBasis)
     ),
-    entryPriceOverride:
-      m?.entryPriceOverride === null || m?.entryPriceOverride === undefined
-        ? null
-        : Number(m.entryPriceOverride),
+    entryPriceOverride: entryOverrideFor(m, "balance"),
     /** What `usdValue`, `price` and `costBasis` are actually denominated in. */
     currency,
     available: Number(b.total) - (b.hold === null ? 0 : Number(b.hold)),
