@@ -101,3 +101,62 @@ export function afterFailedLogin(
   if (next < MAX_FAILED_LOGINS) return { failedLogins: next, lockedUntil: null };
   return { failedLogins: 0, lockedUntil: new Date(now.getTime() + LOCKOUT_MINUTES * 60 * 1000) };
 }
+
+/**
+ * How many new accounts the sync server takes, and how fast.
+ *
+ * Registration needs nothing but an address and a password, so without a limit
+ * anyone who finds the server can make accounts without end, each holding up to
+ * a vault's worth of ciphertext. This is one household's server: a few accounts
+ * a day is more than it will ever legitimately see, and the total is set by
+ * `SYNC_MAX_ACCOUNTS` (ten when unset) so opening it to more people is a
+ * decision written in `.env`, not a default.
+ */
+export const REGISTRATIONS_PER_HOUR = 5;
+export const REGISTRATIONS_PER_DAY = 20;
+export const DEFAULT_MAX_ACCOUNTS = 10;
+
+/**
+ * The configured account limit, or null when `SYNC_MAX_ACCOUNTS` is set to
+ * something that is not a whole number of at least one. Null closes
+ * registration: a limit nobody can read is not permission for no limit.
+ */
+export function maxAccounts(value: string | undefined): number | null {
+  if (value === undefined || value.trim() === "") return DEFAULT_MAX_ACCOUNTS;
+  const n = Number(value.trim());
+  return Number.isSafeInteger(n) && n >= 1 ? n : null;
+}
+
+export type RegistrationRefusal = { status: 403 | 429; reason: string };
+
+/** Why a new account cannot be made now, or null when it can. */
+export function registrationRefusal(
+  counts: { total: number; lastHour: number; lastDay: number },
+  limit: number | null
+): RegistrationRefusal | null {
+  if (limit === null) {
+    return { status: 403, reason: "New accounts are closed: SYNC_MAX_ACCOUNTS on the server is not a whole number." };
+  }
+  if (counts.total >= limit) {
+    return { status: 403, reason: `This server takes at most ${limit} accounts, and has them. Sign in to an existing one.` };
+  }
+  if (counts.lastHour >= REGISTRATIONS_PER_HOUR || counts.lastDay >= REGISTRATIONS_PER_DAY) {
+    return { status: 429, reason: "Too many new accounts on this server recently. Try again later." };
+  }
+  return null;
+}
+
+/**
+ * How many versions of a vault the server keeps.
+ *
+ * Every sync added one and none was ever removed, so an account's history grew
+ * for as long as it was used — ciphertext nobody reads, since a sync only ever
+ * fetches the newest and each device keeps its own base. The newest is never
+ * removed: the next write is checked against it.
+ */
+export const KEPT_VAULT_VERSIONS = 20;
+
+/** The oldest version still kept once `newest` is stored; older ones go. */
+export function oldestKeptVersion(newest: number): number {
+  return Math.max(1, newest - KEPT_VAULT_VERSIONS + 1);
+}

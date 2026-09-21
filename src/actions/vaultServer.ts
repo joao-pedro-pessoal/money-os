@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { and, desc, eq, gt, isNull, max, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, max, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { syncDevices, syncLoginMethods, syncSessions, syncUsers, syncVaultVersions } from "@/db/schema";
 import { hashPassword, needsRehash, verifyPassword } from "@/lib/vault/password";
@@ -14,6 +14,9 @@ import {
   afterFailedLogin,
   checkVaultPut,
   lockedUntil,
+  maxAccounts,
+  oldestKeptVersion,
+  registrationRefusal,
 } from "@/lib/vault/protocol";
 
 /**
@@ -119,10 +122,30 @@ async function authenticate(token: string | null): Promise<{ userId: string; dev
   return session;
 }
 
+/** Accounts made so far, and in the last hour and day, for `registrationRefusal`. */
+async function registrationCounts(executor: Pick<typeof db, "execute">) {
+  const result = await executor.execute(sql`
+    select count(*)::int as total,
+           count(*) filter (where created_at > now() - interval '1 hour')::int as "lastHour",
+           count(*) filter (where created_at > now() - interval '1 day')::int as "lastDay"
+    from sync_users
+  `);
+  return result.rows[0] as { total: number; lastHour: number; lastDay: number };
+}
+
 export async function registerSyncAccount(raw: unknown) {
   const parsed = RegisterRequest.safeParse(raw);
   if (!parsed.success) return invalid(parsed.error);
   const { email, password, deviceName } = parsed.data;
+
+  /**
+   * Limited before the password is hashed, so a closed server spends nothing on
+   * a request it will refuse — and checked again inside the transaction under a
+   * lock, so two registrations arriving together cannot both take the last place.
+   */
+  const limit = maxAccounts(process.env.SYNC_MAX_ACCOUNTS);
+  const early = registrationRefusal(await registrationCounts(db), limit);
+  if (early) return refusal(early.status, early.reason);
 
   // Hashed before the transaction: a slow step inside it would hold locks for
   // most of a second on every registration. Through the gate, because this
@@ -133,6 +156,9 @@ export async function registerSyncAccount(raw: unknown) {
   const secretHash = hashed.value;
   try {
     return await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('sync_users.register'))`);
+      const refused = registrationRefusal(await registrationCounts(tx), limit);
+      if (refused) return refusal(refused.status, refused.reason);
       const [user] = await tx.insert(syncUsers).values({ email }).returning({ id: syncUsers.id });
       await tx.insert(syncLoginMethods).values({ userId: user.id, kind: "password", subject: email, secretHash });
       return { ok: true as const, ...(await openSession(tx, user.id, deviceName)) };
@@ -258,7 +284,22 @@ export async function putSyncVault(token: string | null, raw: unknown) {
         (select max(version) from sync_vault_versions where user_id = ${session.userId}), 0
       ) = ${body.expectedVersion}
     `);
-    if (result.rowCount === 1) return { ok: true as const, vaultVersion: body.vaultVersion };
+    if (result.rowCount === 1) {
+      /**
+       * Versions older than the last `KEPT_VAULT_VERSIONS` go once a newer one is
+       * stored. Best effort: the write above has succeeded, and failing it now
+       * would send the device into a retry that the version check then refuses.
+       * The next write tries again.
+       */
+      try {
+        await db
+          .delete(syncVaultVersions)
+          .where(and(eq(syncVaultVersions.userId, session.userId), lt(syncVaultVersions.version, oldestKeptVersion(body.vaultVersion))));
+      } catch {
+        // Kept for now; nothing is lost by keeping an old version a little longer.
+      }
+      return { ok: true as const, vaultVersion: body.vaultVersion };
+    }
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
   }

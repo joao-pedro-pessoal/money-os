@@ -7,6 +7,13 @@ import {
   MAX_FAILED_LOGINS,
   RegisterRequest,
   afterFailedLogin,
+  maxAccounts,
+  registrationRefusal,
+  oldestKeptVersion,
+  DEFAULT_MAX_ACCOUNTS,
+  KEPT_VAULT_VERSIONS,
+  REGISTRATIONS_PER_HOUR,
+  REGISTRATIONS_PER_DAY,
   checkVaultPut,
   lockedUntil,
 } from "../protocol";
@@ -95,5 +102,45 @@ describe("repeated wrong passwords", () => {
     const state = afterFailedLogin(MAX_FAILED_LOGINS - 1, now);
     const later = new Date(state.lockedUntil!.getTime() + 1);
     expect(lockedUntil(state, later)).toBeNull();
+  });
+});
+
+describe("new accounts", () => {
+  const quiet = { total: 1, lastHour: 0, lastDay: 0 };
+
+  it("are taken while the server is under its limits", () => {
+    expect(registrationRefusal(quiet, 10)).toBeNull();
+  });
+
+  it("stop at the account limit, which is ten unless the server says otherwise", () => {
+    expect(maxAccounts(undefined)).toBe(DEFAULT_MAX_ACCOUNTS);
+    expect(maxAccounts("  ")).toBe(DEFAULT_MAX_ACCOUNTS);
+    expect(maxAccounts("3")).toBe(3);
+    expect(registrationRefusal({ ...quiet, total: 3 }, 3)?.status).toBe(403);
+  });
+
+  /** A limit nobody can read is not permission for no limit. */
+  it("are closed when the configured limit is not a whole number of at least one", () => {
+    for (const bad of ["0", "-2", "ten", "2.5", "1e400"]) expect(maxAccounts(bad)).toBeNull();
+    expect(registrationRefusal(quiet, null)?.status).toBe(403);
+  });
+
+  it("slow down when too many were made in the last hour or day", () => {
+    expect(registrationRefusal({ ...quiet, lastHour: REGISTRATIONS_PER_HOUR }, 100)?.status).toBe(429);
+    expect(registrationRefusal({ ...quiet, lastDay: REGISTRATIONS_PER_DAY }, 100)?.status).toBe(429);
+    expect(registrationRefusal({ ...quiet, lastHour: REGISTRATIONS_PER_HOUR - 1 }, 100)).toBeNull();
+  });
+});
+
+describe("old vault versions", () => {
+  it("are kept up to the last twenty, the newest always among them", () => {
+    expect(oldestKeptVersion(1)).toBe(1);
+    expect(oldestKeptVersion(KEPT_VAULT_VERSIONS)).toBe(1);
+    expect(oldestKeptVersion(KEPT_VAULT_VERSIONS + 1)).toBe(2);
+    expect(oldestKeptVersion(500)).toBe(500 - KEPT_VAULT_VERSIONS + 1);
+    for (const newest of [1, 7, 20, 21, 1000]) {
+      expect(oldestKeptVersion(newest)).toBeLessThanOrEqual(newest);
+      expect(newest - oldestKeptVersion(newest) + 1).toBeLessThanOrEqual(KEPT_VAULT_VERSIONS);
+    }
   });
 });
