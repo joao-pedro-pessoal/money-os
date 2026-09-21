@@ -152,5 +152,11 @@ export function createVaultClient(options: { server: string; fetch: VaultFetch; 
       const r = await call('DELETE', `/api/vault/devices/${deviceId}`, { token });
       if (r.status !== 200) fail(r.status, r.data);
     },
+
+    /** Deletes the account on the server, after its password again. */
+    async deleteAccount(token: string, password: string): Promise<void> {
+      const r = await call('DELETE', '/api/vault/account', { token, body: { password } });
+      if (r.status !== 200) fail(r.status, r.data);
+    },
   };
 }

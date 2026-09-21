@@ -39,6 +39,8 @@ describe('where the sync server may be', () => {
     const origin = 'https://sync.example.com';
     expect(() => assertVaultRequest(origin, `${origin}/api/vault`, 'PUT')).not.toThrow();
     expect(() => assertVaultRequest(origin, `${origin}/api/vault`, 'DELETE')).toThrow(/bloqueado/);
+    expect(() => assertVaultRequest(origin, `${origin}/api/vault/account`, 'DELETE')).not.toThrow();
+    expect(() => assertVaultRequest(origin, `${origin}/api/vault/account`, 'GET')).toThrow(/bloqueado/);
     expect(() => assertVaultRequest(origin, 'https://elsewhere.example.com/api/vault', 'GET')).toThrow(/bloqueado/);
     expect(() => assertVaultRequest(origin, `${origin}/api/sync`, 'POST')).toThrow(/bloqueado/);
   });

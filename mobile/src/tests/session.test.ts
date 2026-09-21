@@ -283,3 +283,33 @@ describe('ending the session on the server when this device stops syncing', () =
     await session.close();
   });
 });
+
+describe('deleting the sync account', () => {
+  it('deletes it on the server with the password, then stops syncing and keeps the data here', async () => {
+    const { vault, session } = await setup();
+    const before = vault.snapshot();
+    const forget = vi.spyOn(vault, 'forgetSync');
+    mocks.loadSync.mockResolvedValue(confirmed);
+    const deleteAccount = vi.fn().mockResolvedValue(undefined);
+    mocks.client.mockReturnValue({ deleteAccount });
+    await session.deleteSyncAccount('the account password');
+    expect(deleteAccount).toHaveBeenCalledWith(confirmed.token, 'the account password');
+    expect(forget).toHaveBeenCalled();
+    expect(mocks.deleteSync).toHaveBeenCalled();
+    expect(vault.snapshot()).toEqual(before);
+    await session.close();
+  });
+
+  it('deletes nothing, here or there, when the password is wrong or there is no network', async () => {
+    const { vault, session } = await setup();
+    const forget = vi.spyOn(vault, 'forgetSync');
+    mocks.loadSync.mockResolvedValue(confirmed);
+    mocks.client.mockReturnValue({ deleteAccount: vi.fn().mockRejectedValue(new VaultServerError(403, 'O servidor recusou (HTTP 403)')) });
+    await expect(session.deleteSyncAccount('wrong')).rejects.toThrow('Nada foi apagado');
+    mocks.client.mockReturnValue({ deleteAccount: vi.fn().mockRejectedValue(new VaultServerError(null, 'Sem ligação')) });
+    await expect(session.deleteSyncAccount('right')).rejects.toThrow('Sem ligação ao servidor');
+    expect(forget).not.toHaveBeenCalled();
+    expect(mocks.deleteSync).not.toHaveBeenCalled();
+    await session.close();
+  });
+});

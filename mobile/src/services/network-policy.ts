@@ -45,6 +45,7 @@ const VAULT_ROUTES: { method: string; path: RegExp }[] = [
   { method: 'PUT', path: /^\/api\/vault$/ },
   { method: 'GET', path: /^\/api\/vault\/devices$/ },
   { method: 'DELETE', path: /^\/api\/vault\/devices\/[A-Za-z0-9_-]{1,64}$/ },
+  { method: 'DELETE', path: /^\/api\/vault\/account$/ },
 ];
 const DEVELOPMENT_HOSTS = new Set(['127.0.0.1', 'localhost', '10.0.2.2']);
 

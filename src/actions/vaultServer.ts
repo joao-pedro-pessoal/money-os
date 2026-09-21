@@ -10,6 +10,7 @@ import { hashSessionToken, newSessionToken, sessionExpiry } from "@/lib/vault/se
 import {
   LoginRequest,
   PutVaultRequest,
+  DeleteAccountRequest,
   RegisterRequest,
   afterFailedLogin,
   checkVaultPut,
@@ -171,6 +172,28 @@ export async function registerSyncAccount(raw: unknown) {
   }
 }
 
+/**
+ * One more wrong password against a login method, and the lockout if it is the
+ * last one allowed.
+ *
+ * Counted in SQL, not from the row just read. Parallel guesses would each read
+ * the same count and each write it plus one, so a burst of attempts would
+ * register as one — the lockout would stop a patient attacker and let a fast one
+ * through. The increment is atomic; the policy deciding what that count means is
+ * still `afterFailedLogin`.
+ */
+async function countFailedPassword(methodId: string, now: Date): Promise<void> {
+  const [counted] = await db
+    .update(syncLoginMethods)
+    .set({ failedLogins: sql`${syncLoginMethods.failedLogins} + 1` })
+    .where(eq(syncLoginMethods.id, methodId))
+    .returning({ failedLogins: syncLoginMethods.failedLogins });
+  const next = afterFailedLogin(counted.failedLogins - 1, now);
+  if (next.lockedUntil !== null) {
+    await db.update(syncLoginMethods).set(next).where(eq(syncLoginMethods.id, methodId));
+  }
+}
+
 export async function loginSyncAccount(raw: unknown) {
   const parsed = LoginRequest.safeParse(raw);
   if (!parsed.success) return invalid(parsed.error);
@@ -207,23 +230,7 @@ export async function loginSyncAccount(raw: unknown) {
   const checked = await passwords.run(() => verifyPassword(password, stored));
   if (!checked.ok) return refusal(429, BUSY);
   if (!checked.value) {
-    /**
-     * Counted in SQL, not from the row just read.
-     *
-     * Parallel guesses would each read the same count and each write it plus one,
-     * so a burst of attempts would register as one — the lockout would stop a
-     * patient attacker and let a fast one through. The increment is atomic; the
-     * policy deciding what that count means is still `afterFailedLogin`.
-     */
-    const [counted] = await db
-      .update(syncLoginMethods)
-      .set({ failedLogins: sql`${syncLoginMethods.failedLogins} + 1` })
-      .where(eq(syncLoginMethods.id, method.id))
-      .returning({ failedLogins: syncLoginMethods.failedLogins });
-    const next = afterFailedLogin(counted.failedLogins - 1, now);
-    if (next.lockedUntil !== null) {
-      await db.update(syncLoginMethods).set(next).where(eq(syncLoginMethods.id, method.id));
-    }
+    await countFailedPassword(method.id, now);
     return refusal(401, WRONG_LOGIN);
   }
 
@@ -347,4 +354,45 @@ export async function revokeSyncDevice(token: string | null, deviceId: string) {
       .where(and(eq(syncSessions.deviceId, deviceId), isNull(syncSessions.revokedAt)));
     return { ok: true as const };
   });
+}
+
+/**
+ * Deletes the account and everything this server holds for it: the login, every
+ * device and session, and every stored version of the vault.
+ *
+ * It asks for the password again, not only the session. A session is what a lost
+ * or borrowed phone still carries, and this cannot be undone; the password check
+ * goes through the same gate and lockout as a sign-in, so it is no cheaper way to
+ * guess one.
+ *
+ * What it does not reach, and the app says so before the button: the copies on
+ * each device, which stay until they are erased there, and the database
+ * provider's own backups, which keep the ciphertext until they expire.
+ */
+export async function deleteSyncAccount(token: string | null, raw: unknown) {
+  const session = await authenticate(token);
+  if (!session) return refusal(401, "Sign in again: this device's session is not valid.");
+  const parsed = DeleteAccountRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const now = new Date();
+
+  const [method] = await db
+    .select()
+    .from(syncLoginMethods)
+    .where(and(eq(syncLoginMethods.userId, session.userId), eq(syncLoginMethods.kind, "password")));
+  if (!method || method.secretHash === null) return refusal(403, "This account has no password to confirm with.");
+  const until = lockedUntil(method, now);
+  if (until) return refusal(429, `Too many wrong passwords. Try again after ${until.toISOString()}.`);
+
+  const stored = method.secretHash;
+  const checked = await passwords.run(() => verifyPassword(parsed.data.password, stored));
+  if (!checked.ok) return refusal(429, BUSY);
+  if (!checked.value) {
+    await countFailedPassword(method.id, now);
+    return refusal(403, "That is not this account's password. Nothing was deleted.");
+  }
+
+  // Everything else goes with the account: every table here cascades from it.
+  await db.delete(syncUsers).where(eq(syncUsers.id, session.userId));
+  return { ok: true as const };
 }

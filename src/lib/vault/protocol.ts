@@ -30,6 +30,9 @@ export const RegisterRequest = z
 /** No password rules at login: a policy message there tells an attacker what to try. */
 export const LoginRequest = z.object({ email, password: z.string().max(PASSWORD_MAX), deviceName }).strict();
 
+/** The password again, to delete an account: see `deleteSyncAccount`. */
+export const DeleteAccountRequest = z.object({ password: z.string().min(1).max(PASSWORD_MAX) }).strict();
+
 export const PutVaultRequest = z
   .object({
     vaultVersion: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),

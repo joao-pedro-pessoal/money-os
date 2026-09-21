@@ -313,6 +313,34 @@ export class MobileSession {
   }
 
   /**
+   * Deletes the sync account on the server, then stops syncing here.
+   *
+   * The server deletes the account's every device, session and stored version,
+   * so nothing is left to end there afterwards. What stays is this device's own
+   * data — kept, like a stop — and the other devices' copies, which stop syncing.
+   * A wrong password or no network deletes nothing.
+   */
+  async deleteSyncAccount(password: string): Promise<void> {
+    this.assertLive();
+    if (this.busy.has(VAULT_SYNC)) throw new Error('Aguarda que a sincronização termine.');
+    const secrets = await this.syncSecrets();
+    try {
+      await phoneVaultClient(secrets.server, this.controller.signal).deleteAccount(secrets.token, password);
+    } catch (error) {
+      if (error instanceof VaultServerError && error.status === 403)
+        throw new Error('A palavra-passe não é a desta conta. Nada foi apagado.');
+      if (error instanceof VaultServerError && error.status === 401)
+        throw new Error('A sessão deste dispositivo já não é válida, por isso a conta não pode ser apagada daqui. Entra outra vez e tenta de novo.');
+      if (error instanceof VaultServerError && error.status === null)
+        throw new Error('Sem ligação ao servidor. Nada foi apagado.');
+      throw error;
+    }
+    this.assertLive();
+    await this.vault.forgetSync();
+    await deleteSyncSecrets();
+  }
+
+  /**
    * Ends on the server every session this device stopped using while it could not
    * reach it. Called when the app opens and when the sync screen does; it never
    * throws, because nothing the person is doing depends on it. Returns how many

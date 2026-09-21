@@ -67,6 +67,8 @@ export function SyncSettings({ session, run, busy }: { session: MobileSession; r
   const [revoking, setRevoking] = useState<string | null>(null);
   const [stop, setStop] = useState('');
   const [stopped, setStopped] = useState('');
+  const [erase, setErase] = useState('');
+  const [erasePassword, setErasePassword] = useState('');
   const [waitingSignOuts, setWaitingSignOuts] = useState(0);
 
   const refresh = useCallback(async () => {
@@ -157,6 +159,20 @@ export function SyncSettings({ session, run, busy }: { session: MobileSession; r
         setStopped(endedOnServer
           ? 'Este dispositivo deixou de sincronizar, e a sessão foi terminada também no servidor.'
           : 'Este dispositivo deixou de sincronizar. Sem ligação ao servidor, a sessão ainda não foi terminada lá: é terminada quando a app voltar a chegar ao servidor.');
+        await refresh();
+      })} />
+    </Card>
+    <Card title="Apagar a conta de sincronização">
+      <Note>Apaga do servidor a conta, todos os dispositivos e todas as versões cifradas do cofre. Não se pode desfazer.</Note>
+      <Note>Não apaga o que está nos dispositivos: os dados deste e dos outros ficam lá, mas deixam de sincronizar. Para ficar sem nada, apaga depois os dados locais em cada um (Definições → Apagar os dados locais).</Note>
+      <Note>As cópias de segurança automáticas do fornecedor da base de dados do servidor podem guardar os dados cifrados até expirarem. Sem a seed, ninguém os consegue ler.</Note>
+      <Note>Se ainda não tens uma cópia, exporta antes um backup cifrado em Definições.</Note>
+      <Field label="Palavra-passe da conta" value={erasePassword} onChangeText={setErasePassword} secureTextEntry autoCapitalize="none" autoComplete="off" />
+      <Field label="Escreve APAGAR para confirmar" value={erase} onChangeText={setErase} autoCapitalize="characters" />
+      <Button title="Apagar a conta" danger disabled={busy || erase !== 'APAGAR' || !erasePassword} onPress={() => void run(async () => {
+        try { await session.deleteSyncAccount(erasePassword); } finally { setErasePassword(''); }
+        setErase(''); setResult(''); setDevices(null);
+        setStopped('A conta de sincronização foi apagada do servidor. Os dados deste dispositivo continuam aqui.');
         await refresh();
       })} />
     </Card>
