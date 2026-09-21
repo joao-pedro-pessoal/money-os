@@ -1543,3 +1543,21 @@ export const syncVaultVersions = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.version] })]
 );
+
+/**
+ * Wrong passwords at the site's own login, counted so they can be limited.
+ *
+ * The site has one password and no accounts, so there is one row, keyed
+ * "site", and the count is global: a lockout here locks the login for
+ * everyone, the owner included. That is the known cost, the same one the
+ * vault's lockout documents, and preferable to unlimited guessing once the
+ * site is reachable from outside the house. The policy — how many failures,
+ * how long — is `afterFailedLogin` in `lib/vault/protocol.ts`, shared with
+ * the vault rather than restated.
+ */
+export const loginThrottle = pgTable("login_throttle", {
+  key: text("key").primaryKey(),
+  failedLogins: integer("failed_logins").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});

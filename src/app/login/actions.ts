@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { checkPassword, expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { attemptSiteLogin } from "@/actions/siteLogin";
 
 export async function logout() {
   const store = await cookies();
@@ -12,9 +13,10 @@ export async function logout() {
 
 export async function login(formData: FormData) {
   const password = String(formData.get("password") ?? "");
-  const ok = await checkPassword(password);
-  if (!ok) {
-    redirect("/login?error=1");
+  // Limited: ten wrong passwords lock the login for a while — see `attemptSiteLogin`.
+  const result = await attemptSiteLogin(password);
+  if (!result.ok) {
+    redirect(result.lockedUntil ? "/login?error=locked" : "/login?error=1");
   }
   const value = await expectedSessionValue();
   const store = await cookies();
