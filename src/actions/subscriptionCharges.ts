@@ -3,9 +3,8 @@
 import { db } from "@/db/client";
 import { accounts, auditLog, categories, subscriptionCharges, subscriptions, transactions } from "@/db/schema";
 import { and, eq, gte, sql } from "drizzle-orm";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { hasSession } from "./session";
 import { isCadence } from "@/lib/accounting/subscriptions";
 import {
   LOOKBACK_DAYS,
@@ -18,7 +17,7 @@ import { manualAmount, manualDate } from "@/lib/money/manualEntry";
 import { getDefaultAccountId } from "./settings";
 
 async function requireSession() {
-  if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== (await expectedSessionValue())) {
+  if (!(await hasSession())) {
     throw new Error("Your session has expired. Sign in again.");
   }
 }

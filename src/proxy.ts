@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE_NAME, expectedSessionValue } from "@/lib/auth";
+import { SESSION_COOKIE_NAME, newSessionValue, readSession, sessionCookieOptions } from "@/lib/auth";
+import { sessionsNotBefore } from "@/actions/session";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -41,14 +42,23 @@ export async function proxy(req: NextRequest) {
   }
 
   const cookie = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const expected = await expectedSessionValue();
+  const session = cookie ? await readSession(cookie, new Date(), await sessionsNotBefore()) : { valid: false as const };
 
-  if (cookie !== expected) {
+  if (!session.valid) {
     const loginUrl = new URL("/login", req.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  /**
+   * A session in use is renewed once a day, so only one left idle for the
+   * whole of `SESSION_MAX_AGE_SECONDS` expires. The phone app's widgets store
+   * the renewed cookie too (Site.java), so they keep working between visits.
+   */
+  const response = NextResponse.next();
+  if (session.renew) {
+    response.cookies.set(SESSION_COOKIE_NAME, await newSessionValue(), sessionCookieOptions());
+  }
+  return response;
 }
 
 export const config = {

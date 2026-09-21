@@ -1,14 +1,13 @@
 "use server";
 
-import { cookies } from 'next/headers';
-import { SESSION_COOKIE_NAME, expectedSessionValue } from '@/lib/auth';
+import { hasSession } from './session';
 import { db } from '@/db/client';
 import { holdings, watchlistItems, positions, platformBalances } from '@/db/schema';
 import { searchQuery, parseAssetSuggestions, mergeAssetSuggestions, type AssetSuggestion } from '@/lib/quotes/assetSearch';
 import { knownListingFor } from '@/lib/quotes/knownListings';
 
 export async function searchAssets(raw: string): Promise<{ results: AssetSuggestion[]; warning: string | null }> {
-  if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== await expectedSessionValue()) throw new Error('Sign in again.');
+  if (!(await hasSession())) throw new Error('Sign in again.');
   const query = searchQuery(raw);
   if (query.length < 2) return { results: [], warning: null };
   const [manual, watching, live, balances] = await Promise.all([

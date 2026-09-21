@@ -18,6 +18,7 @@ import DashboardWindowSettings from "@/components/DashboardWindowSettings";
 import LanguagePicker from "@/components/LanguagePicker";
 import PhoneQuickEntrySettings from "@/components/PhoneQuickEntrySettings";
 import PhoneAlertSettings from "@/components/PhoneAlertSettings";
+import { logOutOtherDevices, sessionsNotBefore } from "@/actions/session";
 
 export default async function SettingsGeneralPage() {
   const baseCurrency = await getBaseCurrency();
@@ -28,6 +29,7 @@ export default async function SettingsGeneralPage() {
     listAccountsWithState(),
   ]);
   const dashboardWindows = await getDashboardWindowPreferences();
+  const sessionsEndedAt = await sessionsNotBefore();
 
   return (
     <>
@@ -156,6 +158,28 @@ export default async function SettingsGeneralPage() {
       {/* Only inside the Android app; renders nothing in a browser. */}
       <PhoneQuickEntrySettings />
       <PhoneAlertSettings />
+
+      <div className="card">
+        <SettingRow
+          title="Signed-in devices"
+          description={
+            <>
+              Each phone and browser that logs in stays signed in until it has gone 30 days without being used.
+              If a phone is lost, or someone may have seen your session, end them all: every other device has to
+              enter the password again, and this one stays signed in.
+              {sessionsEndedAt && (
+                <> Last done {sessionsEndedAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}.</>
+              )}
+            </>
+          }
+        >
+          <form action={logOutOtherDevices}>
+            <button type="submit" className="btn whitespace-nowrap">
+              Log out other devices
+            </button>
+          </form>
+        </SettingRow>
+      </div>
 
       {/* This was buried three cards down inside Settings, which is why it was
           impossible to find. It gets its own page and its own nav entry now. */}

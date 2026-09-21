@@ -58,11 +58,35 @@ final class Site {
                 throw new Unavailable(PROBLEM_LOGIN);
             }
             if (status != 200) throw new Unavailable(PROBLEM_OFFLINE);
+            keepRenewedSession(address, connection);
             return read(connection.getInputStream());
         } catch (IOException | RuntimeException e) {
             throw new Unavailable(PROBLEM_OFFLINE);
         } finally {
             if (connection != null) connection.disconnect();
+        }
+    }
+
+    /**
+     * The site renews a session once a day by sending a new cookie with an
+     * answer. Handed back to the WebView's store, so widgets refreshing on
+     * their own keep a session alive the way opening the app does, instead of
+     * finding it expired after thirty days away from the app.
+     */
+    private static void keepRenewedSession(String address, HttpURLConnection connection) {
+        try {
+            CookieManager cookies = CookieManager.getInstance();
+            boolean changed = false;
+            for (java.util.Map.Entry<String, java.util.List<String>> header : connection.getHeaderFields().entrySet()) {
+                if (header.getKey() == null || !"Set-Cookie".equalsIgnoreCase(header.getKey())) continue;
+                for (String value : header.getValue()) {
+                    cookies.setCookie(address, value);
+                    changed = true;
+                }
+            }
+            if (changed) cookies.flush();
+        } catch (RuntimeException ignored) {
+            // No WebView store right now: the old session stands until it expires.
         }
     }
 

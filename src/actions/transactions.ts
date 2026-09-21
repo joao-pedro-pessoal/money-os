@@ -8,14 +8,13 @@ import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 import type { TransactionRow } from "@/lib/money/transactionFilter";
-import { cookies } from "next/headers";
-import { expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { hasSession } from "./session";
 import { manualAmount, manualDate, isQuickEntryId } from "@/lib/money/manualEntry";
 import { getDefaultAccountId } from "./settings";
 import { assertCashbackLink, purchaseSavings } from "@/lib/money/savings";
 
 async function requireSession() {
-  if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== await expectedSessionValue()) {
+  if (!(await hasSession())) {
     throw new Error("Your session has expired. Sign in again.");
   }
 }

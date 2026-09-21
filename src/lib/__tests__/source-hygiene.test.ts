@@ -20,8 +20,10 @@ import path from "path";
 
 const root = path.resolve(__dirname, "../../..");
 // Local preview databases, verification captures and safety backups are binary
-// or large operational artifacts, not source files to inspect.
-const SKIP = new Set(["node_modules", ".next", ".git", ".local-checkpoints", "dist", "coverage"]);
+// or large operational artifacts, not source files to inspect. Gradle's `build`
+// and `.gradle` hold generated output, and reading them while a build writes
+// them failed this test on half-written files.
+const SKIP = new Set(["node_modules", ".next", ".git", ".local-checkpoints", "dist", "coverage", "build", ".gradle"]);
 const TEXT = /\.(ts|tsx|css|json|md|mjs|cjs|yml|yaml)$/;
 
 function sourceFiles(dir: string): string[] {

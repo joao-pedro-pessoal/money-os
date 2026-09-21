@@ -2,9 +2,13 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { newSessionValue, sessionCookieOptions, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { attemptSiteLogin } from "@/actions/siteLogin";
 
+/**
+ * Forgets the session on this device. Its cookie is still a valid session
+ * until it expires — "Log out other devices" in Settings is what ends them all.
+ */
 export async function logout() {
   const store = await cookies();
   store.delete(SESSION_COOKIE_NAME);
@@ -18,14 +22,8 @@ export async function login(formData: FormData) {
   if (!result.ok) {
     redirect(result.lockedUntil ? "/login?error=locked" : "/login?error=1");
   }
-  const value = await expectedSessionValue();
+  // A session of its own for this device, issued only here, after the password.
   const store = await cookies();
-  store.set(SESSION_COOKIE_NAME, value, {
-    httpOnly: true,
-    secure: process.env.COOKIE_SECURE === "true", // set to "true" if served over HTTPS (e.g. behind a TLS-terminating proxy)
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  store.set(SESSION_COOKIE_NAME, await newSessionValue(), sessionCookieOptions());
   redirect("/");
 }

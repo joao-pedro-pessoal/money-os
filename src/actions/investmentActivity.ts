@@ -1,7 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { hasSession } from "./session";
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
@@ -409,7 +408,7 @@ export async function listTagNames(): Promise<string[]> {
 
 /** Replaces tags on one trade event, keeping labels separate per fill. */
 export async function setInvestmentActivityTags(formData: FormData) {
-  if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== await expectedSessionValue()) throw new Error("Sign in again.");
+  if (!(await hasSession())) throw new Error("Sign in again.");
   const activityId = String(formData.get("activityId") ?? "").trim();
   if (!activityId || activityId.length > 200) throw new Error("Invalid trade.");
   const names = [...new Set(String(formData.get("tags") ?? "").split(",").map((s) => s.trim()).filter(Boolean))];
@@ -428,7 +427,7 @@ export async function setInvestmentActivityTags(formData: FormData) {
 }
 
 export async function setTradeClassification(formData: FormData) {
-  if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== await expectedSessionValue()) throw new Error("Sign in again.");
+  if (!(await hasSession())) throw new Error("Sign in again.");
   const activityId = String(formData.get("activityId") ?? "");
   const input = Object.fromEntries([...formData.entries()].map(([key, value]) => [key, String(value)]));
   const values = parseTradeClassification(input);

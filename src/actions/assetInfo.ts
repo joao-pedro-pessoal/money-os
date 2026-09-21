@@ -6,8 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { listHoldingsWithPnL } from "./investments";
 import { listAllPositions, listBalances } from "./connections";
-import { cookies } from "next/headers";
-import { expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { hasSession } from "./session";
 
 const keyFor = (symbol: string) => `asset_note:${symbol.trim().toUpperCase()}`;
 
@@ -28,7 +27,7 @@ export async function getAssetInfo(symbol: string) {
 }
 
 export async function saveAssetNote(formData: FormData) {
-  if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== await expectedSessionValue()) throw new Error("Sign in again.");
+  if (!(await hasSession())) throw new Error("Sign in again.");
   const symbol = String(formData.get("symbol") ?? "").trim().toUpperCase();
   if (!symbol) return;
   const value = String(formData.get("note") ?? "").trim();

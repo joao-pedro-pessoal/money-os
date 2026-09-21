@@ -3,9 +3,8 @@
 import { db } from "@/db/client";
 import { assetProfiles, auditLog, companyMoves, fundHoldings, holdings } from "@/db/schema";
 import { inArray } from "drizzle-orm";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { expectedSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { hasSession } from "./session";
 import { getPortfolioItems } from "./dashboard";
 import { getBaseCurrency } from "./settings";
 import {
@@ -35,7 +34,7 @@ import { getTradeAnalysis } from "./investmentActivity";
 import type { Announced } from "@/lib/portfolio/dividendCalendar";
 
 async function requireSession() {
-  if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== (await expectedSessionValue())) {
+  if (!(await hasSession())) {
     throw new Error("Your session has expired. Sign in again.");
   }
 }

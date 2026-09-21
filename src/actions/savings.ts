@@ -1,16 +1,15 @@
 "use server";
 
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { accounts, categories, transactions } from '@/db/schema';
-import { expectedSessionValue, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { hasSession } from './session';
 import { assertCashbackLink, purchaseSavings } from '@/lib/money/savings';
 import { createQuickTransaction } from './transactions';
 
 async function authorize() {
-  if ((await cookies()).get(SESSION_COOKIE_NAME)?.value !== await expectedSessionValue()) throw new Error('Sign in again.');
+  if (!(await hasSession())) throw new Error('Sign in again.');
 }
 function refresh() {
   revalidatePath('/savings');

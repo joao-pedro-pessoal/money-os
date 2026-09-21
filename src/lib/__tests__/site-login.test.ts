@@ -35,6 +35,24 @@ describe("the site's login", () => {
     expect(callers).toEqual(["actions/siteLogin.ts", "lib/auth.ts"]);
   });
 
+  /**
+   * A session is handed out in three places: the login form after the
+   * password, the proxy renewing one it has just checked, and "Log out other
+   * devices" re-signing the device that pressed it. Every export of a
+   * "use server" module is an endpoint anyone can call, so a fourth — or the
+   * helper in session.ts becoming an export — would give a session to whoever
+   * asked for one.
+   */
+  it("issues a session only after a password or an existing session", () => {
+    const issuers = sourceFiles(SRC)
+      .filter((file) => /\.set\(\s*SESSION_COOKIE_NAME/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(SRC, file).replace(/\\/g, "/"))
+      .sort();
+    expect(issuers).toEqual(["actions/session.ts", "app/login/actions.ts", "proxy.ts"]);
+    const session = readFileSync(join(SRC, "actions/session.ts"), "utf8");
+    expect(session).not.toMatch(/export\s+(async\s+)?function\s+startSession/);
+  });
+
   it("goes through the limited login from the form", () => {
     const form = readFileSync(join(SRC, "app/login/actions.ts"), "utf8");
     expect(form).toContain("attemptSiteLogin(");
