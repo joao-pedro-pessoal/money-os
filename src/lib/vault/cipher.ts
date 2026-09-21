@@ -41,6 +41,18 @@ const MAX_CIPHERTEXT_HEX = (MAX_PLAINTEXT_BYTES + TAG_BYTES) * 2;
 const MAX_ENVELOPE_CHARS = MAX_CIPHERTEXT_HEX + 1024;
 
 /**
+ * The most a sync request may weigh, derived from the envelope above so the
+ * two cannot drift apart.
+ *
+ * The HTTP edge needs a ceiling of its own, because everything here checks a
+ * value that has already been read into memory: a body is parsed before any
+ * of it can be refused, and Next puts no limit on one. The slack covers the
+ * JSON around the envelope — the field names, the version numbers and the
+ * escaping of the envelope when it travels as a string.
+ */
+export const MAX_SYNC_BODY_BYTES = MAX_ENVELOPE_CHARS + 64 * 1024;
+
+/**
  * What an account id may look like.
  *
  * Restricted because it goes into the authenticated data joined by `|`: an id
