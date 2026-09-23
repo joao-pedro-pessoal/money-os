@@ -14,6 +14,7 @@ import { emptyDocument, type VaultDocument } from "@/lib/vault/document";
 import VaultLedger from "./VaultLedger";
 import VaultSignIn from "./VaultSignIn";
 import VaultBringIn from "./VaultBringIn";
+import VaultSeedPrompt from "./VaultSeedPrompt";
 
 const client = createVaultClient(fetchTransport());
 const SESSION_KEY = "money-os-vault-session";
@@ -41,6 +42,8 @@ export default function VaultApp() {
   const [status, setStatus] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  /** A Google sign-in that has an account but not yet the words that open it. */
+  const [awaitingSeed, setAwaitingSeed] = useState<{ session: VaultSession; isNew: boolean } | null>(null);
   const saving = useRef(false);
 
   /** Opens what the server holds, or starts an empty vault for a new account. */
@@ -72,10 +75,20 @@ export default function VaultApp() {
   }, []);
 
   // Back on this device: the token is still here, and the words are too while
-  // the tab lives. Either one missing means signing in again.
+  // the tab lives. Either one missing means signing in again — and a return
+  // from Google leaves a session waiting to be claimed, once.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      const address = new URL(window.location.href);
+      const googleProblem = address.searchParams.get("google_error");
+      if (googleProblem && !cancelled) setProblem(googleProblem);
+      if (address.searchParams.has("google") || googleProblem) {
+        address.searchParams.delete("google");
+        address.searchParams.delete("google_error");
+        window.history.replaceState(window.history.state, "", address);
+      }
+
       const raw = window.localStorage.getItem(SESSION_KEY);
       const words = window.sessionStorage.getItem(SEED_KEY);
       if (raw && words) {
@@ -85,6 +98,16 @@ export default function VaultApp() {
         } catch {
           // A stored session that no longer parses is one to sign in again for.
         }
+      }
+
+      try {
+        const claimed = await fetch("/api/vault/google/claim", { method: "POST", cache: "no-store" });
+        if (claimed.ok) {
+          const body = (await claimed.json()) as VaultSession & { isNew: boolean };
+          if (!cancelled) setAwaitingSeed({ session: { token: body.token, userId: body.userId, deviceId: body.deviceId }, isNew: body.isNew });
+        }
+      } catch {
+        // No sign-in waiting, which is the ordinary case.
       }
       if (!cancelled) setLoading(false);
     })();
@@ -136,6 +159,27 @@ export default function VaultApp() {
   };
 
   if (loading) return <p className="text-sm text-[var(--muted)]">Opening…</p>;
+
+  if (awaitingSeed) {
+    return (
+      <div className="space-y-4">
+        {problem && (
+          <p role="alert" className="card p-3 text-sm text-[var(--red)]">
+            {problem}
+          </p>
+        )}
+        <VaultSeedPrompt
+          isNew={awaitingSeed.isNew}
+          onReady={(words) => {
+            const waiting = awaitingSeed;
+            setAwaitingSeed(null);
+            void open(waiting.session, words);
+          }}
+          onCancel={() => setAwaitingSeed(null)}
+        />
+      </div>
+    );
+  }
 
   if (!session || !document) {
     return (

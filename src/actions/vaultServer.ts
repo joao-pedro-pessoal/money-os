@@ -173,6 +173,60 @@ export async function registerSyncAccount(raw: unknown) {
 }
 
 /**
+ * Signs in, or creates an account, for someone Google has just identified.
+ *
+ * Google settles who the person is and nothing else: the vault is still opened
+ * by the twelve words, which never reach Google or this server. So this creates
+ * the account and the device session, and the words are asked for — or shown to
+ * be written down — in the page afterwards.
+ *
+ * An address that already has a password account is refused rather than taken
+ * over. Both may well be the same person, but proving one login method does not
+ * prove another, and linking them is something to do knowingly from inside the
+ * account (task E03), not a side effect of pressing a button.
+ */
+export async function signInWithGoogle(identity: { subject: string; email: string }, deviceName: string) {
+  const name = deviceName.trim().slice(0, 80) || "Browser";
+  const [method] = await db
+    .select()
+    .from(syncLoginMethods)
+    .where(and(eq(syncLoginMethods.kind, "google"), eq(syncLoginMethods.subject, identity.subject)));
+
+  if (method) {
+    return await db.transaction(async (tx) => ({
+      ok: true as const,
+      isNew: false,
+      ...(await openSession(tx, method.userId, name)),
+    }));
+  }
+
+  const limit = maxAccounts(process.env.SYNC_MAX_ACCOUNTS);
+  const early = registrationRefusal(await registrationCounts(db), limit);
+  if (early) return refusal(early.status, early.reason);
+
+  try {
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('sync_users.register'))`);
+      const refused = registrationRefusal(await registrationCounts(tx), limit);
+      if (refused) return refusal(refused.status, refused.reason);
+      const [user] = await tx.insert(syncUsers).values({ email: identity.email }).returning({ id: syncUsers.id });
+      await tx
+        .insert(syncLoginMethods)
+        .values({ userId: user.id, kind: "google", subject: identity.subject, secretHash: null });
+      return { ok: true as const, isNew: true, ...(await openSession(tx, user.id, name)) };
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return refusal(
+        409,
+        "An account with this address already exists here. Sign in with its password; linking Google to it is not possible yet."
+      );
+    }
+    throw error;
+  }
+}
+
+/**
  * One more wrong password against a login method, and the lockout if it is the
  * last one allowed.
  *

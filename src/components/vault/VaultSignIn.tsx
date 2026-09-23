@@ -149,6 +149,21 @@ export default function VaultSignIn({ onOpen }: { onOpen: (session: VaultSession
       <button type="button" className="btn" disabled={busy} onClick={mode === "in" ? enter : create}>
         {busy ? "Working…" : mode === "in" ? "Open my vault" : freshSeed ? "Create the account" : "Show my twelve words"}
       </button>
+
+      {/*
+        Google settles who you are, not what you can read: the twelve words are
+        still asked for on the next screen. Said here, beside the button, because
+        "sign in with Google" everywhere else means there is nothing else to keep.
+      */}
+      <div className="pt-3 border-t border-[var(--border)] space-y-2">
+        <a className="btn inline-block" href="/api/vault/google/start">
+          Continue with Google
+        </a>
+        <p className="text-[11px] text-[var(--muted)]">
+          Google proves who you are, so there is no password to remember. It cannot open your vault: the twelve words
+          still do that, and you are asked for them — or given them — straight afterwards.
+        </p>
+      </div>
     </div>
   );
 }
