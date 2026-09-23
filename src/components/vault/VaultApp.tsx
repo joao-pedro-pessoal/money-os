@@ -13,6 +13,7 @@ import {
 import { emptyDocument, type VaultDocument } from "@/lib/vault/document";
 import VaultLedger from "./VaultLedger";
 import VaultSignIn from "./VaultSignIn";
+import VaultBringIn from "./VaultBringIn";
 
 const client = createVaultClient(fetchTransport());
 const SESSION_KEY = "money-os-vault-session";
@@ -165,6 +166,7 @@ export default function VaultApp() {
           {problem}
         </p>
       )}
+      <VaultBringIn document={document} onBring={(next) => void save(next, "records brought in")} />
       <VaultLedger document={document} onChange={(next, what) => void save(next, what)} saving={status} />
     </div>
   );
