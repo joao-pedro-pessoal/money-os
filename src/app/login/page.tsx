@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { login } from "./actions";
 import { siteLoginLockedUntil } from "@/actions/siteLogin";
 
@@ -26,6 +27,19 @@ export default async function LoginPage({
         <button type="submit" className="btn w-full">
           Enter
         </button>
+        {/*
+          This password belongs to whoever runs this installation. Anyone else
+          with an account here has a vault of their own, which this password
+          does not open and which opens without it — so the way in has to be on
+          this page, or they land on a locked door with no other handle.
+        */}
+        <p className="text-xs text-[var(--muted)] pt-2 border-t border-[var(--border)]">
+          Not the owner?{" "}
+          <Link href="/vault" className="text-[var(--accent)]">
+            Open your own vault
+          </Link>{" "}
+          — your account, encrypted with words only you have.
+        </p>
       </form>
     </div>
   );
