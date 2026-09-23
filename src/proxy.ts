@@ -33,6 +33,14 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith("/api/sync") ||
     pathname === "/api/vault" ||
     pathname.startsWith("/api/vault/") ||
+    /**
+     * A vault account is not this installation's owner: it has its own email
+     * and password at the sync server, and the site's single-user cookie would
+     * be the wrong credential entirely. The page it opens carries no data —
+     * everything on it is decrypted in the browser from the account's own vault.
+     */
+    pathname === "/vault" ||
+    pathname.startsWith("/vault/") ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/sw.js" ||
     pathname === "/offline.html" ||

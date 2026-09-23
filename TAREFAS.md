@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **21 de setembro de 2026**.
+Atualizado em **23 de setembro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -94,7 +94,7 @@ de casa (E01–E05).
 | ID | Tarefa | Estado e critério de conclusão |
 | --- | --- | --- |
 | E01 | Preparar o site para acesso fora da rede de casa | **Limite de tentativas feito a 21/09/2026:** 10 palavras-passe erradas bloqueiam o login do site 15 minutos (a mesma regra do cofre), contadas na base de dados; o ecrã diz a que horas reabre. Como a palavra-passe é uma só, o bloqueio também trava o dono — o custo já aceite no cofre. **Sessões feitas a 21/09/2026:** cada login tem o seu cookie, assinado e datado; expira ao fim de 30 dias sem uso (renovado uma vez por dia enquanto é usado) e **Settings → Signed-in devices → Log out other devices** termina todas as outras. Antes o cookie era o mesmo valor em todos os aparelhos e nunca expirava. Falta: HTTPS e verificar o acesso real de fora de casa. A publicação é uma etapa separada, quando solicitada. |
-| E02 | Integrar a experiência web com o cofre local | Preservar as funcionalidades e o design escolhidos, definir a migração dos dados do site e a decifragem no browser do PC. Não importar a base/ações web para o bundle nativo nem duplicar regras financeiras. |
+| E02 | Integrar a experiência web com o cofre local | **Em curso desde 23/09/2026** (decisão: contas com cofre cifrado, para família e amigos). Feito: o documento do cofre e as suas regras (`src/lib/vault/document.ts`), abrir e gravar no browser com controlo de versão (`src/lib/vault/client.ts`), as contas do mês e os orçamentos do cofre (`src/lib/vault/report.ts`) e a página `/vault` com registo, entrada, contas, movimentos, transferências, categorias e "onde o mês foi". Falta: passar os dados atuais do site para um cofre, orçamentos e regras de categorização no modo cofre, e as áreas de investimento (ficam fora do modo cofre até serem passadas). Critério original: Preservar as funcionalidades e o design escolhidos, definir a migração dos dados do site e a decifragem no browser do PC. Não importar a base/ações web para o bundle nativo nem duplicar regras financeiras. |
 | E03 | Completar identidade e isolamento | Acrescentar Google/Apple e associação segura de métodos à conta existente. Link por email permanece uma opção por configurar; email com palavra-passe já existe no cofre. Validar duas pessoas sem acesso cruzado e a migração do atual utilizador único. |
 | E04 | Sincronizar ao abrir a aplicação | A sincronização do cofre é manual. Automatizar receção e leituras das corretoras nos dispositivos com chaves, com intervalo mínimo, data/origem e estados de progresso/erro; preservar a última leitura válida. |
 | E05 | Completar offline e sincronização na experiência escolhida | Reaproveitar o protocolo existente. Validar fila persistente, repetição, falha a meio, edições concorrentes, restauro, eliminações e dois dispositivos sem duplicar movimentos nem saldos. |
