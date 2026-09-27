@@ -23,14 +23,26 @@ mesma base de dados.
    | `DATABASE_URL` | A mesma do teu `.env` (Neon). |
    | `APP_PASSWORD` | A tua palavra-passe do site. **Muda-a**: passa a estar exposta à internet. |
    | `APP_SECRET` | O mesmo do `.env`, ou um novo (um novo fecha as sessões abertas). |
-   | `ENCRYPTION_KEY` | **Exatamente a mesma** do `.env`. Outra torna ilegíveis as chaves das corretoras. |
    | `COOKIE_SECURE` | `true`. Na internet o cookie da sessão só deve viajar cifrado. |
    | `SYNC_MAX_ACCOUNTS` | Quantas contas de cofre aceitas (por defeito 10). |
+
+   **A `ENCRYPTION_KEY` não vai para a Vercel.** É ela que abre os segredos das
+   corretoras guardados na base de dados, e a regra do projeto é que só existe
+   no teu PC (README, *Where your API keys live*). A base de dados na Neon tem
+   os segredos cifrados; sem a chave, nem a Neon nem a Vercel os conseguem ler.
+   Sem ela, a cópia da Vercel mostra o que foi sincronizado em casa e não tenta
+   abrir segredo nenhum: nessas ligações aparece *Synced where its key is* em
+   vez de *Sync now*.
 
    E **não** ponhas estas, mesmo que a Vercel as traga ao importar o
    `.env.example`: `POSTGRES_PASSWORD` (só serve ao docker-compose; na nuvem a
    base de dados é a Neon), `SYNC_INTERVAL_SECONDS` e `IBKR_GATEWAY_URL` (não
    funcionam na nuvem). Apaga-as no `—` ao lado.
+
+   Se já puseste a `ENCRYPTION_KEY` na Vercel: apaga-a, faz **Redeploy**, e
+   apaga também os deploys antigos (**Deployments → ⋯ → Delete**). Cada deploy
+   guarda a sua própria cópia das variáveis, e um deploy antigo continuaria a
+   tê-la.
 
    Os valores vão **sem as aspas** que têm no `.env`.
 
@@ -43,6 +55,10 @@ mesma base de dados.
 
 ### O que não funciona na nuvem
 
+- **Sincronizar as corretoras com chave** (Trading 212, MEXC, Bybit, Binance,
+  OKX, Kraken, SnapTrade): de propósito, porque a chave que lhes abre os
+  segredos fica em casa. Os valores sincronizados em casa aparecem na nuvem na
+  mesma. A Hyperliquid não guarda segredo e sincroniza em qualquer lado.
 - **A Interactive Brokers**: o conector fala com um gateway em
   `https://localhost:5000`, que é o teu PC. Continua a funcionar na cópia de casa.
 - **A sincronização automática** (`/api/sync`): só corre se puseres `SYNC_SECRET` e

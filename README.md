@@ -159,7 +159,10 @@ your stored API secrets, and losing it means reconnecting every platform.
 **Where your API keys live.** In this web app they are stored in your database,
 encrypted with AES-256-GCM. The key that decrypts them is `ENCRYPTION_KEY`, which
 exists only in `.env` and never enters the database — so a copy of the database
-alone, including one kept by a hosted Postgres provider, cannot read them. They
+alone, including one kept by a hosted Postgres provider, cannot read them. The
+same goes for a hosted copy of the app ([docs/FORA_DE_CASA.md](docs/FORA_DE_CASA.md)):
+it runs without `ENCRYPTION_KEY` on purpose, shows what was synced where the key
+is, and does not attempt a connection whose secret it cannot open. They
 are **not** kept on a single device: the phone app opens the site and stores no
 keys at all, and its widgets read figures through the session, never a key. Keys that never leave one device exist only in the separate native
 app in [mobile/](mobile/), which is not the app in daily use; bringing that
@@ -178,7 +181,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2630 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2635 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 

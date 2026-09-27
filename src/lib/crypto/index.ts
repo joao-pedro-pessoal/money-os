@@ -26,10 +26,38 @@ const TAG_LENGTH = 16;
  * word. The setup docs say so explicitly.
  */
 export function deriveKey(masterKey: string): Buffer {
-  if (!masterKey || masterKey.length < 16) {
+  if (!holdsMasterKey(masterKey)) {
     throw new Error("ENCRYPTION_KEY must be at least 16 characters");
   }
   return createHash("sha256").update(masterKey).digest();
+}
+
+/**
+ * Whether this copy of the app holds a key that opens stored secrets.
+ *
+ * Not every copy should. The one at home has it in `.env`. A copy on a hosting
+ * service runs without it on purpose (docs/FORA_DE_CASA.md): the database it
+ * shares holds the secrets encrypted, and the service is never given what opens
+ * them. The same test `deriveKey` applies, so "holds a key" means "a key
+ * `deriveKey` would accept".
+ */
+export function holdsMasterKey(value: string | undefined): value is string {
+  return typeof value === "string" && value.length >= 16;
+}
+
+/**
+ * Whether a stored connection carries something this copy cannot open.
+ *
+ * That is not a broken connection — it works wherever the key is — so a sync
+ * here is skipped rather than recorded as a failure. Recording it would mark
+ * the connection as failing in the database every copy shares, and the copy
+ * at home, where it syncs fine, would show an error that is not its own.
+ */
+export function secretLockedHere(
+  stored: { encryptedSecret: string | null; encryptedPassphrase: string | null },
+  masterKey: string | undefined
+): boolean {
+  return (stored.encryptedSecret !== null || stored.encryptedPassphrase !== null) && !holdsMasterKey(masterKey);
 }
 
 /**

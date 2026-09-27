@@ -523,6 +523,11 @@ export default function ManualPage() {
               They need <span className="font-mono text-xs">ENCRYPTION_KEY</span> configured —
               change it and those connections stop working, with no way back.
             </p>
+            <p>
+              The key lives only on your own computer. A copy running on a hosting
+              service shares the database but not the key, so it shows what was last
+              synced and cannot open a single secret — those connections sync at home.
+            </p>
           </Note>
         </Entry>
 

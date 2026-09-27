@@ -31,31 +31,37 @@ Sem isto só funciona dentro de casa, com o teu PC ligado.
    compilação; é Next.js e a Vercel reconhece-o. Se não aparecer nenhum
    repositório, há um botão para instalar a app da Vercel na tua conta GitHub —
    dá-lhe acesso só a `money-os`.
-3. Em **Environment Variables**, põe estas seis, uma a uma:
+3. Em **Environment Variables**, põe estas cinco, uma a uma:
 
    | Variável | O que meter |
    | --- | --- |
    | `DATABASE_URL` | A mesma do teu `.env` (a da Neon, com `neon.tech` no meio). |
    | `APP_PASSWORD` | **Uma nova, longa.** Passa a estar exposta à internet. |
    | `APP_SECRET` | O mesmo do `.env` (um novo fecha as sessões abertas). |
-   | `ENCRYPTION_KEY` | **Exatamente a mesma** do `.env`. |
    | `COOKIE_SECURE` | `true`. |
    | `SYNC_MAX_ACCOUNTS` | Quantas pessoas aceitas. Para uma família, `6` ou `10`. |
+
+   **A `ENCRYPTION_KEY` fica em casa.** É a chave que abre os segredos das
+   corretoras, e só existe no teu PC. A Neon guarda esses segredos cifrados, e
+   sem a chave nem a Neon nem a Vercel os leem. A cópia da Vercel mostra o que
+   foi sincronizado em casa; as corretoras com chave sincronizam-se em casa.
 
    **Não importes o `.env.example` inteiro.** Ele tem linhas que só servem cá em
    casa, e a Vercel copia-as todas:
 
+   - `ENCRYPTION_KEY` — ver acima.
    - `POSTGRES_PASSWORD` — é da base de dados em contentor (docker-compose). Na
      nuvem a base de dados é a Neon, e chega-se lá pelo `DATABASE_URL`.
    - `SYNC_INTERVAL_SECONDS` e `IBKR_GATEWAY_URL` — não funcionam na nuvem.
    - `SYNC_SECRET` — fica para quando quiseres sincronização agendada.
 
-   Se já lá estiverem, apaga-as no `—` ao lado.
+   Se já lá estiverem, apaga-as no `—` ao lado. Se a `ENCRYPTION_KEY` já lá
+   esteve num deploy, apaga também esse deploy (**Deployments → ⋯ → Delete**):
+   cada deploy guarda a sua cópia das variáveis.
 
    **Sem aspas.** No `.env` os valores estão entre `"…"`, e as aspas não fazem
    parte deles. Na Vercel mete só o que está dentro: com aspas, a palavra-passe
-   passa a ter aspas, e a `ENCRYPTION_KEY` deixa de abrir as chaves das
-   corretoras.
+   passa a ter aspas.
 
 4. **Deploy**. Mudar uma variável **depois** não muda o site que já está a
    correr: só conta depois de **Deployments → ⋯ → Redeploy**.
@@ -76,9 +82,10 @@ Isto não substitui o que tens em casa. O `SITE_PARA_TELEMOVEL.cmd` continua a
 funcionar, e as duas cópias usam a **mesma base de dados** — o que gravas num
 sítio aparece no outro.
 
-**O que não funciona na nuvem:** a Interactive Brokers (o conector fala com um
+**O que não funciona na nuvem:** sincronizar as corretoras com chave (de
+propósito — a chave fica em casa), a Interactive Brokers (o conector fala com um
 gateway no teu PC) e a sincronização automática. Isso continua a ser feito em
-casa.
+casa, e o resultado aparece na nuvem.
 
 ## Passo 2 — entrar com a Google (podes saltar)
 

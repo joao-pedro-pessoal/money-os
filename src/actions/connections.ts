@@ -28,7 +28,7 @@ import { createKrakenConnector } from "@/lib/connectors/kraken";
 import { createBinanceConnector } from "@/lib/connectors/binance";
 import { createOkxConnector } from "@/lib/connectors/okx";
 import { createMexcConnector } from "@/lib/connectors/mexc";
-import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
+import { encryptSecret, decryptSecret, holdsMasterKey, maskSecret, secretLockedHere } from "@/lib/crypto";
 import { freshnessOf } from "@/lib/connectors/freshness";
 import { marginView, describePressure } from "@/lib/connectors/margin";
 import { refreshRates } from "./fx";
@@ -123,7 +123,7 @@ const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken", "binance", "okx",
  * crashing on submit after the user has typed their credentials in.
  */
 export async function canStoreSecrets(): Promise<boolean> {
-  return Boolean(process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.length >= 16);
+  return holdsMasterKey(process.env.ENCRYPTION_KEY);
 }
 
 function masterKey(): string {
@@ -146,10 +146,11 @@ export async function listConnections() {
   return conns.map((c) => {
     // The encrypted secret must never reach a page prop; only a masked hint.
     const { encryptedSecret, encryptedPassphrase, ...safe } = c;
-    void encryptedPassphrase;
     return {
       ...safe,
       hasSecret: encryptedSecret !== null,
+      /** Synced wherever the key is, never from this copy: see `secretLockedHere`. */
+      lockedHere: secretLockedHere({ encryptedSecret, encryptedPassphrase }, process.env.ENCRYPTION_KEY),
       externalIdMasked: maskSecret(c.externalId),
       accountName: accountName.get(c.accountId) ?? "(unknown account)",
       freshness: freshnessOf({ lastSyncAt: c.lastSyncAt, lastSyncStatus: c.lastSyncStatus }),
@@ -676,6 +677,10 @@ export async function syncConnectionAction(formData: FormData) {
  *
  * Never throws: a failure is recorded on the connection and in the sync log so
  * the UI can show ERROR rather than silently presenting stale data as live.
+ *
+ * Except on a copy without the key, where a connection with a stored secret is
+ * not attempted and nothing is written. It has not failed; it is synced where
+ * the key is, and the page says so (`lockedHere`).
  */
 export async function syncConnection(connectionId: string, trigger: "manual" | "scheduled" = "manual") {
   const [conn] = await db
@@ -684,6 +689,13 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
     .where(eq(accountConnections.id, connectionId));
 
   if (!conn) throw new Error("Connection not found");
+
+  if (secretLockedHere(conn, process.env.ENCRYPTION_KEY)) {
+    return {
+      ok: false as const,
+      error: "Not synced here: this copy does not hold ENCRYPTION_KEY, so it cannot open this connection's secret.",
+    };
+  }
 
   const startedAt = new Date();
 

@@ -171,8 +171,9 @@ export default function ConnectionForm({
           style={{ borderLeft: "2px solid var(--amber)" }}
         >
           <div className="text-[var(--foreground)]">
-            {config.identifierLabel === "API key" ? "Bybit" : "This platform"} stores an API secret, which
-            needs an encryption key. Add this line to your <span className="font-mono">.env</span>:
+            This platform stores an API secret, which needs an encryption key. On a copy running on a hosting
+            service, add it on your own computer instead: the key is kept off the service on purpose. On your own
+            computer, add this line to your <span className="font-mono">.env</span>:
           </div>
           <pre className="font-mono text-[10px] bg-[var(--surface-2)] p-2 rounded overflow-x-auto">
 ENCRYPTION_KEY=&quot;{"paste-a-long-random-string-here-at-least-16-chars"}&quot;

@@ -72,25 +72,34 @@ export default async function ConnectionsPage() {
         </Link>
       </div>
 
+      {/* Two readings of the same absence. On a hosted copy it is deliberate:
+          the service shares the database, holds the secrets encrypted, and is
+          never given what opens them (docs/FORA_DE_CASA.md). On the computer
+          at home it is a key still to be set. The card says both, first the
+          one that must not be "fixed" by pasting the key into a hosting
+          service. */}
       {!secretsAvailable && (
         <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
-          <div className="text-sm">Bybit is unavailable until you set an encryption key</div>
+          <div className="text-sm">API secrets cannot be opened on this copy</div>
           <div className="text-xs text-[var(--muted)] mt-2 space-y-2">
             <p>
-              Bybit needs an API secret, and secrets are never stored unencrypted. Add this line to{" "}
+              Secrets are stored encrypted, and only a copy holding{" "}
+              <span className="font-mono text-[var(--foreground)]">ENCRYPTION_KEY</span> can open them. On a
+              copy running on a hosting service that is on purpose: the key stays on your own computer, so the
+              service never holds what opens your broker accounts. Connections with a secret are synced and
+              added there; here you see what they last read. Hyperliquid needs no secret and syncs anywhere.
+            </p>
+            <p>
+              If this <span className="text-[var(--foreground)]">is</span> your own computer, add this line to{" "}
               <span className="font-mono text-[var(--foreground)]">.env</span> in the project folder:
             </p>
             <pre className="font-mono text-[10px] bg-[var(--surface-2)] p-2 rounded overflow-x-auto">
 ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
             </pre>
             <p>
-              Then stop the app and run{" "}
-              <span className="font-mono text-[var(--foreground)]">npm run dev</span> again — the file is only
-              read at startup, so editing it while the app runs changes nothing.
-            </p>
-            <p>
-              Keep that key somewhere safe. Whoever has it can decrypt your stored API secrets, and losing it
-              means losing them. Hyperliquid needs no key — its read endpoint is public.
+              Then stop the app and start it again — the file is only read at startup, so editing it while the
+              app runs changes nothing. Keep that key somewhere safe: whoever has it can decrypt your stored API
+              secrets, and losing it means losing them.
             </p>
           </div>
         </div>
@@ -213,12 +222,18 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                 </div>
 
                 <div className="connection-actions flex items-center gap-3">
-                  <form action={syncConnectionAction}>
-                    <input type="hidden" name="id" value={c.id} />
-                    <button type="submit" className="btn">
-                      Sync now
-                    </button>
-                  </form>
+                  {c.lockedHere ? (
+                    <span className="text-xs text-[var(--muted)]" title="This copy does not hold ENCRYPTION_KEY">
+                      Synced where its key is
+                    </span>
+                  ) : (
+                    <form action={syncConnectionAction}>
+                      <input type="hidden" name="id" value={c.id} />
+                      <button type="submit" className="btn">
+                        Sync now
+                      </button>
+                    </form>
+                  )}
                   <form action={deleteConnection} className="connection-remove">
                     <input type="hidden" name="id" value={c.id} />
                     <ConfirmSubmitButton
