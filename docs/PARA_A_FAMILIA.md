@@ -19,19 +19,38 @@ Pede-me, que eu envio.
 
 Sem isto só funciona dentro de casa, com o teu PC ligado.
 
-1. Vai a [vercel.com](https://vercel.com) e entra com o teu GitHub.
+1. Vai a [vercel.com](https://vercel.com) e entra.
+
+   Se ao entrares pela GitHub aparecer *«There is already an account associated
+   with your GitHub email address»*, é porque já tens conta feita com esse
+   email. Entra pelo método antigo (o botão marcado *Last Used*, ou **Continue
+   with Email**, que manda um código) e depois liga a GitHub em **avatar →
+   Settings → Authentication**. Não uses *Sign Up*: criava uma segunda conta.
+
 2. **Add New → Project**, escolhe `money-os`. Não configures nada da
-   compilação; é Next.js e a Vercel reconhece-o.
-3. Em **Environment Variables**:
+   compilação; é Next.js e a Vercel reconhece-o. Se não aparecer nenhum
+   repositório, há um botão para instalar a app da Vercel na tua conta GitHub —
+   dá-lhe acesso só a `money-os`.
+3. Em **Environment Variables**, põe estas seis, uma a uma:
 
    | Variável | O que meter |
    | --- | --- |
-   | `DATABASE_URL` | A mesma do teu `.env` (Neon). |
+   | `DATABASE_URL` | A mesma do teu `.env` (a da Neon, com `neon.tech` no meio). |
    | `APP_PASSWORD` | **Uma nova, longa.** Passa a estar exposta à internet. |
    | `APP_SECRET` | O mesmo do `.env` (um novo fecha as sessões abertas). |
    | `ENCRYPTION_KEY` | **Exatamente a mesma** do `.env`. |
    | `COOKIE_SECURE` | `true`. |
    | `SYNC_MAX_ACCOUNTS` | Quantas pessoas aceitas. Para uma família, `6` ou `10`. |
+
+   **Não importes o `.env.example` inteiro.** Ele tem linhas que só servem cá em
+   casa, e a Vercel copia-as todas:
+
+   - `POSTGRES_PASSWORD` — é da base de dados em contentor (docker-compose). Na
+     nuvem a base de dados é a Neon, e chega-se lá pelo `DATABASE_URL`.
+   - `SYNC_INTERVAL_SECONDS` e `IBKR_GATEWAY_URL` — não funcionam na nuvem.
+   - `SYNC_SECRET` — fica para quando quiseres sincronização agendada.
+
+   Se já lá estiverem, apaga-as no `—` ao lado.
 
 4. **Deploy**. Fica um endereço tipo `https://money-os-xxxx.vercel.app`.
 5. Abre-o para confirmar: a raiz pede a tua palavra-passe, e `/vault` abre sem

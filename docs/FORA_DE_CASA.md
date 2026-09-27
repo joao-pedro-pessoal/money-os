@@ -10,7 +10,10 @@ mesma base de dados.
 
 ## 1. Pôr o site na Vercel
 
-1. Cria conta em [vercel.com](https://vercel.com) com o teu GitHub.
+1. Entra em [vercel.com](https://vercel.com) com o teu GitHub. Se a Vercel disser
+   que já existe uma conta com o email da GitHub, entra pelo método com que a
+   criaste (*Last Used*, ou **Continue with Email**) e liga depois a GitHub em
+   **avatar → Settings → Authentication**.
 2. **Add New → Project** e escolhe o repositório `money-os`. O projeto é Next.js,
    por isso não é preciso configurar nada da compilação.
 3. Em **Environment Variables**, põe:
@@ -23,6 +26,11 @@ mesma base de dados.
    | `ENCRYPTION_KEY` | **Exatamente a mesma** do `.env`. Outra torna ilegíveis as chaves das corretoras. |
    | `COOKIE_SECURE` | `true`. Na internet o cookie da sessão só deve viajar cifrado. |
    | `SYNC_MAX_ACCOUNTS` | Quantas contas de cofre aceitas (por defeito 10). |
+
+   E **não** ponhas estas, mesmo que a Vercel as traga ao importar o
+   `.env.example`: `POSTGRES_PASSWORD` (só serve ao docker-compose; na nuvem a
+   base de dados é a Neon), `SYNC_INTERVAL_SECONDS` e `IBKR_GATEWAY_URL` (não
+   funcionam na nuvem). Apaga-as no `—` ao lado.
 
 4. **Deploy**. No fim ficas com um endereço `https://money-os-xxxx.vercel.app`.
 5. Abre-o: o site pede a palavra-passe, e `/vault` abre sem ela.
