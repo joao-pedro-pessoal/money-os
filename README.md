@@ -191,6 +191,23 @@ in it is there because it has already gone wrong at least once.
 
 ---
 
+## A vault for someone else
+
+Everything above is the owner's side: one household's records, behind one
+password. Someone else — a partner, a parent, a friend — opens `/vault` instead
+and gets an account of their own: accounts, categories, movements, transfers and
+budgets, encrypted in their own browser with twelve words this server never
+sees. It stores ciphertext it cannot read, so running it for other people
+carries none of the responsibility that holding their records would.
+
+It is a budget manager, not this whole app: no investments, no broker
+connections, no reports. Twelve words lost are a vault lost, by design, and
+signing in with Google says who someone is without being able to open anything.
+
+To set it up for other people: [docs/PARA_A_FAMILIA.md](docs/PARA_A_FAMILIA.md)
+for the steps, [docs/FORA_DE_CASA.md](docs/FORA_DE_CASA.md) for running it
+outside the house and for Google sign-in.
+
 ## What it deliberately will not do
 
 Before offering the app to other people, follow the [legal, privacy and security
