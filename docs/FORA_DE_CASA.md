@@ -32,7 +32,13 @@ mesma base de dados.
    base de dados é a Neon), `SYNC_INTERVAL_SECONDS` e `IBKR_GATEWAY_URL` (não
    funcionam na nuvem). Apaga-as no `—` ao lado.
 
-4. **Deploy**. No fim ficas com um endereço `https://money-os-xxxx.vercel.app`.
+   Os valores vão **sem as aspas** que têm no `.env`.
+
+4. **Deploy**. No fim ficas com um endereço `https://money-os-xxxx.vercel.app`
+   (o que aparece em **Domains**). Uma variável mudada depois só conta com
+   **Redeploy**. Os endereços compridos de cada deploy estão atrás do login da
+   Vercel; se o de **Domains** também estiver, desliga **Vercel
+   Authentication** em **Settings → Deployment Protection**.
 5. Abre-o: o site pede a palavra-passe, e `/vault` abre sem ela.
 
 ### O que não funciona na nuvem

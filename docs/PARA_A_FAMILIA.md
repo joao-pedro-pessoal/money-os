@@ -52,9 +52,25 @@ Sem isto só funciona dentro de casa, com o teu PC ligado.
 
    Se já lá estiverem, apaga-as no `—` ao lado.
 
-4. **Deploy**. Fica um endereço tipo `https://money-os-xxxx.vercel.app`.
-5. Abre-o para confirmar: a raiz pede a tua palavra-passe, e `/vault` abre sem
-   ela.
+   **Sem aspas.** No `.env` os valores estão entre `"…"`, e as aspas não fazem
+   parte deles. Na Vercel mete só o que está dentro: com aspas, a palavra-passe
+   passa a ter aspas, e a `ENCRYPTION_KEY` deixa de abrir as chaves das
+   corretoras.
+
+4. **Deploy**. Mudar uma variável **depois** não muda o site que já está a
+   correr: só conta depois de **Deployments → ⋯ → Redeploy**.
+5. Confirma no endereço que está em **Domains**, na página do projeto (algo
+   como `https://money-os-xxxx.vercel.app`): a raiz pede a tua palavra-passe, e
+   `/vault` abre sem ela.
+
+   Os outros endereços da Vercel (os compridos, com letras ao calhas e o nome
+   da tua conta no meio) estão protegidos pela própria Vercel: tu passas porque
+   tens sessão iniciada nela, a família não. Abre o de **Domains** numa janela
+   anónima; se pedir login da Vercel, desliga **Vercel Authentication** em
+   **Settings → Deployment Protection**.
+
+   Se não conseguires entrar, a página **Logs** do projeto diz porquê. Uma
+   variável em falta aparece pelo nome: *«APP_PASSWORD is not set»*.
 
 Isto não substitui o que tens em casa. O `SITE_PARA_TELEMOVEL.cmd` continua a
 funcionar, e as duas cópias usam a **mesma base de dados** — o que gravas num
