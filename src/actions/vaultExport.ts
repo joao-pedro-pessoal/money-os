@@ -18,6 +18,18 @@ import type { VaultDocument } from "@/lib/vault/document";
  * site's tables exactly as they were, so the two can be compared afterwards
  * and the move can be undone by simply not using the vault.
  */
+/**
+ * Whether whoever is looking is signed in to the site as its owner.
+ *
+ * Only so the vault page can leave the offer above out for everyone else — a
+ * relative opening their first vault was greeted by "if you are its owner" and
+ * a button that could only refuse them. It tells the caller about their own
+ * cookie and nothing more.
+ */
+export async function isSiteOwner(): Promise<boolean> {
+  return hasSession();
+}
+
 export async function siteAsVaultDocument(): Promise<{ document: VaultDocument; leftOut: LeftOut[] }> {
   if (!(await hasSession())) {
     throw new Error("Only this Money OS's owner can bring its records into a vault. Sign in to the site first.");

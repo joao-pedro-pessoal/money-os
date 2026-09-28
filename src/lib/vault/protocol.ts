@@ -14,7 +14,7 @@ import { PASSWORD_MAX, passwordProblem } from "./password";
  */
 
 const email = z.string().trim().toLowerCase().max(254).pipe(z.email());
-const deviceName = z.string().trim().min(1).max(80);
+export const deviceName = z.string().trim().min(1).max(80);
 
 export const RegisterRequest = z
   .object({

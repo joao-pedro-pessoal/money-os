@@ -4,9 +4,11 @@ import { useState } from "react";
 import { createVaultClient, fetchTransport, type VaultSession } from "@/lib/vault/client";
 import { generateSeed, isValidSeed } from "@/lib/vault/seed";
 import { passwordProblem } from "@/lib/vault/password";
+import { describeDevice } from "@/lib/vault/link";
+import KeepOpenChoice from "./KeepOpenChoice";
 
 const client = createVaultClient(fetchTransport());
-const deviceName = () => (typeof navigator === "undefined" ? "Browser" : navigator.userAgent.slice(0, 60));
+const deviceName = () => (typeof navigator === "undefined" ? "Browser" : describeDevice(navigator.userAgent));
 
 /**
  * Creating a vault account, or signing one in on this device.
@@ -17,13 +19,18 @@ const deviceName = () => (typeof navigator === "undefined" ? "Browser" : navigat
  * runs this site — and why losing both means losing the money records, which is
  * said here, before an account exists, rather than in a help page afterwards.
  */
-export default function VaultSignIn({ onOpen }: { onOpen: (session: VaultSession, seed: string) => void }) {
+export default function VaultSignIn({
+  onOpen,
+}: {
+  onOpen: (session: VaultSession, seed: string, keep: boolean) => void;
+}) {
   const [mode, setMode] = useState<"in" | "new">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [seed, setSeed] = useState("");
   const [freshSeed, setFreshSeed] = useState<string | null>(null);
   const [written, setWritten] = useState(false);
+  const [keep, setKeep] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +45,7 @@ export default function VaultSignIn({ onOpen }: { onOpen: (session: VaultSession
     setBusy(true);
     setError(null);
     try {
-      onOpen(await client.register(email.trim(), password, deviceName()), freshSeed);
+      onOpen(await client.register(email.trim(), password, deviceName()), freshSeed, keep);
     } catch (e) {
       setError(e instanceof Error ? e.message : "The account could not be created.");
     } finally {
@@ -51,7 +58,7 @@ export default function VaultSignIn({ onOpen }: { onOpen: (session: VaultSession
     setBusy(true);
     setError(null);
     try {
-      onOpen(await client.login(email.trim(), password, deviceName()), seed.trim());
+      onOpen(await client.login(email.trim(), password, deviceName()), seed.trim(), keep);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not sign in.");
     } finally {
@@ -119,8 +126,9 @@ export default function VaultSignIn({ onOpen }: { onOpen: (session: VaultSession
             placeholder="word word word …"
           />
           <span className="text-[11px] text-[var(--muted)]">
-            They stay in this browser tab and are never sent. Without them the vault cannot be opened, here or by
-            anyone else.
+            They stay on this device and are never sent. Without them the vault cannot be opened, here or by anyone
+            else. Already signed in on a computer? Open the vault there and use <strong>Open on your phone</strong>{" "}
+            instead of typing all this.
           </span>
         </label>
       ) : (
@@ -139,6 +147,8 @@ export default function VaultSignIn({ onOpen }: { onOpen: (session: VaultSession
           </div>
         )
       )}
+
+      <KeepOpenChoice keep={keep} onChange={setKeep} />
 
       {error && (
         <p role="alert" className="text-xs text-[var(--red)]">

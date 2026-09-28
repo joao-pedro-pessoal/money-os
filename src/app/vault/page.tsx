@@ -1,6 +1,19 @@
+import type { Metadata } from "next";
 import VaultApp from "@/components/vault/VaultApp";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Its own manifest, so "Add to home screen" from here opens here.
+ *
+ * The site's manifest starts at `/`, which for anyone but the owner is a
+ * password they do not have: an installed vault opened on the owner's login
+ * page, one tap away from where it should have been.
+ */
+export const metadata: Metadata = {
+  title: "Your vault · Money OS",
+  manifest: "/vault/manifest.webmanifest",
+};
 
 /**
  * Where someone who is not the owner of this installation keeps their money

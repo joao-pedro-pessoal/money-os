@@ -105,7 +105,9 @@ emails que puseres em **Test users**.
 
 ## Passo 3 — o que dizes a cada pessoa
 
-Manda-lhes o endereço `https://…vercel.app/vault` e estas quatro linhas:
+Manda-lhes o endereço `https://…vercel.app/vault` e isto:
+
+**No computador, a primeira vez**
 
 1. Abre o endereço e carrega em **Create an account** (ou *Continue with
    Google*).
@@ -113,12 +115,36 @@ Manda-lhes o endereço `https://…vercel.app/vault` e estas quatro linhas:
    documentos.
 3. Essas doze palavras são a chave. **Ninguém as pode devolver** — nem eu, nem o
    servidor, nem a Google. Perdê-las é perder o que está lá dentro.
-4. No telemóvel: abre no Chrome ou Safari e usa **Adicionar ao ecrã principal**.
-   Fica com ícone, como uma app.
+4. Se o computador for só teu, marca **This phone or computer is mine**: assim
+   não pede as doze palavras cada vez. Num computador partilhado, deixa
+   desmarcado.
 
-Numa segunda pessoa, num segundo aparelho, entra-se com o mesmo email e as
-mesmas doze palavras. É o mesmo cofre, e as alterações passam de um aparelho
-para o outro.
+**No telemóvel, com o código QR**
+
+1. No computador, com o cofre aberto, carrega em **Open on your phone → Show
+   the code**.
+2. Aponta a câmara do telemóvel ao código e abre a ligação que aparece.
+3. O computador pergunta *«Android phone · Chrome scanned the code and wants to
+   open your vault»* (ou o nome do teu telemóvel). Se for o telemóvel que tens na
+   mão, carrega em **Yes, let it in**.
+4. O telemóvel abre o cofre sozinho, sem escrever email, palavra-passe nem
+   doze palavras, e fica aberto até carregares em **Lock and sign out**.
+5. No Chrome ou no Safari, usa **Adicionar ao ecrã principal**. Fica com ícone,
+   como uma app, e abre diretamente no cofre.
+
+O código dura 5 minutos e só funciona uma vez. Se alguém o fotografar, só
+consegue que te apareça a pergunta no computador — por isso, se o nome não for
+o do teu telemóvel, carrega em **No**.
+
+O código tem de ser mostrado a partir do endereço da Vercel (ou do endereço do
+PC na rede de casa). Aberto como `localhost`, o computador avisa que o telemóvel
+não o consegue abrir.
+
+**Os aparelhos**
+
+Em **Devices**, no fundo do cofre, aparece cada aparelho com sessão aberta.
+**Sign out** tira-o de lá. Num telemóvel perdido: tira-o em Devices, e conta que
+as doze palavras podem ter sido vistas, porque estavam guardadas nele.
 
 ## O que isto ainda não é
 
@@ -133,6 +159,11 @@ Dito de frente, para ninguém contar com o que não existe:
 - **Não há reposição de palavra-passe** nem de doze palavras.
 - Dois aparelhos a gravar ao mesmo tempo: o segundo é avisado e volta a ler
   antes de gravar. Não se perde nada, mas às vezes há que repetir.
+- **Qualquer pessoa que descubra o endereço pode criar uma conta**, até ao
+  limite de `SYNC_MAX_ACCOUNTS`. Não vê nada de ninguém, mas ocupa um lugar.
+  Convites (só entra quem tu convidas) é trabalho por fazer.
+- **A cifra nunca foi revista por alguém de fora.** O checklist do projeto pede
+  essa revisão antes de guardar dados de outras pessoas a sério.
 
 ## Se preferires ficar só em casa
 

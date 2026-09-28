@@ -181,7 +181,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2635 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2652 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 

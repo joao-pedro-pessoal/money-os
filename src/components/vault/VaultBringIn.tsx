@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { siteAsVaultDocument } from "@/actions/vaultExport";
+import { useEffect, useState } from "react";
+import { isSiteOwner, siteAsVaultDocument } from "@/actions/vaultExport";
 import type { VaultDocument } from "@/lib/vault/document";
 import type { LeftOut } from "@/lib/vault/import";
 
 /**
  * Bringing this installation's own records into the vault, for its owner.
  *
- * Offered only while the vault is still empty. A vault with movements in it
+ * Offered only to someone signed in to the site as its owner, and only while
+ * the vault is still empty. A vault with movements in it
  * would have to be merged with the site's, and a merge nobody asked for is how
  * one set of records quietly becomes two of everything — so the choice is made
  * before there is anything to lose.
@@ -27,9 +28,25 @@ export default function VaultBringIn({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ document: VaultDocument; leftOut: LeftOut[] } | null>(null);
+  /** Null until known; only the site's owner is offered the site's records. */
+  const [owner, setOwner] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    isSiteOwner()
+      .then((yes) => {
+        if (!cancelled) setOwner(yes);
+      })
+      .catch(() => {
+        if (!cancelled) setOwner(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const empty = document.accounts.length === 0 && document.movements.length === 0;
-  if (!empty && !preview) return null;
+  if (!owner || (!empty && !preview)) return null;
 
   const read = async () => {
     setBusy(true);

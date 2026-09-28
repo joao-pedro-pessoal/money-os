@@ -15,20 +15,19 @@ import VaultLedger from "./VaultLedger";
 import VaultSignIn from "./VaultSignIn";
 import VaultBringIn from "./VaultBringIn";
 import VaultSeedPrompt from "./VaultSeedPrompt";
+import VaultPhoneLink from "./VaultPhoneLink";
+import VaultDevices from "./VaultDevices";
+import { forgetVault, isKept, recallVault, rememberVault } from "./storage";
 
 const client = createVaultClient(fetchTransport());
-const SESSION_KEY = "money-os-vault-session";
-const SEED_KEY = "money-os-vault-seed";
 
 /**
  * A vault account on the site, from signing in to every save.
  *
- * Where the two secrets live is the whole design. The session token goes in
- * `localStorage`, so the account stays signed in on this device — it proves who
- * the account is and unlocks nothing. The twelve words go in `sessionStorage`,
- * which the browser drops when the tab closes: they decrypt the money records,
- * and a key that outlives the tab is a key left in the door of a shared
- * computer. Neither is ever sent; the server sees a token and ciphertext.
+ * Where the two secrets live is the whole design, and it is in `storage.ts`:
+ * the session token outlives the visit and unlocks nothing; the twelve words
+ * last only the visit unless the person says this device is theirs. Neither is
+ * ever sent; the server sees a token and ciphertext.
  *
  * Saving is immediate and one version at a time. A save that would land on top
  * of a newer version from another device stops and says so, because the other
@@ -44,10 +43,16 @@ export default function VaultApp() {
   const [loading, setLoading] = useState(true);
   /** A Google sign-in that has an account but not yet the words that open it. */
   const [awaitingSeed, setAwaitingSeed] = useState<{ session: VaultSession; isNew: boolean } | null>(null);
+  /** Bumped when a phone joins, so the device list reads again. */
+  const [joined, setJoined] = useState(0);
   const saving = useRef(false);
+  const onJoined = useCallback(() => setJoined((n) => n + 1), []);
 
-  /** Opens what the server holds, or starts an empty vault for a new account. */
-  const open = useCallback(async (current: VaultSession, words: string) => {
+  /**
+   * Opens what the server holds, or starts an empty vault for a new account.
+   * `keep` is the person's answer on this visit; reopening leaves it as it was.
+   */
+  const open = useCallback(async (current: VaultSession, words: string, keep?: boolean) => {
     setLoading(true);
     setProblem(null);
     try {
@@ -64,8 +69,7 @@ export default function VaultApp() {
       }
       setSession(current);
       setSeed(words);
-      window.localStorage.setItem(SESSION_KEY, JSON.stringify(current));
-      window.sessionStorage.setItem(SEED_KEY, words);
+      rememberVault(current, words, keep ?? isKept());
     } catch (e) {
       setProblem(e instanceof Error ? e.message : "The vault could not be opened.");
       setDocument(null);
@@ -75,8 +79,9 @@ export default function VaultApp() {
   }, []);
 
   // Back on this device: the token is still here, and the words are too while
-  // the tab lives. Either one missing means signing in again — and a return
-  // from Google leaves a session waiting to be claimed, once.
+  // the tab lives, or for good on a device kept open. Either one missing means
+  // signing in again — and a return from Google leaves a session waiting to be
+  // claimed, once.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -89,15 +94,10 @@ export default function VaultApp() {
         window.history.replaceState(window.history.state, "", address);
       }
 
-      const raw = window.localStorage.getItem(SESSION_KEY);
-      const words = window.sessionStorage.getItem(SEED_KEY);
-      if (raw && words) {
-        try {
-          await open(JSON.parse(raw) as VaultSession, words);
-          return;
-        } catch {
-          // A stored session that no longer parses is one to sign in again for.
-        }
+      const remembered = recallVault();
+      if (remembered) {
+        await open(remembered.session, remembered.words);
+        return;
       }
 
       try {
@@ -149,8 +149,7 @@ export default function VaultApp() {
   };
 
   const signOut = () => {
-    window.localStorage.removeItem(SESSION_KEY);
-    window.sessionStorage.removeItem(SEED_KEY);
+    forgetVault();
     setSession(null);
     setSeed(null);
     setDocument(null);
@@ -170,10 +169,10 @@ export default function VaultApp() {
         )}
         <VaultSeedPrompt
           isNew={awaitingSeed.isNew}
-          onReady={(words) => {
+          onReady={(words, keep) => {
             const waiting = awaitingSeed;
             setAwaitingSeed(null);
-            void open(waiting.session, words);
+            void open(waiting.session, words, keep);
           }}
           onCancel={() => setAwaitingSeed(null)}
         />
@@ -189,7 +188,7 @@ export default function VaultApp() {
             {problem}
           </p>
         )}
-        <VaultSignIn onOpen={(next, words) => void open(next, words)} />
+        <VaultSignIn onOpen={(next, words, keep) => void open(next, words, keep)} />
       </div>
     );
   }
@@ -210,8 +209,16 @@ export default function VaultApp() {
           {problem}
         </p>
       )}
+      {/* Near the top on a computer, where it is the way to the phone; left out
+          on a phone's width, where it would be the phone offering itself. */}
+      {seed && (
+        <div className="hidden sm:block">
+          <VaultPhoneLink session={session} seed={seed} onJoined={onJoined} />
+        </div>
+      )}
       <VaultBringIn document={document} onBring={(next) => void save(next, "records brought in")} />
       <VaultLedger document={document} onChange={(next, what) => void save(next, what)} saving={status} />
+      <VaultDevices session={session} refresh={joined} />
     </div>
   );
 }

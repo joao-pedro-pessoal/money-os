@@ -22,7 +22,7 @@ export interface VaultReply {
 
 /** One call to the vault server: the method, the path, a token and a body. */
 export type VaultTransport = (
-  method: "GET" | "POST" | "PUT",
+  method: "GET" | "POST" | "PUT" | "DELETE",
   path: string,
   init: { token?: string; body?: unknown }
 ) => Promise<VaultReply>;
@@ -46,9 +46,20 @@ export class VaultClientError extends Error {
 const asObject = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
+/**
+ * Why the server refused, in its own words.
+ *
+ * The server's refusals carry them under `error` (see `refused` in
+ * app/api/vault/respond.ts); this read only `reason`, which nothing sends, so
+ * every refusal fell back to the generic line — a password too short read
+ * "The account could not be created." and never said what to change.
+ */
 function reasonOf(reply: VaultReply, fallback: string): string {
-  const reason = asObject(reply.body).reason;
-  return typeof reason === "string" && reason.trim() !== "" ? reason : fallback;
+  const body = asObject(reply.body);
+  for (const said of [body.error, body.reason]) {
+    if (typeof said === "string" && said.trim() !== "") return said;
+  }
+  return fallback;
 }
 
 function sessionOf(reply: VaultReply): VaultSession {
@@ -60,7 +71,7 @@ function sessionOf(reply: VaultReply): VaultSession {
   return { token, userId, deviceId };
 }
 
-/** Over the network: the four calls the site makes, and nothing else. */
+/** Over the network: every call the site makes, and nothing else. */
 export function createVaultClient(transport: VaultTransport) {
   return {
     async register(email: string, password: string, deviceName: string): Promise<VaultSession> {
@@ -109,7 +120,91 @@ export function createVaultClient(transport: VaultTransport) {
       }
       return version;
     },
+
+    /** Every device signed into the account, including revoked ones, newest first. */
+    async listDevices(token: string): Promise<VaultDevice[]> {
+      const reply = await transport("GET", "/api/vault/devices", { token });
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "The devices could not be listed."));
+      const devices = asObject(reply.body).devices;
+      if (!Array.isArray(devices)) {
+        throw new VaultClientError("The server answered something this app does not understand.", "shape");
+      }
+      return devices.map((d) => {
+        const row = asObject(d);
+        return {
+          id: String(row.id),
+          name: String(row.name),
+          createdAt: String(row.createdAt),
+          lastSeenAt: typeof row.lastSeenAt === "string" ? row.lastSeenAt : null,
+          revokedAt: typeof row.revokedAt === "string" ? row.revokedAt : null,
+          current: row.current === true,
+        };
+      });
+    },
+
+    async revokeDevice(token: string, deviceId: string): Promise<void> {
+      const reply = await transport("DELETE", `/api/vault/devices/${encodeURIComponent(deviceId)}`, { token });
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "That device could not be signed out."));
+    },
+
+    // Opening the vault on a phone from a code: see lib/vault/link.ts.
+
+    async createLink(token: string, sealed: string): Promise<{ id: string; expiresAt: string }> {
+      const reply = await transport("POST", "/api/vault/links", { token, body: { sealed } });
+      if (reply.status !== 201) throw new VaultClientError(reasonOf(reply, "No code could be made."));
+      const { id, expiresAt } = asObject(reply.body);
+      if (typeof id !== "string" || typeof expiresAt !== "string") {
+        throw new VaultClientError("The server answered something this app does not understand.", "shape");
+      }
+      return { id, expiresAt };
+    },
+
+    async linkStatus(token: string, id: string): Promise<{ state: string; deviceName: string | null }> {
+      const reply = await transport("GET", `/api/vault/links/${encodeURIComponent(id)}`, { token });
+      if (reply.status === 404) return { state: "gone", deviceName: null };
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "The code could not be checked."));
+      const { state, deviceName } = asObject(reply.body);
+      return { state: String(state), deviceName: typeof deviceName === "string" ? deviceName : null };
+    },
+
+    async answerLink(token: string, id: string, allow: boolean): Promise<void> {
+      const reply = await transport("POST", `/api/vault/links/${encodeURIComponent(id)}/answer`, {
+        token,
+        body: { allow },
+      });
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "The answer did not reach the server."));
+    },
+
+    async askLink(id: string, deviceName: string, claimHash: string): Promise<void> {
+      const reply = await transport("POST", `/api/vault/links/${encodeURIComponent(id)}/ask`, {
+        body: { deviceName, claimHash },
+      });
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "This code no longer works."));
+    },
+
+    /** Null while the owner has not answered; the session and the sealed words once they said yes. */
+    async collectLink(id: string, claimKey: string): Promise<(VaultSession & { sealed: string }) | null> {
+      const reply = await transport("POST", `/api/vault/links/${encodeURIComponent(id)}/collect`, {
+        body: { claimKey },
+      });
+      if (reply.status === 202) return null;
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "This code no longer works."));
+      const sealed = asObject(reply.body).sealed;
+      if (typeof sealed !== "string") {
+        throw new VaultClientError("The server answered something this app does not understand.", "shape");
+      }
+      return { ...sessionOf(reply), sealed };
+    },
   };
+}
+
+export interface VaultDevice {
+  id: string;
+  name: string;
+  createdAt: string;
+  lastSeenAt: string | null;
+  revokedAt: string | null;
+  current: boolean;
 }
 
 export interface OpenVault {

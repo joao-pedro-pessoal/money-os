@@ -1,12 +1,22 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
-import { and, desc, eq, gt, isNull, lt, max, sql } from "drizzle-orm";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { and, desc, eq, gt, isNull, lt, max, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { syncDevices, syncLoginMethods, syncSessions, syncUsers, syncVaultVersions } from "@/db/schema";
+import { syncDeviceLinks, syncDevices, syncLoginMethods, syncSessions, syncUsers, syncVaultVersions } from "@/db/schema";
 import { hashPassword, needsRehash, verifyPassword } from "@/lib/vault/password";
 import { createGate } from "@/lib/vault/gate";
 import { hashSessionToken, newSessionToken, sessionExpiry } from "@/lib/vault/session";
+import {
+  AnswerLinkRequest,
+  AskLinkRequest,
+  claimHashOf,
+  CollectLinkRequest,
+  CreateLinkRequest,
+  isLinkId,
+  LINK_SECONDS,
+  linkState,
+} from "@/lib/vault/link";
 import {
   LoginRequest,
   PutVaultRequest,
@@ -449,4 +459,119 @@ export async function deleteSyncAccount(token: string | null, raw: unknown) {
   // Everything else goes with the account: every table here cascades from it.
   await db.delete(syncUsers).where(eq(syncUsers.id, session.userId));
   return { ok: true as const };
+}
+
+// ---------- Opening the vault on a phone from a code on this device ----------
+//
+// The steps and why each exists are in lib/vault/link.ts. What is here is the
+// part only a database can do: one code per account, a few minutes long, moved
+// from one state to the next only if it is still in the one before — each move
+// is a single conditional write, so two phones scanning at once cannot both be
+// the one that asked.
+
+const LINK_GONE = "This code was already used, or it expired. Show a new one on the other device.";
+
+function sameHash(a: string, b: string): boolean {
+  const left = Buffer.from(a, "hex");
+  const right = Buffer.from(b, "hex");
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+/** A new code for this account, replacing any it had. Holds the words sealed, never the key. */
+export async function createDeviceLink(token: string | null, raw: unknown) {
+  const session = await authenticate(token);
+  if (!session) return refusal(401, "Sign in again: this device's session is not valid.");
+  const parsed = CreateLinkRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+
+  const now = new Date();
+  const id = randomBytes(16).toString("base64url");
+  const expiresAt = new Date(now.getTime() + LINK_SECONDS * 1000);
+  await db.transaction(async (tx) => {
+    // One code at a time per account, and none kept anywhere past its minutes.
+    await tx
+      .delete(syncDeviceLinks)
+      .where(or(eq(syncDeviceLinks.userId, session.userId), lt(syncDeviceLinks.expiresAt, now)));
+    await tx.insert(syncDeviceLinks).values({ id, userId: session.userId, ciphertext: parsed.data.sealed, expiresAt });
+  });
+  return { ok: true as const, id, expiresAt };
+}
+
+/** Where this account's code stands, for the device showing it. */
+export async function deviceLinkStatus(token: string | null, id: string) {
+  const session = await authenticate(token);
+  if (!session) return refusal(401, "Sign in again: this device's session is not valid.");
+  if (!isLinkId(id)) return refusal(404, LINK_GONE);
+  const [row] = await db
+    .select({ state: syncDeviceLinks.state, expiresAt: syncDeviceLinks.expiresAt, deviceName: syncDeviceLinks.deviceName })
+    .from(syncDeviceLinks)
+    .where(and(eq(syncDeviceLinks.id, id), eq(syncDeviceLinks.userId, session.userId)));
+  if (!row) return refusal(404, LINK_GONE);
+  return { ok: true as const, state: linkState(row, new Date()), deviceName: row.deviceName };
+}
+
+/** The owner's yes or no to the phone that asked. A no ends the code. */
+export async function answerDeviceLink(token: string | null, id: string, raw: unknown) {
+  const session = await authenticate(token);
+  if (!session) return refusal(401, "Sign in again: this device's session is not valid.");
+  if (!isLinkId(id)) return refusal(404, LINK_GONE);
+  const parsed = AnswerLinkRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+
+  const mine = and(eq(syncDeviceLinks.id, id), eq(syncDeviceLinks.userId, session.userId));
+  if (!parsed.data.allow) {
+    await db.delete(syncDeviceLinks).where(and(mine, ne(syncDeviceLinks.state, "collected")));
+    return { ok: true as const, state: "refused" as const };
+  }
+  const approved = await db
+    .update(syncDeviceLinks)
+    .set({ state: "approved" })
+    .where(and(mine, eq(syncDeviceLinks.state, "asked"), gt(syncDeviceLinks.expiresAt, new Date())))
+    .returning({ id: syncDeviceLinks.id });
+  if (approved.length === 0) return refusal(409, "That phone is no longer waiting. Show a new code.");
+  return { ok: true as const, state: "approved" as const };
+}
+
+/** A phone that scanned the code, asking to be let in. No session: the code is its only credential. */
+export async function askDeviceLink(id: string, raw: unknown) {
+  if (!isLinkId(id)) return refusal(404, LINK_GONE);
+  const parsed = AskLinkRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const asked = await db
+    .update(syncDeviceLinks)
+    .set({ state: "asked", deviceName: parsed.data.deviceName, claimHash: parsed.data.claimHash })
+    .where(
+      and(eq(syncDeviceLinks.id, id), eq(syncDeviceLinks.state, "waiting"), gt(syncDeviceLinks.expiresAt, new Date()))
+    )
+    .returning({ id: syncDeviceLinks.id });
+  if (asked.length === 0) return refusal(404, LINK_GONE);
+  return { ok: true as const };
+}
+
+/**
+ * The phone that asked, once the owner said yes: a session of its own and the
+ * sealed words, handed over once. The row keeps only that it was used.
+ */
+export async function collectDeviceLink(id: string, raw: unknown) {
+  if (!isLinkId(id)) return refusal(404, LINK_GONE);
+  const parsed = CollectLinkRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const claimHash = claimHashOf(parsed.data.claimKey);
+  const now = new Date();
+
+  return db.transaction(async (tx) => {
+    const [row] = await tx.select().from(syncDeviceLinks).where(eq(syncDeviceLinks.id, id)).for("update");
+    // The same answer whether the code is unknown or the claim is not this phone's.
+    if (!row || row.claimHash === null || !sameHash(row.claimHash, claimHash)) return refusal(404, LINK_GONE);
+    const state = linkState(row, now);
+    if (state === "asked") return { ok: true as const, waiting: true as const };
+    if (state !== "approved" || row.ciphertext === null) return refusal(404, LINK_GONE);
+
+    const opened = await openSession(tx, row.userId, row.deviceName ?? "Phone");
+    await tx
+      .update(syncDeviceLinks)
+      .set({ state: "collected", ciphertext: null, claimHash: null })
+      .where(eq(syncDeviceLinks.id, id));
+    return { ok: true as const, waiting: false as const, ...opened, sealed: row.ciphertext };
+  });
 }

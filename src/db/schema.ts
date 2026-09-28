@@ -1522,6 +1522,31 @@ export const syncSessions = pgTable("sync_sessions", {
 });
 
 /**
+ * A QR code on a signed-in device, waiting for a phone to scan it.
+ *
+ * The code carries the key that opens `ciphertext` in the part of the address
+ * a browser never sends, so this row holds the twelve words sealed with a key
+ * the server never sees. A phone that scans it asks; the device that showed it
+ * says yes or no, seeing the phone's name; only then does the phone get a
+ * session, and only the phone that asked — it proves itself with the secret
+ * behind `claimHash`. Minutes long, used once, and emptied when used.
+ *
+ * `state` runs waiting → asked → approved → collected. A refusal deletes the row.
+ */
+export const syncDeviceLinks = pgTable("sync_device_links", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
+  /** Null once collected: nothing the link carried outlives its use. */
+  ciphertext: text("ciphertext"),
+  state: text("state").notNull().default("waiting"),
+  /** What the phone called itself, shown on the device deciding. */
+  deviceName: text("device_name"),
+  claimHash: text("claim_hash"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+/**
  * Every stored version of every account's vault, as ciphertext.
  *
  * The primary key on (account, version) is what makes a stale send fail instead

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { generateSeed, isValidSeed } from "@/lib/vault/seed";
+import KeepOpenChoice from "./KeepOpenChoice";
 
 /**
  * The step after Google: the twelve words.
@@ -16,12 +17,13 @@ export default function VaultSeedPrompt({
   onCancel,
 }: {
   isNew: boolean;
-  onReady: (seed: string) => void;
+  onReady: (seed: string, keep: boolean) => void;
   onCancel: () => void;
 }) {
   const [words, setWords] = useState("");
   const [freshSeed, setFreshSeed] = useState<string | null>(null);
   const [written, setWritten] = useState(false);
+  const [keep, setKeep] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const make = async () => {
@@ -58,7 +60,7 @@ export default function VaultSeedPrompt({
       ) : (
         <>
           <p className="text-xs text-[var(--muted)]">
-            They stay in this browser tab and are never sent. Without them this vault cannot be opened, here or by
+            They stay on this device and are never sent. Without them this vault cannot be opened, here or by
             anyone else.
           </p>
           <textarea
@@ -72,6 +74,8 @@ export default function VaultSeedPrompt({
           />
         </>
       )}
+
+      <KeepOpenChoice keep={keep} onChange={setKeep} />
 
       {error && (
         <p role="alert" className="text-xs text-[var(--red)]">
@@ -87,10 +91,10 @@ export default function VaultSeedPrompt({
             if (isNew) {
               if (!freshSeed) return setError("Show the words first, and write them down.");
               if (!written) return setError("Write them down first. Nobody can give them back to you.");
-              return onReady(freshSeed);
+              return onReady(freshSeed, keep);
             }
             if (!isValidSeed(words)) return setError("Those are not the twelve words of a recovery seed.");
-            onReady(words.trim());
+            onReady(words.trim(), keep);
           }}
         >
           {isNew ? "Open my new vault" : "Open my vault"}
