@@ -2,8 +2,6 @@ import { getResourceBySlug, listResources, setProgress, updateResource } from "@
 import { isRelevant, STATUSES, PROGRESS_UNITS, type Level } from "@/lib/library/types";
 import { relFor, safeUrl, displayHost, youtubeEmbedUrl, sourceLabel } from "@/lib/library/links";
 
-const GOLD = "#c8a45c";
-const GOLD_LINE = "rgba(200, 164, 92, 0.35)";
 import { tagLabelFor } from "@/components/library/labels";
 import ResourceCard from "@/components/library/ResourceCard";
 import FavouriteButton from "@/components/library/FavouriteButton";
@@ -13,6 +11,7 @@ import { coverSearchUrl } from "@/lib/library/covers-import";
 import Section from "@/components/Section";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { EDITORIAL, EDITORIAL_LINE } from "@/components/library/editorial";
 
 export default async function ResourceDetailPage({
   params,
@@ -87,7 +86,7 @@ export default async function ResourceDetailPage({
               {r.specialBadge && r.editorialRank !== null && (
                 <span
                   className="badge border text-[10px] uppercase tracking-wider"
-                  style={{ color: GOLD, borderColor: GOLD_LINE }}
+                  style={{ color: EDITORIAL, borderColor: EDITORIAL_LINE }}
                 >
                   {r.specialBadge}
                 </span>
@@ -99,7 +98,7 @@ export default async function ResourceDetailPage({
             </div>
             <div className="text-sm text-[var(--muted)]">{r.creator}</div>
             {r.specialDescription && (
-              <p className="text-sm mt-2 max-w-xl leading-relaxed" style={{ color: GOLD }}>
+              <p className="text-sm mt-2 max-w-xl leading-relaxed" style={{ color: EDITORIAL }}>
                 {r.specialDescription}
               </p>
             )}

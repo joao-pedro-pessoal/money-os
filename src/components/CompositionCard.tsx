@@ -4,7 +4,7 @@ import ResponsiveTable from "@/components/ResponsiveTable";
 
 
 import { useState } from "react";
-import DonutChart from "./DonutChart";
+import DonutChart, { SLICE_COLORS } from "./DonutChart";
 import { Money } from "./PrivacyContext";
 import { fmt } from "@/lib/format";
 
@@ -28,17 +28,13 @@ const SHAPES: { value: ChartShape; label: string }[] = [
   { value: "list", label: "List" },
 ];
 
-const COLORS = [
-  "var(--accent)",
-  "var(--green)",
-  "var(--amber)",
-  "var(--red)",
-  "#7aa2f7",
-  "#bb9af7",
-  "#7dcfff",
-  "#e0af68",
-  "var(--muted)",
-];
+/**
+ * The donut's colours, not a copy of them. This card kept its own list after
+ * DonutChart moved to theme tokens, with the dark theme's four hex values still
+ * in it — pale blue and cyan on a white card in every light theme, and colour on
+ * the monochrome one.
+ */
+const COLORS = SLICE_COLORS;
 
 export default function CompositionCard({
   title,

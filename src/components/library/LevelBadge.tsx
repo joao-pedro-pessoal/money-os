@@ -6,12 +6,25 @@ import { levelInfo, type Level } from "@/lib/library/types";
  * Colour carries the same information as the word, never instead of it — the
  * label is always spelled out, so this still works if you can't tell the greens
  * from the ambers. Four levels, warm to cool, open to demanding.
+ *
+ * Each level is a theme token, not a hex value. The fixed pastels read on the
+ * dark themes and nowhere else: on a white card the gold and blue labels were
+ * under 2.5:1. The text is the token pulled a third of the way towards the
+ * page's own text colour — darker on a light theme, lighter on a dark one —
+ * which puts every label above 6:1 in all eight themes, and on the monochrome
+ * ones the levels are greys like everything else there.
  */
+const tint = (token: string) => ({
+  fg: `color-mix(in srgb, var(${token}) 70%, var(--foreground))`,
+  bg: `color-mix(in srgb, var(${token}) 10%, transparent)`,
+  border: `color-mix(in srgb, var(${token}) 35%, transparent)`,
+});
+
 const COLOURS: Record<Level, { fg: string; bg: string; border: string }> = {
-  EVERYONE: { fg: "#c8a45c", bg: "rgba(200,164,92,0.10)", border: "rgba(200,164,92,0.35)" },
-  BEGINNER: { fg: "#6fbf8b", bg: "rgba(111,191,139,0.10)", border: "rgba(111,191,139,0.32)" },
-  INTERMEDIATE: { fg: "#7aa7d8", bg: "rgba(122,167,216,0.10)", border: "rgba(122,167,216,0.32)" },
-  ADVANCED: { fg: "#c98a8a", bg: "rgba(201,138,138,0.10)", border: "rgba(201,138,138,0.32)" },
+  EVERYONE: tint("--accent"),
+  BEGINNER: tint("--green"),
+  INTERMEDIATE: tint("--chart-1"),
+  ADVANCED: tint("--chart-2"),
 };
 
 export default function LevelBadge({

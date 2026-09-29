@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useSyncExternalStore } from "react";
+import { PAGE_BACKGROUND } from "@/lib/themeColors";
 
 export const ACCENTS = [
   { id: "gold", label: "Gold", swatch: "#c9a86a" },
@@ -58,6 +59,8 @@ function apply(accent: AccentId, mode: ModeId, signal: SignalId) {
   document.documentElement.dataset.accent = accent;
   document.documentElement.dataset.mode = mode;
   document.documentElement.dataset.signal = signal;
+  // The status bar follows the page, not the stylesheet; see lib/themeColors.ts.
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", PAGE_BACKGROUND[accent][mode]);
 }
 
 /**

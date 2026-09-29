@@ -17,7 +17,7 @@ import { fmt } from "@/lib/format";
  * the page; `--chart-1` onwards are the categorical ones, which mean nothing
  * beyond "not the last one".
  */
-const COLORS = [
+export const SLICE_COLORS = [
   "var(--accent)",
   "var(--green)",
   "var(--amber)",
@@ -67,7 +67,7 @@ export default function DonutChart({
               strokeWidth={2}
             >
               {data.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                <Cell key={i} fill={SLICE_COLORS[i % SLICE_COLORS.length]} />
               ))}
             </Pie>
             {!hidden && (
@@ -98,7 +98,7 @@ export default function DonutChart({
                 width: 8,
                 height: 8,
                 borderRadius: 999,
-                background: COLORS[i % COLORS.length],
+                background: SLICE_COLORS[i % SLICE_COLORS.length],
               }}
             />
             <span className="truncate text-[var(--muted)]" title={d.name}>

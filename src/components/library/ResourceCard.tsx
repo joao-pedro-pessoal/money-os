@@ -6,9 +6,8 @@ import FavouriteButton from "@/components/library/FavouriteButton";
 import BookCover from "@/components/library/BookCover";
 import LevelBadge from "@/components/library/LevelBadge";
 import type { Level } from "@/lib/library/types";
+import { EDITORIAL, EDITORIAL_LINE } from "@/components/library/editorial";
 
-const GOLD = "#c8a45c";
-const GOLD_LINE = "rgba(200, 164, 92, 0.35)";
 
 /**
  * One card, four shapes.
@@ -61,7 +60,7 @@ export default function ResourceCard({ resource }: { resource: LibraryResource }
       <Link
         href={`/library/${r.slug}`}
         className="card p-3 flex gap-3 hover:opacity-90 transition-opacity"
-        style={editorial ? { borderColor: GOLD_LINE } : undefined}
+        style={editorial ? { borderColor: EDITORIAL_LINE } : undefined}
       >
         <div
         className="shrink-0 rounded overflow-hidden bg-[var(--surface-2)] flex items-center justify-center"
@@ -102,7 +101,7 @@ export default function ResourceCard({ resource }: { resource: LibraryResource }
         {editorial && (
           <div
             className="inline-block text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded mt-1"
-            style={{ color: GOLD, border: `1px solid ${GOLD_LINE}` }}
+            style={{ color: EDITORIAL, border: `1px solid ${EDITORIAL_LINE}` }}
           >
             {r.specialBadge}
           </div>

@@ -1,4 +1,5 @@
 import { toggleFavourite } from "@/actions/library";
+import { EDITORIAL } from "@/components/library/editorial";
 
 /**
  * The star.
@@ -27,10 +28,8 @@ export default function FavouriteButton({
         title={label}
         aria-label={label}
         aria-pressed={favourite}
-        className={`leading-none rounded transition-opacity hover:opacity-100 ${
-          size === "md" ? "text-lg" : "text-sm"
-        } ${favourite ? "opacity-100" : "opacity-45"}`}
-        style={{ color: favourite ? "#e0b64f" : "var(--muted)" }}
+        className={`leading-none rounded ${size === "md" ? "text-lg" : "text-sm"}`}
+        style={{ color: favourite ? EDITORIAL : "var(--muted)" }}
       >
         {favourite ? "★" : "☆"}
       </button>

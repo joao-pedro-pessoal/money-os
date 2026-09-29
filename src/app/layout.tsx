@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { PAGE_BACKGROUND } from "@/lib/themeColors";
 
 export const metadata: Metadata = {
   title: "Money OS",
@@ -60,8 +61,9 @@ try {
     ["gold","emerald","indigo","mono"].indexOf(a) >= 0 ? a : "gold";
   document.documentElement.dataset.mode = m === "light" ? "light" : "dark";
   document.documentElement.dataset.signal = s === "colour" ? "colour" : "mono";
+  var bg = ${JSON.stringify(PAGE_BACKGROUND)};
   var t = document.querySelector('meta[name="theme-color"]');
-  if (t) t.setAttribute("content", m === "light" ? "#faf6ee" : "#141210");
+  if (t) t.setAttribute("content", bg[document.documentElement.dataset.accent][document.documentElement.dataset.mode]);
 } catch (e) {}
 `;
 

@@ -78,7 +78,9 @@ export default async function LibraryPage({
       }}
     >
       {label}
-      {count !== undefined && <span className="ml-1 opacity-70">{count}</span>}
+      {/* Set apart by weight, not by fading: at 70% opacity the count was under
+          3:1 on every light theme. */}
+      {count !== undefined && <span className="ml-1 font-normal tabular-nums">{count}</span>}
     </FilterLink>
   );
 

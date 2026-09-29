@@ -27,6 +27,11 @@
   --muted: #8a8375;
   --accent: #c9a86a;
   --accent-contrast: #241d0f;
+  /* The Library's warm gold, whatever the accent — its editorial voice. A token
+     rather than a hex value so it can be darker on a light page, where the
+     dark themes' gold was 2.3:1, and grey on the monochrome themes. */
+  --editorial: #c8a45c;
+  --editorial-contrast: #1b1509;
   --green: #34d399;
   --red: #f87171;
   --amber: #fbbf24;
@@ -44,6 +49,15 @@
   --chart-4: #e0af68;
 }
 
+/* Light modes are held to the contrast a page of text needs: 4.5:1 for every
+   colour used as text — muted, accent, green, red, amber — against the
+   background, a card and an input (surface-2), and 3:1 for chart colours
+   against a card. The first light palettes were picked by eye and missed it:
+   gold's links and buttons were 2.8:1, and the muted grey of every label and
+   side-menu entry was under 4:1 in three of the four themes. The figures are
+   checked by src/lib/__tests__/themeContrast.test.ts, so a palette edited by
+   eye again fails a test instead of a reader. */
+
 /* --border-strong is a divider that has to read as deliberate: chart baselines,
    the Explain block, a card's hover edge. It existed in three of the eight
    themes, so in the other five those borders fell back to currentColor and a
@@ -56,10 +70,12 @@
   --border: #e6ddc8;
   --border-strong: #cdbc9b;
   --foreground: #2b2416;
-  --muted: #8a8067;
-  --accent: #c9862a;
+  --muted: #706853;
+  --accent: #8e5f1e;
   --accent-contrast: #ffffff;
-  --green: #15803d;
+  --editorial: #81642b;
+  --editorial-contrast: #ffffff;
+  --green: #147739;
   --red: #b91c1c;
   --amber: #92400e;
   --font-heading: Georgia, "Times New Roman", serif;
@@ -83,6 +99,8 @@
   --muted: #7c9186;
   --accent: #1d9e75;
   --accent-contrast: #04342c;
+  --editorial: #c8a45c;
+  --editorial-contrast: #1b1509;
   --green: #34d399;
   --red: #f87171;
   --amber: #fbbf24;
@@ -104,10 +122,12 @@
   --border: #cfe6d9;
   --border-strong: #a9ccb8;
   --foreground: #0f2620;
-  --muted: #5f7a6e;
+  --muted: #587166;
   --accent: #0f6e56;
   --accent-contrast: #ffffff;
-  --green: #15803d;
+  --editorial: #81642b;
+  --editorial-contrast: #ffffff;
+  --green: #147739;
   --red: #b91c1c;
   --amber: #92400e;
   --font-heading: Georgia, "Times New Roman", serif;
@@ -131,6 +151,8 @@
   --muted: #8a8f98;
   --accent: #6366f1;
   --accent-contrast: #ffffff;
+  --editorial: #c8a45c;
+  --editorial-contrast: #1b1509;
   --green: #34d399;
   --red: #f87171;
   --amber: #fbbf24;
@@ -152,10 +174,12 @@
   --border: #e1e3ec;
   --border-strong: #c3c7d8;
   --foreground: #14151a;
-  --muted: #6b6f7d;
+  --muted: #656976;
   --accent: #4f46e5;
   --accent-contrast: #ffffff;
-  --green: #15803d;
+  --editorial: #81642b;
+  --editorial-contrast: #ffffff;
+  --green: #147739;
   --red: #b91c1c;
   --amber: #92400e;
   --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -455,6 +479,8 @@ main .grid > * { min-width: 0; }
   --muted: #8a8a8a;
   --accent: #ffffff;
   --accent-contrast: #000000;
+  --editorial: #ffffff;
+  --editorial-contrast: #000000;
   /* Lightness, not hue: a gain is brighter than the text, a loss dimmer. */
   --green: #ffffff;
   --red: #9e9e9e;
@@ -480,19 +506,21 @@ main .grid > * { min-width: 0; }
   --muted: #6b6b6b;
   --accent: #0a0a0a;
   --accent-contrast: #ffffff;
+  --editorial: #0a0a0a;
+  --editorial-contrast: #ffffff;
   /* Inverted for a white page: the gain is the darkest thing on it. */
   --green: #000000;
-  --red: #757575;
+  --red: #6e6e6e;
   --amber: #4a4a4a;
   --font-heading: Georgia, "Times New Roman", serif;
   /* Categorical series: donut slices and anything else that needs to tell
      one group from another rather than say good or bad. A token used
      anywhere must exist in every theme, which is what --border-strong
      taught this file the hard way. */
-  --chart-1: #1f1f1f;
-  --chart-2: #4f4f4f;
-  --chart-3: #7a7a7a;
-  --chart-4: #a8a8a8;
+  --chart-1: #1a1a1a;
+  --chart-2: #404040;
+  --chart-3: #666666;
+  --chart-4: #8c8c8c;
 }
 
 /**
@@ -530,7 +558,7 @@ main .grid > * { min-width: 0; }
      unreadable as text, and these are used as text on every P&L figure. */
   --green: #047857;
   --red: #b91c1c;
-  --amber: #a16207;
+  --amber: #9c5f07;
   --chart-1: #3b6fd4;
   --chart-2: #7c53c9;
   --chart-3: #2b7f9e;

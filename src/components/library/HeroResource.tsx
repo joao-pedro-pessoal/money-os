@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LibraryResource } from "@/actions/library";
 import BookCover from "@/components/library/BookCover";
+import { EDITORIAL, EDITORIAL_CONTRAST, EDITORIAL_LINE, EDITORIAL_SOFT } from "@/components/library/editorial";
 
 /**
  * The hero slot at the top of the library.
@@ -15,9 +16,6 @@ import BookCover from "@/components/library/BookCover";
  * see src/lib/library/ranking.ts.
  */
 
-const GOLD = "#c8a45c";
-const GOLD_SOFT = "rgba(200, 164, 92, 0.10)";
-const GOLD_LINE = "rgba(200, 164, 92, 0.35)";
 
 /** "reading" for a book, "watching" for a video — the button follows the medium. */
 function verbFor(type: LibraryResource["type"]): string {
@@ -41,7 +39,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
   return (
     <section
       className="rounded-xl border p-5 md:p-6"
-      style={{ borderColor: GOLD_LINE, background: GOLD_SOFT }}
+      style={{ borderColor: EDITORIAL_LINE, background: EDITORIAL_SOFT }}
       aria-label="Featured resource"
     >
       <div className="flex flex-col md:flex-row gap-5">
@@ -50,7 +48,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
           style={{
             width: 116,
             height: 168,
-            border: `1px solid ${GOLD_LINE}`,
+            border: `1px solid ${EDITORIAL_LINE}`,
             background: "var(--surface-2)",
           }}
         >
@@ -72,7 +70,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
           {r.specialBadge && (
             <div
               className="inline-block text-[10px] uppercase tracking-[0.12em] px-2 py-1 rounded"
-              style={{ color: GOLD, border: `1px solid ${GOLD_LINE}` }}
+              style={{ color: EDITORIAL, border: `1px solid ${EDITORIAL_LINE}` }}
             >
               {r.specialBadge}
             </div>
@@ -87,7 +85,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
           <div className="text-xs text-[var(--muted)] mt-1">{r.creator}</div>
 
           {r.specialDescription && (
-            <p className="text-sm mt-3 max-w-2xl leading-relaxed" style={{ color: GOLD }}>
+            <p className="text-sm mt-3 max-w-2xl leading-relaxed" style={{ color: EDITORIAL }}>
               {r.specialDescription}
             </p>
           )}
@@ -103,7 +101,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
                   key={c.id}
                   href={`/library?category=${c.slug}`}
                   className="badge border text-[10px]"
-                  style={{ borderColor: GOLD_LINE, color: GOLD }}
+                  style={{ borderColor: EDITORIAL_LINE, color: EDITORIAL }}
                 >
                   {c.name}
                 </Link>
@@ -118,7 +116,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
               <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
                 <div
                   className="h-full"
-                  style={{ width: `${r.progress.percent}%`, background: GOLD }}
+                  style={{ width: `${r.progress.percent}%`, background: EDITORIAL }}
                 />
               </div>
               <div className="text-[10px] text-[var(--muted)] mt-1">{r.progress.label}</div>
@@ -129,14 +127,14 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
             <Link
               href={`/library/${r.slug}`}
               className="rounded-lg px-4 py-2 text-sm font-medium"
-              style={{ background: GOLD, color: "#1b1509" }}
+              style={{ background: EDITORIAL, color: EDITORIAL_CONTRAST }}
             >
               Explore {r.title}
             </Link>
             <Link
               href={`/library/${r.slug}#progress`}
               className="rounded-lg px-4 py-2 text-sm border"
-              style={{ borderColor: GOLD_LINE, color: GOLD }}
+              style={{ borderColor: EDITORIAL_LINE, color: EDITORIAL }}
             >
               {started ? "Continue" : "Start"} {verbFor(r.type)}
             </Link>
