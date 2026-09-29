@@ -193,6 +193,13 @@
   --chart-4: #a8761f;
 }
 
+/* The browser's own parts of the page — scrollbars, a date picker, a select's
+   open list, autofill — follow the theme's mode, not the computer's. Without
+   this a light theme on a dark computer drew dark scrollbars and pickers, and a
+   dark theme on a light computer drew white ones. */
+[data-mode="light"] { color-scheme: light; }
+[data-mode="dark"] { color-scheme: dark; }
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

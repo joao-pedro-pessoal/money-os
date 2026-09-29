@@ -19,6 +19,15 @@ export const metadata: Metadata = {
     ],
     apple: "/icons/apple-touch-icon.png",
   },
+  /**
+   * Dark Reader and extensions like it darken a site that looks light. Here
+   * that is a site with its own dark mode, switched to light on purpose, and
+   * the result was half of each: the page's ground forced dark, the cards and
+   * menu left light, the dark heading and the top bar's buttons lost against
+   * it. This meta is Dark Reader's own convention for "this site has themes of
+   * its own; leave it alone".
+   */
+  other: { "darkreader-lock": "true" },
 };
 
 /**
@@ -35,6 +44,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#141210",
+  /**
+   * Both, declared: the browser's own "force dark" (Chrome's and Edge's auto
+   * dark mode) does not repaint a page that says it already handles dark, and
+   * globals.css then names the one in use so the browser's own controls —
+   * scrollbars, date pickers, a select's list — follow the chosen theme too.
+   */
+  colorScheme: "light dark",
 };
 
 /**

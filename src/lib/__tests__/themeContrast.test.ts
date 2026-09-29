@@ -76,28 +76,13 @@ describe.each(Object.entries(LIGHT))("the %s light theme", (_name, theme) => {
   });
 });
 
+// That every theme defines every token is theme-tokens.test.ts's job.
 describe("every theme", () => {
-  const ALL = [
-    '[data-accent="gold"][data-mode="dark"]',
-    '[data-accent="gold"][data-mode="light"]',
-    '[data-accent="emerald"][data-mode="dark"]',
-    '[data-accent="emerald"][data-mode="light"]',
-    '[data-accent="indigo"][data-mode="dark"]',
-    '[data-accent="indigo"][data-mode="light"]',
-    '[data-accent="mono"][data-mode="dark"]',
-    '[data-accent="mono"][data-mode="light"]',
-  ];
-
   it("gives the status bar the page's own colour", () => {
     for (const [accent, modes] of Object.entries(PAGE_BACKGROUND)) {
       for (const [mode, colour] of Object.entries(modes)) {
         expect(tokens(`[data-accent="${accent}"][data-mode="${mode}"]`).background).toBe(colour);
       }
     }
-  });
-
-  it("defines the same colours, so a colour used anywhere exists everywhere", () => {
-    const names = ALL.map((selector) => Object.keys(tokens(selector)).sort().join(" "));
-    for (const list of names) expect(list).toBe(names[0]);
   });
 });
