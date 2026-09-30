@@ -38,10 +38,20 @@ export function signInRoute({
   return hasVaultAccount ? "vault" : "owner";
 }
 
-/** What the sign-in page is told. The session is a vault's; the owner's is a cookie. */
+/**
+ * What the sign-in page is told. The session is a vault's; the owner's is a
+ * cookie. A vault comes with its twelve words sealed, for the page to open
+ * with the password it typed; an older vault that has none yet asks for its
+ * words once instead (`needs-words`).
+ */
 export type SignInOutcome =
   | { kind: "owner" }
-  | { kind: "vault"; session: { token: string; userId: string; deviceId: string; email: string } }
+  | {
+      kind: "vault";
+      session: { token: string; userId: string; deviceId: string; email: string };
+      sealedWords: string;
+    }
+  | { kind: "needs-words" }
   | { kind: "wrong" }
   | { kind: "locked"; until: string }
   | { kind: "refused"; reason: string };

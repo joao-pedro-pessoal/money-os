@@ -15,7 +15,7 @@ export default function KeepOpenChoice({ keep, onChange }: { keep: boolean; onCh
       <span>
         This phone or computer is mine — keep the vault open here
         <span className="block text-[11px] text-[var(--muted)]">
-          Then it opens without the twelve words until you press Lock and sign out. Leave it off on a computer other
+          Then it opens without signing in again until you press Lock and sign out. Leave it off on a computer other
           people use.
         </span>
       </span>

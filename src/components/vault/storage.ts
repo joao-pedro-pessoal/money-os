@@ -21,7 +21,6 @@ import type { VaultSession } from "@/lib/vault/client";
 const SESSION_KEY = "money-os-vault-session";
 const SEED_KEY = "money-os-vault-seed";
 const KEPT_SEED_KEY = "money-os-vault-seed-kept";
-const SIGNED_IN_KEY = "money-os-vault-signed-in";
 
 function read(storage: () => Storage, key: string): string | null {
   try {
@@ -74,25 +73,5 @@ export function forgetVault(): void {
   write(local, SESSION_KEY, null);
   write(tab, SEED_KEY, null);
   write(local, KEPT_SEED_KEY, null);
-  write(tab, SIGNED_IN_KEY, null);
 }
 
-/**
- * A session from the sign-in page, on its way to the vault that asks for the
- * words. Only for this tab and only until the vault reads it, once.
- */
-export function holdSignedIn(session: VaultSession): void {
-  write(tab, SIGNED_IN_KEY, JSON.stringify(session));
-}
-
-export function takeSignedIn(): VaultSession | null {
-  const raw = read(tab, SIGNED_IN_KEY);
-  write(tab, SIGNED_IN_KEY, null);
-  if (!raw) return null;
-  try {
-    const session = JSON.parse(raw) as VaultSession;
-    return typeof session.token === "string" && typeof session.userId === "string" ? session : null;
-  } catch {
-    return null;
-  }
-}

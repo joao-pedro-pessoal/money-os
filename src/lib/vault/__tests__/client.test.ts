@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createVaultClient, openDocument, sealDocument, type VaultTransport } from "../client";
 import { addAccount, emptyDocument } from "../document";
 import { generateSeed } from "../seed";
+import { passwordKeys, recoveryHashOf, recoveryKeyOf, sealWords } from "../credentials";
 
 const random = (length: number) => crypto.getRandomValues(new Uint8Array(length));
 const USER = "user-1";
@@ -41,6 +42,35 @@ describe("signing in", () => {
     });
     await expect(client.login("a@b.pt", "wrong", "PC")).rejects.toThrow(/Wrong email or password/);
   });
+});
+
+describe("a vault that opens with a password alone", () => {
+  it("never sends the password or the words, only what was derived from them", async () => {
+    const sent: { path: string; body: unknown }[] = [];
+    const client = createVaultClient(async (_method, path, init) => {
+      sent.push({ path, body: init.body });
+      return { status: path.endsWith("register") ? 201 : 200, body: { token: "t", userId: USER, deviceId: "d" } };
+    });
+    const words = await generateSeed(random);
+    const keys = await passwordKeys("ana@mail.pt", "uma frase suficientemente longa");
+    const kept = {
+      signInKey: keys.signInKey,
+      sealedWords: sealWords(words, keys.sealKey, random),
+      recoveryHash: recoveryHashOf(recoveryKeyOf(words)),
+    };
+
+    await client.registerKeyed("ana@mail.pt", kept, "PC");
+    await client.recover({ email: "ana@mail.pt", recoveryKey: recoveryKeyOf(words), ...kept, deviceName: "PC" });
+
+    for (const { body } of sent) {
+      const text = JSON.stringify(body);
+      expect(text).not.toContain("uma frase suficientemente longa");
+      // Whole words only: a short one like "add" can sit inside a run of hex.
+      for (const word of words.split(" ")) expect(text).not.toMatch(new RegExp(`\\b${word}\\b`));
+      expect(body).not.toHaveProperty("password");
+    }
+    expect(sent.map((s) => s.path)).toEqual(["/api/vault/register", "/api/vault/recover"]);
+  }, 20_000);
 });
 
 describe("a vault across two devices", () => {

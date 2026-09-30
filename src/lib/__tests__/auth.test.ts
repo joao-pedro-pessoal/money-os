@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { checkPassword, newSessionValue, readSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "../auth";
+import { ownerPassword, newSessionValue, readSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "../auth";
 
 /**
  * The gate itself, which had no tests at all while it was the one module in the
@@ -31,9 +31,9 @@ describe("a missing secret is refused, never defaulted", () => {
     await expect(newSessionValue()).rejects.toThrow(/APP_SECRET is not set/);
   });
 
-  it("refuses to check a password without APP_PASSWORD", async () => {
+  it("refuses to check a password without APP_PASSWORD", () => {
     delete process.env.APP_PASSWORD;
-    await expect(checkPassword("anything")).rejects.toThrow(/APP_PASSWORD is not set/);
+    expect(() => ownerPassword()).toThrow(/APP_PASSWORD is not set/);
   });
 
   /**
@@ -55,7 +55,7 @@ describe("a missing secret is refused, never defaulted", () => {
    */
   it("does not accept the old hard-coded defaults", async () => {
     delete process.env.APP_PASSWORD;
-    await expect(checkPassword("changeme")).rejects.toThrow();
+    expect(() => ownerPassword()).toThrow();
 
     delete process.env.APP_SECRET;
     await expect(newSessionValue()).rejects.toThrow();
@@ -124,23 +124,14 @@ describe("a session", () => {
   });
 });
 
-describe("checkPassword", () => {
-  it("accepts the configured password", async () => {
-    expect(await checkPassword("a-password-for-tests")).toBe(true);
-  });
-
-  it("rejects a wrong one", async () => {
-    expect(await checkPassword("not-it")).toBe(false);
-  });
-
-  /**
-   * The comparison hashes both sides before comparing, and a prefix of the
-   * right password must not be treated as the password.
-   */
-  it("rejects a prefix, a suffix and the empty string", async () => {
-    expect(await checkPassword("a-password-for-test")).toBe(false);
-    expect(await checkPassword("a-password-for-tests-and-more")).toBe(false);
-    expect(await checkPassword("")).toBe(false);
+/**
+ * What the owner's password is compared as — a key derived from it, the same
+ * way on the page and here — is in credentials.test.ts; this is only where the
+ * password comes from.
+ */
+describe("ownerPassword", () => {
+  it("is the configured password, exactly", () => {
+    expect(ownerPassword()).toBe("a-password-for-tests");
   });
 });
 

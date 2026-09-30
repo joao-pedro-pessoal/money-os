@@ -92,6 +92,42 @@ export function createVaultClient(transport: VaultTransport) {
       return { ...sessionOf(reply), email: email.trim().toLowerCase() };
     },
 
+    // A password alone: the page sends keys it derived, never the password
+    // (lib/vault/credentials.ts). Signing in that way is the sign-in page's
+    // server action, which also decides whether the email is the owner's.
+
+    async registerKeyed(
+      email: string,
+      keys: { signInKey: string; sealedWords: string; recoveryHash: string },
+      deviceName: string
+    ): Promise<VaultSession> {
+      const reply = await transport("POST", "/api/vault/register", { body: { email, ...keys, deviceName } });
+      if (reply.status !== 201) throw new VaultClientError(reasonOf(reply, "The account could not be created."));
+      return { ...sessionOf(reply), email: email.trim().toLowerCase() };
+    },
+
+    /** An older account onto a password alone, with its password once more. */
+    async upgradeCredentials(
+      token: string,
+      body: { password: string; signInKey: string; sealedWords: string; recoveryHash: string }
+    ): Promise<void> {
+      const reply = await transport("POST", "/api/vault/account/credentials", { token, body });
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "The account could not be moved."));
+    },
+
+    /** A new password, proven by the recovery key the twelve words give. */
+    async recover(body: {
+      email: string;
+      recoveryKey: string;
+      signInKey: string;
+      sealedWords: string;
+      deviceName: string;
+    }): Promise<VaultSession> {
+      const reply = await transport("POST", "/api/vault/recover", { body });
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "The password could not be replaced."));
+      return { ...sessionOf(reply), email: body.email.trim().toLowerCase() };
+    },
+
     /** The stored ciphertext, or null for an account that has never saved one. */
     async fetchVault(token: string): Promise<{ vaultVersion: number; text: string } | null> {
       const reply = await transport("GET", "/api/vault", { token });

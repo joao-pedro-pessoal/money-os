@@ -1493,6 +1493,16 @@ export const syncLoginMethods = pgTable(
     subject: text("subject").notNull(),
     /** scrypt with its parameters; null for a method that keeps no secret here. */
     secretHash: text("secret_hash"),
+    /**
+     * The twelve words, sealed under a key only the password gives
+     * (lib/vault/credentials.ts). Set: the account signs in with a password
+     * alone, and `secretHash` is of the sign-in key the page derives, never of
+     * the password. Null: an older account, whose `secretHash` is of the
+     * password itself and whose words are typed to open it.
+     */
+    sealedWords: text("sealed_words"),
+    /** sha256 of the recovery key the twelve words give: how a forgotten password is replaced. */
+    recoveryHash: text("recovery_hash"),
     failedLogins: integer("failed_logins").notNull().default(0),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

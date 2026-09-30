@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { readVaultHeader } from "./cipher";
+import { KEY_HEX, SEALED_WORDS } from "./credentials";
 import { PASSWORD_MAX, passwordProblem } from "./password";
 
 /**
@@ -30,8 +31,47 @@ export const RegisterRequest = z
 /** No password rules at login: a policy message there tells an attacker what to try. */
 export const LoginRequest = z.object({ email, password: z.string().max(PASSWORD_MAX), deviceName }).strict();
 
-/** The password again, to delete an account: see `deleteSyncAccount`. */
-export const DeleteAccountRequest = z.object({ password: z.string().min(1).max(PASSWORD_MAX) }).strict();
+/*
+ * Signing in with a password alone (lib/vault/credentials.ts). The page sends
+ * the sign-in key it derived, never the password, so the server has no
+ * password rules to apply here: the page applies them before deriving.
+ */
+const signInKey = z.string().regex(KEY_HEX, "That is not a sign-in key.");
+const sealedWords = z.string().regex(SEALED_WORDS, "Those are not sealed words.");
+const recoveryHash = z.string().regex(KEY_HEX, "That is not a recovery hash.");
+
+export const KeyedRegisterRequest = z
+  .object({ email, signInKey, sealedWords, recoveryHash, deviceName })
+  .strict();
+
+export const KeyedLoginRequest = z.object({ email, signInKey, deviceName }).strict();
+
+/** An older account moving to a password alone: its password once more, and what replaces it. */
+export const UpgradeCredentialsRequest = z
+  .object({ password: z.string().min(1).max(PASSWORD_MAX), signInKey, sealedWords, recoveryHash })
+  .strict();
+
+/** A forgotten password replaced, proven by the recovery key the twelve words give. */
+export const RecoverRequest = z
+  .object({ email, recoveryKey: z.string().regex(KEY_HEX, "That is not a recovery key."), signInKey, sealedWords, deviceName })
+  .strict();
+
+/**
+ * Said to a sign-in with a password alone by an account made before that was
+ * possible: its words have to be typed once, and then it never asks again.
+ */
+export const NEEDS_WORDS = "This vault was made before signing in with a password alone. Type its twelve words once.";
+
+/** Whether a request is the keyed kind, so its own schema's message is the one given back. */
+export function isKeyed(raw: unknown): boolean {
+  return typeof raw === "object" && raw !== null && "signInKey" in raw;
+}
+
+/** The password again, or the sign-in key for an account that has one: see `deleteSyncAccount`. */
+export const DeleteAccountRequest = z.union([
+  z.object({ password: z.string().min(1).max(PASSWORD_MAX) }).strict(),
+  z.object({ signInKey }).strict(),
+]);
 
 export const PutVaultRequest = z
   .object({

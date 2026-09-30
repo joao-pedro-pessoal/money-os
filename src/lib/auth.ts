@@ -63,8 +63,17 @@ async function equalsInConstantTime(a: string, b: string): Promise<boolean> {
   return left === right;
 }
 
-export async function checkPassword(password: string): Promise<boolean> {
-  return equalsInConstantTime(password, required("APP_PASSWORD"));
+/**
+ * The owner's password, for the one check that uses it.
+ *
+ * The sign-in page no longer sends the password: it sends a key derived from
+ * it (lib/vault/credentials.ts), and actions/siteLogin.ts derives the same key
+ * from this to compare. Only that limited login may call this — a second
+ * caller would be a way round its limit on guessing, which
+ * src/lib/__tests__/site-login.test.ts checks.
+ */
+export function ownerPassword(): string {
+  return required("APP_PASSWORD");
 }
 
 export const SESSION_COOKIE_NAME = COOKIE_NAME;

@@ -6,7 +6,7 @@ import { afterFailedLogin, lockedUntil, MAX_FAILED_LOGINS } from "../vault/proto
 /**
  * The site's password is only ever checked through the limit on guessing.
  *
- * `checkPassword` answers as fast as it is asked. `attemptSiteLogin` wraps it
+ * `ownerPassword` hands the password to whoever asks. `attemptSiteLogin` wraps it
  * with the vault's lockout, and the protection holds only while nothing else
  * calls it — a second login route, or a settings screen asking for the
  * password again, would be an unlimited way round. Nothing in a review makes
@@ -29,7 +29,7 @@ function sourceFiles(dir: string): string[] {
 describe("the site's login", () => {
   it("checks the password only inside the limited login", () => {
     const callers = sourceFiles(SRC)
-      .filter((file) => /\bcheckPassword\s*\(/.test(readFileSync(file, "utf8")))
+      .filter((file) => /\bownerPassword\s*\(/.test(readFileSync(file, "utf8")))
       .map((file) => relative(SRC, file).replace(/\\/g, "/"))
       .sort();
     expect(callers).toEqual(["actions/siteLogin.ts", "lib/auth.ts"]);

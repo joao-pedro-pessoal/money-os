@@ -121,10 +121,10 @@ export default function VaultLinkJoin() {
         <p className="text-sm">
           This page opens from the code shown on a computer where your vault is open: there, press{" "}
           <span className="font-medium">Open on your phone</span> and point this phone&apos;s camera at the code. Or{" "}
-          <a href="/vault" className="text-[var(--accent)]">
+          <a href="/login" className="text-[var(--accent)]">
             sign in here
           </a>{" "}
-          with your address, password and twelve words.
+          with your email and password.
         </p>
       )}
 

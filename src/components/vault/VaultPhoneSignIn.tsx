@@ -140,7 +140,7 @@ export default function VaultPhoneSignIn({
         <div>
           <div className="text-sm font-medium">Sign in with your phone</div>
           <p className="text-xs text-[var(--muted)]">
-            If your vault is open on your phone, scan a code instead of typing the password and the twelve words here.
+            If your vault is open on your phone, scan a code instead of typing your email and password here.
           </p>
         </div>
         {phase.kind !== "showing" && (

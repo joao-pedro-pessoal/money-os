@@ -29,11 +29,18 @@ import {
   MAX_WAITING_SIGN_INS,
   signInRequestState,
 } from "@/lib/vault/link";
+import { recoveryHashOf, sameKey } from "@/lib/vault/credentials";
 import {
+  isKeyed,
+  KeyedLoginRequest,
+  KeyedRegisterRequest,
   LoginRequest,
+  NEEDS_WORDS,
   PutVaultRequest,
   DeleteAccountRequest,
+  RecoverRequest,
   RegisterRequest,
+  UpgradeCredentialsRequest,
   afterFailedLogin,
   checkVaultPut,
   lockedUntil,
@@ -156,10 +163,28 @@ async function registrationCounts(executor: Pick<typeof db, "execute">) {
   return result.rows[0] as { total: number; lastHour: number; lastDay: number };
 }
 
-export async function registerSyncAccount(raw: unknown) {
+/**
+ * A registration of either kind, read as one: what to hash, and what to keep
+ * beside it. The keyed kind is the site's (a password alone, the words sealed);
+ * the older kind is what the phone app still sends.
+ */
+function readRegistration(raw: unknown) {
+  if (isKeyed(raw)) {
+    const parsed = KeyedRegisterRequest.safeParse(raw);
+    if (!parsed.success) return { ok: false as const, error: parsed.error };
+    const { email, signInKey, sealedWords, recoveryHash, deviceName } = parsed.data;
+    return { ok: true as const, email, secret: signInKey, deviceName, sealedWords, recoveryHash };
+  }
   const parsed = RegisterRequest.safeParse(raw);
-  if (!parsed.success) return invalid(parsed.error);
+  if (!parsed.success) return { ok: false as const, error: parsed.error };
   const { email, password, deviceName } = parsed.data;
+  return { ok: true as const, email, secret: password, deviceName, sealedWords: null, recoveryHash: null };
+}
+
+export async function registerSyncAccount(raw: unknown) {
+  const parsed = readRegistration(raw);
+  if (!parsed.ok) return invalid(parsed.error);
+  const { email, secret, deviceName, sealedWords, recoveryHash } = parsed;
 
   /**
    * Limited before the password is hashed, so a closed server spends nothing on
@@ -174,7 +199,7 @@ export async function registerSyncAccount(raw: unknown) {
   // most of a second on every registration. Through the gate, because this
   // runs before anything has been checked — an address nobody owns costs a
   // full hash here, which is the cheapest attack on this server there is.
-  const hashed = await passwords.run(() => hashPassword(password, random));
+  const hashed = await passwords.run(() => hashPassword(secret, random));
   if (!hashed.ok) return refusal(429, BUSY);
   const secretHash = hashed.value;
   try {
@@ -183,7 +208,9 @@ export async function registerSyncAccount(raw: unknown) {
       const refused = registrationRefusal(await registrationCounts(tx), limit);
       if (refused) return refusal(refused.status, refused.reason);
       const [user] = await tx.insert(syncUsers).values({ email }).returning({ id: syncUsers.id });
-      await tx.insert(syncLoginMethods).values({ userId: user.id, kind: "password", subject: email, secretHash });
+      await tx
+        .insert(syncLoginMethods)
+        .values({ userId: user.id, kind: "password", subject: email, secretHash, sealedWords, recoveryHash });
       return { ok: true as const, ...(await openSession(tx, user.id, deviceName)) };
     });
   } catch (error) {
@@ -270,10 +297,30 @@ async function countFailedPassword(methodId: string, now: Date): Promise<void> {
   }
 }
 
-export async function loginSyncAccount(raw: unknown) {
+/**
+ * A sign-in, with the sign-in key the site derives from a password, or with the
+ * password itself as the phone app still sends it.
+ *
+ * With the key, the answer carries the account's sealed words, which only the
+ * password that made the key can open. An older account has no key to check —
+ * its hash is of the password — so a keyed sign-in there is told to open it
+ * with its words once (`NEEDS_WORDS`), and `upgradeSyncCredentials` moves it.
+ */
+function readLogin(raw: unknown) {
+  if (isKeyed(raw)) {
+    const parsed = KeyedLoginRequest.safeParse(raw);
+    if (!parsed.success) return { ok: false as const, error: parsed.error };
+    return { ok: true as const, keyed: true, ...parsed.data, secret: parsed.data.signInKey };
+  }
   const parsed = LoginRequest.safeParse(raw);
-  if (!parsed.success) return invalid(parsed.error);
-  const { email, password, deviceName } = parsed.data;
+  if (!parsed.success) return { ok: false as const, error: parsed.error };
+  return { ok: true as const, keyed: false, ...parsed.data, secret: parsed.data.password };
+}
+
+export async function loginSyncAccount(raw: unknown) {
+  const parsed = readLogin(raw);
+  if (!parsed.ok) return invalid(parsed.error);
+  const { email, secret: password, deviceName, keyed } = parsed;
   const now = new Date();
 
   const [method] = await db
@@ -300,6 +347,9 @@ export async function loginSyncAccount(raw: unknown) {
     return refusal(429, `Too many wrong passwords. Try again after ${until.toISOString()}.`);
   }
 
+  // Nothing to check a key against: the stored hash is of the password.
+  if (keyed && method.sealedWords === null) return refusal(409, NEEDS_WORDS);
+
   // Held in a const: the check above proved it is there, and a closure would
   // not carry that proof.
   const stored = method.secretHash;
@@ -320,6 +370,95 @@ export async function loginSyncAccount(raw: unknown) {
     await tx
       .update(syncLoginMethods)
       .set({ failedLogins: 0, lockedUntil: null, secretHash })
+      .where(eq(syncLoginMethods.id, method.id));
+    return {
+      ok: true as const,
+      ...(await openSession(tx, method.userId, deviceName)),
+      sealedWords: method.sealedWords,
+    };
+  });
+}
+
+/**
+ * An older account moving to a password alone, from a page that has just
+ * opened it with its twelve words.
+ *
+ * The password is asked for once more, not taken from the session: a session
+ * lifted from a device must not be enough to replace how the account signs in.
+ * After this the stored hash is of the sign-in key, the password stops coming
+ * here at all, and the words stay sealed beside it.
+ */
+export async function upgradeSyncCredentials(token: string | null, raw: unknown) {
+  const session = await authenticate(token);
+  if (!session) return refusal(401, "Sign in again: this device's session is not valid.");
+  const parsed = UpgradeCredentialsRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const { password, signInKey, sealedWords, recoveryHash } = parsed.data;
+  const now = new Date();
+
+  const [method] = await db
+    .select()
+    .from(syncLoginMethods)
+    .where(and(eq(syncLoginMethods.userId, session.userId), eq(syncLoginMethods.kind, "password")));
+  if (!method || method.secretHash === null) return refusal(403, "This account has no password to move.");
+  if (method.sealedWords !== null) return refusal(409, "This account already signs in with its password alone.");
+  const until = lockedUntil(method, now);
+  if (until) return refusal(429, `Too many wrong passwords. Try again after ${until.toISOString()}.`);
+
+  const stored = method.secretHash;
+  const checked = await passwords.run(() => verifyPassword(password, stored));
+  if (!checked.ok) return refusal(429, BUSY);
+  if (!checked.value) {
+    await countFailedPassword(method.id, now);
+    return refusal(403, "That is not this account's password. Nothing was changed.");
+  }
+  const hashed = await passwords.run(() => hashPassword(signInKey, random));
+  if (!hashed.ok) return refusal(429, BUSY);
+
+  // Only if it is still the older kind: two pages moving it at once, one wins.
+  const [moved] = await db
+    .update(syncLoginMethods)
+    .set({ secretHash: hashed.value, sealedWords, recoveryHash, failedLogins: 0, lockedUntil: null })
+    .where(and(eq(syncLoginMethods.id, method.id), isNull(syncLoginMethods.sealedWords)))
+    .returning({ id: syncLoginMethods.id });
+  if (!moved) return refusal(409, "This account already signs in with its password alone.");
+  return { ok: true as const };
+}
+
+/** Same words for an unknown address, an account with no recovery, and the wrong twelve words. */
+const WRONG_WORDS = "Those twelve words and that address do not match an account.";
+
+/**
+ * A forgotten password replaced, with the twelve words as the proof.
+ *
+ * The page sends the recovery key the words give, never the words: the server
+ * checks it against the hash it kept and learns nothing that opens the vault.
+ * Wrong words count as a wrong password, so this is no faster way to guess.
+ */
+export async function recoverSyncAccount(raw: unknown) {
+  const parsed = RecoverRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const { email, recoveryKey, signInKey, sealedWords, deviceName } = parsed.data;
+  const now = new Date();
+
+  const [method] = await db
+    .select()
+    .from(syncLoginMethods)
+    .where(and(eq(syncLoginMethods.kind, "password"), eq(syncLoginMethods.subject, email)));
+  if (!method || method.recoveryHash === null) return refusal(401, WRONG_WORDS);
+  const until = lockedUntil(method, now);
+  if (until) return refusal(429, `Too many wrong attempts. Try again after ${until.toISOString()}.`);
+  if (!sameKey(recoveryHashOf(recoveryKey), method.recoveryHash)) {
+    await countFailedPassword(method.id, now);
+    return refusal(401, WRONG_WORDS);
+  }
+
+  const hashed = await passwords.run(() => hashPassword(signInKey, random));
+  if (!hashed.ok) return refusal(429, BUSY);
+  return db.transaction(async (tx) => {
+    await tx
+      .update(syncLoginMethods)
+      .set({ secretHash: hashed.value, sealedWords, failedLogins: 0, lockedUntil: null })
       .where(eq(syncLoginMethods.id, method.id));
     return { ok: true as const, ...(await openSession(tx, method.userId, deviceName)) };
   });
@@ -460,8 +599,11 @@ export async function deleteSyncAccount(token: string | null, raw: unknown) {
   const until = lockedUntil(method, now);
   if (until) return refusal(429, `Too many wrong passwords. Try again after ${until.toISOString()}.`);
 
+  // An account that signs in with a password alone stores the sign-in key's
+  // hash, so that is what confirms it; an older one, the password's.
+  const secret = "password" in parsed.data ? parsed.data.password : parsed.data.signInKey;
   const stored = method.secretHash;
-  const checked = await passwords.run(() => verifyPassword(parsed.data.password, stored));
+  const checked = await passwords.run(() => verifyPassword(secret, stored));
   if (!checked.ok) return refusal(429, BUSY);
   if (!checked.value) {
     await countFailedPassword(method.id, now);

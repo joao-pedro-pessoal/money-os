@@ -3,7 +3,8 @@
 import { db } from "@/db/client";
 import { loginThrottle } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { checkPassword } from "@/lib/auth";
+import { ownerPassword } from "@/lib/auth";
+import { passwordKeys, sameKey } from "@/lib/vault/credentials";
 import { afterFailedLogin, lockedUntil } from "@/lib/vault/protocol";
 
 /**
@@ -23,13 +24,39 @@ const KEY = "site";
 
 export type SiteLoginResult = { ok: true } | { ok: false; lockedUntil: Date | null };
 
-export async function attemptSiteLogin(password: string): Promise<SiteLoginResult> {
+/**
+ * The key the sign-in page sends for the owner's password on this email.
+ *
+ * The page never sends the password: it derives a sign-in key from the email
+ * and what was typed (lib/vault/credentials.ts), the same key a vault account
+ * signs in with. This derives it from APP_PASSWORD the same way, once per
+ * email for the life of the process — with APP_EMAIL set, only that one email
+ * ever gets here. A slow scrypt, deliberately; the lockout above it stops it
+ * being run more than a handful of times by anyone guessing.
+ */
+const ownerKeys = new Map<string, Promise<string>>();
+
+function ownerKeyFor(email: string): Promise<string> {
+  let key = ownerKeys.get(email);
+  if (!key) {
+    if (ownerKeys.size >= 16) ownerKeys.clear();
+    key = passwordKeys(email, ownerPassword()).then(({ signInKey, sealKey }) => {
+      sealKey.fill(0);
+      return signInKey;
+    });
+    ownerKeys.set(email, key);
+    key.catch(() => ownerKeys.delete(email));
+  }
+  return key;
+}
+
+export async function attemptSiteLogin(email: string, signInKey: string): Promise<SiteLoginResult> {
   const now = new Date();
   const [row] = await db.select().from(loginThrottle).where(eq(loginThrottle.key, KEY));
   const until = row ? lockedUntil(row, now) : null;
   if (until) return { ok: false, lockedUntil: until };
 
-  if (await checkPassword(password)) {
+  if (sameKey(signInKey, await ownerKeyFor(email))) {
     if (row && (row.failedLogins > 0 || row.lockedUntil !== null)) {
       await db
         .update(loginThrottle)

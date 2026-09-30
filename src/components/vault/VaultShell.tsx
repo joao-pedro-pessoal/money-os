@@ -12,13 +12,13 @@ import {
 } from "@/lib/vault/client";
 import { emptyDocument, type VaultDocument } from "@/lib/vault/document";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AuthFrame from "../AuthFrame";
 import TopBar from "../TopBar";
 import VaultNav from "./VaultNav";
-import VaultSignIn from "./VaultSignIn";
+import VaultCreate from "./VaultCreate";
 import VaultSeedPrompt from "./VaultSeedPrompt";
-import VaultPhoneSignIn from "./VaultPhoneSignIn";
-import { forgetVault, isKept, recallVault, rememberVault, takeSignedIn } from "./storage";
+import { forgetVault, isKept, recallVault, rememberVault } from "./storage";
 
 const client = createVaultClient(fetchTransport());
 
@@ -74,6 +74,7 @@ export default function VaultShell({ children }: { children: React.ReactNode }) 
   /** Came from "Create your vault" on the sign-in page. */
   const [startNew, setStartNew] = useState(false);
   const saving = useRef(false);
+  const router = useRouter();
   const onJoined = useCallback(() => setJoined((n) => n + 1), []);
 
   /**
@@ -127,16 +128,6 @@ export default function VaultShell({ children }: { children: React.ReactNode }) 
       const remembered = recallVault();
       if (remembered) {
         await open(remembered.session, remembered.words);
-        return;
-      }
-
-      // Signed in on the sign-in page a moment ago: the words are still to come.
-      const signedIn = takeSignedIn();
-      if (signedIn) {
-        if (!cancelled) {
-          setAwaitingSeed({ session: signedIn, isNew: false });
-          setLoading(false);
-        }
         return;
       }
 
@@ -195,12 +186,21 @@ export default function VaultShell({ children }: { children: React.ReactNode }) 
 
   const lock = () => {
     forgetVault();
+    // Back to the sign-in page, not to the form this vault was created from.
+    setStartNew(false);
     setSession(null);
     setSeed(null);
     setDocument(null);
     setVersion(0);
     setStatus(null);
   };
+
+  // Nothing open, nothing to finish and nothing to say: the way in is the
+  // sign-in page. "Create your vault" arrives with ?new=1 and stays here.
+  const leaving = !loading && !awaitingSeed && !session && !startNew && !problem;
+  useEffect(() => {
+    if (leaving) router.replace("/login");
+  }, [leaving, router]);
 
   const problemNotice = problem && (
     <p role="alert" className="card p-3 text-sm text-[var(--red)]">
@@ -209,19 +209,20 @@ export default function VaultShell({ children }: { children: React.ReactNode }) 
   );
 
   // Before a vault is open there is nothing to move between, so no menu: the
-  // same frame as the sign-in page instead.
+  // same frame as the sign-in page instead. Signing in is that page's; this
+  // one creates a vault, finishes a Google sign-in, or says what went wrong.
   if (loading || awaitingSeed || !session || !document || !seed) {
     return (
       <AuthFrame>
         <header className="space-y-2">
           <h1 className="text-3xl tracking-tight text-[var(--foreground)]">Your vault</h1>
           <p className="text-sm text-[var(--muted)]">
-            An account of your own on this Money OS. What you record is encrypted on this device with twelve words only
-            you have, and stored as something the server cannot read.
+            An account of your own on this Money OS. What you record is encrypted on this device before it is stored,
+            as something the server — and whoever runs it — cannot read.
           </p>
         </header>
         {problemNotice}
-        {loading ? (
+        {loading || leaving ? (
           <p className="text-sm text-[var(--muted)]">Opening…</p>
         ) : awaitingSeed ? (
           <VaultSeedPrompt
@@ -234,17 +235,7 @@ export default function VaultShell({ children }: { children: React.ReactNode }) 
             onCancel={() => setAwaitingSeed(null)}
           />
         ) : (
-          <div className="space-y-4">
-            <VaultSignIn
-              key={startNew ? "new" : "in"}
-              initialMode={startNew ? "new" : "in"}
-              onOpen={(next, words, keep) => void open(next, words, keep)}
-            />
-            {/* On a computer only: a phone would be showing the code to itself. */}
-            <div className="hidden sm:block">
-              <VaultPhoneSignIn onOpen={(next, words, keep) => void open(next, words, keep)} />
-            </div>
-          </div>
+          startNew && <VaultCreate onOpen={(next, words, keep) => void open(next, words, keep)} />
         )}
         <p className="text-sm text-center text-[var(--muted)]">
           <Link href="/login" className="text-[var(--accent)] font-medium">

@@ -150,7 +150,7 @@ export default function VaultPhoneLink({
         <div>
           <div className="text-sm font-medium">Open on your phone</div>
           <p className="text-xs text-[var(--muted)]">
-            Scan a code with the phone&apos;s camera instead of typing the address, the password and the twelve words.
+            Scan a code with the phone&apos;s camera instead of typing the address, your email and your password.
           </p>
         </div>
         {phase.kind === "idle" || phase.kind === "over" || phase.kind === "joined" || phase.kind === "unreachable" ? (

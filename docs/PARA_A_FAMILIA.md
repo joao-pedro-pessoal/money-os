@@ -116,21 +116,33 @@ Manda-lhes o endereço `https://…vercel.app` e isto:
 **No computador, a primeira vez**
 
 1. Abre o endereço e carrega em **Create your vault**, por baixo do botão
-   *Sign in* (ou *Continue with Google*, se a configuraste).
-2. Aparecem **doze palavras**. Escreve-as num papel, guardado onde guardas
-   documentos.
-3. Essas doze palavras são a chave. **Ninguém as pode devolver** — nem eu, nem o
-   servidor, nem a Google. Perdê-las é perder o que está lá dentro.
-4. Se o computador for só teu, marca **This phone or computer is mine**: assim
-   não pede as doze palavras cada vez. Num computador partilhado, deixa
-   desmarcado.
+   *Sign in*. Escolhe o email e uma palavra-passe **longa** (12 caracteres ou
+   mais): é ela que tranca o cofre.
+2. Aparecem **doze palavras de recuperação**. Escreve-as num papel, guardado onde
+   guardas documentos. Não são para entrar — para isso chega o email e a
+   palavra-passe. São a única forma de voltar a entrar se esqueceres a
+   palavra-passe. **Ninguém as pode devolver** — nem eu, nem o servidor.
+3. Se o computador for só teu, marca **This phone or computer is mine**: assim
+   fica aberto até carregares em *Lock and sign out*. Num computador partilhado,
+   deixa desmarcado.
 
 **Das outras vezes**
 
-O email e a palavra-passe na página de entrada, e a seguir as doze palavras —
-ou nada, se marcaste que o aparelho é teu. O cofre tem um menu à esquerda como o
-teu: **Dashboard**, **Accounts**, **Cash Flow** e, no fundo, **Devices** e
-**Lock and sign out**.
+Só o email e a palavra-passe, na página de entrada. O cofre tem um menu à
+esquerda como o teu: **Dashboard**, **Accounts**, **Cash Flow** e, no fundo,
+**Devices** e **Lock and sign out**.
+
+**Se esqueceres a palavra-passe**
+
+Na página de entrada, **Forgot your password?**: o email, as doze palavras e
+uma palavra-passe nova. O cofre fica igual; só muda a palavra-passe. Sem as
+doze palavras e sem a palavra-passe não há forma de entrar.
+
+**Quem já tinha cofre antes de 30 de setembro**
+
+Na primeira entrada com email e palavra-passe, o site pede as doze palavras
+**uma última vez** (*One more step*). Depois disso, basta o email e a
+palavra-passe, em todos os aparelhos.
 
 **No telemóvel, com o código QR**
 
@@ -140,8 +152,8 @@ teu: **Dashboard**, **Accounts**, **Cash Flow** e, no fundo, **Devices** e
 3. O computador pergunta *«Android phone · Chrome scanned the code and wants to
    open your vault»* (ou o nome do teu telemóvel). Se for o telemóvel que tens na
    mão, carrega em **Yes, let it in**.
-4. O telemóvel abre o cofre sozinho, sem escrever email, palavra-passe nem
-   doze palavras, e fica aberto até carregares em **Lock and sign out**.
+4. O telemóvel abre o cofre sozinho, sem escrever email nem palavra-passe, e
+   fica aberto até carregares em **Lock and sign out**.
 5. No Chrome ou no Safari, usa **Adicionar ao ecrã principal**. Fica com ícone,
    como uma app, e abre diretamente no cofre.
 
@@ -172,8 +184,9 @@ não o consegue abrir.
 **Os aparelhos**
 
 Em **Devices**, no menu do cofre, aparece cada aparelho com sessão aberta.
-**Sign out** tira-o de lá. Num telemóvel perdido: tira-o em Devices, e conta que
-as doze palavras podem ter sido vistas, porque estavam guardadas nele.
+**Sign out** tira-o de lá. Num telemóvel perdido: tira-o em Devices e muda a
+palavra-passe (**Forgot your password?**, com as doze palavras). Se o cofre
+estava guardado nele, as doze palavras também estavam.
 
 ## O que isto ainda não é
 
@@ -190,7 +203,16 @@ Dito de frente, para ninguém contar com o que não existe:
 - **Quem entrar com a Google num email que já tem conta de palavra-passe é
   recusado.** Juntar os dois métodos na mesma conta é trabalho por fazer
   (tarefa E03).
-- **Não há reposição de palavra-passe** nem de doze palavras.
+- **A palavra-passe é o que tranca o cofre.** O servidor nunca a vê, mas guarda
+  as doze palavras fechadas com uma chave que só ela dá. Quem tivesse uma cópia
+  da base de dados podia tentar adivinhá-la — cada tentativa é lenta de
+  propósito, mas uma palavra-passe curta ou usada noutros sítios cai. Por isso
+  pede-se uma longa.
+- **As doze palavras não se recuperam.** Com elas muda-se a palavra-passe;
+  perdidas as duas, o cofre fica fechado para sempre.
+- **A app de telemóvel nativa** (a pasta `mobile/`, que não é o site) ainda entra
+  à moda antiga. Um cofre que já passou a entrar só com a palavra-passe não abre
+  lá; no telemóvel usa o site.
 - Dois aparelhos a gravar ao mesmo tempo: o segundo é avisado e volta a ler
   antes de gravar. Não se perde nada, mas às vezes há que repetir.
 - **Qualquer pessoa que descubra o endereço pode criar uma conta**, até ao

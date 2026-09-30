@@ -10,6 +10,7 @@ import { newSessionValue, sessionCookieOptions, SESSION_COOKIE_NAME } from "@/li
 import { attemptSiteLogin } from "@/actions/siteLogin";
 import { loginSyncAccount } from "@/actions/vaultServer";
 import { normalizeEmail, ownerEmailFrom, signInRoute, type SignInOutcome } from "@/lib/signInRoute";
+import { KEY_HEX } from "@/lib/vault/credentials";
 
 /**
  * Forgets the session on this device. Its cookie is still a valid session
@@ -21,10 +22,15 @@ export async function logout() {
   redirect("/login");
 }
 
+/**
+ * The page sends a sign-in key derived from the password, never the password
+ * (lib/vault/credentials.ts): the owner's is checked against the same key
+ * derived from APP_PASSWORD, a vault's against the hash its account keeps.
+ */
 const SignInRequest = z
   .object({
     email: z.string().max(254),
-    password: z.string().max(1024),
+    signInKey: z.string().regex(KEY_HEX),
     deviceName: z.string().trim().min(1).max(80),
   })
   .strict();
@@ -55,8 +61,8 @@ export async function signIn(raw: unknown): Promise<SignInOutcome> {
   const parsed = SignInRequest.safeParse(raw);
   if (!parsed.success) return { kind: "wrong" };
   const email = normalizeEmail(parsed.data.email);
-  const { password, deviceName } = parsed.data;
-  if (email === "" || password === "") return { kind: "wrong" };
+  const { signInKey, deviceName } = parsed.data;
+  if (email === "") return { kind: "wrong" };
 
   const ownerEmail = ownerEmailFrom(process.env.APP_EMAIL);
   const route = signInRoute({
@@ -67,7 +73,7 @@ export async function signIn(raw: unknown): Promise<SignInOutcome> {
 
   if (route === "owner") {
     // Limited: ten wrong passwords lock the login for a while — see `attemptSiteLogin`.
-    const result = await attemptSiteLogin(password);
+    const result = await attemptSiteLogin(email, signInKey);
     if (!result.ok) {
       return result.lockedUntil ? { kind: "locked", until: result.lockedUntil.toISOString() } : { kind: "wrong" };
     }
@@ -77,12 +83,16 @@ export async function signIn(raw: unknown): Promise<SignInOutcome> {
     return { kind: "owner" };
   }
 
-  const result = await loginSyncAccount({ email, password, deviceName });
+  const result = await loginSyncAccount({ email, signInKey, deviceName });
   if (!result.ok) {
+    if (result.status === 409) return { kind: "needs-words" };
     return result.status === 400 || result.status === 401 ? { kind: "wrong" } : { kind: "refused", reason: result.reason };
   }
+  // A keyed sign-in only succeeds on an account with sealed words.
+  if (result.sealedWords === null) return { kind: "needs-words" };
   return {
     kind: "vault",
     session: { token: result.token, userId: result.userId, deviceId: result.deviceId, email },
+    sealedWords: result.sealedWords,
   };
 }

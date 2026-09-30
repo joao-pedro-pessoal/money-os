@@ -4,164 +4,313 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signIn } from "@/app/login/actions";
+import type { VaultSession } from "@/lib/vault/client";
+import { passwordKeys, unsealWords } from "@/lib/vault/credentials";
 import { describeDevice } from "@/lib/vault/link";
+import { passwordProblem } from "@/lib/vault/password";
+import { isValidSeed } from "@/lib/vault/seed";
+import KeepOpenChoice from "./vault/KeepOpenChoice";
 import VaultPhoneSignIn from "./vault/VaultPhoneSignIn";
-import { holdSignedIn, rememberVault } from "./vault/storage";
+import { moveOlderVault, recoverPasswordVault } from "./vault/passwordVault";
+import { rememberVault } from "./vault/storage";
+
+type Step = "sign-in" | "words" | "recover" | "phone";
+
+const deviceName = () => describeDevice(navigator.userAgent);
 
 /**
- * The sign-in form: one email and one password for everyone.
+ * The sign-in page: an email and a password, for everyone.
  *
- * The owner lands on the site. Anyone else lands in their vault, which still
- * asks for the twelve words — they are never typed here, and never sent.
- * Which of the two an email is, the server decides (lib/signInRoute.ts); this
- * page only learns where to go next.
+ * The owner lands on the site; anyone else in their vault, opened on the spot.
+ * The password never leaves this page — it becomes a sign-in key for the
+ * server and a key that unseals the vault's twelve words here
+ * (lib/vault/credentials.ts). Which of the two an email is, the server
+ * decides (lib/signInRoute.ts).
+ *
+ * The words are typed in two cases only: once, for a vault made before they
+ * were kept sealed; and to set a new password when the old one is forgotten.
  */
 export default function LoginScreen({ google }: { google: boolean }) {
   const router = useRouter();
+  const [step, setStep] = useState<Step>("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [words, setWords] = useState("");
   const [shown, setShown] = useState(false);
+  const [keep, setKeep] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [phone, setPhone] = useState(false);
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const go = (next: Step) => {
+    setStep(next);
+    setProblem(null);
+    setWords("");
+  };
+
+  const openVault = (session: VaultSession, vaultWords: string) => {
+    rememberVault(session, vaultWords, keep);
+    router.replace("/vault");
+  };
+
+  /** Runs one step, with the button busy and any failure said in its own words. */
+  const attempt = async (work: () => Promise<void>) => {
     if (busy) return;
-    if (!email.trim() || !password) {
-      setProblem("Write your email and your password.");
-      return;
-    }
     setBusy(true);
     setProblem(null);
     try {
-      const outcome = await signIn({ email, password, deviceName: describeDevice(navigator.userAgent) });
-      switch (outcome.kind) {
-        case "owner":
-          router.replace("/");
-          return;
-        case "vault":
-          holdSignedIn(outcome.session);
-          router.replace("/vault");
-          return;
-        case "wrong":
-          setProblem("That email and password do not match.");
-          break;
-        case "locked":
-          setProblem(
-            `Too many wrong passwords. Signing in opens again at ${new Date(outcome.until).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}.`
-          );
-          break;
-        case "refused":
-          setProblem(outcome.reason);
-          break;
-      }
-    } catch {
-      setProblem("The server could not be reached. Try again in a moment.");
+      await work();
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : "The server could not be reached. Try again in a moment.");
     }
     setBusy(false);
   };
 
+  const signInNow = () =>
+    attempt(async () => {
+      if (!email.trim() || !password) throw new Error("Write your email and your password.");
+      const keys = await passwordKeys(email, password);
+      try {
+        const outcome = await signIn({ email, signInKey: keys.signInKey, deviceName: deviceName() });
+        switch (outcome.kind) {
+          case "owner":
+            router.replace("/");
+            return;
+          case "vault":
+            openVault(outcome.session, unsealWords(outcome.sealedWords, keys.sealKey));
+            return;
+          case "needs-words":
+            go("words");
+            return;
+          case "wrong":
+            throw new Error("That email and password do not match.");
+          case "locked":
+            throw new Error(
+              `Too many wrong passwords. Signing in opens again at ${new Date(outcome.until).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}.`
+            );
+          case "refused":
+            throw new Error(outcome.reason);
+        }
+      } finally {
+        keys.sealKey.fill(0);
+      }
+    });
+
+  const moveNow = () =>
+    attempt(async () => {
+      if (!isValidSeed(words)) throw new Error("Those are not the twelve words of a recovery seed.");
+      const session = await moveOlderVault(email, password, words.trim(), deviceName());
+      openVault(session, words.trim());
+    });
+
+  const recoverNow = () =>
+    attempt(async () => {
+      if (!email.trim()) throw new Error("Write the email of your vault.");
+      if (!isValidSeed(words)) throw new Error("Those are not the twelve words of a recovery seed.");
+      const weak = passwordProblem(password);
+      if (weak) throw new Error(weak);
+      const session = await recoverPasswordVault(email, words.trim(), password, deviceName());
+      openVault(session, words.trim());
+    });
+
+  const emailField = (
+    <label className="block space-y-1.5">
+      <span className="text-sm text-[var(--foreground)]">Email</span>
+      <input
+        className="input auth-input"
+        type="email"
+        name="email"
+        autoComplete="username"
+        inputMode="email"
+        autoFocus
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+    </label>
+  );
+
+  const passwordField = (label: string, autoComplete: "current-password" | "new-password") => (
+    <label className="block space-y-1.5">
+      <span className="text-sm text-[var(--foreground)]">{label}</span>
+      <span className="relative block">
+        <input
+          className="input auth-input pr-16"
+          type={shown ? "text" : "password"}
+          name="password"
+          autoComplete={autoComplete}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          type="button"
+          className="absolute inset-y-0 right-0 px-3 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+          aria-pressed={shown}
+          aria-label={shown ? "Hide the password" : "Show the password"}
+          onClick={() => setShown((value) => !value)}
+        >
+          {shown ? "Hide" : "Show"}
+        </button>
+      </span>
+    </label>
+  );
+
+  const wordsField = (
+    <label className="block space-y-1.5">
+      <span className="text-sm text-[var(--foreground)]">Your twelve words</span>
+      <textarea
+        className="input auth-input"
+        rows={3}
+        autoComplete="off"
+        spellCheck={false}
+        autoFocus={step === "words"}
+        value={words}
+        onChange={(e) => setWords(e.target.value)}
+        placeholder="word word word …"
+      />
+    </label>
+  );
+
+  const problemNotice = problem && (
+    <p role="alert" className="text-sm text-[var(--red)]">
+      {problem}
+    </p>
+  );
+
+  const back = (
+    <button type="button" className="btn-quiet" onClick={() => go("sign-in")}>
+      Back to sign in
+    </button>
+  );
+
+  /*
+   * Each form posts to this page if its script never runs: a form with no
+   * method would send the password as a GET — in the address, the history and
+   * the server's logs.
+   */
+  const form = (onSubmit: () => void, children: React.ReactNode) => (
+    <form
+      method="post"
+      action="/login"
+      noValidate
+      className="space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSubmit();
+      }}
+    >
+      {children}
+    </form>
+  );
+
+  if (step === "phone") {
+    return (
+      <>
+        <Heading title="Sign in with your phone" />
+        <VaultPhoneSignIn start onOpen={(session, vaultWords, keepHere) => {
+          rememberVault(session, vaultWords, keepHere);
+          router.replace("/vault");
+        }} />
+        {back}
+      </>
+    );
+  }
+
+  if (step === "words") {
+    return (
+      <>
+        <Heading title="One more step">
+          This vault was made before signing in with a password alone. Type its twelve words once — from then on,
+          your email and password are enough, here and on every device.
+        </Heading>
+        {form(moveNow, (
+          <>
+            {wordsField}
+            {problemNotice}
+            <button type="submit" className="btn w-full min-h-11" disabled={busy}>
+              {busy ? "Opening…" : "Open my vault"}
+            </button>
+          </>
+        ))}
+        {back}
+      </>
+    );
+  }
+
+  if (step === "recover") {
+    return (
+      <>
+        <Heading title="A new password">
+          Your twelve words prove the vault is yours. Choose a new password; the words stay the same, and still open
+          it if you forget this one too.
+        </Heading>
+        {form(recoverNow, (
+          <>
+            {emailField}
+            {wordsField}
+            {passwordField("New password", "new-password")}
+            <KeepOpenChoice keep={keep} onChange={setKeep} />
+            {problemNotice}
+            <button type="submit" className="btn w-full min-h-11" disabled={busy}>
+              {busy ? "Setting it…" : "Set the new password"}
+            </button>
+            <p className="text-xs text-[var(--muted)]">
+              For vaults only. The owner&apos;s password is set where this site is set up.
+            </p>
+          </>
+        ))}
+        {back}
+      </>
+    );
+  }
+
   return (
     <>
-      <div className="space-y-2">
-        <h1 className="text-3xl tracking-tight text-[var(--foreground)]">Sign in</h1>
-        <p className="text-sm text-[var(--muted)]">
-          With your email and password — the same page for the owner and for everyone with a vault here.
-        </p>
-      </div>
+      <Heading title="Sign in">With your email and password.</Heading>
 
-      {phone ? (
-        <div className="space-y-3">
-          <VaultPhoneSignIn
-            start
-            onOpen={(session, words, keep) => {
-              rememberVault(session, words, keep);
-              router.replace("/vault");
-            }}
-          />
-          <button type="button" className="btn-quiet" onClick={() => setPhone(false)}>
-            Back to email and password
+      {form(signInNow, (
+        <>
+          {emailField}
+          {passwordField("Password", "current-password")}
+          <div className="flex justify-end -mt-2">
+            <button
+              type="button"
+              className="text-xs text-[var(--accent)] hover:underline"
+              onClick={() => {
+                setPassword("");
+                go("recover");
+              }}
+            >
+              Forgot your password?
+            </button>
+          </div>
+          <KeepOpenChoice keep={keep} onChange={setKeep} />
+          {problemNotice}
+          <button type="submit" className="btn w-full min-h-11" disabled={busy}>
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
+        </>
+      ))}
+
+      <div className="auth-divider">or</div>
+
+      <div className="space-y-2">
+        {google && (
+          <a className="btn-quiet" href="/api/vault/google/start">
+            <GoogleMark />
+            Continue with Google
+          </a>
+        )}
+        {/* On a computer only: on a phone it would be showing the code to itself.
+            The wrapper hides it, since .btn-quiet sets its own display. */}
+        <div className="hidden sm:block">
+          <button type="button" className="btn-quiet" onClick={() => go("phone")}>
+            <PhoneMark />
+            Sign in with your phone
           </button>
         </div>
-      ) : (
-        <>
-          {/*
-            POST, and to this page: if the script never runs, the browser sends
-            the form itself, and a form with no method sends it as a GET — the
-            password in the address, the history and the server's logs.
-          */}
-          <form method="post" action="/login" onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
-            <label className="block space-y-1.5">
-              <span className="text-sm text-[var(--foreground)]">Email</span>
-              <input
-                className="input auth-input"
-                type="email"
-                name="email"
-                autoComplete="username"
-                inputMode="email"
-                autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-sm text-[var(--foreground)]">Password</span>
-              <span className="relative block">
-                <input
-                  className="input auth-input pr-16"
-                  type={shown ? "text" : "password"}
-                  name="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 px-3 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
-                  aria-pressed={shown}
-                  aria-label={shown ? "Hide the password" : "Show the password"}
-                  onClick={() => setShown((value) => !value)}
-                >
-                  {shown ? "Hide" : "Show"}
-                </button>
-              </span>
-            </label>
-
-            {problem && (
-              <p role="alert" className="text-sm text-[var(--red)]">
-                {problem}
-              </p>
-            )}
-
-            <button type="submit" className="btn w-full min-h-11" disabled={busy}>
-              {busy ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
-
-          <div className="auth-divider">or</div>
-
-          <div className="space-y-2">
-            {google && (
-              <a className="btn-quiet" href="/api/vault/google/start">
-                <GoogleMark />
-                Continue with Google
-              </a>
-            )}
-            {/* On a computer only: on a phone it would be showing the code to itself.
-                The wrapper hides it, since .btn-quiet sets its own display. */}
-            <div className="hidden sm:block">
-              <button type="button" className="btn-quiet" onClick={() => setPhone(true)}>
-                <PhoneMark />
-                Sign in with your phone
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+      </div>
 
       <p className="text-sm text-center text-[var(--muted)]">
         New here?{" "}
@@ -170,6 +319,15 @@ export default function LoginScreen({ google }: { google: boolean }) {
         </Link>
       </p>
     </>
+  );
+}
+
+function Heading({ title, children }: { title: string; children?: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <h1 className="text-3xl tracking-tight text-[var(--foreground)]">{title}</h1>
+      {children && <p className="text-sm text-[var(--muted)]">{children}</p>}
+    </div>
   );
 }
 
