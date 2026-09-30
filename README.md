@@ -190,6 +190,15 @@ Never hand-write a migration — `drizzle-kit` skips any `.sql` file with no
 journal entry, silently, and the app then fails at runtime far from the cause.
 Run `npm run db:generate`.
 
+### One copy per person
+
+`npm run new-person -- <name> [email]` gives someone a whole copy of the app:
+a database of their own on the same Postgres server, owned by a login that
+opens nothing else, and `instances/<name>.env` (gitignored) with what their
+own deployment of this repository needs. Every copy runs the same code, so
+apply migrations to all of them with `npm run db:migrate-all` before pushing
+one. Step by step, in Portuguese: [docs/UMA_COPIA_POR_PESSOA.md](docs/UMA_COPIA_POR_PESSOA.md).
+
 [CLAUDE.md](CLAUDE.md) is the file to read before changing anything. Everything
 in it is there because it has already gone wrong at least once.
 

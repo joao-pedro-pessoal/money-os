@@ -1,9 +1,7 @@
 import "dotenv/config";
 import { db } from "../src/db/client";
 import { categories } from "../src/db/schema";
-
-const INCOME = ["Salary", "Freelance", "Business", "Sale", "Interest", "Dividend", "Cashback", "Refund", "Gift", "Other Income"];
-const EXPENSE = ["Food", "Restaurants", "Transport", "Fuel", "Subscriptions", "Shopping", "Travel", "Education", "Health", "Entertainment", "Taxes", "Fees", "Long-Term Investment Contribution", "Other"];
+import { DEFAULT_EXPENSE_CATEGORIES as EXPENSE, DEFAULT_INCOME_CATEGORIES as INCOME } from "../src/db/defaultCategories";
 
 async function main() {
   for (const name of INCOME) {

@@ -6,3 +6,5 @@ node_modules/
 .DS_Store
 tsconfig.tsbuildinfo
 .local-checkpoints/
+# One .env per person's copy (scripts/new-person.ts): passwords and database addresses.
+instances/

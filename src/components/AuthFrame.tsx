@@ -6,7 +6,7 @@
  * Painted from the theme's tokens only, so each of the eight themes gets its
  * own version of it, the light ones included.
  */
-export default function AuthFrame({ children }: { children: React.ReactNode }) {
+export default function AuthFrame({ children, vaults = true }: { children: React.ReactNode; vaults?: boolean }) {
   return (
     <div className="app-frame grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <aside className="auth-hero hidden lg:flex flex-col justify-between gap-10 p-12 xl:p-16">
@@ -27,12 +27,20 @@ export default function AuthFrame({ children }: { children: React.ReactNode }) {
             <Point title="Everything in one view" icon={<IconChart />}>
               Accounts, cash flow, budgets and investments — what you have and where it went.
             </Point>
-            <Point title="A vault for each person" icon={<IconLock />}>
-              Family has an account of their own, encrypted with twelve words only they hold. Nobody else can read
-              it, not even whoever runs this site.
-            </Point>
+            {vaults ? (
+              <Point title="A vault for each person" icon={<IconLock />}>
+                Family has an account of their own, encrypted on their own device. Nobody else can read it, not even
+                whoever runs this site.
+              </Point>
+            ) : (
+              <Point title="Yours alone" icon={<IconLock />}>
+                Your own copy of Money OS, with a database of its own.
+              </Point>
+            )}
             <Point title="On your phone too" icon={<IconPhone />}>
-              Install it like an app, and sign in on a computer by scanning a code.
+              {vaults
+                ? "Install it like an app, and sign in on a computer by scanning a code."
+                : "Open it in the phone's browser and add it to the home screen: it installs like an app."}
             </Point>
           </ul>
         </div>
@@ -82,13 +90,7 @@ function Point({ title, icon, children }: { title: string; icon: React.ReactNode
 /** A rising line, drawn rather than measured: decoration, so hidden from screen readers. */
 function Trend() {
   return (
-    <svg
-      className="auth-trend"
-      viewBox="0 0 400 120"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-      focusable="false"
-    >
+    <svg className="auth-trend" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id="auth-trend-fill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="currentColor" stopOpacity="0.28" />

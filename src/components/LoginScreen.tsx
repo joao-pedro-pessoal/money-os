@@ -30,7 +30,7 @@ const deviceName = () => describeDevice(navigator.userAgent);
  * The words are typed in two cases only: once, for a vault made before they
  * were kept sealed; and to set a new password when the old one is forgotten.
  */
-export default function LoginScreen({ google }: { google: boolean }) {
+export default function LoginScreen({ google, vaults }: { google: boolean; vaults: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("sign-in");
   const [email, setEmail] = useState("");
@@ -208,10 +208,13 @@ export default function LoginScreen({ google }: { google: boolean }) {
     return (
       <>
         <Heading title="Sign in with your phone" />
-        <VaultPhoneSignIn start onOpen={(session, vaultWords, keepHere) => {
-          rememberVault(session, vaultWords, keepHere);
-          router.replace("/vault");
-        }} />
+        <VaultPhoneSignIn
+          start
+          onOpen={(session, vaultWords, keepHere) => {
+            rememberVault(session, vaultWords, keepHere);
+            router.replace("/vault");
+          }}
+        />
         {back}
       </>
     );
@@ -221,10 +224,11 @@ export default function LoginScreen({ google }: { google: boolean }) {
     return (
       <>
         <Heading title="One more step">
-          This vault was made before signing in with a password alone. Type its twelve words once — from then on,
-          your email and password are enough, here and on every device.
+          This vault was made before signing in with a password alone. Type its twelve words once — from then on, your
+          email and password are enough, here and on every device.
         </Heading>
-        {form(moveNow, (
+        {form(
+          moveNow,
           <>
             {wordsField}
             {problemNotice}
@@ -232,7 +236,7 @@ export default function LoginScreen({ google }: { google: boolean }) {
               {busy ? "Opening…" : "Open my vault"}
             </button>
           </>
-        ))}
+        )}
         {back}
       </>
     );
@@ -242,10 +246,11 @@ export default function LoginScreen({ google }: { google: boolean }) {
     return (
       <>
         <Heading title="A new password">
-          Your twelve words prove the vault is yours. Choose a new password; the words stay the same, and still open
-          it if you forget this one too.
+          Your twelve words prove the vault is yours. Choose a new password; the words stay the same, and still open it
+          if you forget this one too.
         </Heading>
-        {form(recoverNow, (
+        {form(
+          recoverNow,
           <>
             {emailField}
             {wordsField}
@@ -259,7 +264,7 @@ export default function LoginScreen({ google }: { google: boolean }) {
               For vaults only. The owner&apos;s password is set where this site is set up.
             </p>
           </>
-        ))}
+        )}
         {back}
       </>
     );
@@ -269,55 +274,62 @@ export default function LoginScreen({ google }: { google: boolean }) {
     <>
       <Heading title="Sign in">With your email and password.</Heading>
 
-      {form(signInNow, (
+      {form(
+        signInNow,
         <>
           {emailField}
           {passwordField("Password", "current-password")}
-          <div className="flex justify-end -mt-2">
-            <button
-              type="button"
-              className="text-xs text-[var(--accent)] hover:underline"
-              onClick={() => {
-                setPassword("");
-                go("recover");
-              }}
-            >
-              Forgot your password?
-            </button>
-          </div>
-          <KeepOpenChoice keep={keep} onChange={setKeep} />
+          {vaults && (
+            <div className="flex justify-end -mt-2">
+              <button
+                type="button"
+                className="text-xs text-[var(--accent)] hover:underline"
+                onClick={() => {
+                  setPassword("");
+                  go("recover");
+                }}
+              >
+                Forgot your password?
+              </button>
+            </div>
+          )}
+          {vaults && <KeepOpenChoice keep={keep} onChange={setKeep} />}
           {problemNotice}
           <button type="submit" className="btn w-full min-h-11" disabled={busy}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </>
-      ))}
+      )}
 
-      <div className="auth-divider">or</div>
+      {vaults && (
+        <>
+          <div className="auth-divider">or</div>
 
-      <div className="space-y-2">
-        {google && (
-          <a className="btn-quiet" href="/api/vault/google/start">
-            <GoogleMark />
-            Continue with Google
-          </a>
-        )}
-        {/* On a computer only: on a phone it would be showing the code to itself.
+          <div className="space-y-2">
+            {google && (
+              <a className="btn-quiet" href="/api/vault/google/start">
+                <GoogleMark />
+                Continue with Google
+              </a>
+            )}
+            {/* On a computer only: on a phone it would be showing the code to itself.
             The wrapper hides it, since .btn-quiet sets its own display. */}
-        <div className="hidden sm:block">
-          <button type="button" className="btn-quiet" onClick={() => go("phone")}>
-            <PhoneMark />
-            Sign in with your phone
-          </button>
-        </div>
-      </div>
+            <div className="hidden sm:block">
+              <button type="button" className="btn-quiet" onClick={() => go("phone")}>
+                <PhoneMark />
+                Sign in with your phone
+              </button>
+            </div>
+          </div>
 
-      <p className="text-sm text-center text-[var(--muted)]">
-        New here?{" "}
-        <Link href="/vault?new=1" className="text-[var(--accent)] font-medium">
-          Create your vault
-        </Link>
-      </p>
+          <p className="text-sm text-center text-[var(--muted)]">
+            New here?{" "}
+            <Link href="/vault?new=1" className="text-[var(--accent)] font-medium">
+              Create your vault
+            </Link>
+          </p>
+        </>
+      )}
     </>
   );
 }
@@ -353,8 +365,14 @@ function PhoneMark() {
 function GoogleMark() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z" />
-      <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z" />
+      <path
+        fill="#4285F4"
+        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"
+      />
       <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z" />
       <path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z" />
     </svg>

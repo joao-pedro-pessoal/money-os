@@ -5,6 +5,11 @@ código**, por ordem, para a tua família poder usar isto. O código já está
 pronto: o que falta são contas tuas (GitHub, Vercel, Google) que só tu podes
 criar.
 
+**Há duas maneiras.** Uma **cópia inteira da app** para cada pessoa, com todas
+as páginas, num endereço seu: está em [UMA_COPIA_POR_PESSOA.md](UMA_COPIA_POR_PESSOA.md)
+e é a que dá tudo já. Ou o **cofre**, descrito aqui: menos páginas, mas cifrado
+de forma a que nem tu o consigas ler.
+
 Cada pessoa da família tem um **cofre** seu em `/vault`: contas, categorias,
 movimentos, transferências e orçamentos, cifrados no telemóvel ou no PC dela. O
 servidor guarda texto que não consegue ler. Ninguém vê o dinheiro de ninguém —
