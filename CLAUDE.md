@@ -115,6 +115,30 @@ npm run db:migrate       # tsx scripts/migrate.ts — loads .env, applies them
 `npx drizzle-kit migrate` does **not** work here: the config reads
 `process.env.DATABASE_URL` and drizzle-kit doesn't load `.env`.
 
+## Every person's rows are Postgres's to keep apart
+
+Since 30 September 2026 the site has accounts. Queries do **not** filter by
+user: every table of someone's money has `userId: ownedBy()` (a `user_id`
+filled from the connection's `app.user_id`) and a row-level security policy in
+the migrations, and `src/db/client.ts` sets `app.user_id` on every connection
+it hands out — from the session cookie, or from `asUser(id, work)` where there
+is no session (the scheduled sync, scripts, sign-up).
+
+- A new table of someone's data gets `userId: ownedBy()` and, in a custom
+  migration, `ENABLE ROW LEVEL SECURITY` plus the `own_rows` policy.
+  `src/lib/__tests__/row-security.test.ts` fails otherwise; a table that is
+  genuinely everyone's (public market data) goes in its `SHARED` list, with why.
+- A new unique rule on such a table includes `user_id` (or a column pointing
+  at another of that person's rows) — the same test checks.
+- Adding `user_id` to a table that has rows: default it to `'owner'` in the
+  migration, then set the default to `current_setting('app.user_id')`
+  (see 0062, 0065) — drizzle-kit's own output would fail on existing rows.
+- The app connects as `moneyos_app` (`npm run db:app-role`), which cannot
+  bypass the policies; `src/db/client.ts` refuses a login that can.
+  Migrations run as `DATABASE_ADMIN_URL`, the database's owner.
+- Never cache someone's data in module-level state: the server serves
+  everyone from one process.
+
 After any schema change, `npm run db:generate` a second time must report
 "No schema changes". If it doesn't, the migration and the schema disagree.
 

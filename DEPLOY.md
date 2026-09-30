@@ -47,7 +47,10 @@ Fill in `.env`:
 
 ```bash
 POSTGRES_PASSWORD="a long random string"
-APP_PASSWORD="the password you'll log in with"
+APP_DB_PASSWORD="letters and digits"     # the app's own database login: openssl rand -hex 24
+APP_EMAIL="you@example.com"              # your first sign-in claims the owner's account
+APP_PASSWORD="the password for that first sign-in"
+MAX_ACCOUNTS=10                          # how many accounts the site takes
 APP_SECRET="a long random string"        # signs the session cookie
 ENCRYPTION_KEY="a long random string"    # encrypts stored API secrets
 SYNC_SECRET="a long random string"       # enables scheduled syncing

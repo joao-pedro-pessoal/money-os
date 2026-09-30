@@ -95,8 +95,8 @@ export default function Nav() {
   const linkClass = (href: string) => navLinkClass(isActive(href));
 
   /**
-   * The frame — rail on a wide screen, drawer on a narrow one — is NavFrame,
-   * shared with the vault. The complete menu stays in this drawer. MobileNav
+   * The frame — rail on a wide screen, drawer on a narrow one — is NavFrame.
+   * The complete menu stays in this drawer. MobileNav
    * offers four labeled shortcuts and opens this same drawer for every other
    * destination.
    */

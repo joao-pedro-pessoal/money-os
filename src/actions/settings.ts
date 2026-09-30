@@ -32,7 +32,7 @@ export async function setBaseCurrency(formData: FormData) {
     .insert(appSettings)
     .values({ key: BASE_CURRENCY_KEY, value: currency, updatedAt: new Date() })
     .onConflictDoUpdate({
-      target: appSettings.key,
+      target: [appSettings.userId, appSettings.key],
       set: { value: currency, updatedAt: new Date() },
     });
 
@@ -74,7 +74,7 @@ export async function setFavouriteCurrencies(formData: FormData) {
     .insert(appSettings)
     .values({ key: FAVOURITE_CURRENCIES_KEY, value, updatedAt: new Date() })
     .onConflictDoUpdate({
-      target: appSettings.key,
+      target: [appSettings.userId, appSettings.key],
       set: { value, updatedAt: new Date() },
     });
 
@@ -122,7 +122,7 @@ export async function setDashboardCurrency(formData: FormData) {
     .insert(appSettings)
     .values({ key: DASHBOARD_CURRENCY_KEY, value, updatedAt: new Date() })
     .onConflictDoUpdate({
-      target: appSettings.key,
+      target: [appSettings.userId, appSettings.key],
       set: { value, updatedAt: new Date() },
     });
 
@@ -152,7 +152,7 @@ export async function setDashboardWindowPreferences(formData: FormData) {
   }
   const value = JSON.stringify(normalizeDashboardWindowPreferences(values));
   await db.insert(appSettings).values({ key: DASHBOARD_WINDOWS_KEY, value, updatedAt: new Date() }).onConflictDoUpdate({
-    target: appSettings.key,
+    target: [appSettings.userId, appSettings.key],
     set: { value, updatedAt: new Date() },
   });
   revalidatePath("/");
@@ -202,7 +202,7 @@ export async function setDefaultAccountId(formData: FormData) {
     .insert(appSettings)
     .values({ key: DEFAULT_ACCOUNT_KEY, value, updatedAt: new Date() })
     .onConflictDoUpdate({
-      target: appSettings.key,
+      target: [appSettings.userId, appSettings.key],
       set: { value, updatedAt: new Date() },
     });
 

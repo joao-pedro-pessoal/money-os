@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { ownerPassword, newSessionValue, readSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "../auth";
+import { endedBy, ownerPassword, newSessionValue, readSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "../auth";
 
 /**
  * The gate itself, which had no tests at all while it was the one module in the
@@ -28,7 +28,7 @@ afterEach(() => {
 describe("a missing secret is refused, never defaulted", () => {
   it("refuses to issue a session without APP_SECRET", async () => {
     delete process.env.APP_SECRET;
-    await expect(newSessionValue()).rejects.toThrow(/APP_SECRET is not set/);
+    await expect(newSessionValue("u1")).rejects.toThrow(/APP_SECRET is not set/);
   });
 
   it("refuses to check a password without APP_PASSWORD", () => {
@@ -43,10 +43,10 @@ describe("a missing secret is refused, never defaulted", () => {
    */
   it("treats an empty or blank value as missing", async () => {
     process.env.APP_SECRET = "";
-    await expect(newSessionValue()).rejects.toThrow(/APP_SECRET is not set/);
+    await expect(newSessionValue("u1")).rejects.toThrow(/APP_SECRET is not set/);
 
     process.env.APP_SECRET = "   ";
-    await expect(newSessionValue()).rejects.toThrow(/APP_SECRET is not set/);
+    await expect(newSessionValue("u1")).rejects.toThrow(/APP_SECRET is not set/);
   });
 
   /**
@@ -58,7 +58,7 @@ describe("a missing secret is refused, never defaulted", () => {
     expect(() => ownerPassword()).toThrow();
 
     delete process.env.APP_SECRET;
-    await expect(newSessionValue()).rejects.toThrow();
+    await expect(newSessionValue("u1")).rejects.toThrow();
   });
 });
 
@@ -67,8 +67,8 @@ describe("a session", () => {
   const later = (seconds: number) => new Date(issued.getTime() + seconds * 1000);
 
   it("is accepted as issued, and keeps working across restarts: nothing but the secret is needed", async () => {
-    const value = await newSessionValue(issued);
-    expect(await readSession(value, later(60))).toEqual({ valid: true, issuedAt: issued, renew: false });
+    const value = await newSessionValue("u1", issued);
+    expect(await readSession(value, later(60))).toEqual({ valid: true, userId: "u1", issuedAt: issued, renew: false });
   });
 
   /**
@@ -76,38 +76,68 @@ describe("a session", () => {
    * device and every login, so copying it once opened the site for good.
    */
   it("is different on every login", async () => {
-    expect(await newSessionValue(issued)).not.toBe(await newSessionValue(issued));
+    expect(await newSessionValue("u1", issued)).not.toBe(await newSessionValue("u1", issued));
   });
 
   it("is refused once it is older than the longest a session lasts", async () => {
-    const value = await newSessionValue(issued);
+    const value = await newSessionValue("u1", issued);
     expect((await readSession(value, later(SESSION_MAX_AGE_SECONDS))).valid).toBe(true);
     expect((await readSession(value, later(SESSION_MAX_AGE_SECONDS + 1))).valid).toBe(false);
   });
 
   it("asks to be renewed after a day, so a session in use never runs out", async () => {
-    const value = await newSessionValue(issued);
+    const value = await newSessionValue("u1", issued);
     expect(await readSession(value, later(24 * 3600 + 1))).toMatchObject({ valid: true, renew: true });
   });
 
-  it("is refused when issued before every session was ended, and stands when issued in that second or after", async () => {
-    const value = await newSessionValue(issued);
-    expect((await readSession(value, later(10), later(5))).valid).toBe(false);
-    expect((await readSession(value, later(10), issued)).valid).toBe(true);
+  it("is ended when issued before its account's 'Log out other devices', and stands when issued in that second or after", () => {
+    expect(endedBy(later(5), issued)).toBe(true);
+    expect(endedBy(issued, issued)).toBe(false);
+    expect(endedBy(new Date(issued.getTime() + 999), issued)).toBe(false);
+    expect(endedBy(null, issued)).toBe(false);
+  });
+
+  /** The account is inside the signed part: a session cannot be moved to someone else's. */
+  it("says whose it is, and cannot be made someone else's", async () => {
+    const value = await newSessionValue("u1", issued);
+    const [version, , when, nonce, signature] = value.split(".");
+    const someoneElse = [version, "u2", when, nonce, signature].join(".");
+    expect(await readSession(value, later(60))).toMatchObject({ valid: true, userId: "u1" });
+    expect((await readSession(someoneElse, later(60))).valid).toBe(false);
+    await expect(newSessionValue("Not An Id", issued)).rejects.toThrow();
+  });
+
+  /**
+   * Before accounts there was one person, and every browser that person used
+   * holds a "v2" session. Publishing accounts must not sign them out.
+   */
+  it("reads a session from before accounts as the owner's", async () => {
+    const issuedSeconds = Math.floor(issued.getTime() / 1000);
+    const body = `v2.${issuedSeconds}.${"0".repeat(32)}`;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode("a-secret-for-tests"),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const signature = Buffer.from(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`session|${body}`))).toString("hex");
+    expect(await readSession(`${body}.${signature}`, later(60))).toMatchObject({ valid: true, userId: "owner" });
+    expect((await readSession(`${body}.${"f".repeat(64)}`, later(60))).valid).toBe(false);
   });
 
   it("is refused from a clock far in the future, and after the secret changes", async () => {
-    const value = await newSessionValue(later(3600));
+    const value = await newSessionValue("u1", later(3600));
     expect((await readSession(value, issued)).valid).toBe(false);
-    const good = await newSessionValue(issued);
+    const good = await newSessionValue("u1", issued);
     process.env.APP_SECRET = "a-different-secret-entirely";
     expect((await readSession(good, later(60))).valid).toBe(false);
   });
 
   it("is refused when any part is changed, including its date", async () => {
-    const value = await newSessionValue(issued);
-    const [version, when, nonce, signature] = value.split(".");
-    const moved = [version, String(Number(when) + 86_400), nonce, signature].join(".");
+    const value = await newSessionValue("u1", issued);
+    const [version, userId, when, nonce, signature] = value.split(".");
+    const moved = [version, userId, String(Number(when) + 86_400), nonce, signature].join(".");
     expect((await readSession(moved, later(60))).valid).toBe(false);
     expect((await readSession(value.slice(0, -1) + (value.endsWith("0") ? "1" : "0"), later(60))).valid).toBe(false);
   });
@@ -120,7 +150,7 @@ describe("a session", () => {
   });
 
   it("never contains the secret", async () => {
-    expect(await newSessionValue(issued)).not.toContain("a-secret-for-tests");
+    expect(await newSessionValue("u1", issued)).not.toContain("a-secret-for-tests");
   });
 });
 

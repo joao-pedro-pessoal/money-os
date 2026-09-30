@@ -32,6 +32,6 @@ export async function saveAssetNote(formData: FormData) {
   if (!symbol) return;
   const value = String(formData.get("note") ?? "").trim();
   if (symbol.length > 500 || value.length > 20000) throw new Error("Note is too long.");
-  await db.insert(appSettings).values({ key: keyFor(symbol), value, updatedAt: new Date() }).onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
+  await db.insert(appSettings).values({ key: keyFor(symbol), value, updatedAt: new Date() }).onConflictDoUpdate({ target: [appSettings.userId, appSettings.key], set: { value, updatedAt: new Date() } });
   revalidatePath(`/investments/asset/${encodeURIComponent(symbol)}`);
 }

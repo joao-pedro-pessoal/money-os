@@ -18,7 +18,9 @@ import DashboardWindowSettings from "@/components/DashboardWindowSettings";
 import LanguagePicker from "@/components/LanguagePicker";
 import PhoneQuickEntrySettings from "@/components/PhoneQuickEntrySettings";
 import PhoneAlertSettings from "@/components/PhoneAlertSettings";
-import { logOutOtherDevices, sessionsNotBefore } from "@/actions/session";
+import { currentUserId, logOutOtherDevices, sessionsNotBefore } from "@/actions/session";
+import { accountEmail } from "@/actions/auth";
+import AccountSettings from "@/components/AccountSettings";
 
 export default async function SettingsGeneralPage() {
   const baseCurrency = await getBaseCurrency();
@@ -29,7 +31,9 @@ export default async function SettingsGeneralPage() {
     listAccountsWithState(),
   ]);
   const dashboardWindows = await getDashboardWindowPreferences();
-  const sessionsEndedAt = await sessionsNotBefore();
+  const userId = await currentUserId();
+  const sessionsEndedAt = userId ? await sessionsNotBefore(userId) : null;
+  const email = await accountEmail();
 
   return (
     <>
@@ -160,6 +164,12 @@ export default async function SettingsGeneralPage() {
       <PhoneAlertSettings />
 
       <div className="card">
+        <SettingRow
+          title="Your account"
+          description="The recovery code is how you set a new password if you forget this one. Make a new one if you have lost it, or if someone may have seen it."
+        >
+          <AccountSettings email={email} />
+        </SettingRow>
         <SettingRow
           title="Signed-in devices"
           description={

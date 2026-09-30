@@ -8,9 +8,10 @@ import {
   primaryKey,
   unique,
   integer,
+  index,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
 // ---------- Enums ----------
@@ -24,8 +25,58 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
 // "bank": read from a bank connection (Enable Banking), with the bank's id in externalId.
 export const importSourceEnum = pgEnum("import_source", ["manual", "csv", "bank"]);
 
+// ---------- Users ----------
+/**
+ * Everyone with an account on this site.
+ *
+ * Every table of someone's money carries `user_id` and Postgres itself keeps
+ * each person to their own rows (row-level security, in the migrations): the
+ * app sets `app.user_id` on each connection it hands out (src/db/client.ts),
+ * and a query that forgets to filter still sees one person's rows, never two.
+ *
+ * The password is never stored or even received: the page derives a sign-in
+ * key from it (lib/accounts/credentials.ts) and this keeps a slow hash of that
+ * key. "legacy" marks a hash of a password itself, from accounts made before —
+ * moved to a key at their next sign-in.
+ */
+export const users = pgTable("users", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  /** Null only on the owner's row, until its first sign-in claims it (see OWNER_USER_ID). */
+  email: text("email").unique(),
+  passwordHash: text("password_hash"),
+  passwordKind: text("password_kind").notNull().default("keyed"), // "keyed" | "legacy"
+  /** sha256 of the recovery code shown once at sign-up; how a forgotten password is replaced. */
+  recoveryHash: text("recovery_hash"),
+  failedLogins: integer("failed_logins").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  /** "Log out other devices": sessions issued before this are refused. */
+  sessionsNotBefore: timestamp("sessions_not_before", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * The owner's account. Everything recorded while this was a one-person app
+ * belongs to it; the migration that introduced accounts gave it all to this
+ * row, whose email and password are set at the owner's first sign-in with
+ * APP_EMAIL and APP_PASSWORD.
+ */
+export const OWNER_USER_ID = "owner";
+
+/**
+ * Whose row this is. Filled by Postgres from the connection's `app.user_id`,
+ * so an insert never names it and can never name someone else — and an insert
+ * with no one signed in fails rather than landing anywhere.
+ */
+function ownedBy() {
+  return text("user_id")
+    .notNull()
+    .default(sql`current_setting('app.user_id')`)
+    .references(() => users.id, { onDelete: "cascade" });
+}
+
 // ---------- Account ----------
 export const accounts = pgTable("accounts", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   institution: text("institution").notNull(),
   name: text("name").notNull(),
@@ -83,17 +134,19 @@ export const accounts = pgTable("accounts", {
 
 // ---------- Category / Subcategory ----------
 export const categories = pgTable("categories", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   kind: text("kind").notNull(), // "income" | "expense"
   // Does money in this category arrive or leave whether you act or not?
   // Rent and salary are fixed; groceries and freelance are not. Set on the
   // category rather than per transaction so it needs deciding once — the cost
   // is that a genuinely mixed category lands entirely on one side.
   fixed: boolean("fixed").notNull().default(false),
-});
+}, (t) => [unique("categories_user_name").on(t.userId, t.name)]);
 
 export const subcategories = pgTable("subcategories", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   categoryId: text("category_id")
     .notNull()
@@ -103,13 +156,15 @@ export const subcategories = pgTable("subcategories", {
 
 // ---------- Tags ----------
 export const tags = pgTable("tags", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
-  name: text("name").notNull().unique(),
-});
+  name: text("name").notNull(),
+}, (t) => [unique("tags_user_name").on(t.userId, t.name)]);
 
 export const transactionTags = pgTable(
   "transaction_tags",
   {
+  userId: ownedBy(),
     transactionId: text("transaction_id")
       .notNull()
       .references(() => transactions.id, { onDelete: "cascade" }),
@@ -122,6 +177,7 @@ export const transactionTags = pgTable(
 
 // ---------- Transaction ----------
 export const transactions = pgTable("transactions", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   discountAmount: numeric("discount_amount", { precision: 18, scale: 2 }).notNull().default("0"),
   cashbackExpected: numeric("cashback_expected", { precision: 18, scale: 2 }).notNull().default("0"),
@@ -143,10 +199,11 @@ export const transactions = pgTable("transactions", {
   externalId: text("external_id"),
   importId: text("import_id").references(() => imports.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [index("transactions_user_id").on(t.userId)]);
 
 // ---------- Transfer (links two transaction legs) ----------
 export const transfers = pgTable("transfers", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   fromTransactionId: text("from_transaction_id")
     .notNull()
@@ -159,6 +216,7 @@ export const transfers = pgTable("transfers", {
 
 // ---------- Bucket ----------
 export const buckets = pgTable("buckets", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   description: text("description"),
@@ -175,6 +233,7 @@ export const buckets = pgTable("buckets", {
 
 // ---------- BucketAllocation ----------
 export const bucketAllocations = pgTable("bucket_allocations", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   accountId: text("account_id")
     .notNull()
@@ -188,6 +247,7 @@ export const bucketAllocations = pgTable("bucket_allocations", {
 
 // ---------- InterestPayment ----------
 export const interestPayments = pgTable("interest_payments", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   accountId: text("account_id")
     .notNull()
@@ -208,6 +268,7 @@ export const interestPayments = pgTable("interest_payments", {
  * things are worth now; it must never rewrite what they were worth then.
  */
 export const accountSnapshots = pgTable("account_snapshots", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   accountId: text("account_id")
     .notNull()
@@ -225,10 +286,11 @@ export const accountSnapshots = pgTable("account_snapshots", {
   // True for rows written before conversions were frozen. Those are charted at
   // today's rate and marked approximate rather than dropped or trusted.
   backfilled: boolean("backfilled").notNull().default(false),
-});
+}, (t) => [index("account_snapshots_user_id").on(t.userId)]);
 
 // ---------- Import ----------
 export const imports = pgTable("imports", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
   fileName: text("file_name").notNull(),
@@ -248,13 +310,14 @@ export const imports = pgTable("imports", {
 
 // ---------- AuditLog ----------
 export const auditLog = pgTable("audit_log", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   entityType: text("entity_type").notNull(),
   entityId: text("entity_id").notNull(),
   action: text("action").notNull(),
   details: text("details"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [index("audit_log_user_id").on(t.userId)]);
 
 // ---------- Investment Portfolio ----------
 // A Holding is money put at risk in the market — unrealized value, not
@@ -264,18 +327,20 @@ export const auditLog = pgTable("audit_log", {
 
 // ---------- Playlist (a named group of positions, e.g. "Reforma") ----------
 export const playlists = pgTable("playlists", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   description: text("description"),
   color: text("color"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [unique("playlists_user_name").on(t.userId, t.name)]);
 
 // ---------- Watchlist (assets being followed, NOT owned) ----------
 // Deliberately a separate table from `holdings`: nothing here has a quantity or
 // a cost basis, so it can never leak into portfolio value or Net Worth.
 export const watchlistItems = pgTable("watchlist_items", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   symbol: text("symbol").notNull(),
   name: text("name"),
@@ -290,6 +355,7 @@ export const watchlistItems = pgTable("watchlist_items", {
 });
 
 export const holdings = pgTable("holdings", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   symbol: text("symbol").notNull(),
   name: text("name"),
@@ -344,6 +410,7 @@ export const holdings = pgTable("holdings", {
 });
 
 export const holdingSnapshots = pgTable("holding_snapshots", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   holdingId: text("holding_id")
     .notNull()
@@ -351,7 +418,7 @@ export const holdingSnapshots = pgTable("holding_snapshots", {
   timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow().notNull(),
   price: numeric("price", { precision: 18, scale: 4 }).notNull(),
   value: numeric("value", { precision: 18, scale: 2 }).notNull(),
-});
+}, (t) => [index("holding_snapshots_user_id").on(t.userId)]);
 
 // ---------- HoldingAllocation ----------
 /**
@@ -366,6 +433,7 @@ export const holdingSnapshots = pgTable("holding_snapshots", {
 export const holdingAllocations = pgTable(
   "holding_allocations",
   {
+  userId: ownedBy(),
     id: text("id").primaryKey().$defaultFn(() => createId()),
     holdingId: text("holding_id")
       .notNull()
@@ -446,6 +514,7 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
 // that do require credentials (Bybit, IBKR) — it must never hold plaintext,
 // and no connector may ever write an API key into `externalId`.
 export const accountConnections = pgTable("account_connections", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   accountId: text("account_id")
     .notNull()
@@ -521,6 +590,7 @@ export const accountConnections = pgTable("account_connections", {
 // This is the opposite of manual `holdings`, where the balance is cash only
 // and positions add on top.
 export const positions = pgTable("positions", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   connectionId: text("connection_id")
     .notNull()
@@ -546,6 +616,7 @@ export const positions = pgTable("positions", {
 });
 
 export const positionSnapshots = pgTable("position_snapshots", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   connectionId: text("connection_id")
     .notNull()
@@ -555,10 +626,11 @@ export const positionSnapshots = pgTable("position_snapshots", {
   markPrice: numeric("mark_price", { precision: 20, scale: 8 }),
   positionValue: numeric("position_value", { precision: 20, scale: 4 }),
   unrealizedPnl: numeric("unrealized_pnl", { precision: 20, scale: 4 }),
-});
+}, (t) => [index("position_snapshots_user_id").on(t.userId)]);
 
 // ---------- SyncLog ----------
 export const syncLogs = pgTable("sync_logs", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   connectionId: text("connection_id")
     .notNull()
@@ -570,7 +642,7 @@ export const syncLogs = pgTable("sync_logs", {
   equity: numeric("equity", { precision: 20, scale: 4 }),
   message: text("message"),
   trigger: text("trigger"), // "manual" | "scheduled"
-});
+}, (t) => [index("sync_logs_user_id").on(t.userId)]);
 
 export const accountConnectionsRelations = relations(accountConnections, ({ one, many }) => ({
   account: one(accounts, {
@@ -592,6 +664,7 @@ export const positionsRelations = relations(positions, ({ one }) => ({
 // Separate pool from the perps margin account, so these ARE added to equity to
 // get the account total — unlike `positions`, whose value is already inside it.
 export const platformBalances = pgTable("platform_balances", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   connectionId: text("connection_id")
     .notNull()
@@ -617,15 +690,18 @@ export const platformBalances = pgTable("platform_balances", {
 // One row per quote currency, rate expressed per 1 unit of the base (EUR).
 // Refreshed automatically; `manual` marks a rate the user pinned by hand so a
 // later automatic refresh doesn't silently overwrite their choice.
+// Each person's own: a rate pinned by hand (`manual`) is a choice about their
+// money, and a shared table would pin it for everyone.
 export const exchangeRates = pgTable("exchange_rates", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   base: text("base").notNull().default("EUR"),
-  quote: text("quote").notNull().unique(),
+  quote: text("quote").notNull(),
   rate: numeric("rate", { precision: 20, scale: 10 }).notNull(),
   manual: boolean("manual").notNull().default(false),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
   source: text("source"),
-});
+}, (t) => [unique("exchange_rates_user_quote").on(t.userId, t.quote)]);
 
 // ---------- PositionMeta ----------
 // Manual tags on an automatically-synced position.
@@ -637,6 +713,7 @@ export const exchangeRates = pgTable("exchange_rates", {
 export const positionMeta = pgTable(
   "position_meta",
   {
+  userId: ownedBy(),
     connectionId: text("connection_id")
       .notNull()
       .references(() => accountConnections.id, { onDelete: "cascade" }),
@@ -691,10 +768,11 @@ export const positionMeta = pgTable(
 // Single-row key/value store for app-wide preferences (base currency, …).
 // Kept as rows rather than columns so adding a preference needs no migration.
 export const appSettings = pgTable("app_settings", {
-  key: text("key").primaryKey(),
+  userId: ownedBy(),
+  key: text("key").notNull(),
   value: text("value").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [primaryKey({ columns: [t.userId, t.key] })]);
 
 // ---------- Subscription ----------
 /**
@@ -708,6 +786,7 @@ export const appSettings = pgTable("app_settings", {
  * subscription.
  */
 export const subscriptions = pgTable("subscriptions", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
@@ -740,6 +819,7 @@ export const subscriptions = pgTable("subscriptions", {
 export const subscriptionCharges = pgTable(
   "subscription_charges",
   {
+  userId: ownedBy(),
     id: text("id").primaryKey().$defaultFn(() => createId()),
     subscriptionId: text("subscription_id")
       .notNull()
@@ -908,6 +988,7 @@ export const assetLogos = pgTable("asset_logos", {
  * all say so. One table for both would make "monthly cost" ambiguous.
  */
 export const expectedMoney = pgTable("expected_money", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
@@ -950,6 +1031,7 @@ export const expectedMoney = pgTable("expected_money", {
  * what November was judged against.
  */
 export const budgets = pgTable("budgets", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   // Yours to name. The first version hardcoded one budget per category per
   // month, which can express "€400 for food" and nothing else — not "€150 a
@@ -974,6 +1056,7 @@ export const budgets = pgTable("budgets", {
 export const budgetCategories = pgTable(
   "budget_categories",
   {
+  userId: ownedBy(),
     budgetId: text("budget_id")
       .notNull()
       .references(() => budgets.id, { onDelete: "cascade" }),
@@ -997,10 +1080,11 @@ export const budgetCategories = pgTable(
  * touches an account, a balance or Net Worth.
  */
 export const learningResources = pgTable("learning_resources", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   // "BOOK" | "VIDEO" | "PODCAST" | "COURSE"
   type: text("type").notNull(),
-  slug: text("slug").notNull().unique(),
+  slug: text("slug").notNull(),
   title: text("title").notNull(),
   /**
    * Whoever made it: author, YouTube channel, podcast host, professor,
@@ -1049,7 +1133,7 @@ export const learningResources = pgTable("learning_resources", {
    * this separate from `personalRating` is the whole point: an editorial
    * position must never be implemented as a fake five stars.
    */
-  editorialRank: numeric("editorial_rank", { precision: 4, scale: 0 }).unique(),
+  editorialRank: numeric("editorial_rank", { precision: 4, scale: 0 }),
   /** Eligible for the hero slot at the top of the library. */
   heroFeatured: boolean("hero_featured").notNull().default(false),
   /**
@@ -1064,7 +1148,10 @@ export const learningResources = pgTable("learning_resources", {
   archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [
+  unique("learning_resources_user_slug").on(t.userId, t.slug),
+  unique("learning_resources_user_editorial_rank").on(t.userId, t.editorialRank),
+]);
 
 /**
  * Fields only some media have.
@@ -1074,6 +1161,7 @@ export const learningResources = pgTable("learning_resources", {
  * and a schema that pretends otherwise invites a UI that shows them.
  */
 export const learningResourceMeta = pgTable("learning_resource_meta", {
+  userId: ownedBy(),
   resourceId: text("resource_id")
     .primaryKey()
     .references(() => learningResources.id, { onDelete: "cascade" }),
@@ -1121,17 +1209,19 @@ export const learningResourceMeta = pgTable("learning_resource_meta", {
 
 /** One taxonomy for every medium. Philosophy holds books and lectures alike. */
 export const resourceCategories = pgTable("resource_categories", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
-  slug: text("slug").notNull().unique(),
+  slug: text("slug").notNull(),
   name: text("name").notNull(),
   description: text("description"),
   sortOrder: numeric("sort_order", { precision: 4, scale: 0 }).notNull().default("0"),
-});
+}, (t) => [unique("resource_categories_user_slug").on(t.userId, t.slug)]);
 
 /** A subtag belongs to one category: "Stoicism" only makes sense under Philosophy. */
 export const resourceSubtags = pgTable(
   "resource_subtags",
   {
+  userId: ownedBy(),
     id: text("id").primaryKey().$defaultFn(() => createId()),
     categoryId: text("category_id")
       .notNull()
@@ -1145,6 +1235,7 @@ export const resourceSubtags = pgTable(
 export const learningResourceCategories = pgTable(
   "learning_resource_categories",
   {
+  userId: ownedBy(),
     resourceId: text("resource_id")
       .notNull()
       .references(() => learningResources.id, { onDelete: "cascade" }),
@@ -1158,6 +1249,7 @@ export const learningResourceCategories = pgTable(
 export const learningResourceSubtags = pgTable(
   "learning_resource_subtags",
   {
+  userId: ownedBy(),
     resourceId: text("resource_id")
       .notNull()
       .references(() => learningResources.id, { onDelete: "cascade" }),
@@ -1177,6 +1269,7 @@ export const learningResourceSubtags = pgTable(
  * unreadable or outdated view is discarded when loaded rather than crashing.
  */
 export const savedViews = pgTable("saved_views", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   // Which screen it belongs to, e.g. "investments-analysis".
@@ -1198,6 +1291,7 @@ export const savedViews = pgTable("saved_views", {
 export const dividendPayments = pgTable(
   "dividend_payments",
   {
+  userId: ownedBy(),
     id: text("id").primaryKey().$defaultFn(() => createId()),
     connectionId: text("connection_id")
       .notNull()
@@ -1226,7 +1320,7 @@ export const dividendPayments = pgTable(
     reference: text("reference"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [unique("dividend_payments_connection_reference").on(t.connectionId, t.reference)]
+  (t) => [index("dividend_payments_user_id").on(t.userId), unique("dividend_payments_connection_reference").on(t.connectionId, t.reference)]
 );
 
 /**
@@ -1244,6 +1338,7 @@ export const dividendPayments = pgTable(
 export const brokerEvents = pgTable(
   "broker_events",
   {
+  userId: ownedBy(),
     id: text("id").primaryKey().$defaultFn(() => createId()),
     accountId: text("account_id")
       .notNull()
@@ -1274,7 +1369,7 @@ export const brokerEvents = pgTable(
     naturalKey: text("natural_key").notNull(),
     importedAt: timestamp("imported_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [unique("broker_events_account_natural_key").on(t.accountId, t.naturalKey)]
+  (t) => [index("broker_events_user_id").on(t.userId), unique("broker_events_account_natural_key").on(t.accountId, t.naturalKey)]
 );
 
 /**
@@ -1301,6 +1396,7 @@ export const brokerEvents = pgTable(
 export const investmentActivities = pgTable(
   "investment_activities",
   {
+  userId: ownedBy(),
     id: text("id").primaryKey().$defaultFn(() => createId()),
     accountId: text("account_id")
       .notNull()
@@ -1336,7 +1432,7 @@ export const investmentActivities = pgTable(
     fingerprint: text("fingerprint").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [unique("investment_activities_account_fingerprint").on(t.accountId, t.fingerprint)]
+  (t) => [index("investment_activities_user_id").on(t.userId), unique("investment_activities_account_fingerprint").on(t.accountId, t.fingerprint)]
 );
 
 /**
@@ -1355,6 +1451,7 @@ export const investmentActivities = pgTable(
  * total. Same declaration-not-inference rule as `balanceMeaning` on accounts.
  */
 export const liabilities = pgTable("liabilities", {
+  userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   // mortgage | credit_card | personal_loan | car_loan | student | tax | other
@@ -1435,6 +1532,7 @@ export const benchmarkPrices = pgTable(
 export const investmentActivityTags = pgTable(
   "investment_activity_tags",
   {
+  userId: ownedBy(),
     activityId: text("activity_id")
       .notNull()
       .references(() => investmentActivities.id, { onDelete: "cascade" }),
@@ -1447,6 +1545,7 @@ export const investmentActivityTags = pgTable(
 
 // Classification belongs to a particular execution, never to its ticker.
 export const tradeClassifications = pgTable("trade_classifications", {
+  userId: ownedBy(),
   activityId: text("activity_id").primaryKey().references(() => investmentActivities.id, { onDelete: "cascade" }),
   assetType: text("asset_type"),
   riskLevel: text("risk_level"),
@@ -1456,167 +1555,5 @@ export const tradeClassifications = pgTable("trade_classifications", {
   apr: numeric("apr", { precision: 8, scale: 3 }),
   playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
   notes: text("notes"),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
-
-// ---------- Encrypted sync server ----------
-/**
- * Accounts on the encrypted sync server.
- *
- * Deliberately unconnected to every table above. Those hold one person's finances
- * in plaintext behind the site's single password; these hold other people's
- * identities and ciphertext the server cannot read. No foreign key crosses
- * between the two, so no join added later can reach one from the other.
- */
-export const syncUsers = pgTable("sync_users", {
-  id: text("id").primaryKey().$defaultFn(() => createId()),
-  /** Trimmed and lowercased before it arrives; unique, so one address is one account. */
-  email: text("email").notNull().unique(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
-
-/**
- * The ways into an account: a password now; Google, Apple or an email link later.
- *
- * Separate from the account because the plan requires every method to reach the
- * same one. `subject` is what a method identifies someone by — the address for a
- * password, the provider's stable id otherwise — and a new method is linked from
- * inside a signed-in account, never matched by address, because Apple can hide
- * the real one.
- */
-export const syncLoginMethods = pgTable(
-  "sync_login_methods",
-  {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
-    kind: text("kind").notNull(), // "password" | "google" | "apple" | "email_link"
-    subject: text("subject").notNull(),
-    /** scrypt with its parameters; null for a method that keeps no secret here. */
-    secretHash: text("secret_hash"),
-    /**
-     * The twelve words, sealed under a key only the password gives
-     * (lib/vault/credentials.ts). Set: the account signs in with a password
-     * alone, and `secretHash` is of the sign-in key the page derives, never of
-     * the password. Null: an older account, whose `secretHash` is of the
-     * password itself and whose words are typed to open it.
-     */
-    sealedWords: text("sealed_words"),
-    /** sha256 of the recovery key the twelve words give: how a forgotten password is replaced. */
-    recoveryHash: text("recovery_hash"),
-    failedLogins: integer("failed_logins").notNull().default(0),
-    lockedUntil: timestamp("locked_until", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [unique("sync_login_methods_kind_subject").on(t.kind, t.subject)]
-);
-
-export const syncDevices = pgTable("sync_devices", {
-  id: text("id").primaryKey().$defaultFn(() => createId()),
-  userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
-  /** Set once and never cleared: a revoked device that signs in again is a new device. */
-  revokedAt: timestamp("revoked_at", { withTimezone: true }),
-});
-
-/** Only a SHA-256 of each token is stored, so a copy of this table cannot be replayed as logins. */
-export const syncSessions = pgTable("sync_sessions", {
-  id: text("id").primaryKey().$defaultFn(() => createId()),
-  userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
-  deviceId: text("device_id").notNull().references(() => syncDevices.id, { onDelete: "cascade" }),
-  tokenHash: text("token_hash").notNull().unique(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  revokedAt: timestamp("revoked_at", { withTimezone: true }),
-});
-
-/**
- * A QR code on a signed-in device, waiting for a phone to scan it.
- *
- * The code carries the key that opens `ciphertext` in the part of the address
- * a browser never sends, so this row holds the twelve words sealed with a key
- * the server never sees. A phone that scans it asks; the device that showed it
- * says yes or no, seeing the phone's name; only then does the phone get a
- * session, and only the phone that asked — it proves itself with the secret
- * behind `claimHash`. Minutes long, used once, and emptied when used.
- *
- * `state` runs waiting → asked → approved → collected. A refusal deletes the row.
- */
-export const syncDeviceLinks = pgTable("sync_device_links", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
-  /** Null once collected: nothing the link carried outlives its use. */
-  ciphertext: text("ciphertext"),
-  state: text("state").notNull().default("waiting"),
-  /** What the phone called itself, shown on the device deciding. */
-  deviceName: text("device_name"),
-  claimHash: text("claim_hash"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-});
-
-/**
- * The other direction: a device with no account yet shows the code, and a
- * phone already in the vault scans it and lets that device in.
- *
- * So the row starts with no account at all — only the waiting device's name
- * and the hash of its claim secret. The phone that says yes fills in whose
- * vault it is and the twelve words, sealed with the key in the code's
- * fragment, which the server never sees. The waiting device collects once;
- * the row keeps only that it was used. `state` runs waiting → granted →
- * collected; a no deletes the row.
- */
-export const syncSignInRequests = pgTable("sync_sign_in_requests", {
-  id: text("id").primaryKey(),
-  deviceName: text("device_name").notNull(),
-  claimHash: text("claim_hash").notNull(),
-  state: text("state").notNull().default("waiting"),
-  /** Null until a phone says yes; the account that phone is in. */
-  userId: text("user_id").references(() => syncUsers.id, { onDelete: "cascade" }),
-  /** Null until granted, and again once collected. */
-  ciphertext: text("ciphertext"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-});
-
-/**
- * Every stored version of every account's vault, as ciphertext.
- *
- * The primary key on (account, version) is what makes a stale send fail instead
- * of overwriting: two devices writing the same next version race for one row, and
- * the loser gets a unique violation the server answers with 409.
- *
- * Kept rather than replaced, for now. Old versions are still that person's data:
- * the cascade removes them with the account, and pruning them sooner is recorded
- * as pending in docs/PLANO_MOBILE.md.
- */
-export const syncVaultVersions = pgTable(
-  "sync_vault_versions",
-  {
-    userId: text("user_id").notNull().references(() => syncUsers.id, { onDelete: "cascade" }),
-    version: integer("version").notNull(),
-    deviceId: text("device_id").references(() => syncDevices.id, { onDelete: "set null" }),
-    envelope: text("envelope").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [primaryKey({ columns: [t.userId, t.version] })]
-);
-
-/**
- * Wrong passwords at the site's own login, counted so they can be limited.
- *
- * The site has one password and no accounts, so there is one row, keyed
- * "site", and the count is global: a lockout here locks the login for
- * everyone, the owner included. That is the known cost, the same one the
- * vault's lockout documents, and preferable to unlimited guessing once the
- * site is reachable from outside the house. The policy — how many failures,
- * how long — is `afterFailedLogin` in `lib/vault/protocol.ts`, shared with
- * the vault rather than restated.
- */
-export const loginThrottle = pgTable("login_throttle", {
-  key: text("key").primaryKey(),
-  failedLogins: integer("failed_logins").notNull().default(0),
-  lockedUntil: timestamp("locked_until", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

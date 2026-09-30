@@ -1,12 +1,11 @@
 /**
- * The frame every way in shares: the sign-in page and a vault that is not
- * open yet. On a wide screen the left half says what this is; on a phone it
+ * The frame of the way in: signing in, making an account, recovering one. On a wide screen the left half says what this is; on a phone it
  * folds away and leaves the brand above the form.
  *
  * Painted from the theme's tokens only, so each of the eight themes gets its
  * own version of it, the light ones included.
  */
-export default function AuthFrame({ children, vaults = true }: { children: React.ReactNode; vaults?: boolean }) {
+export default function AuthFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-frame grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <aside className="auth-hero hidden lg:flex flex-col justify-between gap-10 p-12 xl:p-16">
@@ -27,20 +26,11 @@ export default function AuthFrame({ children, vaults = true }: { children: React
             <Point title="Everything in one view" icon={<IconChart />}>
               Accounts, cash flow, budgets and investments — what you have and where it went.
             </Point>
-            {vaults ? (
-              <Point title="A vault for each person" icon={<IconLock />}>
-                Family has an account of their own, encrypted on their own device. Nobody else can read it, not even
-                whoever runs this site.
-              </Point>
-            ) : (
-              <Point title="Yours alone" icon={<IconLock />}>
-                Your own copy of Money OS, with a database of its own.
-              </Point>
-            )}
+            <Point title="Yours alone" icon={<IconLock />}>
+              Your own account. What you record is kept apart from everyone else&apos;s, and only you see it.
+            </Point>
             <Point title="On your phone too" icon={<IconPhone />}>
-              {vaults
-                ? "Install it like an app, and sign in on a computer by scanning a code."
-                : "Open it in the phone's browser and add it to the home screen: it installs like an app."}
+              Open it in your phone&apos;s browser and add it to the home screen: it installs like an app.
             </Point>
           </ul>
         </div>

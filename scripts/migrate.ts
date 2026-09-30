@@ -4,7 +4,8 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 
 async function main() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  // As the database's owner: the app's own login may not change tables.
+  const pool = new Pool({ connectionString: process.env.DATABASE_ADMIN_URL ?? process.env.DATABASE_URL });
   const db = drizzle(pool);
   await migrate(db, { migrationsFolder: "./drizzle" });
   console.log("Migrations applied.");

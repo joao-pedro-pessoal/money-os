@@ -16,10 +16,9 @@ export function newQuickEntryId(source: RandomSource = globalThis.crypto): strin
 /**
  * A version-4 id that works over plain http, for anything the browser makes.
  *
- * The same trap caught the vault: every account, category and movement took
- * its id from crypto.randomUUID, so on the family's phones at home — the site
- * by its Wi-Fi address — nothing could be recorded at all, only on Vercel's
- * https. One function, so the next place that needs an id finds this one.
+ * crypto.randomUUID exists only on https and localhost: a page opened by the
+ * home Wi-Fi address has none, and every id it made failed there. One
+ * function, so the next place that needs an id finds this one.
  */
 export function randomUuid(source: RandomSource = globalThis.crypto): string {
   if (typeof source.randomUUID === "function") return source.randomUUID();

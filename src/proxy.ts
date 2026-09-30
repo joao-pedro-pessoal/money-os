@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE_NAME, newSessionValue, readSession, sessionCookieOptions } from "@/lib/auth";
+import { SESSION_COOKIE_NAME, endedBy, newSessionValue, readSession, sessionCookieOptions } from "@/lib/auth";
 import { sessionsNotBefore } from "@/actions/session";
 
 export async function proxy(req: NextRequest) {
@@ -7,15 +7,10 @@ export async function proxy(req: NextRequest) {
   /**
    * What is reachable without a session, and why each one has to be.
    *
+   * /login is where an account is made or signed into, so it cannot need one.
+   *
    * /api/sync is called by a scheduler rather than a browser and enforces its
    * own shared-secret check.
-   *
-   * /api/vault is the encrypted-sync server. Devices authenticate with their own
-   * bearer tokens, per account, and every handler checks one before touching a
-   * row. The site's cookie would be the wrong credential there: it proves someone
-   * knows the single-user password and names no account. Nothing under it reads
-   * the single-user tables — an account made there can store and fetch its own
-   * ciphertext and nothing else.
    *
    * The rest is what an installed app needs before anyone has logged in. The
    * browser fetches the manifest and registers the service worker outside any
@@ -31,16 +26,6 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/public") ||
     pathname.startsWith("/api/sync") ||
-    pathname === "/api/vault" ||
-    pathname.startsWith("/api/vault/") ||
-    /**
-     * A vault account is not this installation's owner: it has its own email
-     * and password at the sync server, and the site's single-user cookie would
-     * be the wrong credential entirely. The page it opens carries no data —
-     * everything on it is decrypted in the browser from the account's own vault.
-     */
-    pathname === "/vault" ||
-    pathname.startsWith("/vault/") ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/sw.js" ||
     pathname === "/offline.html" ||
@@ -50,9 +35,11 @@ export async function proxy(req: NextRequest) {
   }
 
   const cookie = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const session = cookie ? await readSession(cookie, new Date(), await sessionsNotBefore()) : { valid: false as const };
+  const session = await readSession(cookie ?? null);
+  // Whose it is decides which "Log out other devices" can have ended it.
+  const ended = session.valid && endedBy(await sessionsNotBefore(session.userId), session.issuedAt);
 
-  if (!session.valid) {
+  if (!session.valid || ended) {
     const loginUrl = new URL("/login", req.url);
     return NextResponse.redirect(loginUrl);
   }
@@ -64,7 +51,7 @@ export async function proxy(req: NextRequest) {
    */
   const response = NextResponse.next();
   if (session.renew) {
-    response.cookies.set(SESSION_COOKIE_NAME, await newSessionValue(), sessionCookieOptions());
+    response.cookies.set(SESSION_COOKIE_NAME, await newSessionValue(session.userId), sessionCookieOptions());
   }
   return response;
 }

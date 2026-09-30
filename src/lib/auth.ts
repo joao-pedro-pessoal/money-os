@@ -1,6 +1,6 @@
-// Single-user auth gate. No accounts table, no multi-tenancy (MVP_SPEC.md §0).
-// Session cookies are signed with HMAC-SHA256 under APP_SECRET using Web Crypto,
-// so the same code runs in the proxy and in server actions.
+// Sessions: who is signed in, carried in a cookie signed with HMAC-SHA256
+// under APP_SECRET using Web Crypto, so the same code runs in the proxy, in
+// server actions and in the database pool that reads it (src/db/client.ts).
 
 const COOKIE_NAME = "moneyos_session";
 
@@ -64,13 +64,13 @@ async function equalsInConstantTime(a: string, b: string): Promise<boolean> {
 }
 
 /**
- * The owner's password, for the one check that uses it.
+ * The owner's password, for the one check that uses it: the owner's first
+ * sign-in, which claims the owner's account (actions/auth.ts).
  *
- * The sign-in page no longer sends the password: it sends a key derived from
- * it (lib/vault/credentials.ts), and actions/siteLogin.ts derives the same key
- * from this to compare. Only that limited login may call this — a second
- * caller would be a way round its limit on guessing, which
- * src/lib/__tests__/site-login.test.ts checks.
+ * The page sends a key derived from the password (lib/accounts/credentials.ts)
+ * and the claim derives the same key from this to compare. Only that limited
+ * sign-in may call this — a second caller would be a way round its limit on
+ * guessing, which src/lib/__tests__/site-login.test.ts checks.
  */
 export function ownerPassword(): string {
   return required("APP_PASSWORD");
@@ -81,61 +81,78 @@ export const SESSION_COOKIE_NAME = COOKIE_NAME;
 /**
  * A session, and how long one lasts.
  *
- * The cookie used to be one fixed value, HMAC(secret, "authenticated"): the
- * same on every device, valid forever, and "log out" only deleted the copy in
- * the browser that pressed it. A cookie lifted from any device opened the site
- * until APP_SECRET changed, and nothing could end it.
+ * Each sign-in gets its own value — a version, whose session it is, the moment
+ * it was issued, a random nonce, and a signature over all four. It is refused
+ * once it is older than `SESSION_MAX_AGE_SECONDS`, or issued before that
+ * person last pressed "Log out other devices" (checked by the proxy, which
+ * reads the date from their row). No session table: the signature proves it
+ * was issued here, and the date is what ends it. The proxy renews a session
+ * once it is a day old, so someone using the site is never thrown out, and
+ * one left idle for thirty days is.
  *
- * Now each login gets its own value — a version, the moment it was issued, a
- * random nonce, and a signature over the three. It is refused once it is older
- * than `SESSION_MAX_AGE_SECONDS`, or issued before the moment "Log out other
- * devices" was last pressed. Still no session table: the signature is what
- * proves it was issued here, and the date is what ends it. The proxy renews a
- * session once it is a day old, so someone using the site is never thrown
- * out, and one left idle for thirty days is.
+ * "v2" sessions are from before there were accounts. Only the owner could hold
+ * one, so they are read as the owner's — publishing accounts signs nobody out.
  */
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 export const SESSION_RENEW_AFTER_SECONDS = 24 * 60 * 60;
 /** A clock a little ahead of this one should not make a fresh session invalid. */
 const CLOCK_SKEW_SECONDS = 5 * 60;
-const SESSION_VERSION = "v2";
+const SESSION_VERSION = "v3";
+/** Whose session a "v2" cookie is: the one account there was. Same value as OWNER_USER_ID in the schema. */
+const V2_USER_ID = "owner";
+/** An account id as the schema makes them (cuid2), or the owner's. */
+const USER_ID = /^[a-z0-9]{1,40}$/;
 
 const hex = (bytes: Uint8Array) => Buffer.from(bytes).toString("hex");
 
 const signSession = (body: string) => hmac(required("APP_SECRET"), `session|${body}`);
 
-/** A new session value, issued at `now`. */
-export async function newSessionValue(now: Date = new Date()): Promise<string> {
+/** A new session for this account, issued at `now`. */
+export async function newSessionValue(userId: string, now: Date = new Date()): Promise<string> {
+  if (!USER_ID.test(userId)) throw new Error("That is not an account id.");
   const issued = Math.floor(now.getTime() / 1000);
-  const body = `${SESSION_VERSION}.${issued}.${hex(crypto.getRandomValues(new Uint8Array(16)))}`;
+  const body = `${SESSION_VERSION}.${userId}.${issued}.${hex(crypto.getRandomValues(new Uint8Array(16)))}`;
   return `${body}.${await signSession(body)}`;
 }
 
-export type SessionCheck = { valid: false } | { valid: true; issuedAt: Date; renew: boolean };
+export type SessionCheck =
+  | { valid: false }
+  | { valid: true; userId: string; issuedAt: Date; renew: boolean };
 
 /**
- * Whether a cookie value is a session this site issued and has not ended.
- *
- * `notBefore` is the moment "Log out other devices" was pressed, in whole
- * seconds; a session issued in that second or after it stands, which is what
- * lets the device that pressed it be given a fresh one at once.
+ * Whether a cookie value is a session this site issued, still in date, and
+ * whose. "Log out other devices" is the caller's to apply, with
+ * `endedBy` and the date on that person's row.
  */
-export async function readSession(
-  value: string | null | undefined,
-  now: Date = new Date(),
-  notBefore: Date | null = null
-): Promise<SessionCheck> {
-  const parts = /^(v2)\.(\d{1,12})\.([0-9a-f]{32})\.([0-9a-f]{64})$/.exec(value ?? "");
-  if (parts === null) return { valid: false };
-  const [, version, issued, nonce, signature] = parts;
-  if (!(await equalsInConstantTime(signature, await signSession(`${version}.${issued}.${nonce}`)))) {
+export async function readSession(value: string | null | undefined, now: Date = new Date()): Promise<SessionCheck> {
+  const v3 = /^(v3)\.([a-z0-9]{1,40})\.(\d{1,12})\.([0-9a-f]{32})\.([0-9a-f]{64})$/.exec(value ?? "");
+  const v2 = v3 ? null : /^(v2)\.(\d{1,12})\.([0-9a-f]{32})\.([0-9a-f]{64})$/.exec(value ?? "");
+  let userId: string, issued: string, body: string, signature: string;
+  if (v3) {
+    [, , userId, issued, , signature] = v3;
+    body = `${v3[1]}.${userId}.${issued}.${v3[4]}`;
+  } else if (v2) {
+    userId = V2_USER_ID;
+    [, , issued, , signature] = v2;
+    body = `${v2[1]}.${issued}.${v2[3]}`;
+  } else {
     return { valid: false };
   }
+  if (!(await equalsInConstantTime(signature, await signSession(body)))) return { valid: false };
   const issuedSeconds = Number(issued);
   const age = Math.floor(now.getTime() / 1000) - issuedSeconds;
   if (age < -CLOCK_SKEW_SECONDS || age > SESSION_MAX_AGE_SECONDS) return { valid: false };
-  if (notBefore !== null && issuedSeconds < Math.floor(notBefore.getTime() / 1000)) return { valid: false };
-  return { valid: true, issuedAt: new Date(issuedSeconds * 1000), renew: age > SESSION_RENEW_AFTER_SECONDS };
+  return { valid: true, userId, issuedAt: new Date(issuedSeconds * 1000), renew: age > SESSION_RENEW_AFTER_SECONDS };
+}
+
+/**
+ * Whether "Log out other devices", pressed at `notBefore`, ended a session
+ * issued at `issuedAt`. Compared in whole seconds: a session issued in that
+ * same second stands, which is what lets the device that pressed it be given
+ * a fresh one at once.
+ */
+export function endedBy(notBefore: Date | null, issuedAt: Date): boolean {
+  return notBefore !== null && Math.floor(issuedAt.getTime() / 1000) < Math.floor(notBefore.getTime() / 1000);
 }
 
 /** How the session cookie is set, wherever it is set. */

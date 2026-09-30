@@ -1,6 +1,6 @@
 import "dotenv/config";
-import { db } from "../src/db/client";
-import { categories, transactions } from "../src/db/schema";
+import { asUser, db } from "../src/db/client";
+import { categories, transactions, OWNER_USER_ID } from "../src/db/schema";
 import { eq } from "drizzle-orm";
 
 /**
@@ -37,7 +37,10 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => {
+// As one account: the owner's, or AS_USER's. Each person's rows are theirs alone (src/db/client.ts).
+asUser(process.env.AS_USER ?? OWNER_USER_ID, main)
+  .then(() => process.exit(0))
+  .catch((e) => {
   console.error(e);
   process.exit(1);
 });

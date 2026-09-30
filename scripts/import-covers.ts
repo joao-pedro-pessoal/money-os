@@ -17,10 +17,9 @@
 import "dotenv/config";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { asUser, db } from "../src/db/client";
 import { eq } from "drizzle-orm";
-import { learningResources, learningResourceMeta } from "../src/db/schema";
+import { learningResources, learningResourceMeta, OWNER_USER_ID } from "../src/db/schema";
 import { parseCoverCsv, planCoverImport, describeSkip } from "../src/lib/library/covers-import";
 
 async function main() {
@@ -30,9 +29,6 @@ async function main() {
 
   const text = readFileSync(resolve(process.cwd(), file), "utf8");
   const rows = parseCoverCsv(text);
-
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  const db = drizzle(pool);
 
   const library = await db
     .select({ id: learningResources.id, slug: learningResources.slug, title: learningResources.title })
@@ -50,7 +46,6 @@ async function main() {
   if (dryRun) {
     for (const a of plan.assign) console.log(`  would set ${a.slug} → ${a.url}`);
     console.log("\nDry run: nothing was written.");
-    await pool.end();
     return;
   }
 
@@ -75,10 +70,12 @@ async function main() {
   }
 
   console.log(`\nDone. ${plan.assign.length} covers written.`);
-  await pool.end();
 }
 
-main().catch((e) => {
+// Into one account's library: the owner's, or AS_USER's (src/db/client.ts).
+asUser(process.env.AS_USER ?? OWNER_USER_ID, main)
+  .then(() => process.exit(0))
+  .catch((e) => {
   console.error(e);
   process.exit(1);
 });

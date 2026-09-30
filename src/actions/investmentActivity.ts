@@ -418,7 +418,7 @@ export async function setInvestmentActivityTags(formData: FormData) {
     if (!activity) throw new Error("Trade no longer exists.");
     await tx.delete(investmentActivityTags).where(eq(investmentActivityTags.activityId, activityId));
     for (const name of names) {
-      const [tag] = await tx.insert(tags).values({ name }).onConflictDoUpdate({ target: tags.name, set: { name } }).returning();
+      const [tag] = await tx.insert(tags).values({ name }).onConflictDoUpdate({ target: [tags.userId, tags.name], set: { name } }).returning();
       if (tag) await tx.insert(investmentActivityTags).values({ activityId, tagId: tag.id }).onConflictDoNothing();
     }
   });

@@ -19,10 +19,13 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/src/db ./src/db
+# The database client reads sessions (src/lib/auth.ts) to know whose rows to show.
+COPY --from=build /app/src/lib ./src/lib
 # tsx needs the tsconfig paths to resolve "@/..." inside the scripts.
 COPY --from=build /app/tsconfig.json ./tsconfig.json
 COPY --from=build /app/drizzle.config.ts ./drizzle.config.ts
 EXPOSE 3000
 # Migrations run on every start; they are idempotent, so a restart is safe.
-# Seeding only inserts categories that are missing.
-CMD ["sh", "-c", "npx tsx scripts/migrate.ts && npx tsx scripts/seed.ts && npm run start"]
+# Then the app's own database login and its grants, then the owner's starting
+# categories — seeding only inserts the ones that are missing.
+CMD ["sh", "-c", "npx tsx scripts/migrate.ts && npx tsx scripts/app-role.ts && npx tsx scripts/seed.ts && npm run start"]

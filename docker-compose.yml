@@ -25,8 +25,16 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://moneyos:${POSTGRES_PASSWORD:-changeme}@db:5432/moneyos
+      # The app connects as a login that cannot see past each person's rows;
+      # the database's owner is for migrations. scripts/app-role.ts makes the
+      # first with APP_DB_PASSWORD on every start.
+      DATABASE_ADMIN_URL: postgresql://moneyos:${POSTGRES_PASSWORD:-changeme}@db:5432/moneyos
+      DATABASE_URL: postgresql://moneyos_app:${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}@db:5432/moneyos
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
+      # The owner's first sign-in; see .env.example.
+      APP_EMAIL: ${APP_EMAIL:-}
       APP_PASSWORD: ${APP_PASSWORD:?set APP_PASSWORD in .env}
+      MAX_ACCOUNTS: ${MAX_ACCOUNTS:-}
       APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env}
       # Required to store API secrets for Bybit, Trading 212, Kraken, Binance,
       # OKX or MEXC. Losing it loses the secrets — keep a copy off the server.

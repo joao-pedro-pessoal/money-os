@@ -10,16 +10,15 @@ export function navLinkClass(active: boolean): string {
 }
 
 /**
- * The side menu's frame, shared by the owner's pages and the vault's.
+ * The side menu's frame.
  *
  * A fixed rail on a wide screen, a drawer on a narrow one. It used to be
  * `w-56 shrink-0` at every width, which on a 375px phone left 87px for the
  * content once the page padding was taken off — every table and every card
  * squeezed into a column narrower than the sidebar beside it.
  *
- * What goes inside is each side's own: the owner's pages, search and log out;
- * the vault's pages and its lock. The frame, the drawer and the brand are one
- * thing, so the two sides cannot drift into looking like different apps.
+ * What goes inside is Nav's: the pages, the search and log out. The frame,
+ * the drawer and the brand live here, apart from the list of pages.
  */
 export default function NavFrame({
   onClose,

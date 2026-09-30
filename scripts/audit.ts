@@ -31,8 +31,8 @@ import { STABLE_ASSET_TYPES } from "../src/lib/portfolio/tags";
 import { realisedProvenance } from "../src/lib/trading/realised";
 import { listAccountsWithState } from "../src/actions/accounts";
 import { getAccountPlatformTotals } from "../src/actions/platformTotals";
-import { db } from "../src/db/client";
-import { accountConnections, accounts, positions, transactions } from "../src/db/schema";
+import { asUser, db } from "../src/db/client";
+import { accountConnections, accounts, positions, transactions, OWNER_USER_ID } from "../src/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 const CENT = 0.011;
@@ -523,7 +523,10 @@ async function main() {
   if (failures > 0) process.exit(1);
 }
 
-main().catch((error) => {
+// As one account: the owner's, or AS_USER's. Each person's rows are theirs alone (src/db/client.ts).
+asUser(process.env.AS_USER ?? OWNER_USER_ID, main)
+  .then(() => process.exit(0))
+  .catch((error) => {
   console.error("The audit could not run:", error instanceof Error ? error.message : error);
   process.exit(1);
 });

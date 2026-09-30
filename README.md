@@ -139,8 +139,10 @@ Fill in `.env`. Generate each secret with `openssl rand -base64 32`:
 
 ```bash
 POSTGRES_PASSWORD="..."   # your database
-APP_EMAIL="..."           # the owner's email on the sign-in page
-APP_PASSWORD="..."        # what you log in with
+DATABASE_URL="..."        # the app's own login (npm run db:app-role)
+DATABASE_ADMIN_URL="..."  # the database owner's, for migrations
+APP_EMAIL="..."           # the owner's first sign-in claims the owner's account
+APP_PASSWORD="..."        # with this password
 APP_SECRET="..."          # signs the session cookie
 ENCRYPTION_KEY="..."      # encrypts stored API secrets
 COOKIE_SECURE=false       # true once TLS is in front
@@ -177,12 +179,13 @@ the full setup, including Tailscale, backups and updating.
 
 ```bash
 npm install
-cp .env.example .env      # DATABASE_URL pointing at any Postgres
-npm run db:migrate
+cp .env.example .env      # both database addresses: the owner's login, at first
+npm run db:migrate        # as DATABASE_ADMIN_URL
+npm run db:app-role       # makes the app's own login and points DATABASE_URL at it
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2814 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2715 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 
@@ -190,36 +193,29 @@ Never hand-write a migration — `drizzle-kit` skips any `.sql` file with no
 journal entry, silently, and the app then fails at runtime far from the cause.
 Run `npm run db:generate`.
 
-### One copy per person
-
-`npm run new-person -- <name> [email]` gives someone a whole copy of the app:
-a database of their own on the same Postgres server, owned by a login that
-opens nothing else, and `instances/<name>.env` (gitignored) with what their
-own deployment of this repository needs. Every copy runs the same code, so
-apply migrations to all of them with `npm run db:migrate-all` before pushing
-one. Step by step, in Portuguese: [docs/UMA_COPIA_POR_PESSOA.md](docs/UMA_COPIA_POR_PESSOA.md).
-
 [CLAUDE.md](CLAUDE.md) is the file to read before changing anything. Everything
 in it is there because it has already gone wrong at least once.
 
 ---
 
-## A vault for someone else
+## Accounts
 
-Everything above is the owner's side: one household's records, behind one
-password. Someone else — a partner, a parent, a friend — opens `/vault` instead
-and gets an account of their own: accounts, categories, movements, transfers and
-budgets, encrypted in their own browser with twelve words this server never
-sees. It stores ciphertext it cannot read, so running it for other people
-carries none of the responsibility that holding their records would.
+Anyone can make an account on the site — up to `MAX_ACCOUNTS` (ten unless set),
+and no more than a few an hour — and gets the whole app, empty and their own.
+Postgres keeps each person to their own rows: every table of someone's money
+has a `user_id`, filled from the connection, and a row-level security policy
+that checks it, so a query that forgets to filter still sees one person's rows
+(`src/db/client.ts`, `src/lib/__tests__/row-security.test.ts`). The app has to
+connect as a login that cannot bypass that — `npm run db:app-role` makes it —
+and refuses to start on one that can.
 
-It is a budget manager, not this whole app: no investments, no broker
-connections, no reports. Twelve words lost are a vault lost, by design, and
-signing in with Google says who someone is without being able to open anything.
+The password never reaches the server: the page sends a key derived from it
+with scrypt, and the server stores a slow hash of that. A recovery code shown
+once at sign-up is the way back in after a forgotten password.
 
-To set it up for other people: [docs/PARA_A_FAMILIA.md](docs/PARA_A_FAMILIA.md)
-for the steps, [docs/FORA_DE_CASA.md](docs/FORA_DE_CASA.md) for running it
-outside the house and for Google sign-in.
+Everything recorded before accounts existed belongs to the owner's account,
+which the owner claims at their first sign-in with `APP_EMAIL` and
+`APP_PASSWORD`. Step by step, in Portuguese: [docs/PARA_A_FAMILIA.md](docs/PARA_A_FAMILIA.md).
 
 ## What it deliberately will not do
 

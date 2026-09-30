@@ -5,6 +5,7 @@ export default {
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    // The owner's login: the app's own may read and write rows, not change tables.
+    url: (process.env.DATABASE_ADMIN_URL ?? process.env.DATABASE_URL)!,
   },
 } satisfies Config;

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { asUser, db } from "@/db/client";
+import { users } from "@/db/schema";
 import { syncAllConnections } from "@/actions/connections";
 import { refreshRates } from "@/actions/fx";
 import { refreshQuotedPrices } from "@/actions/quotes";
@@ -32,32 +34,50 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const fx = await refreshRates();
-
   /**
-   * Prices, which this route did not refresh at all.
-   *
-   * It updated exchange rates and connected platforms and stopped there, so a
-   * holding typed in by hand was priced only when somebody opened the app and
-   * pressed a button. On a real account that left every quoted price fifteen
-   * days old — past `MAX_PRICE_AGE_DAYS`, which is the app's own threshold for
-   * a price it still believes.
-   *
-   * Only the ones actually due: the schedule decides how often to look, and
-   * `needsRepricing` decides what is worth asking for.
+   * Once per account, as that account: rates, prices and connections are all
+   * each person's own rows, and a scheduler has no session to say whose. One
+   * account at a time, so a slow platform delays the rest rather than piling
+   * every account's requests onto it at once.
    */
-  const prices = await refreshQuotedPrices({ olderThanMinutes: REPRICE_AFTER_MINUTES });
-  const results = await syncAllConnections("scheduled");
+  const accounts = await db.select({ id: users.id }).from(users);
+  const totals = { fxUpdated: 0, pricesAttempted: 0, pricesUpdated: 0 };
+  const results: Awaited<ReturnType<typeof syncAllConnections>> = [];
+  for (const { id } of accounts) {
+    await asUser(id, async () => {
+      const fx = await refreshRates();
+
+      /**
+       * Prices, which this route did not refresh at all.
+       *
+       * It updated exchange rates and connected platforms and stopped there, so a
+       * holding typed in by hand was priced only when somebody opened the app and
+       * pressed a button. On a real account that left every quoted price fifteen
+       * days old — past `MAX_PRICE_AGE_DAYS`, which is the app's own threshold for
+       * a price it still believes.
+       *
+       * Only the ones actually due: the schedule decides how often to look, and
+       * `needsRepricing` decides what is worth asking for.
+       */
+      const prices = await refreshQuotedPrices({ olderThanMinutes: REPRICE_AFTER_MINUTES });
+      results.push(...(await syncAllConnections("scheduled")));
+      if (fx.ok) totals.fxUpdated++;
+      totals.pricesAttempted += prices.attempted;
+      totals.pricesUpdated += prices.updated;
+    });
+  }
   const failed = results.filter((r) => !r.ok);
 
   return NextResponse.json(
     {
       synced: results.length,
       failed: failed.length,
-      fxUpdated: fx.ok,
+      accounts: accounts.length,
+      /** Accounts whose rates were refreshed. */
+      fxUpdated: totals.fxUpdated,
       /** What it did, not only that it ran — a stuck price is invisible otherwise. */
-      pricesAttempted: prices.attempted,
-      pricesUpdated: prices.updated,
+      pricesAttempted: totals.pricesAttempted,
+      pricesUpdated: totals.pricesUpdated,
       results,
     },
     { status: failed.length > 0 ? 207 : 200 }

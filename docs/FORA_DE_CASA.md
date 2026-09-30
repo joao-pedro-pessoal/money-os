@@ -1,8 +1,9 @@
-# Usar o Money OS fora de casa, e entrar com a Google
+# Usar o Money OS fora de casa
 
 Decidido a 23 de setembro de 2026: o site passa a poder correr **na Vercel**, com
-endereço `https` fixo, usando a mesma base de dados Neon que já usas. Quem tem um
-cofre (`/vault`) usa-o de qualquer lado, sem o teu PC ligado.
+endereço `https` fixo, usando a mesma base de dados Neon que já usas. Desde 30 de
+setembro tem contas: qualquer pessoa cria a sua e usa-a de qualquer lado, sem o
+teu PC ligado (ver [PARA_A_FAMILIA.md](PARA_A_FAMILIA.md)).
 
 Isto não substitui o que tens em casa. O site continua a correr no PC com o
 `SITE_PARA_TELEMOVEL.cmd`; a nuvem é uma segunda cópia do mesmo código, ligada à
@@ -20,12 +21,15 @@ mesma base de dados.
 
    | Variável | O que meter |
    | --- | --- |
-   | `DATABASE_URL` | A mesma do teu `.env` (Neon). |
-   | `APP_EMAIL` | O teu email. Entras com ele e com a palavra-passe; qualquer outro email é de um cofre. |
-   | `APP_PASSWORD` | A tua palavra-passe do site. **Muda-a**: passa a estar exposta à internet. |
+   | `DATABASE_URL` | A do utilizador da app, **não** a do teu `.env` antigo: o `npm run db:app-role` escreve-a em `for-vercel.txt`. |
+   | `APP_EMAIL` | O teu email. A tua primeira entrada reclama com ele a tua conta de dono. |
+   | `APP_PASSWORD` | A palavra-passe dessa primeira entrada. Depois disso já não é lida. |
    | `APP_SECRET` | O mesmo do `.env`, ou um novo (um novo fecha as sessões abertas). |
    | `COOKIE_SECURE` | `true`. Na internet o cookie da sessão só deve viajar cifrado. |
-   | `SYNC_MAX_ACCOUNTS` | Quantas contas de cofre aceitas (por defeito 10). |
+   | `MAX_ACCOUNTS` | Quantas contas o site aceita no total (por defeito 10). |
+
+   A `DATABASE_ADMIN_URL` também **não** vai para a Vercel: serve só para mudar
+   a estrutura da base de dados, e isso faz-se a partir do teu PC.
 
    **A `ENCRYPTION_KEY` não vai para a Vercel.** É ela que abre os segredos das
    corretoras guardados na base de dados, e a regra do projeto é que só existe
@@ -52,7 +56,7 @@ mesma base de dados.
    **Redeploy**. Os endereços compridos de cada deploy estão atrás do login da
    Vercel; se o de **Domains** também estiver, desliga **Vercel
    Authentication** em **Settings → Deployment Protection**.
-5. Abre-o: o site pede a palavra-passe, e `/vault` abre sem ela.
+5. Abre-o: aparece a página de entrada.
 
 ### O que não funciona na nuvem
 
@@ -69,61 +73,9 @@ mesma base de dados.
 
 ### O que muda em segurança
 
-O site deixa de estar só na tua rede. O que o protege é a palavra-passe, o limite
-de tentativas e as sessões que expiram. Por isso: **muda a palavra-passe**, usa
-uma longa, e mantém `COOKIE_SECURE=true`.
+O site deixa de estar só na tua rede. O que o protege é a palavra-passe de cada
+conta, o limite de tentativas e as sessões que expiram. Por isso: palavras-passe
+longas, e `COOKIE_SECURE=true`.
 
-Os cofres não dependem disso: o que lá está é cifrado no aparelho de cada pessoa
-e o servidor — em casa ou na Vercel — guarda texto que não consegue ler.
-
-## 2. Entrar com a Google
-
-A Google responde a uma pergunta: **quem é a pessoa**. Não abre o cofre. As doze
-palavras continuam a ser a chave, e é por isso que o servidor continua sem poder
-ler nada. Quem cria a conta com a Google recebe as doze palavras logo a seguir,
-para escrever num papel.
-
-### Preparar, uma vez
-
-1. Vai a [console.cloud.google.com](https://console.cloud.google.com) e cria um
-   projeto (o nome é só teu).
-2. **APIs & Services → OAuth consent screen**: tipo *External*, nome da app
-   "Money OS", o teu email de contacto. Em **Test users** acrescenta os emails das
-   pessoas que vão usar, enquanto a app estiver em modo de teste.
-3. **APIs & Services → Credentials → Create credentials → OAuth client ID**, tipo
-   *Web application*.
-4. Em **Authorized redirect URIs** mete, exatamente:
-   `https://o-teu-endereco.vercel.app/api/vault/google/callback`
-5. Copia o **Client ID** e o **Client secret**.
-6. Na Vercel, acrescenta:
-
-   | Variável | O que meter |
-   | --- | --- |
-   | `GOOGLE_CLIENT_ID` | O Client ID. |
-   | `GOOGLE_CLIENT_SECRET` | O Client secret. |
-   | `GOOGLE_REDIRECT_ORIGIN` | Só se o endereço que registaste for diferente daquele por onde as pessoas entram (por exemplo, um domínio próprio). |
-
-7. Faz **Redeploy**.
-
-Sem estas variáveis o botão existe mas responde que não está configurado — não
-falha nem finge.
-
-### Como fica para quem usa
-
-1. Abre `/vault` e carrega em **Continue with Google**.
-2. Escolhe a conta Google.
-3. Volta ao Money OS:
-   - **conta nova**: aparecem as doze palavras, para escrever e confirmar;
-   - **conta que já existe**: pede as doze palavras.
-4. A partir daí é o cofre normal.
-
-### Limites, ditos de frente
-
-- **Um email com conta de palavra-passe não pode ser tomado pela Google.** Se já
-  existe uma conta com esse endereço, a app recusa e manda entrar com a
-  palavra-passe. Juntar os dois métodos na mesma conta é trabalho por fazer
-  (tarefa E03).
-- **A Google não recupera nada.** Quem perde as doze palavras perde o cofre, com
-  ou sem Google.
-- **Enquanto o projeto Google estiver em modo de teste**, só entram os emails que
-  puseres em *Test users* (até 100).
+Cada pessoa só vê o que é seu: é a própria base de dados que o garante, e a app
+recusa arrancar se estiver ligada com um utilizador que o pudesse ignorar.

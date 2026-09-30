@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { isQuickEntryId } from "../manualEntry";
 import { newQuickEntryId, randomUuid } from "../quickEntryId";
-import { AccountSchema } from "../../vault/document";
 
 function bytesSource(fill: (length: number) => Uint8Array) {
   return {
@@ -34,12 +33,9 @@ describe("newQuickEntryId", () => {
 });
 
 describe("randomUuid", () => {
-  it("makes a version-4 id without randomUUID, which the vault's documents accept", () => {
+  it("makes a version-4 id without randomUUID", () => {
     const source = bytesSource((n) => randomBytes(n));
     const id = randomUuid(source);
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-    expect(
-      AccountSchema.safeParse({ id, name: "Conta", kind: "bank", currency: "EUR", balance: "0.00", createdAt: "2026-09-29" }).success
-    ).toBe(true);
   });
 });

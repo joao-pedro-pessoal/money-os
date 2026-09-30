@@ -435,6 +435,34 @@
       "when": 1790778887204,
       "tag": "0061_mean_harry_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1790783484534,
+      "tag": "0062_accounts_for_everyone",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1790783541132,
+      "tag": "0063_row_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1790783732449,
+      "tag": "0064_retire_the_vault",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1790784313569,
+      "tag": "0065_own_exchange_rates",
+      "breakpoints": true
     }
   ]
 }

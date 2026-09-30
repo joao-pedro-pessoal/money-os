@@ -32,7 +32,7 @@ export async function setBenchmarkChoice(formData: FormData) {
     .insert(appSettings)
     .values({ key: BENCHMARK_KEY, value: id, updatedAt: new Date() })
     .onConflictDoUpdate({
-      target: appSettings.key,
+      target: [appSettings.userId, appSettings.key],
       set: { value: id, updatedAt: new Date() },
     });
 
