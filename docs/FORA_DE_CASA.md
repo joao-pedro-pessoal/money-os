@@ -21,6 +21,7 @@ mesma base de dados.
    | Variável | O que meter |
    | --- | --- |
    | `DATABASE_URL` | A mesma do teu `.env` (Neon). |
+   | `APP_EMAIL` | O teu email. Entras com ele e com a palavra-passe; qualquer outro email é de um cofre. |
    | `APP_PASSWORD` | A tua palavra-passe do site. **Muda-a**: passa a estar exposta à internet. |
    | `APP_SECRET` | O mesmo do `.env`, ou um novo (um novo fecha as sessões abertas). |
    | `COOKIE_SECURE` | `true`. Na internet o cookie da sessão só deve viajar cifrado. |

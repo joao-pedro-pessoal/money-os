@@ -21,10 +21,13 @@ const deviceName = () => (typeof navigator === "undefined" ? "Browser" : describ
  */
 export default function VaultSignIn({
   onOpen,
+  initialMode = "in",
 }: {
   onOpen: (session: VaultSession, seed: string, keep: boolean) => void;
+  /** "new" when the person came here from "Create your vault". */
+  initialMode?: "in" | "new";
 }) {
-  const [mode, setMode] = useState<"in" | "new">("in");
+  const [mode, setMode] = useState<"in" | "new">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [seed, setSeed] = useState("");
@@ -67,7 +70,7 @@ export default function VaultSignIn({
   };
 
   return (
-    <div className="card p-5 space-y-4 max-w-xl">
+    <div className="card p-5 space-y-4">
       <div className="flex gap-2">
         {(["in", "new"] as const).map((value) => (
           <button
@@ -90,7 +93,7 @@ export default function VaultSignIn({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <label className="text-xs">
           Email
           <input

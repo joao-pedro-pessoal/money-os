@@ -32,10 +32,12 @@ function fakeServer() {
 describe("signing in", () => {
   it("takes the session the server hands back, and says when it refuses", async () => {
     const client = createVaultClient(fakeServer().transport);
-    await expect(client.register("a@b.pt", "a-long-password", "PC")).resolves.toEqual({
+    await expect(client.register(" A@b.pt ", "a-long-password", "PC")).resolves.toEqual({
       token: "t",
       userId: USER,
       deviceId: "d",
+      // Kept so the screen can say whose vault is open, as the server stores it.
+      email: "a@b.pt",
     });
     await expect(client.login("a@b.pt", "wrong", "PC")).rejects.toThrow(/Wrong email or password/);
   });

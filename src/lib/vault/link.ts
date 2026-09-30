@@ -99,6 +99,15 @@ export function linkAddress(origin: string, id: string, key: string): string {
   return `${origin.replace(/\/+$/, "")}/vault/link#${id}.${key}`;
 }
 
+/**
+ * The other direction's code: shown by a device with no session, scanned by a
+ * phone already in the vault. Same shape, a different page — the phone that
+ * opens it is the one deciding, not the one being let in.
+ */
+export function approveAddress(origin: string, id: string, key: string): string {
+  return `${origin.replace(/\/+$/, "")}/vault/approve#${id}.${key}`;
+}
+
 /** The id and key from a scanned address's fragment, or null when it holds neither. */
 export function readLinkFragment(hash: string): { id: string; key: string } | null {
   const text = hash.startsWith("#") ? hash.slice(1) : hash;
@@ -176,6 +185,24 @@ export function describeDevice(userAgent: string): string {
   return browser ? `${kind} · ${browser}` : kind;
 }
 
+export type SignInRequestState = "waiting" | "granted" | "collected" | "expired";
+
+/** Where a device waiting to be let in stands. */
+export function signInRequestState(row: { state: string; expiresAt: Date }, now: Date): SignInRequestState {
+  if (row.state === "collected") return "collected";
+  if (row.expiresAt.getTime() <= now.getTime()) return "expired";
+  return row.state === "granted" ? "granted" : "waiting";
+}
+
+/**
+ * How many devices may be waiting at once, across the whole server.
+ *
+ * Asking needs no account — that is the point of it — so without a ceiling
+ * anyone could fill the table. A household has one or two waiting at most, and
+ * each lasts minutes.
+ */
+export const MAX_WAITING_SIGN_INS = 200;
+
 // What the server accepts — decided here, without a database, like the rest of the protocol.
 
 export const CreateLinkRequest = z
@@ -189,3 +216,11 @@ export const AskLinkRequest = z
 export const CollectLinkRequest = z.object({ claimKey: z.string().regex(KEY_TEXT) }).strict();
 
 export const AnswerLinkRequest = z.object({ allow: z.boolean() }).strict();
+
+export const CreateSignInRequest = z
+  .object({ deviceName, claimHash: z.string().regex(/^[0-9a-f]{64}$/) })
+  .strict();
+
+export const GrantSignInRequest = z
+  .object({ sealed: z.string().max(512).regex(/^v1\.[0-9a-f]{24}\.[0-9a-f]{2,400}$/) })
+  .strict();

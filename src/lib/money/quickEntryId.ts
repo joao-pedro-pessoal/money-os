@@ -10,10 +10,22 @@ type RandomSource = Pick<Crypto, "getRandomValues"> & { randomUUID?: () => strin
  * the version and variant bits set are the same version-4 id.
  */
 export function newQuickEntryId(source: RandomSource = globalThis.crypto): string {
-  if (typeof source.randomUUID === "function") return `quick-${source.randomUUID()}`;
+  return `quick-${randomUuid(source)}`;
+}
+
+/**
+ * A version-4 id that works over plain http, for anything the browser makes.
+ *
+ * The same trap caught the vault: every account, category and movement took
+ * its id from crypto.randomUUID, so on the family's phones at home — the site
+ * by its Wi-Fi address — nothing could be recorded at all, only on Vercel's
+ * https. One function, so the next place that needs an id finds this one.
+ */
+export function randomUuid(source: RandomSource = globalThis.crypto): string {
+  if (typeof source.randomUUID === "function") return source.randomUUID();
   const bytes = source.getRandomValues(new Uint8Array(16));
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
   const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `quick-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createVaultClient, type VaultTransport } from "../client";
 import {
+  approveAddress,
   AskLinkRequest,
+  CreateSignInRequest,
+  GrantSignInRequest,
+  signInRequestState,
   claimHashOf,
   CollectLinkRequest,
   CreateLinkRequest,
@@ -164,5 +168,43 @@ describe("a refusal's reason", () => {
     await expect(createVaultClient(transport).register("a@b.pt", "short", "PC")).rejects.toThrow(
       "Use a password of at least 12 characters."
     );
+  });
+});
+
+describe("the other direction: a device with no session asks a phone", () => {
+  it("shows a code for the phone's approval page, the key again after #", () => {
+    const key = newLinkKey(random);
+    const address = approveAddress("https://money.example", ID, key);
+    expect(address).toBe(`https://money.example/vault/approve#${ID}.${key}`);
+    const url = new URL(address);
+    expect(url.pathname + url.search).not.toContain(key);
+    expect(readLinkFragment(url.hash)).toEqual({ id: ID, key });
+  });
+
+  it("asks under a name and a claim hash, and nothing else", () => {
+    const hash = claimHashOf(newLinkKey(random));
+    expect(CreateSignInRequest.safeParse({ deviceName: "Windows computer · Edge", claimHash: hash }).success).toBe(true);
+    expect(CreateSignInRequest.safeParse({ deviceName: "PC", claimHash: hash, userId: "someone" }).success).toBe(false);
+    expect(CreateSignInRequest.safeParse({ deviceName: "", claimHash: hash }).success).toBe(false);
+  });
+
+  it("is answered with the words sealed, which only the code's key opens", async () => {
+    const seed = await generateSeed(random);
+    const key = newLinkKey(random);
+    const sealed = sealSeed(seed, key, random);
+    expect(GrantSignInRequest.safeParse({ sealed }).success).toBe(true);
+    expect(GrantSignInRequest.safeParse({ sealed: seed }).success).toBe(false);
+    expect(openSeed(sealed, key)).toBe(seed);
+  });
+
+  it("waits, is granted, is collected once, and expires unless collected", () => {
+    const now = new Date("2026-09-29T12:00:00Z");
+    const later = new Date("2026-09-29T12:04:00Z");
+    const earlier = new Date("2026-09-29T11:59:00Z");
+    expect(signInRequestState({ state: "waiting", expiresAt: later }, now)).toBe("waiting");
+    expect(signInRequestState({ state: "granted", expiresAt: later }, now)).toBe("granted");
+    expect(signInRequestState({ state: "granted", expiresAt: earlier }, now)).toBe("expired");
+    expect(signInRequestState({ state: "collected", expiresAt: earlier }, now)).toBe("collected");
+    expect(signInRequestState({ state: "anything", expiresAt: later }, now)).toBe("waiting");
   });
 });

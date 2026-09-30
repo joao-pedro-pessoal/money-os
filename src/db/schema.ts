@@ -1547,6 +1547,30 @@ export const syncDeviceLinks = pgTable("sync_device_links", {
 });
 
 /**
+ * The other direction: a device with no account yet shows the code, and a
+ * phone already in the vault scans it and lets that device in.
+ *
+ * So the row starts with no account at all — only the waiting device's name
+ * and the hash of its claim secret. The phone that says yes fills in whose
+ * vault it is and the twelve words, sealed with the key in the code's
+ * fragment, which the server never sees. The waiting device collects once;
+ * the row keeps only that it was used. `state` runs waiting → granted →
+ * collected; a no deletes the row.
+ */
+export const syncSignInRequests = pgTable("sync_sign_in_requests", {
+  id: text("id").primaryKey(),
+  deviceName: text("device_name").notNull(),
+  claimHash: text("claim_hash").notNull(),
+  state: text("state").notNull().default("waiting"),
+  /** Null until a phone says yes; the account that phone is in. */
+  userId: text("user_id").references(() => syncUsers.id, { onDelete: "cascade" }),
+  /** Null until granted, and again once collected. */
+  ciphertext: text("ciphertext"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+/**
  * Every stored version of every account's vault, as ciphertext.
  *
  * The primary key on (account, version) is what makes a stale send fail instead

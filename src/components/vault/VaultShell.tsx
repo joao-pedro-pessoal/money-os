@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   browserRandom,
   createVaultClient,
@@ -11,29 +11,56 @@ import {
   type VaultSession,
 } from "@/lib/vault/client";
 import { emptyDocument, type VaultDocument } from "@/lib/vault/document";
-import VaultLedger from "./VaultLedger";
+import Link from "next/link";
+import AuthFrame from "../AuthFrame";
+import TopBar from "../TopBar";
+import VaultNav from "./VaultNav";
 import VaultSignIn from "./VaultSignIn";
-import VaultBringIn from "./VaultBringIn";
 import VaultSeedPrompt from "./VaultSeedPrompt";
-import VaultPhoneLink from "./VaultPhoneLink";
-import VaultDevices from "./VaultDevices";
-import { forgetVault, isKept, recallVault, rememberVault } from "./storage";
+import VaultPhoneSignIn from "./VaultPhoneSignIn";
+import { forgetVault, isKept, recallVault, rememberVault, takeSignedIn } from "./storage";
 
 const client = createVaultClient(fetchTransport());
 
+export interface OpenVaultState {
+  session: VaultSession;
+  seed: string;
+  document: VaultDocument;
+  /** What the last save or open said, for the pages to show. */
+  status: string | null;
+  save: (next: VaultDocument, what: string) => void;
+  /** Bumped when a phone joins, so the device list reads again. */
+  joined: number;
+  onJoined: () => void;
+}
+
+const VaultContext = createContext<OpenVaultState | null>(null);
+
+/** The open vault, for its pages. Only rendered inside one, so never null there. */
+export function useVault(): OpenVaultState {
+  const vault = useContext(VaultContext);
+  if (!vault) throw new Error("useVault is only available inside an open vault.");
+  return vault;
+}
+
 /**
- * A vault account on the site, from signing in to every save.
+ * A vault account on the site, from signing in to every save — and the frame
+ * its pages sit in, the same one the owner's pages do.
  *
  * Where the two secrets live is the whole design, and it is in `storage.ts`:
  * the session token outlives the visit and unlocks nothing; the twelve words
  * last only the visit unless the person says this device is theirs. Neither is
  * ever sent; the server sees a token and ciphertext.
  *
+ * The document is opened once here and kept while moving between the vault's
+ * pages: they are client-side navigations inside this layout, so nothing is
+ * decrypted twice and nothing decrypted is ever sent anywhere.
+ *
  * Saving is immediate and one version at a time. A save that would land on top
  * of a newer version from another device stops and says so, because the other
  * device recorded something real.
  */
-export default function VaultApp() {
+export default function VaultShell({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<VaultSession | null>(null);
   const [seed, setSeed] = useState<string | null>(null);
   const [document, setDocument] = useState<VaultDocument | null>(null);
@@ -43,8 +70,9 @@ export default function VaultApp() {
   const [loading, setLoading] = useState(true);
   /** A Google sign-in that has an account but not yet the words that open it. */
   const [awaitingSeed, setAwaitingSeed] = useState<{ session: VaultSession; isNew: boolean } | null>(null);
-  /** Bumped when a phone joins, so the device list reads again. */
   const [joined, setJoined] = useState(0);
+  /** Came from "Create your vault" on the sign-in page. */
+  const [startNew, setStartNew] = useState(false);
   const saving = useRef(false);
   const onJoined = useCallback(() => setJoined((n) => n + 1), []);
 
@@ -88,9 +116,11 @@ export default function VaultApp() {
       const address = new URL(window.location.href);
       const googleProblem = address.searchParams.get("google_error");
       if (googleProblem && !cancelled) setProblem(googleProblem);
-      if (address.searchParams.has("google") || googleProblem) {
+      if (address.searchParams.get("new") === "1" && !cancelled) setStartNew(true);
+      if (address.searchParams.has("google") || googleProblem || address.searchParams.has("new")) {
         address.searchParams.delete("google");
         address.searchParams.delete("google_error");
+        address.searchParams.delete("new");
         window.history.replaceState(window.history.state, "", address);
       }
 
@@ -100,11 +130,26 @@ export default function VaultApp() {
         return;
       }
 
+      // Signed in on the sign-in page a moment ago: the words are still to come.
+      const signedIn = takeSignedIn();
+      if (signedIn) {
+        if (!cancelled) {
+          setAwaitingSeed({ session: signedIn, isNew: false });
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
         const claimed = await fetch("/api/vault/google/claim", { method: "POST", cache: "no-store" });
         if (claimed.ok) {
           const body = (await claimed.json()) as VaultSession & { isNew: boolean };
-          if (!cancelled) setAwaitingSeed({ session: { token: body.token, userId: body.userId, deviceId: body.deviceId }, isNew: body.isNew });
+          if (!cancelled) {
+            setAwaitingSeed({
+              session: { token: body.token, userId: body.userId, deviceId: body.deviceId },
+              isNew: body.isNew,
+            });
+          }
         }
       } catch {
         // No sign-in waiting, which is the ordinary case.
@@ -148,7 +193,7 @@ export default function VaultApp() {
     }
   };
 
-  const signOut = () => {
+  const lock = () => {
     forgetVault();
     setSession(null);
     setSeed(null);
@@ -157,68 +202,75 @@ export default function VaultApp() {
     setStatus(null);
   };
 
-  if (loading) return <p className="text-sm text-[var(--muted)]">Opening…</p>;
+  const problemNotice = problem && (
+    <p role="alert" className="card p-3 text-sm text-[var(--red)]">
+      {problem}
+    </p>
+  );
 
-  if (awaitingSeed) {
+  // Before a vault is open there is nothing to move between, so no menu: the
+  // same frame as the sign-in page instead.
+  if (loading || awaitingSeed || !session || !document || !seed) {
     return (
-      <div className="space-y-4">
-        {problem && (
-          <p role="alert" className="card p-3 text-sm text-[var(--red)]">
-            {problem}
+      <AuthFrame>
+        <header className="space-y-2">
+          <h1 className="text-3xl tracking-tight text-[var(--foreground)]">Your vault</h1>
+          <p className="text-sm text-[var(--muted)]">
+            An account of your own on this Money OS. What you record is encrypted on this device with twelve words only
+            you have, and stored as something the server cannot read.
           </p>
+        </header>
+        {problemNotice}
+        {loading ? (
+          <p className="text-sm text-[var(--muted)]">Opening…</p>
+        ) : awaitingSeed ? (
+          <VaultSeedPrompt
+            isNew={awaitingSeed.isNew}
+            onReady={(words, keep) => {
+              const waiting = awaitingSeed;
+              setAwaitingSeed(null);
+              void open(waiting.session, words, keep);
+            }}
+            onCancel={() => setAwaitingSeed(null)}
+          />
+        ) : (
+          <div className="space-y-4">
+            <VaultSignIn
+              key={startNew ? "new" : "in"}
+              initialMode={startNew ? "new" : "in"}
+              onOpen={(next, words, keep) => void open(next, words, keep)}
+            />
+            {/* On a computer only: a phone would be showing the code to itself. */}
+            <div className="hidden sm:block">
+              <VaultPhoneSignIn onOpen={(next, words, keep) => void open(next, words, keep)} />
+            </div>
+          </div>
         )}
-        <VaultSeedPrompt
-          isNew={awaitingSeed.isNew}
-          onReady={(words, keep) => {
-            const waiting = awaitingSeed;
-            setAwaitingSeed(null);
-            void open(waiting.session, words, keep);
-          }}
-          onCancel={() => setAwaitingSeed(null)}
-        />
-      </div>
-    );
-  }
-
-  if (!session || !document) {
-    return (
-      <div className="space-y-4">
-        {problem && (
-          <p role="alert" className="card p-3 text-sm text-[var(--red)]">
-            {problem}
-          </p>
-        )}
-        <VaultSignIn onOpen={(next, words, keep) => void open(next, words, keep)} />
-      </div>
+        <p className="text-sm text-center text-[var(--muted)]">
+          <Link href="/login" className="text-[var(--accent)] font-medium">
+            Back to sign in
+          </Link>
+        </p>
+      </AuthFrame>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-xs text-[var(--muted)]">
-          Your own vault. Everything here is encrypted in this page before it is stored, so whoever runs this site
-          cannot read it — and cannot recover it for you either.
-        </p>
-        <button type="button" className="btn" onClick={signOut}>
-          Lock and sign out
-        </button>
+    <div className="app-frame flex">
+      <VaultNav email={session.email} onLock={lock} />
+      <div id="app-content" className="flex-1 min-w-0 flex flex-col">
+        {/* The owner's top bar: menu, hide values, light and dark. No alerts —
+            those are read from the owner's records. */}
+        <TopBar alerts={[]} />
+        <main className="app-main flex-1 p-4 md:p-8 max-w-5xl space-y-4">
+          {problemNotice}
+          <VaultContext.Provider
+            value={{ session, seed, document, status, save: (next, what) => void save(next, what), joined, onJoined }}
+          >
+            {children}
+          </VaultContext.Provider>
+        </main>
       </div>
-      {problem && (
-        <p role="alert" className="card p-3 text-sm text-[var(--red)]">
-          {problem}
-        </p>
-      )}
-      {/* Near the top on a computer, where it is the way to the phone; left out
-          on a phone's width, where it would be the phone offering itself. */}
-      {seed && (
-        <div className="hidden sm:block">
-          <VaultPhoneLink session={session} seed={seed} onJoined={onJoined} />
-        </div>
-      )}
-      <VaultBringIn document={document} onBring={(next) => void save(next, "records brought in")} />
-      <VaultLedger document={document} onChange={(next, what) => void save(next, what)} saving={status} />
-      <VaultDevices session={session} refresh={joined} />
     </div>
   );
 }

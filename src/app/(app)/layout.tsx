@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <LanguageProvider>
       <PrivacyProvider>
         <NavProvider>
-          <div className="flex">
+          <div className="app-frame flex">
             <Nav />
             {/*
               `min-w-0` is what stops a wide table from pushing the whole page

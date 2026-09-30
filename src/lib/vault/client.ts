@@ -31,6 +31,12 @@ export interface VaultSession {
   token: string;
   userId: string;
   deviceId: string;
+  /**
+   * Whose vault this is, when known. Shown on screen so a device let in by a
+   * code says which account it opened — a phone scanning someone else's code
+   * would otherwise leave a computer in the wrong vault without a word.
+   */
+  email?: string;
 }
 
 export class VaultClientError extends Error {
@@ -64,11 +70,11 @@ function reasonOf(reply: VaultReply, fallback: string): string {
 
 function sessionOf(reply: VaultReply): VaultSession {
   const body = asObject(reply.body);
-  const { token, userId, deviceId } = body;
+  const { token, userId, deviceId, email } = body;
   if (typeof token !== "string" || typeof userId !== "string" || typeof deviceId !== "string") {
     throw new VaultClientError("The server answered something this app does not understand.", "shape");
   }
-  return { token, userId, deviceId };
+  return typeof email === "string" ? { token, userId, deviceId, email } : { token, userId, deviceId };
 }
 
 /** Over the network: every call the site makes, and nothing else. */
@@ -77,13 +83,13 @@ export function createVaultClient(transport: VaultTransport) {
     async register(email: string, password: string, deviceName: string): Promise<VaultSession> {
       const reply = await transport("POST", "/api/vault/register", { body: { email, password, deviceName } });
       if (reply.status !== 201) throw new VaultClientError(reasonOf(reply, "The account could not be created."));
-      return sessionOf(reply);
+      return { ...sessionOf(reply), email: email.trim().toLowerCase() };
     },
 
     async login(email: string, password: string, deviceName: string): Promise<VaultSession> {
       const reply = await transport("POST", "/api/vault/login", { body: { email, password, deviceName } });
       if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "Wrong email or password."));
-      return sessionOf(reply);
+      return { ...sessionOf(reply), email: email.trim().toLowerCase() };
     },
 
     /** The stored ciphertext, or null for an account that has never saved one. */
@@ -185,6 +191,53 @@ export function createVaultClient(transport: VaultTransport) {
     /** Null while the owner has not answered; the session and the sealed words once they said yes. */
     async collectLink(id: string, claimKey: string): Promise<(VaultSession & { sealed: string }) | null> {
       const reply = await transport("POST", `/api/vault/links/${encodeURIComponent(id)}/collect`, {
+        body: { claimKey },
+      });
+      if (reply.status === 202) return null;
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "This code no longer works."));
+      const sealed = asObject(reply.body).sealed;
+      if (typeof sealed !== "string") {
+        throw new VaultClientError("The server answered something this app does not understand.", "shape");
+      }
+      return { ...sessionOf(reply), sealed };
+    },
+
+    // The other direction: this device has no session, and a phone lets it in.
+
+    async createSignInRequest(deviceName: string, claimHash: string): Promise<{ id: string; expiresAt: string }> {
+      const reply = await transport("POST", "/api/vault/sign-in-requests", { body: { deviceName, claimHash } });
+      if (reply.status !== 201) throw new VaultClientError(reasonOf(reply, "No code could be made."));
+      const { id, expiresAt } = asObject(reply.body);
+      if (typeof id !== "string" || typeof expiresAt !== "string") {
+        throw new VaultClientError("The server answered something this app does not understand.", "shape");
+      }
+      return { id, expiresAt };
+    },
+
+    /** The name of the device asking, for the phone to show before it says yes. */
+    async signInRequest(token: string, id: string): Promise<{ deviceName: string }> {
+      const reply = await transport("GET", `/api/vault/sign-in-requests/${encodeURIComponent(id)}`, { token });
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "This code no longer works."));
+      const deviceName = asObject(reply.body).deviceName;
+      return { deviceName: typeof deviceName === "string" ? deviceName : "A device" };
+    },
+
+    async grantSignIn(token: string, id: string, sealed: string): Promise<void> {
+      const reply = await transport("POST", `/api/vault/sign-in-requests/${encodeURIComponent(id)}/grant`, {
+        token,
+        body: { sealed },
+      });
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "This code no longer works."));
+    },
+
+    async refuseSignIn(token: string, id: string): Promise<void> {
+      const reply = await transport("DELETE", `/api/vault/sign-in-requests/${encodeURIComponent(id)}`, { token });
+      if (reply.status !== 200) throw new VaultClientError(reasonOf(reply, "The answer did not reach the server."));
+    },
+
+    /** Null while no phone has answered; the session and the sealed words once one said yes. */
+    async collectSignIn(id: string, claimKey: string): Promise<(VaultSession & { sealed: string }) | null> {
+      const reply = await transport("POST", `/api/vault/sign-in-requests/${encodeURIComponent(id)}/collect`, {
         body: { claimKey },
       });
       if (reply.status === 202) return null;

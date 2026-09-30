@@ -139,6 +139,7 @@ Fill in `.env`. Generate each secret with `openssl rand -base64 32`:
 
 ```bash
 POSTGRES_PASSWORD="..."   # your database
+APP_EMAIL="..."           # the owner's email on the sign-in page
 APP_PASSWORD="..."        # what you log in with
 APP_SECRET="..."          # signs the session cookie
 ENCRYPTION_KEY="..."      # encrypts stored API secrets
@@ -181,7 +182,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2793 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2802 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 

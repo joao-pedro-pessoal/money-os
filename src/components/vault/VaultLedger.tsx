@@ -11,12 +11,18 @@ import {
   type VaultDocument,
 } from "@/lib/vault/document";
 import { budgetLines, monthOf, monthReport, monthsWithMovements } from "@/lib/vault/report";
+import { usePrivacy } from "@/components/PrivacyContext";
+import { randomUuid } from "@/lib/money/quickEntryId";
 
 const today = () => new Date().toISOString().slice(0, 10);
-const newId = () => crypto.randomUUID();
+// Over plain http too: see randomUuid.
+const newId = () => randomUuid();
 const amountOf = (value: string) => value.trim().replace(",", ".");
 
+/** Hidden like every other figure when the eye in the top bar is closed. */
 function Money({ value, currency }: { value: string; currency: string }) {
+  const { hidden } = usePrivacy();
+  if (hidden) return <span>••••••</span>;
   const number = Number(value);
   return (
     <span>
@@ -25,25 +31,44 @@ function Money({ value, currency }: { value: string; currency: string }) {
   );
 }
 
+type Change = (make: () => VaultDocument, what: string) => void;
+
 /**
- * The day-to-day of a vault: what you have, what you recorded, and where the
- * month went.
+ * The day-to-day of a vault, in the pieces its pages are made of: what you
+ * have and where the month went, your accounts, and what you recorded.
  *
  * Every change is made here, on the document in the page, and handed back to be
- * sealed and stored. Nothing on this screen reaches the server in the clear —
+ * sealed and stored. Nothing on these screens reaches the server in the clear —
  * which is also why the arithmetic is the vault's own (lib/vault/report), not a
  * server action.
+ *
+ * A change that the document's rules refuse — a transfer to the same account, a
+ * category on the wrong side — is said on the page, not thrown.
  */
-export default function VaultLedger({
-  document: doc,
-  onChange,
-  saving,
-}: {
-  document: VaultDocument;
-  onChange: (next: VaultDocument, what: string) => void;
-  saving: string | null;
-}) {
+export function useLedgerChange(onChange: (next: VaultDocument, what: string) => void) {
   const [error, setError] = useState<string | null>(null);
+  const change: Change = (make, what) => {
+    try {
+      setError(null);
+      onChange(make(), what);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "That could not be recorded.");
+    }
+  };
+  return { change, error };
+}
+
+export function LedgerError({ error }: { error: string | null }) {
+  if (!error) return null;
+  return (
+    <p role="alert" className="card p-3 text-sm text-[var(--red)]">
+      {error}
+    </p>
+  );
+}
+
+/** What you have, and where the month went. Reads only. */
+export function VaultOverview({ document: doc }: { document: VaultDocument }) {
   const months = useMemo(() => {
     const list = monthsWithMovements(doc);
     const now = monthOf(today());
@@ -55,23 +80,8 @@ export default function VaultLedger({
   const base = doc.baseCurrency;
   const totals = totalIn(doc, base);
 
-  const change = (make: () => VaultDocument, what: string) => {
-    try {
-      setError(null);
-      onChange(make(), what);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "That could not be recorded.");
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {error && (
-        <p role="alert" className="card p-3 text-sm text-[var(--red)]">
-          {error}
-        </p>
-      )}
-
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="card p-4">
           <div className="text-xs text-[var(--muted)]">What you have</div>
@@ -167,24 +177,17 @@ export default function VaultLedger({
           </div>
         )}
       </section>
-
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Accounts doc={doc} onChange={change} saving={saving} />
-        <Record doc={doc} onChange={change} />
-      </section>
-
-      <Movements doc={doc} onChange={change} />
     </div>
   );
 }
 
-function Accounts({
+export function Accounts({
   doc,
   onChange,
   saving,
 }: {
   doc: VaultDocument;
-  onChange: (make: () => VaultDocument, what: string) => void;
+  onChange: Change;
   saving: string | null;
 }) {
   const [name, setName] = useState("");
@@ -258,7 +261,7 @@ function Accounts({
   );
 }
 
-function Record({ doc, onChange }: { doc: VaultDocument; onChange: (make: () => VaultDocument, what: string) => void }) {
+export function Record({ doc, onChange }: { doc: VaultDocument; onChange: Change }) {
   const [type, setType] = useState<"expense" | "income" | "transfer">("expense");
   const [accountId, setAccountId] = useState("");
   const [toId, setToId] = useState("");
@@ -414,7 +417,7 @@ function Record({ doc, onChange }: { doc: VaultDocument; onChange: (make: () => 
   );
 }
 
-function Movements({ doc, onChange }: { doc: VaultDocument; onChange: (make: () => VaultDocument, what: string) => void }) {
+export function Movements({ doc, onChange }: { doc: VaultDocument; onChange: Change }) {
   const rows = [...doc.movements].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 50);
   const accountName = new Map(doc.accounts.map((a) => [a.id, a.name]));
   const categoryName = new Map(doc.categories.map((c) => [c.id, c.name]));

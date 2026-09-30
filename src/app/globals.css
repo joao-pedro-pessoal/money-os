@@ -205,6 +205,25 @@
   --color-foreground: var(--foreground);
 }
 
+/*
+ * The page's ground is painted twice on purpose: on the root, and on the frame
+ * every page sits in (`.app-frame`). A browser left to paint it from <body>
+ * alone draws it on its own canvas, and that is the one surface extensions and
+ * "force dark" features repaint: the menu and the cards, painted by elements,
+ * kept the theme while the ground around them came out black on a light theme
+ * and then white on a dark one. An element's own background is what they leave
+ * alone, so the frame carries one too.
+ */
+html {
+  background: var(--background);
+}
+
+.app-frame {
+  background: var(--background);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -245,6 +264,93 @@ body {
 
 .btn:hover {
   opacity: 0.9;
+}
+
+/* The second choice beside a .btn: same size, no fill. */
+.btn-quiet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: border-color 150ms ease;
+}
+.btn-quiet:hover {
+  border-color: var(--border-strong);
+}
+
+/* The way in: AuthFrame, on the sign-in page and a vault not yet open. */
+.auth-hero {
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background:
+    radial-gradient(48rem 32rem at -10% -15%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 65%),
+    radial-gradient(36rem 28rem at 115% 110%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    var(--surface);
+}
+.auth-trend {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 30%;
+  color: var(--accent);
+  opacity: 0.4;
+  pointer-events: none;
+}
+.auth-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--accent);
+  background: var(--background);
+  color: var(--accent);
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.auth-point-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+/* 16px, so a phone does not zoom the page when the field takes focus. */
+.input.auth-input {
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
 .input {
@@ -920,7 +1026,7 @@ main .grid > * { min-width: 0; }
 @media print {
   nav, header, .mobile-bottom-nav, .report-actions, .page-tabs, .mobile-mode-switch, .quick-entry-trigger { display: none !important; }
   .monthly-report h1 { display: none; }
-  body, .app-main { background: #fff !important; color: #000 !important; }
+  html, body, .app-frame, .app-main { background: #fff !important; color: #000 !important; }
   .monthly-report .card { break-inside: avoid; border: 1px solid #ccc; background: #fff !important; }
   .app-main { max-width: none !important; padding: 0 !important; }
 }

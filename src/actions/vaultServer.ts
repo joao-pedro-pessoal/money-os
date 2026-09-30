@@ -1,9 +1,17 @@
 "use server";
 
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { and, desc, eq, gt, isNull, lt, max, ne, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, isNull, lt, max, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { syncDeviceLinks, syncDevices, syncLoginMethods, syncSessions, syncUsers, syncVaultVersions } from "@/db/schema";
+import {
+  syncDeviceLinks,
+  syncDevices,
+  syncLoginMethods,
+  syncSessions,
+  syncSignInRequests,
+  syncUsers,
+  syncVaultVersions,
+} from "@/db/schema";
 import { hashPassword, needsRehash, verifyPassword } from "@/lib/vault/password";
 import { createGate } from "@/lib/vault/gate";
 import { hashSessionToken, newSessionToken, sessionExpiry } from "@/lib/vault/session";
@@ -13,9 +21,13 @@ import {
   claimHashOf,
   CollectLinkRequest,
   CreateLinkRequest,
+  CreateSignInRequest,
+  GrantSignInRequest,
   isLinkId,
   LINK_SECONDS,
   linkState,
+  MAX_WAITING_SIGN_INS,
+  signInRequestState,
 } from "@/lib/vault/link";
 import {
   LoginRequest,
@@ -568,10 +580,117 @@ export async function collectDeviceLink(id: string, raw: unknown) {
     if (state !== "approved" || row.ciphertext === null) return refusal(404, LINK_GONE);
 
     const opened = await openSession(tx, row.userId, row.deviceName ?? "Phone");
+    const [owner] = await tx.select({ email: syncUsers.email }).from(syncUsers).where(eq(syncUsers.id, row.userId));
     await tx
       .update(syncDeviceLinks)
       .set({ state: "collected", ciphertext: null, claimHash: null })
       .where(eq(syncDeviceLinks.id, id));
-    return { ok: true as const, waiting: false as const, ...opened, sealed: row.ciphertext };
+    return { ok: true as const, waiting: false as const, ...opened, sealed: row.ciphertext, email: owner?.email ?? null };
+  });
+}
+
+// ---------- Letting a device in from a phone already in the vault ----------
+//
+// The reverse of the above: the device with no session shows the code, and a
+// phone that is signed in scans it and says yes. See syncSignInRequests in
+// the schema for what each column holds and when.
+
+const REQUEST_GONE = "This code was already used, refused, or it expired. Show a new one on the computer.";
+
+/** A device with no session, asking to be let in. It needs no account; the phone that answers does. */
+export async function createSignInRequest(raw: unknown) {
+  const parsed = CreateSignInRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const now = new Date();
+  const id = randomBytes(16).toString("base64url");
+  const expiresAt = new Date(now.getTime() + LINK_SECONDS * 1000);
+  return db.transaction(async (tx) => {
+    await tx.delete(syncSignInRequests).where(lt(syncSignInRequests.expiresAt, now));
+    const [{ waiting }] = await tx.select({ waiting: count() }).from(syncSignInRequests);
+    if (waiting >= MAX_WAITING_SIGN_INS) {
+      return refusal(429, "Too many devices are waiting to be let in. Try again in a few minutes.");
+    }
+    await tx.insert(syncSignInRequests).values({
+      id,
+      deviceName: parsed.data.deviceName,
+      claimHash: parsed.data.claimHash,
+      expiresAt,
+    });
+    return { ok: true as const, id, expiresAt };
+  });
+}
+
+/** Which device is asking, for the phone to show before anyone says yes. */
+export async function signInRequestFor(token: string | null, id: string) {
+  const session = await authenticate(token);
+  if (!session) return refusal(401, "Sign in again: this device's session is not valid.");
+  if (!isLinkId(id)) return refusal(404, REQUEST_GONE);
+  const [row] = await db
+    .select({ deviceName: syncSignInRequests.deviceName, state: syncSignInRequests.state, expiresAt: syncSignInRequests.expiresAt })
+    .from(syncSignInRequests)
+    .where(eq(syncSignInRequests.id, id));
+  if (!row || signInRequestState(row, new Date()) !== "waiting") return refusal(404, REQUEST_GONE);
+  return { ok: true as const, deviceName: row.deviceName };
+}
+
+/** The phone's yes: this account, and its twelve words sealed with the code's key. */
+export async function grantSignInRequest(token: string | null, id: string, raw: unknown) {
+  const session = await authenticate(token);
+  if (!session) return refusal(401, "Sign in again: this device's session is not valid.");
+  if (!isLinkId(id)) return refusal(404, REQUEST_GONE);
+  const parsed = GrantSignInRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const granted = await db
+    .update(syncSignInRequests)
+    .set({ state: "granted", userId: session.userId, ciphertext: parsed.data.sealed })
+    .where(
+      and(
+        eq(syncSignInRequests.id, id),
+        eq(syncSignInRequests.state, "waiting"),
+        gt(syncSignInRequests.expiresAt, new Date())
+      )
+    )
+    .returning({ id: syncSignInRequests.id });
+  if (granted.length === 0) return refusal(404, REQUEST_GONE);
+  return { ok: true as const };
+}
+
+/** The phone's no. The waiting device is told the code no longer works. */
+export async function refuseSignInRequest(token: string | null, id: string) {
+  const session = await authenticate(token);
+  if (!session) return refusal(401, "Sign in again: this device's session is not valid.");
+  if (!isLinkId(id)) return refusal(404, REQUEST_GONE);
+  await db
+    .delete(syncSignInRequests)
+    .where(and(eq(syncSignInRequests.id, id), eq(syncSignInRequests.state, "waiting")));
+  return { ok: true as const };
+}
+
+/**
+ * The waiting device, collecting once a phone said yes: a session of its own,
+ * the sealed words, and whose vault it is — so it can say so, rather than
+ * leave someone recording money into an account they did not mean to open.
+ */
+export async function collectSignInRequest(id: string, raw: unknown) {
+  if (!isLinkId(id)) return refusal(404, REQUEST_GONE);
+  const parsed = CollectLinkRequest.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const claimHash = claimHashOf(parsed.data.claimKey);
+  const now = new Date();
+
+  return db.transaction(async (tx) => {
+    const [row] = await tx.select().from(syncSignInRequests).where(eq(syncSignInRequests.id, id)).for("update");
+    if (!row || !sameHash(row.claimHash, claimHash)) return refusal(404, REQUEST_GONE);
+    const state = signInRequestState(row, now);
+    if (state === "waiting") return { ok: true as const, waiting: true as const };
+    if (state !== "granted" || row.userId === null || row.ciphertext === null) return refusal(404, REQUEST_GONE);
+
+    const opened = await openSession(tx, row.userId, row.deviceName);
+    const [owner] = await tx.select({ email: syncUsers.email }).from(syncUsers).where(eq(syncUsers.id, row.userId));
+    await tx
+      .update(syncSignInRequests)
+      .set({ state: "collected", ciphertext: null })
+      .where(eq(syncSignInRequests.id, id));
+    return { ok: true as const, waiting: false as const, ...opened, sealed: row.ciphertext, email: owner?.email ?? null };
   });
 }
