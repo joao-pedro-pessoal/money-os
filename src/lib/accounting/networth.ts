@@ -107,6 +107,8 @@ export interface PurposeSplit {
   waitingToInvest: number;
   /** Cash promised to a bucket. */
   promised: number;
+  /** Cash a budget still has to spend this period: spoken for, though not spent yet. */
+  budgeted: number;
   /** Cash committed to nothing. */
   free: number;
 }
@@ -114,7 +116,7 @@ export interface PurposeSplit {
 /**
  * Every euro under exactly one purpose.
  *
- * Four slices that must add to the net worth, no more and no less. Written as
+ * Five slices that must add to the net worth, no more and no less. Written as
  * one function because the Analytics chart got this wrong by assembling it from
  * pieces that overlapped — free cash counted once as cash and again inside the
  * investments figure — and reported 880 € against a net worth of 694 €.
@@ -131,7 +133,10 @@ export interface PurposeSplit {
  *  3. **Promised** is capped by the cash that exists — buckets can be
  *     over-promised, and that must be visible elsewhere rather than inflating
  *     this.
- *  4. **Free** is whatever is left, and never negative.
+ *  4. **Budgeted** is what the budgets still have to spend this period, from
+ *     the cash left after the two above: the same order the dashboard's Free
+ *     Cash takes them out in.
+ *  5. **Free** is whatever is left, and never negative.
  */
 export function purposeSplit(input: {
   result: NetWorthResult;
@@ -139,6 +144,8 @@ export function purposeSplit(input: {
   investingCash: number;
   /** Total promised to buckets, in base currency. */
   promisedToBuckets: number;
+  /** What the budgets still have to spend this period, in base currency. */
+  keptForBudgets?: number;
 }): PurposeSplit {
   const { result } = input;
 
@@ -151,6 +158,7 @@ export function purposeSplit(input: {
   const promised = clamp(input.promisedToBuckets, 0, result.cash);
   const investingCash = clamp(input.investingCash, 0, round2(result.cash - promised));
   const waitingToInvest = round2(stableInPortfolio + investingCash);
+  const budgeted = clamp(input.keptForBudgets ?? 0, 0, round2(result.cash - promised - investingCash));
 
   /**
    * The remainder of the whole, not of the cash.
@@ -161,7 +169,7 @@ export function purposeSplit(input: {
    * contradictory the free slice absorbs it and goes to zero, which is visible,
    * rather than the total drifting, which is not.
    *
-   * The four slices describe what you **hold**, so they add to `assets` and not
+   * The slices describe what you **hold**, so they add to `assets` and not
    * to the headline. A mortgage is not a fifth purpose your money is serving —
    * it is money you do not have. Taking it off here would shrink "free to
    * spend" by the whole outstanding loan, which is exactly the wrong advice on
@@ -171,7 +179,8 @@ export function purposeSplit(input: {
     invested,
     waitingToInvest,
     promised: round2(promised),
-    free: round2(Math.max(0, result.assets - invested - waitingToInvest - promised)),
+    budgeted: round2(budgeted),
+    free: round2(Math.max(0, result.assets - invested - waitingToInvest - promised - budgeted)),
   };
 }
 

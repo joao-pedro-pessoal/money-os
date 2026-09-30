@@ -56,7 +56,7 @@ describe("the site's login", () => {
 
   it("counts wrong attempts and honours a lockout in every sign-in action", () => {
     const auth = readFileSync(join(SRC, "actions/auth.ts"), "utf8");
-    for (const action of ["claimOwner", "signIn", "recoverAccount", "replaceRecoveryCode"]) {
+    for (const action of ["claimOwner", "signIn", "recoverAccount", "replaceRecoveryCode", "deleteAccount"]) {
       const body = auth.slice(auth.indexOf(`function ${action}(`));
       const end = body.indexOf("\n}\n");
       expect(body.slice(0, end), action).toContain("lockedUntil(");

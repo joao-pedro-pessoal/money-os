@@ -7,6 +7,7 @@ import { getRates } from "@/actions/fx";
 import { toBase } from "@/lib/fx";
 import { splitPortfolioCash } from "@/lib/accounting/unallocated";
 import { purposeSplit } from "@/lib/accounting/networth";
+import { keptForBudgets } from "@/lib/accounting/envelopes";
 import { getNetWorth } from "@/actions/networth";
 import CompositionCard, { BudgetBars } from "@/components/CompositionCard";
 import TimeSeriesCard from "@/components/TimeSeriesCard";
@@ -54,12 +55,15 @@ export default async function AnalyticsPage() {
     result: netWorth,
     investingCash,
     promisedToBuckets: buckets.reduce((s, b) => s + b.total, 0),
+    // What the budgets have left this period, spoken for though not spent.
+    keptForBudgets: keptForBudgets(budgets.items),
   });
 
   const byPurpose = [
     { name: "Invested", value: purpose.invested },
     { name: "Waiting to invest", value: purpose.waitingToInvest },
     { name: "Promised to a bucket", value: purpose.promised },
+    { name: "Kept for budgets", value: purpose.budgeted },
     { name: "Free to spend", value: purpose.free },
   ].filter((p) => p.value > 0);
 

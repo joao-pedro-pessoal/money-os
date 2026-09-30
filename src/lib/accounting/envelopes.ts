@@ -246,6 +246,19 @@ export function envelopeState(
   };
 }
 
+/**
+ * What the budgets still have to spend in their current period.
+ *
+ * Money budgeted is spoken for before it is spent: with 700 in the bank and
+ * 300 budgeted for food this month, 400 is what is free, whether or not the
+ * shopping has happened yet. Only what is left counts — a budget already
+ * overspent keeps nothing back, and does not give its overspend back as free
+ * money either.
+ */
+export function keptForBudgets(states: { remaining: number }[]): number {
+  return round2(states.reduce((sum, s) => sum + Math.max(0, s.remaining), 0));
+}
+
 /** How far through the period we are, 0-1. */
 export function periodProgress(bounds: Bounds, today: Date): number {
   const span = bounds.end.getTime() - bounds.start.getTime();

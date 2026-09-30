@@ -63,9 +63,10 @@ describe("money by purpose", () => {
         // more cash than exists, and buckets can be over-promised.
         investingCash: r() * 3000,
         promisedToBuckets: r() * 3000,
+        keptForBudgets: r() * 3000,
       });
 
-      const sum = split.invested + split.waitingToInvest + split.promised + split.free;
+      const sum = split.invested + split.waitingToInvest + split.promised + split.budgeted + split.free;
       expect(Math.abs(sum - result.total)).toBeLessThan(0.03);
 
       for (const value of Object.values(split)) {
@@ -127,7 +128,7 @@ describe("money by purpose", () => {
       promisedToBuckets: 0,
     });
 
-    expect(split).toEqual({ invested: 0, waitingToInvest: 0, promised: 0, free: 250 });
+    expect(split).toEqual({ invested: 0, waitingToInvest: 0, promised: 0, budgeted: 0, free: 250 });
   });
 
   it("survives an empty picture", () => {
@@ -137,6 +138,6 @@ describe("money by purpose", () => {
       promisedToBuckets: 0,
     });
 
-    expect(split).toEqual({ invested: 0, waitingToInvest: 0, promised: 0, free: 0 });
+    expect(split).toEqual({ invested: 0, waitingToInvest: 0, promised: 0, budgeted: 0, free: 0 });
   });
 });

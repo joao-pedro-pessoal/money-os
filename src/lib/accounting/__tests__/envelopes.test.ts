@@ -9,6 +9,7 @@ import {
   isPacingOver,
   monthlyEquivalent,
   isPeriod,
+  keptForBudgets,
   type Envelope,
   type Spend,
 } from "../envelopes";
@@ -251,5 +252,32 @@ describe("monthlyEquivalent", () => {
   it("uses 52 weeks, not 48", () => {
     // "×4 a month" understates a weekly budget by a month's worth a year.
     expect(monthlyEquivalent(100, "weekly")).toBe(433.33);
+  });
+});
+
+describe("keptForBudgets", () => {
+  const today = new Date(2026, 7, 14);
+  const spending: Spend[] = [{ date: new Date(2026, 7, 3), amount: -120, categoryId: "food" }];
+
+  /** 300 budgeted and nothing spent: all 300 is spoken for. */
+  it("keeps back what a budget has not spent yet, spent or not", () => {
+    const untouched = envelopeState(envelope({ limit: 300, categoryIds: ["travel"] }), spending, today);
+    expect(keptForBudgets([untouched])).toBe(300);
+  });
+
+  it("keeps back only what is left once some is spent", () => {
+    const food = envelopeState(envelope({ limit: 300 }), spending, today);
+    expect(keptForBudgets([food])).toBe(180);
+  });
+
+  it("keeps nothing back for an overspent budget, and does not hand the overspend back", () => {
+    const over = envelopeState(envelope({ limit: 100 }), spending, today);
+    const other = envelopeState(envelope({ id: "e2", limit: 50, categoryIds: ["gym"] }), spending, today);
+    expect(over.remaining).toBe(-20);
+    expect(keptForBudgets([over, other])).toBe(50);
+  });
+
+  it("is nothing without budgets", () => {
+    expect(keptForBudgets([])).toBe(0);
   });
 });

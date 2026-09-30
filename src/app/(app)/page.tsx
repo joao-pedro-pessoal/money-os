@@ -28,6 +28,7 @@ import SimpleOverview from "@/components/SimpleOverview";
 import MobileFold from "@/components/MobileFold";
 import DueSubscriptionCharges from "@/components/DueSubscriptionCharges";
 import { getDueSubscriptionCharges } from "@/actions/subscriptionCharges";
+import { getKeptForBudgets } from "@/actions/budgets";
 
 export default async function DashboardPage({
   searchParams,
@@ -212,6 +213,15 @@ export default async function DashboardPage({
     base
   ).total;
 
+  /**
+   * What the budgets still have to spend this period is not free to spend:
+   * 700 in the bank with 300 budgeted for food is 400 free, whether or not
+   * the shopping has happened yet. It is counted with the reserved money
+   * instead, below.
+   */
+  const keptForBudgets = inDisplay(await getKeptForBudgets());
+  const freeToSpend = Math.max(0, Math.round((totalFree - keptForBudgets) * 100) / 100);
+
   const investingCash = sumInBase(
     accountRows.map((a) => ({
       amount: splitPortfolioCash(a.free, a.portfolioCashPercent ?? null).belongsToPortfolio,
@@ -319,11 +329,11 @@ export default async function DashboardPage({
         <StatCard
           label="Free Cash"
           simpleLabel="Available to spend"
-          value={totalFree}
+          value={freeToSpend}
           currency={base}
           explain={[
             "Money you could spend today without selling anything or breaking a promise to yourself.",
-            "Smaller than the cash in Net Worth, and deliberately so: this also takes out what buckets have claimed, what a broker is holding as margin, and the share of each account you've marked as investing money waiting to be used.",
+            "Smaller than the cash in Net Worth, and deliberately so: this also takes out what buckets have claimed, what your budgets still have to spend this period, what a broker is holding as margin, and the share of each account you've marked as investing money waiting to be used.",
             "If it looks low, the Accounts card below says why, account by account.",
           ]}
           note={
@@ -338,11 +348,11 @@ export default async function DashboardPage({
         <StatCard
           label="Allocated Cash"
           simpleLabel="Reserved money"
-          value={inDisplay(totalAllocated)}
+          value={inDisplay(totalAllocated) + keptForBudgets}
           currency={base}
           explain={[
-            "Cash you have promised to a bucket — an emergency fund, a trip, a deposit.",
-            "Nothing has moved. The money is still in the same account; this only records that it is spoken for, which is why it comes out of Free Cash.",
+            "Cash you have promised to a bucket — an emergency fund, a trip, a deposit — and what your budgets still have to spend this period.",
+            "Nothing has moved. The money is still in the same account; this only records that it is spoken for, which is why it comes out of Free Cash. A budget counts from the day it starts, not from the day it is spent: 300 budgeted for food this month is spoken for already.",
           ]}
         />
         </div>

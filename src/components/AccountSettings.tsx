@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { replaceRecoveryCode } from "@/actions/auth";
+import { deleteAccount, replaceRecoveryCode } from "@/actions/auth";
 import { signInKeyFor } from "@/lib/accounts/credentials";
 
 /**
@@ -11,8 +12,13 @@ import { signInKeyFor } from "@/lib/accounts/credentials";
  * unlocked, a cookie seen — must not be enough to take the way back in, and
  * the old code stops working the moment the new one exists.
  */
-export default function AccountSettings({ email }: { email: string | null }) {
+export default function AccountSettings({ email, canDelete }: { email: string | null; canDelete: boolean }) {
+  const router = useRouter();
   const [asking, setAsking] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteProblem, setDeleteProblem] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -38,6 +44,33 @@ export default function AccountSettings({ email }: { email: string | null }) {
       }
     } catch {
       setProblem("The server could not be reached. Try again in a moment.");
+    }
+    setBusy(false);
+  };
+
+  const remove = async () => {
+    if (busy || !email) return;
+    if (!deletePassword) return setDeleteProblem("Write your password.");
+    setBusy(true);
+    setDeleteProblem(null);
+    try {
+      const outcome = await deleteAccount({
+        signInKey: await signInKeyFor(email, deletePassword),
+        confirmEmail,
+      });
+      if (outcome.kind === "deleted") {
+        router.replace("/login");
+        return;
+      }
+      setDeleteProblem(
+        outcome.kind === "wrong"
+          ? "That is not this account's password. Nothing was deleted."
+          : outcome.kind === "locked"
+            ? "Too many wrong attempts. Try again later."
+            : outcome.reason
+      );
+    } catch {
+      setDeleteProblem("The server could not be reached. Nothing was deleted.");
     }
     setBusy(false);
   };
@@ -94,6 +127,76 @@ export default function AccountSettings({ email }: { email: string | null }) {
         <p role="alert" className="text-xs text-[var(--red)]">
           {problem}
         </p>
+      )}
+
+      {canDelete && (
+        <div className="pt-3 mt-3 border-t border-[var(--border)] space-y-2">
+          {deleting ? (
+            <form
+              method="post"
+              action="/settings"
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void remove();
+              }}
+            >
+              <p className="text-xs text-[var(--red)]">
+                This deletes your account and everything in it — accounts, movements, investments, budgets, all of it.
+                It cannot be undone, and nobody can bring it back.
+              </p>
+              <div className="flex flex-wrap gap-2 items-end">
+                <label className="text-xs">
+                  Type your email
+                  <input
+                    className="input mt-1"
+                    type="email"
+                    autoComplete="off"
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                  />
+                </label>
+                <label className="text-xs">
+                  Your password
+                  <input
+                    className="input mt-1"
+                    type="password"
+                    autoComplete="current-password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  className="btn"
+                  style={{ background: "var(--red)", color: "var(--background)" }}
+                  disabled={busy || confirmEmail.trim().toLowerCase() !== (email ?? "").toLowerCase()}
+                >
+                  {busy ? "Deleting…" : "Delete my account"}
+                </button>
+                <button type="button" className="btn-quiet w-auto!" onClick={() => setDeleting(false)}>
+                  Cancel
+                </button>
+              </div>
+              {deleteProblem && (
+                <p role="alert" className="text-xs text-[var(--red)]">
+                  {deleteProblem}
+                </p>
+              )}
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="text-xs text-[var(--red)] hover:underline"
+              disabled={!email}
+              onClick={() => setDeleting(true)}
+            >
+              Delete my account…
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

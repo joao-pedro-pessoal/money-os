@@ -13,6 +13,7 @@ import {
   isPacingOver,
   monthlyEquivalent,
   isPeriod,
+  keptForBudgets,
   type Envelope,
   type Spend,
   type Period,
@@ -93,6 +94,17 @@ export async function listBudgets(offset = 0) {
       .filter((c) => c.kind === "expense")
       .map((c) => ({ id: c.id, name: c.name })),
   };
+}
+
+/**
+ * What the active budgets still have to spend in their current period, in
+ * the base currency: money that is spoken for though not spent yet, which the
+ * dashboard takes out of Free Cash (see `keptForBudgets`).
+ */
+export async function getKeptForBudgets(): Promise<number> {
+  const today = new Date();
+  const [envelopes, spending] = await Promise.all([loadEnvelopes(), loadSpending()]);
+  return keptForBudgets(envelopes.map((e) => envelopeState(e, spending, today)));
 }
 
 export async function createBudget(formData: FormData) {

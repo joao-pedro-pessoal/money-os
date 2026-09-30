@@ -389,8 +389,23 @@ describe("purpose slices against debt", () => {
   });
 
   it("still adds up to what is held", () => {
-    const split = purposeSplit({ result, investingCash: 0, promisedToBuckets: 2_000 });
-    const sum = split.invested + split.waitingToInvest + split.promised + split.free;
+    const split = purposeSplit({ result, investingCash: 0, promisedToBuckets: 2_000, keptForBudgets: 300 });
+    const sum = split.invested + split.waitingToInvest + split.promised + split.budgeted + split.free;
     expect(sum).toBeCloseTo(result.assets, 2);
+  });
+
+  /** 700 in the bank and 300 budgeted this month: 400 is free, spent or not. */
+  it("takes what the budgets still have to spend out of free, not out of anything else", () => {
+    const split = purposeSplit({ result, investingCash: 0, promisedToBuckets: 0, keptForBudgets: 300 });
+    expect(split.budgeted).toBe(300);
+    expect(split.free).toBe(9_700);
+    expect(split.invested).toBe(5_000);
+  });
+
+  it("never keeps back more for budgets than the cash left", () => {
+    const split = purposeSplit({ result, investingCash: 0, promisedToBuckets: 9_000, keptForBudgets: 5_000 });
+    expect(split.promised).toBe(9_000);
+    expect(split.budgeted).toBe(1_000);
+    expect(split.free).toBe(0);
   });
 });

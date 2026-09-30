@@ -18,6 +18,12 @@ export type SignInOutcome =
 
 export type SignUpOutcome = { kind: "ok"; recoveryCode: string } | { kind: "refused"; reason: string };
 
+export type DeleteOutcome =
+  | { kind: "deleted" }
+  | { kind: "wrong" }
+  | { kind: "locked"; until: string }
+  | { kind: "refused"; reason: string };
+
 export type RecoveryOutcome =
   | { kind: "ok"; recoveryCode: string }
   | { kind: "wrong" }

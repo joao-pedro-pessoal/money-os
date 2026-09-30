@@ -21,6 +21,7 @@ import PhoneAlertSettings from "@/components/PhoneAlertSettings";
 import { currentUserId, logOutOtherDevices, sessionsNotBefore } from "@/actions/session";
 import { accountEmail } from "@/actions/auth";
 import AccountSettings from "@/components/AccountSettings";
+import { OWNER_USER_ID } from "@/db/schema";
 
 export default async function SettingsGeneralPage() {
   const baseCurrency = await getBaseCurrency();
@@ -168,7 +169,7 @@ export default async function SettingsGeneralPage() {
           title="Your account"
           description="The recovery code is how you set a new password if you forget this one. Make a new one if you have lost it, or if someone may have seen it."
         >
-          <AccountSettings email={email} />
+          <AccountSettings email={email} canDelete={userId !== null && userId !== OWNER_USER_ID} />
         </SettingRow>
         <SettingRow
           title="Signed-in devices"

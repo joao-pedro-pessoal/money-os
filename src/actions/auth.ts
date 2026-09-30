@@ -19,7 +19,7 @@ import {
 import { createGate } from "@/lib/accounts/gate";
 import { afterFailedLogin, lockedUntil, maxAccounts, registrationRefusal } from "@/lib/accounts/limits";
 import { hashPassword, needsRehash, PASSWORD_MAX, verifyPassword } from "@/lib/accounts/password";
-import type { RecoveryOutcome, SignInOutcome, SignUpOutcome } from "@/lib/accounts/outcomes";
+import type { DeleteOutcome, RecoveryOutcome, SignInOutcome, SignUpOutcome } from "@/lib/accounts/outcomes";
 import { currentUserId } from "./session";
 
 /**
@@ -60,6 +60,7 @@ const SignInRequest = z
 const SignUpRequest = z.object({ email, signInKey }).strict();
 const RecoverRequest = z.object({ email, recoveryCode: z.string().max(64), signInKey }).strict();
 const NewCodeRequest = z.object({ signInKey }).strict();
+const DeleteRequest = z.object({ signInKey, confirmEmail: z.string().max(254) }).strict();
 
 async function startSession(userId: string): Promise<void> {
   (await cookies()).set(SESSION_COOKIE_NAME, await newSessionValue(userId), sessionCookieOptions());
@@ -339,6 +340,44 @@ export async function replaceRecoveryCode(raw: unknown): Promise<RecoveryOutcome
     .set({ recoveryHash: recoveryHashOf(recoveryCode), failedLogins: 0, lockedUntil: null })
     .where(eq(users.id, userId));
   return { kind: "ok", recoveryCode };
+}
+
+/**
+ * Deletes the signed-in account and everything in it — every account, every
+ * movement, every holding: each of those rows belongs to the account and goes
+ * with it (ON DELETE CASCADE from `users`). Nothing is kept and nothing can
+ * bring it back, so it asks for the password and for the email typed out.
+ *
+ * Not the owner's account: everything the site recorded before accounts
+ * existed is in it, and losing that to one mistaken press is not a risk worth
+ * a button.
+ */
+export async function deleteAccount(raw: unknown): Promise<DeleteOutcome> {
+  const parsed = DeleteRequest.safeParse(raw);
+  if (!parsed.success) return { kind: "wrong" };
+  const userId = await currentUserId();
+  if (!userId) return { kind: "refused", reason: "Sign in again." };
+  if (userId === OWNER_USER_ID) {
+    return { kind: "refused", reason: "The owner's account holds everything from before accounts, and is not deleted from here." };
+  }
+  const now = new Date();
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  if (!user || user.passwordHash === null || user.email === null) return { kind: "refused", reason: "Sign in again." };
+  if (normalizeEmail(parsed.data.confirmEmail) !== user.email) {
+    return { kind: "refused", reason: "Type your account's email exactly, to confirm." };
+  }
+  const until = lockedUntil(user, now);
+  if (until) return lockedAnswer(until);
+  const stored = user.passwordHash;
+  const checked = await hashes.run(() => verifyPassword(parsed.data.signInKey, stored));
+  if (!checked.ok) return { kind: "refused", reason: BUSY };
+  if (!checked.value) {
+    const locked = await countFailure(user.id, now);
+    return locked ? lockedAnswer(locked) : { kind: "wrong" };
+  }
+  await db.delete(users).where(eq(users.id, userId));
+  (await cookies()).delete(SESSION_COOKIE_NAME);
+  return { kind: "deleted" };
 }
 
 /** The signed-in account's email, for Settings. */

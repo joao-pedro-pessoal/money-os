@@ -86,7 +86,12 @@ cifrado no aparelho dessa pessoa, e o servidor nunca o conseguiu ler.
   [lista de verificação legal e de segurança](LEGAL_SECURITY_CHECKLIST.md).
   Guardar dados financeiros de outras pessoas traz obrigações (RGPD): política de
   privacidade, apagar dados a pedido, avisar de falhas.
-- **Apagar a própria conta** ainda não existe no ecrã. Se alguém pedir, pede-me.
+- **Apagar a própria conta:** **Settings → Your account → Delete my account**.
+  Pede o email escrito à mão e a palavra-passe, e apaga tudo o que a conta tem,
+  sem volta. A tua conta de dono não se apaga por aí.
+- **Orçamentos contam como dinheiro reservado:** com 700 na conta e um orçamento
+  de 300 este mês, o **Free Cash** mostra 400 e o **Allocated Cash** 300, mesmo
+  antes de gastares. Só conta o que falta gastar no período atual.
 - **Chaves API das corretoras** (Bybit, Trading 212, Kraken…) não funcionam no
   site publicado, para ninguém. As tuas continuam só em casa, como combinado.
   Contas à mão, movimentos, extratos, CSV e ligações sem chave funcionam.
