@@ -1,42 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /**
- * Download the report as CSV, or print it — which is also how it becomes a PDF.
+ * Download the report as CSV or as a PDF the app draws itself.
  *
- * The CSV goes through a blob link like every other export, so the Android app
- * saves it to Downloads. Printing is hidden inside that app: a WebView has no
- * print dialog, and a button that does nothing is worse than no button.
+ * Both go through a blob link like every other export, so the Android app
+ * saves them to Downloads: its WebView has no print dialog, which is why the
+ * PDF used to be missing there. The PDF is fetched from `/api/report/pdf` with
+ * the page's own parameters, so it holds the figures on the screen.
  */
-export default function ReportActions({ csv, filename }: { csv: string; filename: string }) {
-  const [canPrint, setCanPrint] = useState(false);
+export default function ReportActions({
+  csv,
+  filename,
+  pdfHref,
+  pdfFilename,
+}: {
+  csv: string;
+  filename: string;
+  pdfHref: string;
+  pdfFilename: string;
+}) {
+  const [making, setMaking] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    // Read once in the browser; the server cannot know where the page runs.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCanPrint(!("MoneyOSAndroid" in window));
-  }, []);
-
-  function download() {
-    // A byte-order mark so a spreadsheet opens accented names correctly.
-    const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" }));
+  function save(blob: Blob, name: string) {
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = name;
     a.click();
     URL.revokeObjectURL(url);
   }
 
+  function downloadCsv() {
+    // A byte-order mark so a spreadsheet opens accented names correctly.
+    save(new Blob(["﻿" + csv], { type: "text/csv" }), filename);
+  }
+
+  async function downloadPdf() {
+    setMaking(true);
+    setFailed(false);
+    try {
+      const response = await fetch(pdfHref, { cache: "no-store" });
+      // A session that ended answers with the login page, which is not a PDF.
+      if (!response.ok || !response.headers.get("content-type")?.includes("application/pdf")) {
+        throw new Error(`No PDF: ${response.status}`);
+      }
+      save(await response.blob(), pdfFilename);
+    } catch {
+      setFailed(true);
+    } finally {
+      setMaking(false);
+    }
+  }
+
   return (
-    <div className="report-actions flex gap-2 flex-wrap">
-      <button type="button" className="btn" onClick={download}>
+    <div className="report-actions flex gap-2 flex-wrap items-center">
+      <button type="button" className="btn" onClick={downloadCsv}>
         Download CSV
       </button>
-      {canPrint && (
-        <button type="button" className="btn" onClick={() => window.print()}>
-          Print / save as PDF
-        </button>
+      <button type="button" className="btn" onClick={downloadPdf} disabled={making} aria-busy={making}>
+        {making ? "Making the PDF…" : "Download PDF"}
+      </button>
+      {failed && (
+        <span className="text-xs text-[var(--red)]" role="alert">
+          The PDF could not be made. Reload the page and try again.
+        </span>
       )}
     </div>
   );

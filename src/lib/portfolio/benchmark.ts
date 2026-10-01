@@ -105,6 +105,18 @@ export type BenchmarkRefusal =
   /** The series came back in a currency the comparison cannot use. */
   | "wrong_currency";
 
+/** Why there is no comparison, in words a page can show. */
+export const BENCHMARK_REFUSALS: Record<BenchmarkRefusal, string> = {
+  no_series:
+    "There is no stored series for this index over that window yet. Refresh it and the comparison appears.",
+  starts_too_late:
+    "The stored index series does not reach back to where your own history starts. Comparing them would measure two different periods and present the difference as performance.",
+  ends_too_early:
+    "The stored index series stops well before your history does, so the two would cover different periods. Refresh it to bring it up to date.",
+  wrong_currency:
+    "The index series came back in a currency this comparison cannot use. It is refused rather than converted, because converting would hide a wrong listing behind a plausible number.",
+};
+
 export interface BenchmarkComparison {
   /** The index rebased to 100 on the first aligned day, ready to plot. */
   curve: ValuePoint[];

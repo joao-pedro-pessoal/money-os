@@ -1,22 +1,16 @@
-import { getSpendingAnalysis } from "@/actions/spending";
-import { getTotalNetWorthOverTime } from "@/actions/analytics";
-import { listBudgets } from "@/actions/budgets";
+import { loadReport } from "@/actions/reports";
 import PageTabs from "@/components/PageTabs";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import ReportActions from "@/components/ReportActions";
+import ReportChart from "@/components/ReportChart";
+import InvestmentReportSection from "@/components/InvestmentReport";
+import RangePicker from "@/components/RangePicker";
 import FilterSelect from "@/components/FilterSelect";
 import { Money } from "@/components/PrivacyContext";
 import { ANALYTICS_TABS } from "@/lib/navigation";
-import { buildReport, reportPeriods, reportToCsv } from "@/lib/reports/monthly";
-import {
-  isPeriodKey,
-  periodLabel,
-  periodOf,
-  periodsBetween,
-  REPORT_PERIODS,
-  type ReportPeriod,
-} from "@/lib/reports/periods";
-import { localDay } from "@/lib/calendar/localDay";
+import { periodNoun } from "@/lib/reports/monthly";
+import { periodLabel, REPORT_KINDS, type ReportKind } from "@/lib/reports/periods";
+import { REPORT_SCOPES, REPORT_TITLE, reportCsv, reportFileName, type ReportScope } from "@/lib/reports/document";
 import FilterLink from "@/components/FilterLink";
 import Link from "next/link";
 
@@ -35,64 +29,46 @@ function Change({ now, before, lowerIsBetter = false }: { now: number; before: n
   );
 }
 
-/** What a budget of each report's length is called in `envelopes.ts`. */
-const BUDGET_PERIOD: Record<ReportPeriod, string> = { week: "weekly", month: "monthly", year: "yearly" };
-
-const REPORT_TITLE: Record<ReportPeriod, string> = { week: "Weekly report", month: "Monthly report", year: "Annual report" };
-
 /**
- * The weekly, monthly and annual report: one period read back as a whole —
- * what came in, what went out and where, against the period before and the
- * budgets of that length, and what it did to net worth. A year also shows each
- * month. Downloadable as CSV and printable as PDF.
+ * The report: a week, a month, a year or any range of days, read back as a
+ * whole — the day-to-day money (what came in, what went out and where, against
+ * the period before and the budgets of that length, and what it did to net
+ * worth), the investments (value, money in and out, trades, dividends, return
+ * against an index, what is held), or both. Downloadable as CSV and as a PDF
+ * the app draws, with the same figures as the page: all three read
+ * `loadReport`.
  */
 export default async function ReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; at?: string; month?: string }>;
+  searchParams: Promise<{ period?: string; at?: string; month?: string; from?: string; to?: string; scope?: string }>;
 }) {
-  const [params, spending, netWorthSeries] = await Promise.all([
-    searchParams,
-    getSpendingAnalysis(),
-    getTotalNetWorthOverTime(),
-  ]);
+  const loaded = await loadReport(await searchParams);
+  const { kind, key, current, scope } = loaded;
+  const report = loaded.money;
 
-  const kind: ReportPeriod = REPORT_PERIODS.some((p) => p.value === params.period)
-    ? (params.period as ReportPeriod)
-    : "month";
-  // The period on the wall, not in UTC: see `localDay`.
-  const current = periodOf(kind, localDay());
-  // `?month=` is the address the monthly report had before it had siblings.
-  const requested = params.at ?? (kind === "month" ? params.month : undefined);
-  // A period still to come has no report; one typed into the address opens this one.
-  const key = requested && isPeriodKey(kind, requested) && requested <= current ? requested : current;
-
-  const available = reportPeriods(spending.rows, kind);
-  if (!available.includes(current)) available.unshift(current);
-  // An empty period from the address still has to be the one the picker shows.
-  if (!available.includes(key)) {
-    available.push(key);
-    available.sort().reverse();
-  }
-
-  // Budgets are periods counted from today; one back is offset -1, whatever its length.
-  const budgets = await listBudgets(periodsBetween(kind, current, key));
-
-  const report = buildReport({
-    kind,
-    key,
-    rows: spending.rows,
-    netWorthSeries,
-    budgets: budgets.items
-      .filter((b) => b.period === BUDGET_PERIOD[kind])
-      .map((b) => ({ name: b.name, limit: b.limit, spent: b.spent, percent: b.percent, status: b.status })),
-  });
-  const noun = kind;
+  const noun = periodNoun(kind);
   const Noun = noun[0].toUpperCase() + noun.slice(1);
-  const href = (period: ReportPeriod, at?: string) => `/analytics/report?period=${period}${at ? `&at=${at}` : ""}`;
-  const base = spending.baseCurrency;
-  const csv = reportToCsv(report, base);
-  const hasAnything = report.totals.transactions > 0;
+  /** The report's address with some of its choices changed, keeping the rest. */
+  const href = (changes: { period?: ReportKind; at?: string; scope?: ReportScope; from?: string; to?: string }) => {
+    const period = changes.period ?? kind;
+    const query = new URLSearchParams({ period });
+    if (period === "custom") {
+      query.set("from", changes.from ?? loaded.from);
+      query.set("to", changes.to ?? loaded.to);
+    } else if (changes.at) {
+      query.set("at", changes.at);
+    } else if (changes.period === undefined) {
+      query.set("at", key);
+    }
+    const chosenScope = changes.scope ?? scope;
+    if (chosenScope !== "both") query.set("scope", chosenScope);
+    return `/analytics/report?${query.toString()}`;
+  };
+  const base = loaded.currency;
+  const csv = reportCsv(loaded);
+  const pdfHref = `/api/report/pdf?${href({}).split("?")[1]}`;
+  const hasAnything = (report?.totals.transactions ?? 0) > 0;
 
   return (
     <div className="monthly-report space-y-6">
@@ -101,40 +77,69 @@ export default async function ReportPage({
 
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-semibold">{REPORT_TITLE[kind]} · {report.label}</h2>
+          <h2 className="text-xl font-semibold">{REPORT_TITLE[kind]} · {loaded.label}</h2>
           <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
-            {key === current
-              ? `This ${noun} so far — the figures change until it closes.`
-              : `A closed ${noun}, as recorded.`}{" "}
-            Transfers between your own accounts and money moved into investments are not spending.
+            {kind === "custom"
+              ? loaded.to === loaded.today
+                ? "Up to today — the figures change until the day closes."
+                : "A range of days, as recorded."
+              : key === current
+                ? `This ${noun} so far — the figures change until it closes.`
+                : `A closed ${noun}, as recorded.`}{" "}
+            {scope !== "investments" &&
+              "Transfers between your own accounts and money moved into investments are not spending."}
           </p>
         </div>
-        <div className="report-actions flex gap-2 flex-wrap items-center">
+        {/* One row of equal choices on a wide screen, one under another on a phone. */}
+        <div className="report-actions grid gap-2 w-full sm:grid-flow-col sm:auto-cols-fr">
           <FilterSelect
             label="Report"
             value={kind}
             className="input"
-            options={REPORT_PERIODS.map((p) => ({ value: p.value, label: p.label, href: href(p.value) }))}
+            options={REPORT_KINDS.map((p) => ({ value: p.value, label: p.label, href: href({ period: p.value }) }))}
           />
+          {kind !== "custom" && (
+            <FilterSelect
+              label={Noun}
+              value={key}
+              className="input"
+              options={loaded.available.map((k) => ({ value: k, label: periodLabel(kind, k), href: href({ at: k }) }))}
+            />
+          )}
           <FilterSelect
-            label={Noun}
-            value={key}
+            label="What the report covers"
+            value={scope}
             className="input"
-            options={available.map((k) => ({ value: k, label: periodLabel(kind, k), href: href(kind, k) }))}
+            options={REPORT_SCOPES.map((s) => ({ value: s.value, label: s.label, href: href({ scope: s.value }) }))}
           />
-          <ReportActions csv={csv} filename={`money-os-report-${key}.csv`} />
         </div>
       </div>
 
-      {(spending.approximate || spending.unconverted.length > 0) && (
-        <p className="text-xs text-[var(--muted)]">
-          {spending.approximate && `Amounts in other currencies use today's rates, so earlier ${noun}s are approximate. `}
-          {spending.unconverted.length > 0 &&
-            `Left out, no exchange rate: ${spending.unconverted.join(", ")}.`}
-        </p>
+      {kind === "custom" && (
+        <RangePicker
+          from={loaded.from}
+          to={loaded.to}
+          max={loaded.today}
+          path={`/analytics/report?${new URLSearchParams(scope === "both" ? { period: "custom" } : { period: "custom", scope })}`}
+        />
       )}
 
-      {!hasAnything ? (
+      <ReportActions
+        csv={csv}
+        filename={reportFileName(loaded, "csv")}
+        pdfHref={pdfHref}
+        pdfFilename={reportFileName(loaded, "pdf")}
+      />
+
+      {loaded.notes.length > 0 && (
+        <p className="text-xs text-[var(--muted)]">{loaded.notes.join(" ")}</p>
+      )}
+
+      {report !== null && loaded.investments !== null && (
+        <h3 className="text-base font-semibold">Day-to-day money</h3>
+      )}
+
+      {report === null ? null : !hasAnything ? (
         <div className="card p-8 text-center text-sm text-[var(--muted)]">
           Nothing recorded in {report.label}.{" "}
           <Link href="/transactions" className="text-[var(--accent)]">Record a movement</Link> or{" "}
@@ -228,9 +233,36 @@ export default async function ReportPage({
             </div>
           </div>
 
+          {report.netWorthLine.length >= 2 && (
+            <div className="card p-4">
+              <ReportChart
+                kind="line"
+                title="Net worth through the period"
+                series={[{ name: "Net worth", color: "accent", points: report.netWorthLine }]}
+                range={{ from: report.from, to: report.to }}
+                unit={base}
+              />
+            </div>
+          )}
+
           {report.months && (
             <div className="card p-4">
               <div className="text-sm font-medium mb-3">Month by month</div>
+              <div className="mb-4">
+                <ReportChart
+                  kind="columns"
+                  title="Income and spending"
+                  groups={report.months.map((m) => ({
+                    label: m.label.slice(0, 3) + (m.partial ? "*" : ""),
+                    values: m.totals === null ? [null, null] : [m.totals.income, m.totals.spent],
+                  }))}
+                  legend={[
+                    { name: "Income", color: "green" },
+                    { name: "Spent", color: "red" },
+                  ]}
+                  unit={base}
+                />
+              </div>
               <div className="table-scroll" role="region" aria-label="Month by month" tabIndex={0}>
                 <ResponsiveTable className="data-table">
                   <thead>
@@ -245,7 +277,8 @@ export default async function ReportPage({
                     {report.months.map((m) => (
                       <tr key={m.key}>
                         <td>
-                          <FilterLink href={href("month", m.key)} className="hover:underline">{m.label}</FilterLink>
+                          <FilterLink href={href({ period: "month", at: m.key })} className="hover:underline">{m.label}</FilterLink>
+                          {m.partial && <span className="text-[10px] text-[var(--muted)]"> · part of the month</span>}
                         </td>
                         {m.totals === null ? (
                           // Nothing recorded is not a month of nothing spent.
@@ -374,6 +407,13 @@ export default async function ReportPage({
               </div>
             </div>
           )}
+        </>
+      )}
+
+      {loaded.investments !== null && (
+        <>
+          {report !== null && <h3 className="text-base font-semibold pt-2">Investments</h3>}
+          <InvestmentReportSection report={loaded.investments} currency={base} />
         </>
       )}
     </div>

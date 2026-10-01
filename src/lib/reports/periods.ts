@@ -1,5 +1,6 @@
 /**
- * The periods a report can cover: a week, a month or a year.
+ * The periods a report can cover: a week, a month, a year, or any stretch of
+ * days you choose.
  *
  * A period has a key — "2026-W38", "2026-09", "2026" — that sorts in time
  * order as text, so the newest-first lists and the "not in the future" check
@@ -20,6 +21,19 @@ export const REPORT_PERIODS: { value: ReportPeriod; label: string }[] = [
   { value: "week", label: "Week" },
   { value: "month", label: "Month" },
   { value: "year", label: "Year" },
+];
+
+/**
+ * A report covers a calendar period or a range of days you pick. The range has
+ * no key of its own to sort by, so it is kept apart from the three periods
+ * rather than made a fourth: `periodOf` has no answer for "which custom range is
+ * this day in".
+ */
+export type ReportKind = ReportPeriod | "custom";
+
+export const REPORT_KINDS: { value: ReportKind; label: string }[] = [
+  ...REPORT_PERIODS,
+  { value: "custom", label: "Custom" },
 ];
 
 const DAY = 86_400_000;
@@ -103,8 +117,14 @@ export function periodLabel(kind: ReportPeriod, key: string): string {
   if (kind === "year") return key;
   if (kind === "month") return `${LONG_MONTHS[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`;
   const { from, to } = periodBounds("week", key);
+  return rangeLabel(from, to);
+}
+
+/** Days as a reader writes them: "3 Mar 2026", "3–17 Mar 2026", "28 Feb – 3 Mar 2026", "29 Dec 2025 – 4 Jan 2026". */
+export function rangeLabel(from: string, to: string): string {
   const [fy, fm, fd] = [from.slice(0, 4), Number(from.slice(5, 7)), Number(from.slice(8, 10))];
   const [ty, tm, td] = [to.slice(0, 4), Number(to.slice(5, 7)), Number(to.slice(8, 10))];
+  if (from === to) return `${td} ${MONTHS[tm - 1]} ${ty}`;
   if (fy !== ty) return `${fd} ${MONTHS[fm - 1]} ${fy} – ${td} ${MONTHS[tm - 1]} ${ty}`;
   if (fm !== tm) return `${fd} ${MONTHS[fm - 1]} – ${td} ${MONTHS[tm - 1]} ${ty}`;
   return `${fd}–${td} ${MONTHS[tm - 1]} ${ty}`;
@@ -113,4 +133,50 @@ export function periodLabel(kind: ReportPeriod, key: string): string {
 /** The twelve months of a year, as month keys. */
 export function monthsOfYear(year: string): string[] {
   return Array.from({ length: 12 }, (_, i) => `${year}-${pad(i + 1)}`);
+}
+
+// ---------------------------------------------------------------------------
+// A range of days you choose
+// ---------------------------------------------------------------------------
+
+/** Whether `text` is a day that exists: "2026-02-29" is not, "2028-02-29" is. */
+export function isDay(text: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) && dayOf(dayTime(text)) === text;
+}
+
+/** How many days a range covers, both ends included. */
+export function daysInRange(from: string, to: string): number {
+  return Math.round((dayTime(to) - dayTime(from)) / DAY) + 1;
+}
+
+/** The day `days` after `day`; negative goes back. */
+export function shiftDay(day: string, days: number): string {
+  return dayOf(dayTime(day) + days * DAY);
+}
+
+/**
+ * The range of the same length that ends the day before this one begins —
+ * what a chosen range is compared with, the way a month is compared with the
+ * month before.
+ */
+export function rangeBefore(from: string, to: string): { from: string; to: string } {
+  const length = daysInRange(from, to);
+  return { from: shiftDay(from, -length), to: shiftDay(from, -1) };
+}
+
+/** Every month a range touches, as month keys, oldest first. */
+export function monthsBetween(from: string, to: string): string[] {
+  const months: string[] = [];
+  let year = Number(from.slice(0, 4));
+  let month = Number(from.slice(5, 7));
+  const last = to.slice(0, 7);
+  for (let key = `${year}-${pad(month)}`; key <= last; key = `${year}-${pad(month)}`) {
+    months.push(key);
+    month += 1;
+    if (month === 13) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return months;
 }

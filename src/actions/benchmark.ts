@@ -6,12 +6,12 @@ import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { yahooHistoryUrl, parseYahooHistory } from "@/lib/quotes/yahoo";
 import {
+  BENCHMARK_REFUSALS,
   BENCHMARKS,
   benchmarkById,
   compareOverWindow,
   relativeToBenchmark,
   type BenchmarkDefinition,
-  type BenchmarkRefusal,
 } from "@/lib/portfolio/benchmark";
 import { getPortfolioReturns } from "./investments";
 import { getBaseCurrency } from "./settings";
@@ -133,18 +133,6 @@ export async function refreshBenchmark(id?: string) {
   }
 }
 
-/** Why there is no comparison, in words a page can show. */
-const REFUSALS: Record<BenchmarkRefusal, string> = {
-  no_series:
-    "There is no stored series for this index over that window yet. Refresh it and the comparison appears.",
-  starts_too_late:
-    "The stored index series does not reach back to where your own history starts. Comparing them would measure two different periods and present the difference as performance.",
-  ends_too_early:
-    "The stored index series stops well before your history does, so the two would cover different periods. Refresh it to bring it up to date.",
-  wrong_currency:
-    "The index series came back in a currency this comparison cannot use. It is refused rather than converted, because converting would hide a wrong listing behind a plausible number.",
-};
-
 /**
  * Your return against the market's, over one window and one window only.
  *
@@ -191,7 +179,7 @@ export async function getBenchmarkComparison() {
     return {
       benchmark: definition,
       baseCurrency: base,
-      unavailable: REFUSALS[result.reason],
+      unavailable: BENCHMARK_REFUSALS[result.reason],
       comparison: null,
     };
   }

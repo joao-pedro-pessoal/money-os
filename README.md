@@ -27,9 +27,12 @@ database. Nobody else — including the author — ever sees your figures.
 **Money that holds its value.** Accounts across banks, brokers, exchanges and
 cash, each in its own currency. Transactions in and out, with CSV import that
 detects rows you have already imported. Budgets per category and period.
-Buckets — money set aside for a purpose, filled in priority order. A monthly
-report for any month — income, spending by category against the month before,
-budgets, largest expenses and what net worth did — as a page, a CSV or a PDF.
+Buckets — money set aside for a purpose, filled in priority order. A report for
+a week, a month, a year or any range of days — the everyday money (income,
+spending by category against the period before, budgets, largest expenses, what
+net worth did), the investments (value, deposits, trades, dividends, return
+against an index, what is held), or both — as a page, a CSV, or a PDF with
+charts that the app draws itself.
 Subscriptions, so you know what is already committed before you decide anything —
 and on each charge day the expense is proposed for you to record, match with one
 already imported, or skip; never added behind your back.
@@ -185,7 +188,7 @@ npm run db:app-role       # makes the app's own login and points DATABASE_URL at
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2727 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2768 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 

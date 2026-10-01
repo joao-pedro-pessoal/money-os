@@ -286,6 +286,28 @@ export async function getDividendsForTicker(ticker: string) {
 export type DividendOverview = Awaited<ReturnType<typeof getDividendOverview>>;
 
 /**
+ * Every dividend and interest credit, converted, for a report to cut at its
+ * own two days. The same payments the page above totals, from the same sources,
+ * so a report over all time and the page cannot differ.
+ */
+export async function getIncomePayments() {
+  const [loaded, fx] = await Promise.all([loadPayments(), converter()]);
+  const payments = loaded.counted.flatMap((p) => {
+    const amount = fx.convert(p.amount, p.currency);
+    if (amount === null) return [];
+    return [
+      {
+        date: p.paidOn.toISOString().slice(0, 10),
+        kind: isInterest(p.type) ? ("interest" as const) : ("dividend" as const),
+        instrument: isInterest(p.type) ? p.accountName : p.ticker,
+        amount,
+      },
+    ];
+  });
+  return { payments, unconverted: fx.unconverted() };
+}
+
+/**
  * Everything realised: sales closed, dividends paid, interest credited.
  *
  * All three are money that arrived and stayed. Reporting only closed sales

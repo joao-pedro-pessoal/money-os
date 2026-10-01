@@ -1013,6 +1013,13 @@ export async function getPortfolioReturns() {
     baseCurrency: base,
     currentValue,
     externalFlows: external.length,
+    /**
+     * The inputs themselves, for a report that measures one period of them
+     * (`lib/reports/investments.ts`). Handed over rather than rebuilt there, so
+     * a report and this page cannot disagree about what counts as a flow.
+     */
+    valuePoints: values,
+    flows: external,
     /** Net of deposits against withdrawals — what you have actually put in. */
     netContributed,
     timeWeighted: twr,

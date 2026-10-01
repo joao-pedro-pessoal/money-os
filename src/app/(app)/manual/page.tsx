@@ -444,16 +444,23 @@ export default function ManualPage() {
             and it is arithmetic on assumptions, not advice.
           </p>
           <p>
-            <strong className="text-[var(--foreground)]">Reports</strong> read one week, month or year back
-            as a whole: income, spending, net and savings rate against the period before, spending by
-            category with the change, fixed against variable, the budgets of that length, the largest
-            expenses and what net worth did. A year also lists each month, and a month with nothing
-            recorded says so instead of showing zeros. Pick <em>Week</em>, <em>Month</em> or{" "}
-            <em>Year</em> and then the period at the top; weeks run Monday to Sunday.{" "}
-            <em>Download CSV</em> saves it for a spreadsheet (on the phone, to Downloads);{" "}
-            <em>Print / save as PDF</em> prints it without the menus. The current period is marked as
-            still open. Transfers and money moved into investments are never counted as spending, and a
-            period with no income shows no savings rate rather than 0%.
+            <strong className="text-[var(--foreground)]">Reports</strong> read one week, month, year or
+            any range of days back as a whole. Pick <em>Week</em>, <em>Month</em>, <em>Year</em> or{" "}
+            <em>Custom</em> at the top — a custom range takes a first and a last day and is compared
+            with the same number of days just before it — and choose whether it covers your money, your
+            investments or both; weeks run Monday to Sunday. The money part is income, spending, net and
+            savings rate against the period before, spending by category with the change, fixed against
+            variable, the budgets of that length, the largest expenses and net worth drawn through the
+            period; a year, and a range across several months, also lists each month. The investments
+            part is the portfolio&apos;s value at both ends and through the period, money deposited and
+            withdrawn, what was bought and sold, what trades realised and cost in fees, dividends and
+            interest, the time-weighted and money-weighted return against your chosen index, and — for a
+            period reaching today — what is held. <em>Download CSV</em> saves it for a spreadsheet;{" "}
+            <em>Download PDF</em> saves a file the app draws itself, charts included, the same on the
+            computer and on the phone (there, to Downloads). Both hold the figures on the screen. A return
+            the history cannot support is left out with the reason, as on the Investments page; transfers
+            and money moved into investments are never counted as spending, and a period with no income
+            shows no savings rate rather than 0%.
           </p>
         </Entry>
       </Part>
