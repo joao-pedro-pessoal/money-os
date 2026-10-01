@@ -4,6 +4,7 @@ Set-Location -LiteralPath $projectRoot
 $resultCode = 0
 $transcribing = $false
 $ownsMutex = $false
+$syncJob = $null
 $launcherMutex = New-Object System.Threading.Mutex($false, 'Local\MoneyOS-PhoneSite-3000')
 
 try {
@@ -60,6 +61,29 @@ try {
         }
         Write-Host 'Deixa esta janela aberta enquanto usas o site.'
         Write-Host 'Se o Windows pedir acesso a rede, permite em Redes privadas.'
+
+        # Syncs the platforms every 15 minutes while this window is open: the
+        # ones with an API key can only sync here, where ENCRYPTION_KEY is, and
+        # what they bring in shows on the published site too (same database).
+        # The job belongs to this window and stops with it.
+        $syncSecret = $null
+        $secretLine = Get-Content -LiteralPath (Join-Path $projectRoot '.env') -ErrorAction SilentlyContinue |
+            Where-Object { $_ -match '^\s*SYNC_SECRET\s*=' } | Select-Object -First 1
+        if ($secretLine) { $syncSecret = ($secretLine -replace '^\s*SYNC_SECRET\s*=\s*', '').Trim().Trim('"') }
+        if ($syncSecret) {
+            $syncJob = Start-Job -ArgumentList $syncSecret -ScriptBlock {
+                param($secret)
+                Start-Sleep -Seconds 90
+                while ($true) {
+                    try {
+                        Invoke-RestMethod -Method Post -Uri 'http://localhost:3000/api/sync' `
+                            -Headers @{ 'x-sync-secret' = $secret } -TimeoutSec 600 | Out-Null
+                    } catch { }
+                    Start-Sleep -Seconds 900
+                }
+            }
+            Write-Host 'Sincronizacao automatica das corretoras: a cada 15 minutos, enquanto esta janela estiver aberta.'
+        }
         Write-Host ''
         & $nodeCommand $nextCli start --hostname 0.0.0.0 --port 3000
         if ($LASTEXITCODE -ne 0) { throw 'O servidor parou com erro. Consulta a mensagem acima.' }
@@ -70,6 +94,7 @@ try {
     Write-Host ("ERRO: {0}" -f $_.Exception.Message) -ForegroundColor Red
     Write-Host 'Registo: .local-checkpoints\site-startup.log'
 } finally {
+    if ($syncJob) { Stop-Job -Job $syncJob -ErrorAction SilentlyContinue; Remove-Job -Job $syncJob -Force -ErrorAction SilentlyContinue }
     if ($transcribing) { Stop-Transcript | Out-Null }
     if ($ownsMutex) { $launcherMutex.ReleaseMutex() }
     $launcherMutex.Dispose()
