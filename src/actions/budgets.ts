@@ -107,6 +107,14 @@ export async function getKeptForBudgets(): Promise<number> {
   return keptForBudgets(envelopes.map((e) => envelopeState(e, spending, today)));
 }
 
+/** What the budgets still have to spend this period, and how many still have something left. */
+export async function getBudgetsLeft(): Promise<{ total: number; count: number }> {
+  const today = new Date();
+  const [envelopes, spending] = await Promise.all([loadEnvelopes(), loadSpending()]);
+  const states = envelopes.map((e) => envelopeState(e, spending, today));
+  return { total: keptForBudgets(states), count: states.filter((s) => s.remaining > 0).length };
+}
+
 export async function createBudget(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const period = String(formData.get("period") ?? "monthly");

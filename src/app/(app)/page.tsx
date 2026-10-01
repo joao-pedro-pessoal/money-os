@@ -29,6 +29,8 @@ import MobileFold from "@/components/MobileFold";
 import DueSubscriptionCharges from "@/components/DueSubscriptionCharges";
 import { getDueSubscriptionCharges } from "@/actions/subscriptionCharges";
 import { getKeptForBudgets } from "@/actions/budgets";
+import { getMonthAhead } from "@/actions/monthAhead";
+import MonthAheadCard from "@/components/MonthAheadCard";
 
 export default async function DashboardPage({
   searchParams,
@@ -222,6 +224,16 @@ export default async function DashboardPage({
   const keptForBudgets = inDisplay(await getKeptForBudgets());
   const freeToSpend = Math.max(0, Math.round((totalFree - keptForBudgets) * 100) / 100);
 
+  /** The rest of the month — what is due to leave and to arrive — in the currency shown. */
+  const ahead = await getMonthAhead();
+  const aheadShown = {
+    ...ahead,
+    subscriptions: { ...ahead.subscriptions, total: inDisplay(ahead.subscriptions.total) },
+    budgets: { ...ahead.budgets, total: inDisplay(ahead.budgets.total) },
+    comingIn: { ...ahead.comingIn, total: inDisplay(ahead.comingIn.total) },
+    net: inDisplay(ahead.net),
+  };
+
   const investingCash = sumInBase(
     accountRows.map((a) => ({
       amount: splitPortfolioCash(a.free, a.portfolioCashPercent ?? null).belongsToPortfolio,
@@ -375,6 +387,8 @@ export default async function DashboardPage({
         <Link href="/budgets">Budgets <span aria-hidden="true">→</span></Link>
         <Link href="/savings">Savings <span aria-hidden="true">→</span></Link>
       </nav>
+
+      <MonthAheadCard ahead={aheadShown} currency={base} />
 
       {subs.activeCount > 0 && (
         <div className="card p-3 text-xs flex items-center justify-between gap-3 flex-wrap">
