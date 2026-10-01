@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **28 de setembro de 2026**.
+Atualizado em **1 de outubro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -15,8 +15,10 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 - **Produto em uso:** o site existente e a app Android em `android-shell/`, que
   abre esse site servido pelo PC. Preservar o design e as funcionalidades; a
   interface mantém-se em inglês, incluindo Simple e Complex.
-- **Próxima prioridade:** A01–A03 concluídos a 17/09. Seguem A04–A08 e os ecrãs
-  do telemóvel que ainda forem reportados.
+- **Próxima funcionalidade (pedida a 01/10/2026):** F17 — relatórios à medida,
+  com período livre, dinheiro e/ou investimentos, em PDF com gráficos e em CSV.
+- **Próxima prioridade de manutenção:** A01–A03 concluídos a 17/09. Seguem
+  A04–A08 e os ecrãs do telemóvel que ainda forem reportados.
 - **Evolução futura, quando pedida:** usar a mesma experiência com dados locais,
   offline e sincronização entre PC e telemóvel. A interface separada de `mobile/`
   não é o modelo visual escolhido; o seu armazenamento, conectores e cofre podem
@@ -45,7 +47,8 @@ não significa que todas tenham sido pedidas para implementação imediata.
 | --- | --- | --- |
 | F01 | Propor transações recorrentes | **Feito a 17/09/2026** (H15 na secção 5). Possível a seguir: o mesmo para Expected money (receitas previstas). O aviso no sino e no telemóvel ficou feito com F02. |
 | F02 | Alertas fora da app | **Feito a 17/09/2026, app 0.7.0** (H16 na secção 5): notificações no telemóvel, sem serviço externo nem credenciais. Possível a seguir, se pedido: email (exige uma conta de envio e a sua palavra-passe, configurada pelo utilizador no `.env`) e o envio automático do relatório mensal. |
-| F03 | Relatórios | **Mensal feito a 17/09/2026** (H14 na secção 5); **semanal e anual feitos a 21/09/2026** (H27). Possível a seguir, se pedido: envio automático no fim do período (depende de F02). |
+| F03 | Relatórios | **Mensal feito a 17/09/2026** (H14 na secção 5); **semanal e anual feitos a 21/09/2026** (H27). Possível a seguir, se pedido: envio automático no fim do período (depende de F02). Relatórios à medida: ver F17. |
+| F17 | Relatórios à medida | **Próxima a implementar (pedida a 01/10/2026).** Hoje há o relatório semanal, mensal e anual (Analytics → Report), só do dinheiro do dia a dia — entradas, saídas por categoria, comparação com o período anterior, orçamentos e efeito no património — em CSV e em PDF pela impressão do browser. A fazer: (1) **período livre**, de uma data a outra, além de semana, mês e ano; (2) **âmbito à escolha**: dinheiro do dia a dia, investimentos, ou ambos; (3) **relatório de investimentos do período**: contribuições, compras e vendas, dividendos e juros recebidos, ganhos realizados e não realizados, rentabilidade (TWR/MWR) e comparação com o índice de referência, composição no fim do período; (4) **exportar** em CSV (uma secção por parte) e em **PDF gerado pela app, com gráficos** — património ao longo do período, gastos por categoria, composição e evolução dos investimentos — igual no computador e no telemóvel; (5) cada pessoa só exporta os seus dados (já garantido pela base de dados), e o modo privacidade esconde os valores no ecrã. Critério: o mesmo período dá os mesmos totais no ecrã, no CSV e no PDF, e coincide com as páginas Analytics e Investments. |
 | F04 | Anexar recibos | Foto/PDF associado à transação, com armazenamento, exportação, backup, restauro e eliminação coerentes. |
 | F05 | Completar o modelo de obrigações | Acrescentar cupões e maturidade, com uma definição explícita da avaliação. Priorizar quando existir uma obrigação real para validar. |
 | F06 | Validar e ampliar conectores | Testar Kraken, Binance e restantes caminhos de sucesso ainda sem validação com contas reais. Acrescentar Funding/Earn da Binance. Coinbase é candidata, dependente de credenciais de teste e confirmação da API. |
