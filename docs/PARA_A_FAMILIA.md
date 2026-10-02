@@ -60,8 +60,15 @@ Manda-lhes o endereço (o de **Domains** na Vercel) e isto:
 2. Escolhe o email e uma palavra-passe **longa**, com 12 caracteres ou mais.
 3. Aparece um **código de recuperação**. Guarda-o: sem ele, uma palavra-passe
    esquecida não tem volta — ninguém a pode repor, nem eu.
-4. No telemóvel: abre o endereço no Chrome ou no Safari e usa **Adicionar ao
-   ecrã principal**. Fica com ícone, como uma app.
+4. No telemóvel: abre o endereço no Chrome ou no Safari e carrega em **Install
+   app** (na página de entrada, ou em **Settings → App on this device**). No
+   Android e no computador instala com um toque; no iPhone mostra os passos —
+   **Partilhar → Adicionar ao ecrã principal**. Fica com ícone, como uma app. Não
+   há loja nem ficheiro para descarregar: a app é o próprio site.
+
+**A app está em inglês.** O navegador já não a traduz sozinho: a tradução
+automática mudava também os nomes das contas e categorias e podia estragar as
+páginas. Os nomes do menu podem ficar noutra língua em **Settings → Language**.
 
 **Se esqueceres a palavra-passe:** na página de entrada, **Forgot your
 password?**, e depois o email, o código de recuperação e uma palavra-passe nova.

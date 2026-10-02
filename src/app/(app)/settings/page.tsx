@@ -16,6 +16,7 @@ import SettingRow from "@/components/SettingRow";
 import Link from "next/link";
 import DashboardWindowSettings from "@/components/DashboardWindowSettings";
 import LanguagePicker from "@/components/LanguagePicker";
+import InstallApp from "@/components/InstallApp";
 import PhoneQuickEntrySettings from "@/components/PhoneQuickEntrySettings";
 import PhoneAlertSettings from "@/components/PhoneAlertSettings";
 import { currentUserId, logOutOtherDevices, sessionsNotBefore } from "@/actions/session";
@@ -39,7 +40,16 @@ export default async function SettingsGeneralPage() {
   return (
     <>
       <div className="card">
-        <SettingRow title="Language" description="Choose the language for the app interface. Your financial data stays unchanged.">
+        <SettingRow
+          title="App on this device"
+          description="Money OS has no store or download: your browser installs it, with its own icon on the home screen. On another phone, open this site there and do the same."
+        >
+          <InstallApp />
+        </SettingRow>
+        <SettingRow
+          title="Language"
+          description="The language of the menus. Pages stay in English, and your financial data is never translated."
+        >
           <LanguagePicker />
         </SettingRow>
       </div>

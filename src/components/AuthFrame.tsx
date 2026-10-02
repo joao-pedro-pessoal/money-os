@@ -1,3 +1,5 @@
+import InstallApp from "./InstallApp";
+
 /**
  * The frame of the way in: signing in, making an account, recovering one. On a wide screen the left half says what this is; on a phone it
  * folds away and leaves the brand above the form.
@@ -44,6 +46,7 @@ export default function AuthFrame({ children }: { children: React.ReactNode }) {
             <Brand />
           </div>
           {children}
+          <InstallApp compact />
         </div>
       </main>
     </div>

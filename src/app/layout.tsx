@@ -27,7 +27,17 @@ export const metadata: Metadata = {
    * it. This meta is Dark Reader's own convention for "this site has themes of
    * its own; leave it alone".
    */
-  other: { "darkreader-lock": "true" },
+  /**
+   * `google: notranslate`, with `translate="no"` on the page below: the
+   * browser's own translation is turned away.
+   *
+   * A phone set to Portuguese translated the whole app on its own, sign-in
+   * included, so it no longer read as the English interface it is. It also
+   * translates what is yours — account names, shops, categories — which this
+   * app never changes, and it rewrites the page under React, which can break
+   * it. The menus have a language of their own in Settings.
+   */
+  other: { "darkreader-lock": "true", google: "notranslate" },
 };
 
 /**
@@ -100,6 +110,26 @@ if ("serviceWorker" in navigator) {
 }
 `;
 
+/**
+ * Keeps the browser's install prompt for the "Install app" button.
+ *
+ * Chrome offers it once, early, and possibly before React has started; a
+ * listener added by a component could miss it. So it is caught here, kept on
+ * `window`, and announced — `components/InstallApp.tsx` reads it from there.
+ * The browser's own offer is left to appear as it would: the button is one more
+ * way in, not a replacement.
+ */
+const keepInstallPrompt = `
+window.addEventListener("beforeinstallprompt", function (e) {
+  window.__moneyosInstall = e;
+  window.dispatchEvent(new Event("moneyos-installable"));
+});
+window.addEventListener("appinstalled", function () {
+  window.__moneyosInstall = null;
+  window.dispatchEvent(new Event("moneyos-installable"));
+});
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     /**
@@ -109,10 +139,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
      * every page for exactly this. Scoped to this element, so a real mismatch
      * anywhere inside still reports.
      */
-    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="en" translate="no" className="h-full antialiased" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: applyStoredTheme }} />
         <script dangerouslySetInnerHTML={{ __html: registerServiceWorker }} />
+        <script dangerouslySetInnerHTML={{ __html: keepInstallPrompt }} />
       </head>
       <body className="min-h-full">{children}</body>
     </html>
