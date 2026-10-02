@@ -98,6 +98,28 @@ describe("what the PDF says", () => {
     ]);
   });
 
+  it("names the day of a closed period's composition, without a gain it cannot know", () => {
+    const closed = buildInvestmentReport({
+      from: "2026-09-01",
+      to: "2026-09-30",
+      today: "2026-10-02",
+      values: [{ date: "2026-09-30", value: 3200 }],
+      flows: [],
+      moneyWeightedWithheld: null,
+      trades: [],
+      income: [],
+      benchmark: null,
+      holdings: null,
+      heldAtEnd: [{ name: "VWCE", account: "Trade Republic", assetType: "etf", value: 3200, pnl: null }],
+    });
+    const blocks = reportBlocks({ ...input, investments: closed });
+    const bars = blocks.find((b) => b.type === "bars" && b.title.startsWith("What was held"));
+    expect(bars && "title" in bars ? bars.title : "").toBe(`What was held on 30 Sep 2026, by type · ${fmt(3200, "EUR")}`);
+    const table = blocks.find((b) => b.type === "table" && b.title === "Largest positions on 30 Sep 2026");
+    expect(table && table.type === "table" ? table.columns.map((c) => c.title) : []).toEqual(["Position", "Account", "Value", "Share"]);
+    expect(allText(blocks)).not.toContain("Unrealised today");
+  });
+
   it("leaves a part out when the report is not about it", () => {
     const onlyMoney = reportBlocks({ ...input, investments: null });
     expect(onlyMoney.some((b) => b.type === "heading" && b.text === "Investments")).toBe(false);
@@ -188,9 +210,14 @@ describe("chart geometry, shared by the page and the PDF", () => {
     expect(chart.groups[0].columns[0].height).toBeGreaterThan(chart.groups[0].columns[1].height);
   });
 
-  it("writes axis amounts short", () => {
+  it("writes axis amounts short, and every tick as itself", () => {
     expect(compactAmount(950)).toBe("950");
     expect(compactAmount(12500)).toBe("12.5k");
-    expect(compactAmount(-1_250_000)).toBe("-1.3M");
+    expect(compactAmount(-1_250_000)).toBe("-1.25M");
+    expect(compactAmount(0.5)).toBe("0.5");
+    // A narrow axis keeps one name per line.
+    const labels = niceTicks(2105, 2190).map(compactAmount);
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(labels).toEqual(["2100", "2125", "2150", "2175", "2200"]);
   });
 });

@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { Money } from "./PrivacyContext";
+import Percent from "./Percent";
 import ReportChart from "./ReportChart";
 import ResponsiveTable from "./ResponsiveTable";
 import type { InvestmentReport } from "@/lib/reports/investments";
 
 const tone = (n: number) => (n > 0 ? "text-[var(--green)]" : n < 0 ? "text-[var(--red)]" : "");
-const asPercent = (fraction: number) => `${fraction > 0 ? "+" : ""}${(fraction * 100).toFixed(2)}%`;
+/** An index's return: market data anyone can look up, so privacy mode leaves it alone. */
+const indexPercent = (fraction: number) => `${fraction > 0 ? "+" : ""}${(fraction * 100).toFixed(2)}%`;
+/** A return on your own money, hidden by privacy mode. */
+const ownReturn = (fraction: number) => <Percent value={fraction * 100} digits={2} signed />;
 
 function Signed({ value, currency }: { value: number; currency: string }) {
   return (
@@ -125,7 +129,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
           <div>
             <div className="text-xs text-[var(--muted)]">Time-weighted · how the choices did</div>
-            <div className={`text-lg font-semibold ${twr ? tone(twr.total) : ""}`}>{twr ? asPercent(twr.total) : "—"}</div>
+            <div className={`text-lg font-semibold ${twr ? tone(twr.total) : ""}`}>{twr ? ownReturn(twr.total) : "—"}</div>
             {twr && (
               <div className="text-[11px] text-[var(--muted)]">
                 {twr.from} to {twr.to}
@@ -135,17 +139,18 @@ export default function InvestmentReportSection({ report, currency }: { report: 
           <div>
             <div className="text-xs text-[var(--muted)]">Money-weighted · how your money did</div>
             <div className={`text-lg font-semibold ${report.returns.moneyWeighted === null ? "" : tone(report.returns.moneyWeighted)}`}>
-              {report.returns.moneyWeighted === null ? "—" : asPercent(report.returns.moneyWeighted)}
+              {report.returns.moneyWeighted === null ? "—" : ownReturn(report.returns.moneyWeighted)}
             </div>
           </div>
           {report.benchmark !== null && (
             <div>
               <div className="text-xs text-[var(--muted)]">{report.benchmark.name}</div>
-              <div className="text-lg font-semibold">{index ? asPercent(index.indexReturn) : "—"}</div>
+              <div className="text-lg font-semibold">{index ? indexPercent(index.indexReturn) : "—"}</div>
               {index && (
+                // Your return minus the index's, so it reveals yours: hidden like it.
                 <div className={`text-[11px] ${tone(index.differencePoints)}`}>
-                  {index.differencePoints > 0 ? "+" : ""}
-                  {index.differencePoints.toFixed(2)} points {index.differencePoints >= 0 ? "ahead" : "behind"}
+                  <Percent value={index.differencePoints} digits={2} signed suffix=" points" />{" "}
+                  {index.differencePoints >= 0 ? "ahead" : "behind"}
                 </div>
               )}
             </div>
@@ -232,7 +237,9 @@ export default function InvestmentReportSection({ report, currency }: { report: 
       {report.composition !== null ? (
         <div className="card p-4 space-y-3">
           <div className="flex justify-between gap-3 flex-wrap">
-            <div className="text-sm font-medium">What is held today</div>
+            <div className="text-sm font-medium">
+              {report.composition.today ? "What is held today" : `What was held on ${report.composition.asOf}`}
+            </div>
             <div className="text-sm">
               <Money value={report.composition.held} currency={currency} />
             </div>
@@ -243,7 +250,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
                 <div className="flex justify-between text-xs gap-3">
                   <span>{t.name}</span>
                   <span className="text-[var(--muted)]">
-                    <Money value={t.value} currency={currency} /> · {t.percent.toFixed(1)}%
+                    <Money value={t.value} currency={currency} /> · <Percent value={t.percent} />
                   </span>
                 </div>
                 <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden mt-1" aria-hidden="true">
@@ -259,7 +266,8 @@ export default function InvestmentReportSection({ report, currency }: { report: 
                   <th>Position</th>
                   <th>Account</th>
                   <th className="text-right">Value</th>
-                  <th className="text-right">Unrealised</th>
+                  <th className="text-right">Share</th>
+                  {report.composition.today && <th className="text-right">Unrealised</th>}
                 </tr>
               </thead>
               <tbody>
@@ -268,21 +276,27 @@ export default function InvestmentReportSection({ report, currency }: { report: 
                     <td>{p.name}</td>
                     <td className="text-[var(--muted)]">{p.account}</td>
                     <td className="text-right"><Money value={p.value} currency={currency} /></td>
-                    <td className="text-right">{p.pnl === null ? "—" : <Signed value={p.pnl} currency={currency} />}</td>
+                    <td className="text-right"><Percent value={p.percent} /></td>
+                    {report.composition?.today && (
+                      <td className="text-right">{p.pnl === null ? "—" : <Signed value={p.pnl} currency={currency} />}</td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </ResponsiveTable>
           </div>
-          <p className="text-[11px] text-[var(--muted)]">
-            Unrealised today <Signed value={report.composition.unrealised} currency={currency} />
-            {report.composition.costUnknown > 0 && (
-              <>
-                , leaving out <Money value={report.composition.costUnknown} currency={currency} /> whose cost nobody states
-              </>
-            )}
-            .
-          </p>
+          {report.composition.unrealised !== null && (
+            <p className="text-[11px] text-[var(--muted)]">
+              Unrealised today <Signed value={report.composition.unrealised} currency={currency} />
+              {report.composition.costUnknown > 0 && (
+                <>
+                  , leaving out <Money value={report.composition.costUnknown} currency={currency} /> whose cost nobody states
+                </>
+              )}
+              .
+            </p>
+          )}
+          {report.compositionNote && <p className="text-[11px] text-[var(--muted)]">{report.compositionNote}</p>}
         </div>
       ) : (
         report.compositionNote && <p className="text-xs text-[var(--muted)]">{report.compositionNote}</p>

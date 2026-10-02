@@ -14,7 +14,7 @@ import { eq } from "drizzle-orm";
 import { getSpendingAnalysis } from "./spending";
 import { getTotalNetWorthOverTime } from "./analytics";
 import { listBudgets } from "./budgets";
-import { getPortfolioReturns } from "./investments";
+import { getPortfolioAt, getPortfolioReturns } from "./investments";
 import { getTradeAnalysis } from "./investmentActivity";
 import { getIncomePayments } from "./dividends";
 import { getPortfolioItems } from "./dashboard";
@@ -177,12 +177,15 @@ async function loadInvestments(
 ): Promise<{ report: InvestmentReport; unconverted: number }> {
   const { from, to } = reportWindow(kind, key);
 
-  const [returns, trades, income, items, benchmark] = await Promise.all([
+  const reachesToday = to >= today;
+  const [returns, trades, income, items, heldAtEnd, benchmark] = await Promise.all([
     getPortfolioReturns(),
     getTradeAnalysis(),
     getIncomePayments(),
-    // What is held is known for today only; a period that ended earlier does not read it.
-    to >= today ? getPortfolioItems() : null,
+    // Today's positions, with their gains, for a period that reaches today…
+    reachesToday ? getPortfolioItems() : null,
+    // …and the last day's, rebuilt from snapshots, for one that ended earlier.
+    reachesToday ? null : getPortfolioAt(to),
     getBenchmarkChoice(),
   ]);
   const closes = await db.select().from(benchmarkPrices).where(eq(benchmarkPrices.symbol, benchmark.symbol));
@@ -219,6 +222,7 @@ async function loadInvestments(
                 pnl: i.costUnknown ? null : i.pnl,
               })),
             },
+      heldAtEnd,
     }),
     unconverted: income.unconverted + trades.unconvertible,
   };

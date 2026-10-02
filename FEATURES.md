@@ -973,8 +973,12 @@ moedas sem taxa são deixadas de fora **e nomeadas**, nunca contadas como zero.
   dia a dia, os investimentos, ou ambos**. Investimentos do período: valor no início,
   no fim e ao longo do período, depósitos e levantamentos, compras e vendas, resultado
   realizado e comissões, dividendos e juros, rentabilidade ponderada no tempo e pelo
-  dinheiro contra o índice escolhido, e o que se detém (só num período que chega a
-  hoje). **CSV** com uma secção por parte e **PDF desenhado pela própria app, com
+  dinheiro contra o índice escolhido, e o que se detinha no fim (hoje, com ganhos;
+  num período já terminado, as posições do último dia reconstruídas dos valores
+  guardados, que somam o valor da carteira nesse dia, sem ganho porque o custo de
+  então não está registado — `positionsAt` em `lib/portfolio/series.ts`). No modo
+  privacidade, rentabilidades e percentagens também ficam escondidas.
+  **CSV** com uma secção por parte e **PDF desenhado pela própria app, com
   gráficos** (património, mês a mês, gastos por categoria, valor da carteira,
   crescimento contra o índice, composição), igual no computador e no telemóvel.
   Ecrã, CSV e PDF leem os mesmos objetos (`src/actions/reports.ts`,

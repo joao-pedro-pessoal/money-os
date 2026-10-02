@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { buildPortfolioSeries, trimLeadingZeros } from "@/lib/portfolio/series";
+import { buildPortfolioSeries, positionsAt, trimLeadingZeros } from "@/lib/portfolio/series";
 import {
   holdings,
   holdingSnapshots,
@@ -37,6 +37,7 @@ import {
 } from "@/lib/portfolio/untagged";
 import { STABLE_ASSET_TYPES } from "@/lib/portfolio/tags";
 import { toBase } from "@/lib/fx";
+import { displaySymbol } from "@/lib/quotes/symbolSource";
 import {
   timeWeightedReturn,
   timeWeightedSeries,
@@ -391,6 +392,96 @@ export async function deleteHolding(formData: FormData) {
  * not zero the others.
  */
 export async function getPortfolioValueOverTime(onlyWhatAddsOnTop = false) {
+  const { manual, synced, allDates } = await seriesInputs(onlyWhatAddsOnTop);
+
+  if (allDates.length === 0) return [];
+
+  /**
+   * Assembling the total is not a matter of adding up last-known values.
+   *
+   * A closed position keeps its final snapshot forever, and carried forward
+   * with no stopping rule it went on contributing to every later date — the
+   * line climbed while the portfolio stood still. buildPortfolioSeries drops a
+   * position once a sync of its own connection happened without it.
+   */
+  const series = buildPortfolioSeries({
+    dates: allDates,
+    manual: [...manual.values()],
+    synced: [...synced.entries()].map(([key, points]) => ({
+      key,
+      connectionId: key.split(":")[0],
+      points,
+    })),
+  });
+
+  // The days before anything was held are true but not worth drawing; they
+  // squash every later movement into the right-hand edge.
+  return trimLeadingZeros(series);
+}
+
+/**
+ * What was held on one day, position by position, from the same snapshots and
+ * the same rules as the value line above — so the positions add up to the
+ * line's value on that day. What a report shows for a period that has closed.
+ *
+ * Values are converted at today's rates, as the line's are. There is no cost
+ * on record for a past day, so no gain or loss is stated for one.
+ */
+export async function getPortfolioAt(date: string) {
+  const [{ allHoldings, manual, synced, conns }, accountRows, metaRows] = await Promise.all([
+    seriesInputs(false),
+    db.select().from(accounts),
+    db.select().from(positionMeta),
+  ]);
+  const accountName = new Map(accountRows.map((a) => [a.id, a.name]));
+  const holdingById = new Map(allHoldings.map((h) => [h.id, h]));
+  const connectionById = new Map(conns.map((c) => [c.id, c]));
+  const metaFor = new Map(metaRows.map((m) => [`${m.connectionId}:${m.coin}`, m]));
+
+  const held = positionsAt({
+    date,
+    manual: [...manual.entries()].map(([id, points]) => ({ key: `h:${id}`, points })),
+    synced: [...synced.entries()].map(([key, points]) => ({
+      key: `p:${key}`,
+      connectionId: key.split(":")[0],
+      points,
+    })),
+  });
+
+  return held.flatMap(({ key, value }) => {
+    if (key.startsWith("h:")) {
+      const h = holdingById.get(key.slice(2));
+      if (!h) return [];
+      return [
+        {
+          name: displaySymbol(h.quoteSymbol) ?? h.symbol,
+          account: (h.accountId ? accountName.get(h.accountId) : null) ?? h.platform ?? "—",
+          assetType: h.assetType,
+          value,
+          pnl: null,
+        },
+      ];
+    }
+    const position = key.slice(2);
+    const connectionId = position.split(":")[0];
+    const connection = connectionById.get(connectionId);
+    return [
+      {
+        name: position.slice(connectionId.length + 1),
+        account: (connection ? accountName.get(connection.accountId) : null) ?? connection?.platform ?? "—",
+        assetType: metaFor.get(position)?.assetType ?? null,
+        value,
+        pnl: null,
+      },
+    ];
+  });
+}
+
+/**
+ * The snapshots behind the value line: each position's points in the base
+ * currency, oldest first, and every day anything was recorded on.
+ */
+async function seriesInputs(onlyWhatAddsOnTop: boolean) {
   const [allHoldings, holdingSnaps, positionSnaps, rates, base] = await Promise.all([
     db.select().from(holdings),
     db.select().from(holdingSnapshots),
@@ -482,29 +573,7 @@ export async function getPortfolioValueOverTime(onlyWhatAddsOnTop = false) {
     ]),
   ].sort();
 
-  if (allDates.length === 0) return [];
-
-  /**
-   * Assembling the total is not a matter of adding up last-known values.
-   *
-   * A closed position keeps its final snapshot forever, and carried forward
-   * with no stopping rule it went on contributing to every later date — the
-   * line climbed while the portfolio stood still. buildPortfolioSeries drops a
-   * position once a sync of its own connection happened without it.
-   */
-  const series = buildPortfolioSeries({
-    dates: allDates,
-    manual: [...manual.values()],
-    synced: [...synced.entries()].map(([key, points]) => ({
-      key,
-      connectionId: key.split(":")[0],
-      points,
-    })),
-  });
-
-  // The days before anything was held are true but not worth drawing; they
-  // squash every later movement into the right-hand edge.
-  return trimLeadingZeros(series);
+  return { allHoldings, manual, synced, allDates, conns };
 }
 
 /** Accounts available to hold positions (active only) — used by the forms. */

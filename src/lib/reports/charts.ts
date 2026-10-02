@@ -184,17 +184,28 @@ export function columnChart(
   };
 }
 
-/** An axis label short enough for the side of a chart: 950, 12k, 1.2M. */
+/**
+ * An axis label short enough for the side of a chart — 950, 2125, 12.5k, 1.25M —
+ * and exact: a tick is a round number, so it can be written as itself.
+ *
+ * Rounding it to one decimal of a thousand turned an axis stepping by 25 into
+ * "2.1k, 2.1k, 2.2k, 2.2k", five lines with three names.
+ */
 export function compactAmount(value: number): string {
   const abs = Math.abs(value);
   const sign = value < 0 ? "-" : "";
-  if (abs >= 1_000_000) return `${sign}${trim(abs / 1_000_000)}M`;
-  if (abs >= 1_000) return `${sign}${trim(abs / 1_000)}k`;
-  return `${sign}${trim(abs)}`;
+  if (abs >= 1_000_000) return `${sign}${shortest(abs / 1_000_000)}M`;
+  if (abs >= 10_000) return `${sign}${shortest(abs / 1_000)}k`;
+  return `${sign}${shortest(abs)}`;
 }
 
-function trim(n: number): string {
-  return n >= 100 ? String(Math.round(n)) : String(Math.round(n * 10) / 10);
+/** The fewest decimals, up to three, that write `n` as it is. */
+function shortest(n: number): string {
+  for (let digits = 0; digits < 3; digits++) {
+    const written = Number(n.toFixed(digits));
+    if (Math.abs(written - n) < 1e-9 * Math.max(1, n)) return String(written);
+  }
+  return String(Number(n.toFixed(3)));
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

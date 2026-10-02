@@ -80,9 +80,15 @@ export interface InvestmentReportInput {
   } | null;
   /**
    * What is held today and the Investments page's own totals for it, or null
-   * when it was not read.
+   * when it was not read. Used for a period that reaches today.
    */
   holdings: { held: number; unrealised: number; costUnknown: number; items: readonly HoldingNow[] } | null;
+  /**
+   * What was held on the period's last day, rebuilt from the same snapshots as
+   * the value line, or null when it was not read. Used for a period that ended
+   * before today; no cost is on record for a past day, so every `pnl` is null.
+   */
+  heldAtEnd?: readonly HoldingNow[] | null;
 }
 
 export interface BreakdownLine {
@@ -140,11 +146,18 @@ export interface InvestmentReport {
     | { name: string; curve: ValuePoint[]; indexReturn: number; differencePoints: number; from: string; to: string }
     | { name: string; unavailable: string }
     | null;
-  /** Today's composition, only for a period that reaches today; `compositionNote` says why otherwise. */
+  /**
+   * What was held at the end of the period: today's positions for a period that
+   * reaches today, the period's last day rebuilt from snapshots for one that
+   * ended earlier. `compositionNote` says why there is none.
+   */
   composition: {
     asOf: string;
+    /** True when `asOf` is today, the only day a gain or loss is known for. */
+    today: boolean;
     held: number;
-    unrealised: number;
+    /** Null for a past day: what each position cost then is not on record. */
+    unrealised: number | null;
     costUnknown: number;
     byType: BreakdownLine[];
     largest: (BreakdownLine & { account: string; pnl: number | null })[];
@@ -313,24 +326,45 @@ export function buildInvestmentReport(input: InvestmentReportInput): InvestmentR
     }
   }
 
+  /**
+   * What was held at the end. A period reaching today takes today's positions,
+   * with the Investments page's own totals; one that ended earlier takes the
+   * positions rebuilt for its last day, which add up to the value line there.
+   */
+  const reachesToday = to >= input.today;
+  const atEnd = reachesToday
+    ? input.holdings === null
+      ? null
+      : { ...input.holdings, today: true, asOf: input.today }
+    : input.heldAtEnd === undefined || input.heldAtEnd === null
+      ? null
+      : {
+          items: input.heldAtEnd,
+          held: round2(input.heldAtEnd.reduce((s, i) => s + i.value, 0)),
+          unrealised: null,
+          costUnknown: 0,
+          today: false,
+          asOf: to,
+        };
+
   let composition: InvestmentReport["composition"] = null;
   let compositionNote: string | null = null;
-  if (to < input.today) {
-    compositionNote =
-      "What was held position by position is known for today only, so a period that ended before today has no composition.";
-  } else if (input.holdings === null || input.holdings.items.length === 0) {
-    compositionNote = "Nothing is held today.";
+  if (atEnd === null) {
+    compositionNote = "What was held at the end of this period was not read.";
+  } else if (atEnd.items.every((i) => i.value === 0)) {
+    compositionNote = reachesToday ? "Nothing is held today." : `Nothing was held on ${to}.`;
   } else {
-    const items = input.holdings.items.filter((i) => i.value !== 0);
+    const items = atEnd.items.filter((i) => i.value !== 0);
     const total = items.reduce((s, i) => s + i.value, 0);
     const share = (v: number) => (total === 0 ? 0 : round2((v / total) * 100));
     const byType = new Map<string, number>();
     for (const i of items) byType.set(i.assetType ?? "Not classified", (byType.get(i.assetType ?? "Not classified") ?? 0) + i.value);
     composition = {
-      asOf: input.today,
-      held: input.holdings.held,
-      unrealised: input.holdings.unrealised,
-      costUnknown: input.holdings.costUnknown,
+      asOf: atEnd.asOf,
+      today: atEnd.today,
+      held: atEnd.held,
+      unrealised: atEnd.unrealised,
+      costUnknown: atEnd.costUnknown,
       byType: [...byType.entries()]
         .map(([name, v]) => ({ name, value: round2(v), percent: share(v) }))
         .sort((a, b) => b.value - a.value),
@@ -339,6 +373,10 @@ export function buildInvestmentReport(input: InvestmentReportInput): InvestmentR
         .slice(0, 10)
         .map((i) => ({ name: i.name, account: i.account, value: round2(i.value), percent: share(i.value), pnl: i.pnl })),
     };
+    if (!atEnd.today) {
+      compositionNote =
+        "Rebuilt from each position's recorded values on that day, at today's exchange rates, like the value line. What each position cost then is not on record, so no gain or loss is stated.";
+    }
   }
 
   return {

@@ -151,7 +151,7 @@ describe("the investing side of a period", () => {
     expect(refused.benchmark).toMatchObject({ name: "World", unavailable: expect.stringMatching(/currency/) });
   });
 
-  it("has a composition only for a period that reaches today", () => {
+  it("shows today's positions, with their gains, for a period that reaches today", () => {
     const holdings = {
       held: 1510,
       unrealised: 60,
@@ -162,14 +162,31 @@ describe("the investing side of a period", () => {
         { name: "EUR", account: "Broker", assetType: null, value: 10, pnl: null },
       ],
     };
-    expect(buildInvestmentReport(input({ holdings })).composition).toBeNull();
     const now = buildInvestmentReport(input({ holdings, today: "2026-03-31" }));
+    expect(now.composition).toMatchObject({ asOf: "2026-03-31", today: true, held: 1510, unrealised: 60 });
     expect(now.composition?.byType.map((t) => [t.name, t.value])).toEqual([
       ["etf", 1200],
       ["crypto", 300],
       ["Not classified", 10],
     ]);
     expect(now.composition?.largest[1]).toMatchObject({ name: "BTC", pnl: null });
+    expect(now.compositionNote).toBeNull();
+    // Today's positions are not what was held at the end of a period that closed earlier.
+    expect(buildInvestmentReport(input({ holdings })).composition).toBeNull();
+  });
+
+  it("shows what was held on the last day of a period that has closed, with no gain stated", () => {
+    const heldAtEnd = [
+      { name: "VWCE", account: "Broker", assetType: "etf", value: 1210, pnl: null },
+      { name: "BTC", account: "Exchange", assetType: "crypto", value: 300, pnl: null },
+    ];
+    const past = buildInvestmentReport(input({ heldAtEnd }));
+    expect(past.composition).toMatchObject({ asOf: "2026-03-31", today: false, held: 1510, unrealised: null });
+    // It adds up to the value the report states for the end.
+    expect(past.composition?.held).toBe(past.value?.end);
+    expect(past.composition?.largest.map((p) => p.percent)).toEqual([80.13, 19.87]);
+    expect(past.compositionNote).toMatch(/today's exchange rates/);
+    expect(buildInvestmentReport(input({ heldAtEnd: [] })).compositionNote).toBe("Nothing was held on 2026-03-31.");
   });
 
   it("knows when nothing happened", () => {

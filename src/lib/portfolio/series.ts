@@ -79,30 +79,70 @@ export function buildPortfolioSeries(input: {
   manual: readonly SnapshotPoint[][];
   synced: readonly SyncedSeriesInput[];
 }): SeriesPoint[] {
-  // When each connection was synced, from the snapshots it produced.
+  const syncDates = syncDatesOf(input.synced);
+  return [...input.dates].sort().map((date) => {
+    const total = valuesOn(date, input.manual, input.synced, syncDates).reduce<number>((sum, v) => sum + (v ?? 0), 0);
+    return { date, portfolioValue: Math.round((total + Number.EPSILON) * 100) / 100 };
+  });
+}
+
+/** When each connection was synced, from the snapshots it produced. */
+function syncDatesOf(synced: readonly SyncedSeriesInput[]): Map<string, string[]> {
   const syncDates = new Map<string, string[]>();
-  for (const s of input.synced) {
+  for (const s of synced) {
     const known = syncDates.get(s.connectionId) ?? [];
     for (const p of s.points) if (!known.includes(p.date)) known.push(p.date);
     syncDates.set(s.connectionId, known);
   }
   for (const list of syncDates.values()) list.sort();
+  return syncDates;
+}
 
-  return [...input.dates].sort().map((date) => {
-    let total = 0;
-
-    for (const points of input.manual) {
-      total += lastAtOrBefore(points, date)?.value ?? 0;
-    }
-
-    for (const s of input.synced) {
+/**
+ * What each position was worth on a date — manual ones first, then synced, in
+ * the order given — or null for one that was not held then. The only place the
+ * carry-forward and "gone after a sync without it" rules are applied, so the
+ * total and the positions behind it cannot disagree.
+ */
+function valuesOn(
+  date: string,
+  manual: readonly SnapshotPoint[][],
+  synced: readonly SyncedSeriesInput[],
+  syncDates: Map<string, string[]>
+): (number | null)[] {
+  return [
+    ...manual.map((points) => lastAtOrBefore(points, date)?.value ?? null),
+    ...synced.map((s) => {
       const seen = lastAtOrBefore(s.points, date);
-      if (seen === null) continue;
-      if (!stillHeld(seen.date, date, syncDates.get(s.connectionId) ?? [])) continue;
-      total += seen.value;
-    }
+      if (seen === null) return null;
+      return stillHeld(seen.date, date, syncDates.get(s.connectionId) ?? []) ? seen.value : null;
+    }),
+  ];
+}
 
-    return { date, portfolioValue: Math.round((total + Number.EPSILON) * 100) / 100 };
+/**
+ * The positions behind the series on one date: each one held then, with what
+ * it was worth. Their sum is the series' value on that date, by construction —
+ * this is how a report shows what was held at the end of a period that has
+ * already closed.
+ *
+ * `key` is whatever the caller needs to name the position afterwards.
+ */
+export function positionsAt(input: {
+  date: string;
+  manual: readonly { key: string; points: SnapshotPoint[] }[];
+  synced: readonly SyncedSeriesInput[];
+}): { key: string; value: number }[] {
+  const values = valuesOn(
+    input.date,
+    input.manual.map((m) => m.points),
+    input.synced,
+    syncDatesOf(input.synced)
+  );
+  const keys = [...input.manual.map((m) => m.key), ...input.synced.map((s) => s.key)];
+  return keys.flatMap((key, i) => {
+    const value = values[i];
+    return value === null ? [] : [{ key, value: Math.round((value + Number.EPSILON) * 100) / 100 }];
   });
 }
 

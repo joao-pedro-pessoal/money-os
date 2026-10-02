@@ -454,8 +454,10 @@ export default function ManualPage() {
             period; a year, and a range across several months, also lists each month. The investments
             part is the portfolio&apos;s value at both ends and through the period, money deposited and
             withdrawn, what was bought and sold, what trades realised and cost in fees, dividends and
-            interest, the time-weighted and money-weighted return against your chosen index, and — for a
-            period reaching today — what is held. <em>Download CSV</em> saves it for a spreadsheet;{" "}
+            interest, the time-weighted and money-weighted return against your chosen index, and what was
+            held at the end — today&apos;s positions with their gains, or, for a period that has closed, the
+            positions on its last day as recorded then (no gain is stated for a past day: what they cost
+            then is not on record). <em>Download CSV</em> saves it for a spreadsheet;{" "}
             <em>Download PDF</em> saves a file the app draws itself, charts included, the same on the
             computer and on the phone (there, to Downloads). Both hold the figures on the screen. A return
             the history cannot support is left out with the reason, as on the Investments page; transfers

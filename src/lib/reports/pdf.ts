@@ -355,9 +355,10 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
       }
       if (inv.composition !== null) {
         const c = inv.composition;
+        const when = c.today ? "today" : `on ${shortDate(c.asOf)}`;
         blocks.push({
           type: "bars",
-          title: `What is held today, by type · ${money(c.held)}`,
+          title: `${c.today ? "What is held today" : `What was held on ${shortDate(c.asOf)}`}, by type · ${money(c.held)}`,
           items: barShares(c.byType.map((t) => ({ name: t.name, value: t.value })), 10).map((b) => ({
             name: b.name,
             value: b.share,
@@ -366,21 +367,34 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
         });
         blocks.push({
           type: "table",
-          title: "Largest positions today",
-          columns: [
-            { title: "Position", align: "left", width: 0.34 },
-            { title: "Account", align: "left", width: 0.24 },
-            { title: "Value", align: "right", width: 0.16 },
-            { title: "Share", align: "right", width: 0.1 },
-            { title: "Unrealised", align: "right", width: 0.16 },
-          ],
-          rows: c.largest.map((p) => [p.name, p.account, money(p.value), percent(p.percent), p.pnl === null ? "—" : signedMoney(p.pnl)]),
+          title: `Largest positions ${when}`,
+          columns: c.today
+            ? [
+                { title: "Position", align: "left", width: 0.34 },
+                { title: "Account", align: "left", width: 0.24 },
+                { title: "Value", align: "right", width: 0.16 },
+                { title: "Share", align: "right", width: 0.1 },
+                { title: "Unrealised", align: "right", width: 0.16 },
+              ]
+            : [
+                { title: "Position", align: "left", width: 0.4 },
+                { title: "Account", align: "left", width: 0.3 },
+                { title: "Value", align: "right", width: 0.18 },
+                { title: "Share", align: "right", width: 0.12 },
+              ],
+          rows: c.largest.map((p) => {
+            const row = [p.name, p.account, money(p.value), percent(p.percent)];
+            return c.today ? [...row, p.pnl === null ? "—" : signedMoney(p.pnl)] : row;
+          }),
         });
-        blocks.push({
-          type: "text",
-          text: `Unrealised today: ${signedMoney(c.unrealised)}${c.costUnknown > 0 ? `, leaving out ${money(c.costUnknown)} whose cost nobody states` : ""}.`,
-          muted: true,
-        });
+        if (c.unrealised !== null) {
+          blocks.push({
+            type: "text",
+            text: `Unrealised today: ${signedMoney(c.unrealised)}${c.costUnknown > 0 ? `, leaving out ${money(c.costUnknown)} whose cost nobody states` : ""}.`,
+            muted: true,
+          });
+        }
+        if (inv.compositionNote !== null) blocks.push({ type: "text", text: inv.compositionNote, muted: true });
       } else if (inv.compositionNote !== null) {
         blocks.push({ type: "text", text: inv.compositionNote, muted: true });
       }
