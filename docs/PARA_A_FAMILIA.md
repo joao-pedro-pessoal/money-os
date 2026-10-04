@@ -61,10 +61,20 @@ Manda-lhes o endereço (o de **Domains** na Vercel) e isto:
 3. Aparece um **código de recuperação**. Guarda-o: sem ele, uma palavra-passe
    esquecida não tem volta — ninguém a pode repor, nem eu.
 4. No telemóvel: abre o endereço no Chrome ou no Safari e carrega em **Install
-   app** (na página de entrada, ou em **Settings → App on this device**). No
+   app** (na página de entrada, ou em **Settings → On your phone**). No
    Android e no computador instala com um toque; no iPhone mostra os passos —
    **Partilhar → Adicionar ao ecrã principal**. Fica com ícone, como uma app. Não
    há loja nem ficheiro para descarregar: a app é o próprio site.
+5. **Atalhos (Android):** carregar uns segundos no ícone **Money OS** mostra
+   **Record expense**, **Record income**, **Cash Flow** e **Investments**.
+   Arrastando um deles para o ecrã fica um ícone próprio — por exemplo, um toque e
+   abre logo o registo de uma despesa. O passo a passo está em **Settings → On
+   your phone**. No iPhone não há atalhos: o botão **+ Add entry** faz o mesmo.
+
+**Widgets:** a app instalada pelo navegador não pode ter widgets no ecrã inicial
+— nenhum navegador o permite, nem no Android nem no iPhone. Os widgets são da app
+Android à parte (`android-shell/`), que se instala por ficheiro e hoje só funciona
+no Wi-Fi de casa, com o PC ligado.
 
 **A app está em inglês.** O navegador já não a traduz sozinho: a tradução
 automática mudava também os nomes das contas e categorias e podia estragar as

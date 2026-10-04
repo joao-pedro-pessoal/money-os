@@ -31,6 +31,20 @@
   ],
   "shortcuts": [
     {
+      "name": "Record expense",
+      "short_name": "Expense",
+      "url": "/?quick=expense",
+      "description": "Open the quick entry form for money that went out",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Record income",
+      "short_name": "Income",
+      "url": "/?quick=income",
+      "description": "Open the quick entry form for money that came in",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
       "name": "Cash Flow",
       "url": "/transactions",
       "description": "Record what came in and what went out"

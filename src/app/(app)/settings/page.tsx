@@ -42,9 +42,14 @@ export default async function SettingsGeneralPage() {
       <div className="card">
         <SettingRow
           title="App on this device"
-          description="Money OS has no store or download: your browser installs it, with its own icon on the home screen. On another phone, open this site there and do the same."
+          description="Money OS has no store or download: your browser installs it, with its own icon on the home screen. Shortcuts and widgets are explained under On your phone."
         >
-          <InstallApp />
+          <div className="space-y-2">
+            <InstallApp />
+            <Link href="/settings/phone" className="text-xs text-[var(--accent)]">
+              On your phone: install, shortcuts, widgets →
+            </Link>
+          </div>
         </SettingRow>
         <SettingRow
           title="Language"

@@ -8,6 +8,7 @@ const TABS = [
   { href: "/settings/categories", label: "Categories" },
   { href: "/settings/rates", label: "Currency & rates" },
   { href: "/settings/data", label: "Your data" },
+  { href: "/settings/phone", label: "On your phone" },
 ];
 
 /**
