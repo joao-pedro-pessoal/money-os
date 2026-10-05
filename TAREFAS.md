@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **1 de outubro de 2026**.
+Atualizado em **5 de outubro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -18,6 +18,9 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
   Simple e Complex mantêm o nome.
 - **Última funcionalidade entregue:** F17 — relatórios à medida, com período
   livre, dinheiro e/ou investimentos, em PDF com gráficos e em CSV (01/10/2026, H28).
+- **Trabalho em curso (05/10/2026):** branch `f17-relatorios` na pasta
+  `C:\Users\joao2\Projects\money-os-f17`, por juntar ao `main`. Corrigir B01–B09
+  (secção 2) antes de juntar. Passagem de trabalho: [CONTINUAR_NO_CODEX.md](CONTINUAR_NO_CODEX.md).
 - **Próxima prioridade de manutenção:** A01–A03 concluídos a 17/09. Seguem
   A04–A08 e os ecrãs do telemóvel que ainda forem reportados.
 - **Evolução futura, quando pedida:** usar a mesma experiência com dados locais,
@@ -38,6 +41,15 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 | A06 | Unificar as preferências de painéis | Definir a precedência entre preferências no servidor e escolhas no browser, incluindo Simple/Complex. Preservar escolhas guardadas e verificar recarregamento e mudança de dispositivo. |
 | A07 | Afinar os ecrãs que ainda apresentam dificuldades no telemóvel | Trabalho contínuo orientado pelos problemas reportados. As correções recentes de menu, símbolo USD e ordem dos gráficos estão concluídas na secção 5. |
 | A08 | Confirmar o destino das contas arquivadas com saldo | A auditoria recente ainda nomeia contas antigas arquivadas. Confirmar se são histórico, duplicados ou contas a reativar; continuam fora dos totais. Não apagar nem reativar com base apenas nas notas antigas de consolidação. |
+| B01 | Português escolhido bloqueia a tradução das páginas por traduzir | `src/app/layout.tsx:146` (`translate="no"` e `lang` na página inteira). Antes do branch, o Chrome traduzia o Painel; agora fica em inglês. Proposta e critério em CONTINUAR_NO_CODEX.md, secção 3. Confirmar num telemóvel real. |
+| B02 | Install app no site de casa (http pelo Wi-Fi) | `src/lib/ui/install.ts:47`. Não é contexto seguro: o browser não instala. Dizer para usar o endereço publicado. |
+| B03 | Atalho com sessão expirada perde o pedido | `src/proxy.ts:43` não guarda o destino; depois de entrar fica no painel. `next` só com caminhos relativos (`/`, nunca `//`). |
+| B04 | Escolha de língua local nunca limpa | `src/components/LanguageContext.tsx:39`; duas abas ficam com línguas misturadas. |
+| B05 | Erros do registo rápido em inglês com Português | `src/components/QuickEntry.tsx:108`; juntar as mensagens da validação ao mapa `server` de `src/lib/i18n/messages.ts`. |
+| B06 | `lang="pt"` em páginas ainda em inglês | Mesmo sítio que B01; resolve-se com B01. |
+| B07 | Firefox no computador recebe instruções de instalação impossíveis | `src/lib/ui/install.ts:47`; o Firefox de computador não instala sites. |
+| B08 | CSV não diz porque falta "Change not explained by deposits" | `src/lib/reports/investments.ts:489`; pôr a razão (`unexplainedWithheld`). |
+| B09 | Traduções das abas presas ao texto inglês sem teste que o apanhe | `src/lib/i18n/messages.ts:637`; o teste deve percorrer as listas reais de páginas e abas. |
 
 ## 3. Funcionalidades por desenvolver
 
@@ -51,6 +63,8 @@ não significa que todas tenham sido pedidas para implementação imediata.
 | F03 | Relatórios | **Mensal feito a 17/09/2026** (H14 na secção 5); **semanal e anual feitos a 21/09/2026** (H27). Possível a seguir, se pedido: envio automático no fim do período (depende de F02). Relatórios à medida: **feitos a 01/10/2026** (F17, H28). |
 | F17 | Relatórios à medida | **Feito a 01–02/10/2026** (H28 na secção 5), incluindo a composição no fim de um período já terminado e o modo privacidade nas percentagens da parte de investimentos. Pedido original: (1) **período livre**, de uma data a outra, além de semana, mês e ano; (2) **âmbito à escolha**: dinheiro do dia a dia, investimentos, ou ambos; (3) **relatório de investimentos do período**: contribuições, compras e vendas, dividendos e juros recebidos, ganhos realizados e não realizados, rentabilidade (TWR/MWR) e comparação com o índice de referência, composição no fim do período; (4) **exportar** em CSV (uma secção por parte) e em **PDF gerado pela app, com gráficos** — património ao longo do período, gastos por categoria, composição e evolução dos investimentos — igual no computador e no telemóvel; (5) cada pessoa só exporta os seus dados (já garantido pela base de dados), e o modo privacidade esconde os valores no ecrã. Critério: o mesmo período dá os mesmos totais no ecrã, no CSV e no PDF, e coincide com as páginas Analytics e Investments. |
 | F18 | App em português | **Fase 1 feita a 05/10/2026** (H31 na secção 5): a escolha de língua vale para toda a app (cookie lido também pelo servidor) e estão em português os menus (computador e telemóvel), as abas de todas as páginas, a entrada e a criação de conta, o registo rápido e as Definições. **A fazer, por fases:** o resto das páginas (Painel, Contas, Movimentos, Orçamentos, Investimentos, Análise, Relatórios, Manual…), depois de publicado o trabalho de privacidade que mexe nos mesmos ficheiros, e as mensagens de erro do servidor ainda não conhecidas em `lib/i18n/messages.ts`. Outras línguas só quando houver tradução completa; a lista oferece apenas English e Português. Critério: nenhum texto da interface fica em inglês com Português escolhido; nomes e valores do utilizador nunca traduzidos. |
+| F19 | App na Play Store, fase 1 | **Proposto a 05/10/2026, por confirmar.** O site publicado embrulhado como app Android (Trusted Web Activity), com o mesmo login. Funciona tudo menos corretoras com chave. Precisa: páginas de privacidade, termos e pedido para apagar a conta; confirmação de email, proteção anti-robô e limites por endereço na criação de conta; registo de erros e cópias de segurança; o resto de `docs/LEGAL_SECURITY_CHECKLIST.md`. Do utilizador: conta de programador Google (25 USD), formulários da Google, 12 testadores durante 14 dias (conta pessoal nova). Depende de F18 (público português). |
+| F20 | Corretoras com chave para toda a gente, fase 2 | **Proposto a 05/10/2026, por confirmar.** Segue a decisão de `docs/PLANO_MOBILE.md`: chaves só no telemóvel (Android Keystore), uma por aparelho; a app sincroniza de 15 em 15 min mesmo fechada e envia só saldos, posições e movimentos para a conta. Reaproveita os conectores que já correm em `mobile/`. O servidor recebe resultados e nunca chaves. Decisões por tomar: confirmar este caminho (contra chaves cifradas no servidor); conta Google pessoal ou de empresa; domínio próprio; manter o servidor capaz de ler os dados (como hoje, a dizer na política de privacidade) ou cifragem só nos aparelhos; gratuita ou paga. |
 | F04 | Anexar recibos | Foto/PDF associado à transação, com armazenamento, exportação, backup, restauro e eliminação coerentes. |
 | F05 | Completar o modelo de obrigações | Acrescentar cupões e maturidade, com uma definição explícita da avaliação. Priorizar quando existir uma obrigação real para validar. |
 | F06 | Validar e ampliar conectores | Testar Kraken, Binance e restantes caminhos de sucesso ainda sem validação com contas reais. Acrescentar Funding/Earn da Binance. Coinbase é candidata, dependente de credenciais de teste e confirmação da API. |
