@@ -5,6 +5,9 @@ import { useState } from "react";
 import { recoverAccount, signIn, signUp } from "@/actions/auth";
 import { signInKeyFor } from "@/lib/accounts/credentials";
 import { passwordProblem } from "@/lib/accounts/password";
+import { localeOf } from "@/lib/i18n/languages";
+import { serverMessageIn } from "@/lib/i18n/messages";
+import { useLanguage } from "./LanguageContext";
 
 type Step = "sign-in" | "sign-up" | "recover" | "code";
 
@@ -22,6 +25,10 @@ type Step = "sign-in" | "sign-up" | "recover" | "code";
  */
 export default function LoginScreen({ signUps }: { signUps: boolean }) {
   const router = useRouter();
+  const { m, language } = useLanguage();
+  const w = m.auth;
+  /** What the server or the password check said, in the chosen language when it is a known message. */
+  const said = (message: string) => serverMessageIn(m, message);
   const [step, setStep] = useState<Step>("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,13 +56,13 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
     try {
       await work();
     } catch (e) {
-      setProblem(e instanceof Error ? e.message : "The server could not be reached. Try again in a moment.");
+      setProblem(e instanceof Error ? e.message : w.unreachable);
     }
     setBusy(false);
   };
 
   const lockedMessage = (until: string) =>
-    `Too many wrong attempts. Try again at ${new Date(until).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`;
+    w.locked(new Date(until).toLocaleTimeString(localeOf(language), { hour: "2-digit", minute: "2-digit" }));
 
   const showCode = (value: string) => {
     setRecoveryCode(value);
@@ -65,7 +72,7 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
 
   const signInNow = () =>
     attempt(async () => {
-      if (!email.trim() || !password) throw new Error("Write your email and your password.");
+      if (!email.trim() || !password) throw new Error(w.writeEmailAndPassword);
       const signInKey = await signInKeyFor(email, password);
       let outcome = await signIn({ email, signInKey });
       // An account from before keys: its password once, to move it.
@@ -79,29 +86,29 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
           return;
         case "legacy":
         case "wrong":
-          throw new Error("That email and password do not match.");
+          throw new Error(w.noMatch);
         case "locked":
           throw new Error(lockedMessage(outcome.until));
         case "refused":
-          throw new Error(outcome.reason);
+          throw new Error(said(outcome.reason));
       }
     });
 
   const signUpNow = () =>
     attempt(async () => {
-      if (!email.trim()) throw new Error("Write your email.");
+      if (!email.trim()) throw new Error(w.writeEmail);
       const weak = passwordProblem(password);
-      if (weak) throw new Error(weak);
+      if (weak) throw new Error(said(weak));
       const outcome = await signUp({ email, signInKey: await signInKeyFor(email, password) });
-      if (outcome.kind === "refused") throw new Error(outcome.reason);
+      if (outcome.kind === "refused") throw new Error(said(outcome.reason));
       showCode(outcome.recoveryCode);
     });
 
   const recoverNow = () =>
     attempt(async () => {
-      if (!email.trim() || !code.trim()) throw new Error("Write your email and your recovery code.");
+      if (!email.trim() || !code.trim()) throw new Error(w.writeEmailAndCode);
       const weak = passwordProblem(password);
-      if (weak) throw new Error(weak);
+      if (weak) throw new Error(said(weak));
       const outcome = await recoverAccount({
         email,
         recoveryCode: code,
@@ -112,17 +119,17 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
           showCode(outcome.recoveryCode);
           return;
         case "wrong":
-          throw new Error("That email and recovery code do not match.");
+          throw new Error(w.codeNoMatch);
         case "locked":
           throw new Error(lockedMessage(outcome.until));
         case "refused":
-          throw new Error(outcome.reason);
+          throw new Error(said(outcome.reason));
       }
     });
 
   const emailField = (
     <label className="block space-y-1.5">
-      <span className="text-sm text-[var(--foreground)]">Email</span>
+      <span className="text-sm text-[var(--foreground)]">{w.email}</span>
       <input
         className="input auth-input"
         type="email"
@@ -152,10 +159,10 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
           type="button"
           className="absolute inset-y-0 right-0 px-3 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
           aria-pressed={shown}
-          aria-label={shown ? "Hide the password" : "Show the password"}
+          aria-label={shown ? w.hidePassword : w.showPassword}
           onClick={() => setShown((value) => !value)}
         >
-          {shown ? "Hide" : "Show"}
+          {shown ? w.hide : w.show}
         </button>
       </span>
       {hint && <span className="block text-xs text-[var(--muted)]">{hint}</span>}
@@ -206,16 +213,14 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
   if (step === "code" && recoveryCode) {
     return (
       <>
-        <Heading title="Your recovery code">
-          Write it down, or keep it in a password manager. If you ever forget your password, this code is how you set
-          a new one — and nobody, including whoever runs this site, can give it back to you.
-        </Heading>
+        <Heading title={w.codeTitle}>{w.codeText}</Heading>
         <p className="card p-4 text-center font-mono text-lg tracking-wider break-all select-all">{recoveryCode}</p>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />I have saved it
+          <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />
+          {w.savedIt}
         </label>
         <button type="button" className="btn w-full min-h-11" disabled={!saved} onClick={enter}>
-          Continue
+          {w.continue}
         </button>
       </>
     );
@@ -224,17 +229,17 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
   if (step === "sign-up") {
     return (
       <>
-        <Heading title="Create your account">Your own Money OS: everything in it is yours alone.</Heading>
+        <Heading title={w.signUpTitle}>{w.signUpText}</Heading>
         {form(
           signUpNow,
           <>
             {emailField}
-            {passwordField("Password", "new-password", "At least 12 characters. A long one: it guards your money records.")}
+            {passwordField(w.password, "new-password", w.newPasswordHint)}
             {problemNotice}
-            {submit("Create my account", "Creating it…")}
+            {submit(w.createMyAccount, w.creating)}
           </>
         )}
-        {switchTo("Already have an account?", "Sign in", "sign-in")}
+        {switchTo(w.haveAccount, w.signIn, "sign-in")}
       </>
     );
   }
@@ -242,15 +247,13 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
   if (step === "recover") {
     return (
       <>
-        <Heading title="A new password">
-          With the recovery code you were given when the account was made. It is used up, and you get a new one.
-        </Heading>
+        <Heading title={w.recoverTitle}>{w.recoverText}</Heading>
         {form(
           recoverNow,
           <>
             {emailField}
             <label className="block space-y-1.5">
-              <span className="text-sm text-[var(--foreground)]">Recovery code</span>
+              <span className="text-sm text-[var(--foreground)]">{w.recoveryCode}</span>
               <input
                 className="input auth-input font-mono"
                 autoComplete="off"
@@ -260,34 +263,34 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
                 placeholder="xxxxx-xxxxx-xxxxx-xxxxx"
               />
             </label>
-            {passwordField("New password", "new-password", "At least 12 characters.")}
+            {passwordField(w.newPassword, "new-password", w.atLeast)}
             {problemNotice}
-            {submit("Set the new password", "Setting it…")}
+            {submit(w.setPassword, w.setting)}
           </>
         )}
-        {switchTo("Remembered it?", "Sign in", "sign-in")}
+        {switchTo(w.remembered, w.signIn, "sign-in")}
       </>
     );
   }
 
   return (
     <>
-      <Heading title="Sign in">With your email and password.</Heading>
+      <Heading title={w.signIn}>{w.signInText}</Heading>
       {form(
         signInNow,
         <>
           {emailField}
-          {passwordField("Password", "current-password")}
+          {passwordField(w.password, "current-password")}
           <div className="flex justify-end -mt-2">
             <button type="button" className="text-xs text-[var(--accent)] hover:underline" onClick={() => go("recover")}>
-              Forgot your password?
+              {w.forgot}
             </button>
           </div>
           {problemNotice}
-          {submit("Sign in", "Signing in…")}
+          {submit(w.signIn, w.signingIn)}
         </>
       )}
-      {signUps && switchTo("New here?", "Create an account", "sign-up")}
+      {signUps && switchTo(w.newHere, w.createAnAccount, "sign-up")}
     </>
   );
 }

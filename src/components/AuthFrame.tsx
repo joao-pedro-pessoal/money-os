@@ -1,4 +1,6 @@
 import InstallApp from "./InstallApp";
+import LanguagePicker from "./LanguagePicker";
+import { words } from "@/actions/language";
 
 /**
  * The frame of the way in: signing in, making an account, recovering one. On a wide screen the left half says what this is; on a phone it
@@ -7,7 +9,8 @@ import InstallApp from "./InstallApp";
  * Painted from the theme's tokens only, so each of the eight themes gets its
  * own version of it, the light ones included.
  */
-export default function AuthFrame({ children }: { children: React.ReactNode }) {
+export default async function AuthFrame({ children }: { children: React.ReactNode }) {
+  const w = (await words()).auth;
   return (
     <div className="app-frame grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <aside className="auth-hero hidden lg:flex flex-col justify-between gap-10 p-12 xl:p-16">
@@ -22,28 +25,35 @@ export default function AuthFrame({ children }: { children: React.ReactNode }) {
             style={{ fontFamily: "var(--font-heading)" }}
             className="text-4xl xl:text-5xl leading-[1.1] tracking-tight text-[var(--foreground)]"
           >
-            Your money, <span className="text-[var(--accent)]">in one place.</span>
+            {w.heroBefore}
+            <span className="text-[var(--accent)]">{w.heroAccent}</span>
           </p>
           <ul className="space-y-5">
-            <Point title="Everything in one view" icon={<IconChart />}>
-              Accounts, cash flow, budgets and investments — what you have and where it went.
+            <Point title={w.oneViewTitle} icon={<IconChart />}>
+              {w.oneViewText}
             </Point>
-            <Point title="Yours alone" icon={<IconLock />}>
-              Your own account. What you record is kept apart from everyone else&apos;s, and only you see it.
+            <Point title={w.yoursTitle} icon={<IconLock />}>
+              {w.yoursText}
             </Point>
-            <Point title="On your phone too" icon={<IconPhone />}>
-              Open it in your phone&apos;s browser and add it to the home screen: it installs like an app.
+            <Point title={w.phoneTitle} icon={<IconPhone />}>
+              {w.phoneText}
             </Point>
           </ul>
         </div>
 
-        <p className="relative text-xs text-[var(--muted)]">Private by design. Open source, under the AGPL.</p>
+        <p className="relative text-xs text-[var(--muted)]">{w.footer}</p>
       </aside>
 
       <main className="flex flex-col items-center justify-center px-4 py-10 sm:px-8">
         <div className="w-full max-w-md space-y-8">
-          <div className="lg:hidden">
-            <Brand />
+          {/* Before signing in there is no Settings page: the language is chosen here. */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="lg:hidden">
+              <Brand />
+            </div>
+            <div className="ml-auto">
+              <LanguagePicker className="input w-auto py-1 text-sm" />
+            </div>
           </div>
           {children}
           <InstallApp compact />

@@ -1,21 +1,23 @@
 import { DASHBOARD_WINDOWS, type DashboardWindowPreferences } from "@/lib/dashboard/windows";
 import { setDashboardWindowPreferences } from "@/actions/settings";
+import { words } from "@/actions/language";
 
-export default function DashboardWindowSettings({ preferences }: { preferences: DashboardWindowPreferences }) {
+export default async function DashboardWindowSettings({ preferences }: { preferences: DashboardWindowPreferences }) {
+  const w = (await words()).settings;
   return (
     <SettingBlock>
       <form action={setDashboardWindowPreferences} className="space-y-3">
         {DASHBOARD_WINDOWS.map((window) => (
           <label key={window.id} className="flex items-center justify-between gap-3 text-xs">
-            <span>{window.label}</span>
+            <span>{w.windows[window.id] ?? window.label}</span>
             <select name={`dashboardWindow_${window.id}`} className="input w-auto" defaultValue={preferences[window.id]}>
-              <option value="visible">Show open</option>
-              <option value="minimized">Show minimized</option>
-              <option value="hidden">Hide</option>
+              <option value="visible">{w.windowShowOpen}</option>
+              <option value="minimized">{w.windowShowMinimized}</option>
+              <option value="hidden">{w.windowHide}</option>
             </select>
           </label>
         ))}
-        <button type="submit" className="btn">Save dashboard</button>
+        <button type="submit" className="btn">{w.saveDashboard}</button>
       </form>
     </SettingBlock>
   );

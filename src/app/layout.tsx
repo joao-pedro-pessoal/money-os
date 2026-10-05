@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PAGE_BACKGROUND } from "@/lib/themeColors";
+import { currentLanguage } from "@/actions/language";
+import { LanguageProvider } from "@/components/LanguageContext";
 
 export const metadata: Metadata = {
   title: "Money OS",
@@ -35,7 +37,8 @@ export const metadata: Metadata = {
    * included, so it no longer read as the English interface it is. It also
    * translates what is yours — account names, shops, categories — which this
    * app never changes, and it rewrites the page under React, which can break
-   * it. The menus have a language of their own in Settings.
+   * it. The app has its own language choice, in Settings and on the sign-in
+   * page (`lib/i18n`).
    */
   other: { "darkreader-lock": "true", google: "notranslate" },
 };
@@ -77,8 +80,6 @@ export const viewport: Viewport = {
  */
 const applyStoredTheme = `
 try {
-  var l = localStorage.getItem("moneyos_language");
-  if (["en","pt","es","fr","de","it","nl","pl","tr","ja","ko","zh"].indexOf(l) >= 0) document.documentElement.lang = l;
   document.documentElement.dataset.mobileUi = localStorage.getItem("moneyos_mobile_mode") === "simple" ? "simple" : "complex";
   var a = localStorage.getItem("moneyos_accent");
   var m = localStorage.getItem("moneyos_mode");
@@ -130,7 +131,9 @@ window.addEventListener("appinstalled", function () {
 });
 `;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The language chosen, from its cookie: the server draws in it from the first byte.
+  const language = await currentLanguage();
   return (
     /**
      * `suppressHydrationWarning` because the script above writes `data-accent`
@@ -139,13 +142,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
      * every page for exactly this. Scoped to this element, so a real mismatch
      * anywhere inside still reports.
      */
-    <html lang="en" translate="no" className="h-full antialiased" suppressHydrationWarning>
+    <html lang={language} translate="no" className="h-full antialiased" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: applyStoredTheme }} />
         <script dangerouslySetInnerHTML={{ __html: registerServiceWorker }} />
         <script dangerouslySetInnerHTML={{ __html: keepInstallPrompt }} />
       </head>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <LanguageProvider language={language}>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

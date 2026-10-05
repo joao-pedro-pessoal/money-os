@@ -8,7 +8,6 @@ import { getQuickEntryOptions } from "@/actions/transactions";
 import QuickEntry from "@/components/QuickEntry";
 import MobileNav from "@/components/MobileNav";
 import MobileModeSwitch from "@/components/MobileMode";
-import { LanguageProvider } from "@/components/LanguageContext";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +22,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <ThemeProvider>
-      <LanguageProvider>
       <PrivacyProvider>
         <NavProvider>
           <div className="app-frame flex">
@@ -42,7 +40,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </NavProvider>
       </PrivacyProvider>
-      </LanguageProvider>
     </ThemeProvider>
   );
 }

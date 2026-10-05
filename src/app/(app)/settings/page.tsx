@@ -23,6 +23,9 @@ import { currentUserId, logOutOtherDevices, sessionsNotBefore } from "@/actions/
 import { accountEmail } from "@/actions/auth";
 import AccountSettings from "@/components/AccountSettings";
 import { OWNER_USER_ID } from "@/db/schema";
+import { currentLanguage } from "@/actions/language";
+import { localeOf } from "@/lib/i18n/languages";
+import { messagesFor } from "@/lib/i18n/messages";
 
 export default async function SettingsGeneralPage() {
   const baseCurrency = await getBaseCurrency();
@@ -36,32 +39,34 @@ export default async function SettingsGeneralPage() {
   const userId = await currentUserId();
   const sessionsEndedAt = userId ? await sessionsNotBefore(userId) : null;
   const email = await accountEmail();
+  const language = await currentLanguage();
+  const w = messagesFor(language).settings;
 
   return (
     <>
       <div className="card">
         <SettingRow
-          title="App on this device"
-          description="Money OS has no store or download: your browser installs it, with its own icon on the home screen. Shortcuts and widgets are explained under On your phone."
+          title={w.appTitle}
+          description={w.appText}
         >
           <div className="space-y-2">
             <InstallApp />
             <Link href="/settings/phone" className="text-xs text-[var(--accent)]">
-              On your phone: install, shortcuts, widgets →
+              {w.phoneLink}
             </Link>
           </div>
         </SettingRow>
         <SettingRow
-          title="Language"
-          description="The language of the menus. Pages stay in English, and your financial data is never translated."
+          title={w.languageTitle}
+          description={w.languageText}
         >
           <LanguagePicker />
         </SettingRow>
       </div>
       <div className="card">
         <SettingRow
-          title="Base currency"
-          description="Every total in the app is converted to this. Individual accounts keep their own currency — only the summed figures change."
+          title={w.baseTitle}
+          description={w.baseText}
         >
           <form action={setBaseCurrency} className="flex gap-2">
             <select name="baseCurrency" className="input" defaultValue={baseCurrency}>
@@ -72,7 +77,7 @@ export default async function SettingsGeneralPage() {
               ))}
             </select>
             <button type="submit" className="btn whitespace-nowrap">
-              Save
+              {w.save}
             </button>
           </form>
         </SettingRow>
@@ -81,8 +86,8 @@ export default async function SettingsGeneralPage() {
             of 170 entries is a worse answer to "show me this in dollars" than
             two buttons on the dashboard. */}
         <SettingRow
-          title="Favourite currencies"
-          description="Offered as a one-click view on the dashboard. Switching there converts what you see — the base currency above is still what every total is stored and compared in."
+          title={w.favouritesTitle}
+          description={w.favouritesText}
           stacked
         >
           <form action={setFavouriteCurrencies} className="space-y-3">
@@ -102,21 +107,21 @@ export default async function SettingsGeneralPage() {
                     />
                     <span className={isBase ? "text-[var(--muted)]" : undefined}>
                       {c.code}
-                      {isBase && " (base)"}
+                      {isBase && w.baseMark}
                     </span>
                   </label>
                 );
               })}
             </div>
             <button type="submit" className="btn">
-              Save favourites
+              {w.saveFavourites}
             </button>
           </form>
         </SettingRow>
 
         <SettingRow
-          title="Dashboard currency"
-          description="The dashboard opens in this. Everywhere else stays in the base currency, so this doesn't change what the app stores — only what that one page renders."
+          title={w.dashboardCurrencyTitle}
+          description={w.dashboardCurrencyText}
         >
           <form action={setDashboardCurrency} className="flex gap-2">
             <select
@@ -124,7 +129,7 @@ export default async function SettingsGeneralPage() {
               className="input"
               defaultValue={dashboardCurrency ?? ""}
             >
-              <option value="">Same as base ({baseCurrency})</option>
+              <option value="">{w.sameAsBase(baseCurrency)}</option>
               {favourites
                 .filter((c) => c !== baseCurrency)
                 .map((c) => (
@@ -134,14 +139,14 @@ export default async function SettingsGeneralPage() {
                 ))}
             </select>
             <button type="submit" className="btn whitespace-nowrap">
-              Save
+              {w.save}
             </button>
           </form>
         </SettingRow>
 
         <SettingRow
-          title="Default account"
-          description="Where a new transaction starts. Almost every hand-entered one comes from the same place — cash, usually, since that is the account no connector fills in for you."
+          title={w.defaultAccountTitle}
+          description={w.defaultAccountText}
         >
           <form action={setDefaultAccountId} className="flex gap-2">
             <select
@@ -149,7 +154,7 @@ export default async function SettingsGeneralPage() {
               className="input"
               defaultValue={defaultAccountId ?? ""}
             >
-              <option value="">No default — pick every time</option>
+              <option value="">{w.noDefault}</option>
               {activeAccounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -157,18 +162,18 @@ export default async function SettingsGeneralPage() {
               ))}
             </select>
             <button type="submit" className="btn whitespace-nowrap">
-              Save
+              {w.save}
             </button>
           </form>
         </SettingRow>
 
-        <SettingRow title="Appearance" description="Each theme has a light and a dark variant." stacked>
+        <SettingRow title={w.appearanceTitle} description={w.appearanceText} stacked>
           <ThemePicker />
         </SettingRow>
 
         <SettingRow
-          title="Analysis windows"
-          description="Choose which analysis detail appears, and whether it starts open or minimized. Other app sections with a header can also be minimized by clicking that header."
+          title={w.windowsTitle}
+          description={w.windowsText}
           stacked
         >
           <DashboardWindowSettings preferences={dashboardWindows} />
@@ -181,27 +186,24 @@ export default async function SettingsGeneralPage() {
 
       <div className="card">
         <SettingRow
-          title="Your account"
-          description="The recovery code is how you set a new password if you forget this one. Make a new one if you have lost it, or if someone may have seen it."
+          title={w.accountTitle}
+          description={w.accountText}
         >
           <AccountSettings email={email} canDelete={userId !== null && userId !== OWNER_USER_ID} />
         </SettingRow>
         <SettingRow
-          title="Signed-in devices"
+          title={w.devicesTitle}
           description={
             <>
-              Each phone and browser that logs in stays signed in until it has gone 30 days without being used.
-              If a phone is lost, or someone may have seen your session, end them all: every other device has to
-              enter the password again, and this one stays signed in.
-              {sessionsEndedAt && (
-                <> Last done {sessionsEndedAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}.</>
-              )}
+              {w.devicesText}
+              {sessionsEndedAt &&
+                w.lastDone(sessionsEndedAt.toLocaleString(localeOf(language), { dateStyle: "medium", timeStyle: "short" }))}
             </>
           }
         >
           <form action={logOutOtherDevices}>
             <button type="submit" className="btn whitespace-nowrap">
-              Log out other devices
+              {w.logOutOthers}
             </button>
           </form>
         </SettingRow>
@@ -212,13 +214,10 @@ export default async function SettingsGeneralPage() {
       <Link href="/import" className="card p-4 block hover:opacity-90 transition-opacity">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <div className="text-sm font-medium">Import a bank statement</div>
-            <p className="text-xs text-[var(--muted)] mt-1 max-w-xl">
-              Your bank&apos;s format doesn&apos;t matter — copy the instruction, paste it into any AI
-              with your statement, and upload what comes back.
-            </p>
+            <div className="text-sm font-medium">{w.importTitle}</div>
+            <p className="text-xs text-[var(--muted)] mt-1 max-w-xl">{w.importText}</p>
           </div>
-          <span className="text-[var(--accent)] text-sm whitespace-nowrap">Open →</span>
+          <span className="text-[var(--accent)] text-sm whitespace-nowrap">{w.open}</span>
         </div>
       </Link>
     </>

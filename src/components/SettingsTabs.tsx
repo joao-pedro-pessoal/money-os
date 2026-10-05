@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLanguage } from "./LanguageContext";
+import { labelIn } from "@/lib/i18n/messages";
 
 const TABS = [
   { href: "/settings", label: "General" },
@@ -18,9 +20,10 @@ const TABS = [
  */
 export default function SettingsTabs() {
   const pathname = usePathname();
+  const { m } = useLanguage();
 
   return (
-    <nav aria-label="Settings pages" className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
+    <nav aria-label={m.nav.settingsPages} className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
       {TABS.map((t) => {
         const active = pathname === t.href;
         return (
@@ -34,7 +37,7 @@ export default function SettingsTabs() {
               color: active ? "var(--foreground)" : "var(--muted)",
             }}
           >
-            {t.label}
+            {labelIn(m, t.label)}
           </Link>
         );
       })}

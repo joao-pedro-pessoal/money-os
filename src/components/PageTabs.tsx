@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLanguage } from "./LanguageContext";
+import { labelIn } from "@/lib/i18n/messages";
 
 /**
  * Tabs for pages that belong together but live at sibling URLs.
@@ -12,9 +14,11 @@ import { usePathname } from "next/navigation";
  */
 export default function PageTabs({ tabs }: { tabs: { href: string; label: string }[] }) {
   const pathname = usePathname();
+  // Tabs are named in English in `lib/navigation.ts` and translated by that name.
+  const { m } = useLanguage();
 
   return (
-    <nav aria-label="Related pages" className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
+    <nav aria-label={m.nav.relatedPages} className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
       {tabs.map((t) => {
         const active = pathname === t.href;
         return (
@@ -28,7 +32,7 @@ export default function PageTabs({ tabs }: { tabs: { href: string; label: string
               color: active ? "var(--foreground)" : "var(--muted)",
             }}
           >
-            {t.label}
+            {labelIn(m, t.label)}
           </Link>
         );
       })}

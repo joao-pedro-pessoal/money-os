@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "./LanguageContext";
 
 /** What the Android app exposes to its own pages. Absent in a browser and in apps before 0.7.0. */
 type AndroidBridge = {
@@ -20,6 +21,7 @@ function bridge(): AndroidBridge | null {
  * `money-os:alert-notifications`, because the system may refuse the permission.
  */
 export default function PhoneAlertSettings() {
+  const w = useLanguage().m.settings;
   const [available, setAvailable] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [waiting, setWaiting] = useState(false);
@@ -45,14 +47,8 @@ export default function PhoneAlertSettings() {
   return (
     <div className="card p-4 space-y-3">
       <div>
-        <div className="text-sm font-medium">Alerts on this phone</div>
-        <p className="text-xs text-[var(--muted)] mt-1 max-w-xl">
-          A notification for what the bell would show you: a budget over or running ahead, a
-          subscription about to charge or waiting to be confirmed, a balance not updated in two
-          months, a connection that stopped syncing, a watchlist price reached. Each one once. The
-          phone checks about every half hour, and only hears while it can reach this computer: on
-          the same Wi-Fi, with the site running.
-        </p>
+        <div className="text-sm font-medium">{w.alertsTitle}</div>
+        <p className="text-xs text-[var(--muted)] mt-1 max-w-xl">{w.alertsText}</p>
       </div>
       <label className="flex items-center gap-3 text-sm">
         <input
@@ -64,7 +60,7 @@ export default function PhoneAlertSettings() {
             bridge()?.setAlertNotifications?.(event.target.checked);
           }}
         />
-        Alert notifications
+        {w.alertsToggle}
       </label>
     </div>
   );

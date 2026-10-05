@@ -76,9 +76,13 @@ Manda-lhes o endereço (o de **Domains** na Vercel) e isto:
 Android à parte (`android-shell/`), que se instala por ficheiro e hoje só funciona
 no Wi-Fi de casa, com o PC ligado.
 
-**A app está em inglês.** O navegador já não a traduz sozinho: a tradução
-automática mudava também os nomes das contas e categorias e podia estragar as
-páginas. Os nomes do menu podem ficar noutra língua em **Settings → Language**.
+**Língua:** a app abre em inglês. Para português, escolhe **Português** no canto
+da página de entrada ou em **Settings → Language** (Definições → Idioma). Já
+estão em português os menus, a entrada e a criação de conta, o registo rápido e
+as Definições; as outras páginas ainda estão em inglês e passam a português por
+fases. Os nomes das tuas contas e categorias e os valores nunca são traduzidos.
+O navegador já não traduz a app sozinho: essa tradução mudava também os teus
+nomes e podia estragar as páginas.
 
 **Se esqueceres a palavra-passe:** na página de entrada, **Forgot your
 password?**, e depois o email, o código de recuperação e uma palavra-passe nova.

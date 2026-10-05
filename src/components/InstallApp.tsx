@@ -2,6 +2,8 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { installRoute, type InstallRoute } from "@/lib/ui/install";
+import { useLanguage } from "./LanguageContext";
+import Rich from "./Rich";
 
 /** Chrome's install prompt, kept by the script in `app/layout.tsx` from the moment it arrives. */
 type InstallPrompt = Event & {
@@ -56,6 +58,7 @@ function serverRoute(): InstallRoute | null {
  */
 export default function InstallApp({ compact = false }: { compact?: boolean }) {
   const route = useSyncExternalStore(subscribe, readRoute, serverRoute);
+  const w = useLanguage().m.install;
   const [showSteps, setShowSteps] = useState(false);
   const [installed, setInstalled] = useState(false);
 
@@ -65,9 +68,7 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
     if (compact) return null;
     return (
       <p className="text-sm text-[var(--muted)]">
-        {route === "android-app"
-          ? "You are in the Money OS Android app."
-          : "Installed — you are using Money OS as an app on this device."}
+        {route === "android-app" ? w.androidApp : w.installed}
       </p>
     );
   }
@@ -95,8 +96,8 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
     <div className={compact ? "card p-4 space-y-2" : "space-y-2"}>
       {compact && (
         <p className="text-sm">
-          <span className="font-medium">Use it like an app.</span>{" "}
-          <span className="text-[var(--muted)]">Install Money OS on this phone or computer — no store, no download.</span>
+          <span className="font-medium">{w.pitchTitle}</span>{" "}
+          <span className="text-[var(--muted)]">{w.pitchText}</span>
         </p>
       )}
       <button
@@ -105,22 +106,11 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
         onClick={() => (route === "prompt" ? install() : setShowSteps((open) => !open))}
         aria-expanded={route === "prompt" ? undefined : showSteps}
       >
-        Install app
+        {w.button}
       </button>
       {showSteps && (
         <p className="text-xs text-[var(--muted)] leading-relaxed max-w-sm" role="status">
-          {route === "ios" ? (
-            <>
-              In Safari, tap <strong>Share</strong> (the square with an arrow), then{" "}
-              <strong>Add to Home Screen</strong>, then <strong>Add</strong>. Money OS then opens from its own icon.
-            </>
-          ) : (
-            <>
-              Open your browser&apos;s menu (<strong>⋮</strong> or <strong>⋯</strong>) and choose{" "}
-              <strong>Install app</strong> or <strong>Add to Home screen</strong>. On a computer, Chrome and Edge also
-              show an install icon at the end of the address bar.
-            </>
-          )}
+          <Rich text={route === "ios" ? w.iosSteps : w.menuSteps} />
         </p>
       )}
     </div>

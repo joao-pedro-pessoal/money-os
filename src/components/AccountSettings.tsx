@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { deleteAccount, replaceRecoveryCode } from "@/actions/auth";
 import { signInKeyFor } from "@/lib/accounts/credentials";
+import { serverMessageIn } from "@/lib/i18n/messages";
+import { useLanguage } from "./LanguageContext";
 
 /**
  * The account itself in Settings: whose it is, and a new recovery code.
@@ -14,6 +16,8 @@ import { signInKeyFor } from "@/lib/accounts/credentials";
  */
 export default function AccountSettings({ email, canDelete }: { email: string | null; canDelete: boolean }) {
   const router = useRouter();
+  const { m } = useLanguage();
+  const w = m.account;
   const [asking, setAsking] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
@@ -26,7 +30,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
 
   const make = async () => {
     if (busy || !email) return;
-    if (!password) return setProblem("Write your password.");
+    if (!password) return setProblem(w.writePassword);
     setBusy(true);
     setProblem(null);
     try {
@@ -36,21 +40,21 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
         setAsking(false);
         setPassword("");
       } else if (outcome.kind === "wrong") {
-        setProblem("That is not this account's password.");
+        setProblem(w.notThisPassword);
       } else if (outcome.kind === "locked") {
-        setProblem("Too many wrong attempts. Try again later.");
+        setProblem(w.tooMany);
       } else {
-        setProblem(outcome.reason);
+        setProblem(serverMessageIn(m, outcome.reason));
       }
     } catch {
-      setProblem("The server could not be reached. Try again in a moment.");
+      setProblem(w.unreachable);
     }
     setBusy(false);
   };
 
   const remove = async () => {
     if (busy || !email) return;
-    if (!deletePassword) return setDeleteProblem("Write your password.");
+    if (!deletePassword) return setDeleteProblem(w.writePassword);
     setBusy(true);
     setDeleteProblem(null);
     try {
@@ -64,13 +68,13 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
       }
       setDeleteProblem(
         outcome.kind === "wrong"
-          ? "That is not this account's password. Nothing was deleted."
+          ? w.notThisPasswordNothingDeleted
           : outcome.kind === "locked"
-            ? "Too many wrong attempts. Try again later."
-            : outcome.reason
+            ? w.tooMany
+            : serverMessageIn(m, outcome.reason)
       );
     } catch {
-      setDeleteProblem("The server could not be reached. Nothing was deleted.");
+      setDeleteProblem(w.unreachableNothingDeleted);
     }
     setBusy(false);
   };
@@ -78,14 +82,14 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
   return (
     <div className="space-y-3">
       <div className="text-sm">
-        Signed in as <span className="font-medium">{email ?? "—"}</span>
+        {w.signedInAs} <span className="font-medium">{email ?? "—"}</span>
       </div>
 
       {code && (
         <div className="rounded-lg border p-3 space-y-1" style={{ borderColor: "var(--amber)" }}>
-          <div className="text-sm font-medium">Your new recovery code — write it down now</div>
+          <div className="text-sm font-medium">{w.newCodeTitle}</div>
           <p className="font-mono text-base tracking-wider break-all select-all">{code}</p>
-          <p className="text-xs text-[var(--muted)]">The old one no longer works. This one is not shown again.</p>
+          <p className="text-xs text-[var(--muted)]">{w.newCodeNote}</p>
         </div>
       )}
 
@@ -100,7 +104,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
           }}
         >
           <label className="text-xs">
-            Your password
+            {w.yourPassword}
             <input
               className="input mt-1"
               type="password"
@@ -111,15 +115,15 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
             />
           </label>
           <button type="submit" className="btn" disabled={busy}>
-            {busy ? "Checking…" : "Make the new code"}
+            {busy ? w.checking : w.makeCode}
           </button>
           <button type="button" className="btn-quiet w-auto!" onClick={() => setAsking(false)}>
-            Cancel
+            {w.cancel}
           </button>
         </form>
       ) : (
         <button type="button" className="btn" disabled={!email} onClick={() => setAsking(true)}>
-          New recovery code
+          {w.newCode}
         </button>
       )}
 
@@ -142,12 +146,11 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
               }}
             >
               <p className="text-xs text-[var(--red)]">
-                This deletes your account and everything in it — accounts, movements, investments, budgets, all of it.
-                It cannot be undone, and nobody can bring it back.
+                {w.deleteWarning}
               </p>
               <div className="flex flex-wrap gap-2 items-end">
                 <label className="text-xs">
-                  Type your email
+                  {w.typeEmail}
                   <input
                     className="input mt-1"
                     type="email"
@@ -157,7 +160,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
                   />
                 </label>
                 <label className="text-xs">
-                  Your password
+                  {w.yourPassword}
                   <input
                     className="input mt-1"
                     type="password"
@@ -174,10 +177,10 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
                   style={{ background: "var(--red)", color: "var(--background)" }}
                   disabled={busy || confirmEmail.trim().toLowerCase() !== (email ?? "").toLowerCase()}
                 >
-                  {busy ? "Deleting…" : "Delete my account"}
+                  {busy ? w.deleting : w.deleteMine}
                 </button>
                 <button type="button" className="btn-quiet w-auto!" onClick={() => setDeleting(false)}>
-                  Cancel
+                  {w.cancel}
                 </button>
               </div>
               {deleteProblem && (
@@ -193,7 +196,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
               disabled={!email}
               onClick={() => setDeleting(true)}
             >
-              Delete my account…
+              {w.deleteStart}
             </button>
           )}
         </div>

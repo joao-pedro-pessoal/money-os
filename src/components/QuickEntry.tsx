@@ -8,6 +8,8 @@ import type { QuickEntryOptions } from "@/lib/money/manualEntry";
 import { newQuickEntryId } from "@/lib/money/quickEntryId";
 import PurchaseSavingsFields from './PurchaseSavingsFields';
 import { localDay } from "@/lib/calendar/localDay";
+import { serverMessageIn } from "@/lib/i18n/messages";
+import { useLanguage } from "./LanguageContext";
 
 const today = () => localDay();
 
@@ -18,6 +20,8 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
   const requestId = useRef("");
   const scrollBefore = useRef("");
   const router = useRouter();
+  const { m } = useLanguage();
+  const w = m.quickEntry;
   const [type, setType] = useState<"expense" | "income">("expense");
   const [accountId, setAccountId] = useState(defaultAccountId ?? accounts[0]?.id ?? "");
   const [date, setDate] = useState("");
@@ -101,13 +105,13 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
     data.set("requestId", requestId.current);
     try {
       const result = await createQuickTransaction(data);
-      if (result.error) setError(result.error);
+      if (result.error) setError(serverMessageIn(m, result.error));
       else if (result.id) {
         setSavedId(result.id);
         router.refresh();
       }
     } catch {
-      setError("Could not confirm the save. Retry with the same details, or check Cash Flow before starting another entry.");
+      setError(w.saveFailed);
     } finally {
       busy.current = false;
       setPending(false);
@@ -125,7 +129,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
       setUndone(true);
       router.refresh();
     } catch {
-      setError("Could not confirm the undo. You can retry safely.");
+      setError(w.undoFailed);
     } finally {
       busy.current = false;
       setPending(false);
@@ -134,71 +138,71 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
 
   return (
     <>
-      <button type="button" className="icon-btn quick-entry-trigger" aria-label="Quick entry" title="Add income or expense" onClick={() => open()}>
+      <button type="button" className="icon-btn quick-entry-trigger" aria-label={w.open} title={w.openTitle} onClick={() => open()}>
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
-        <span className="quick-entry-label"><span className="complex-visible">Add entry</span><span className="simple-only">Add entry</span></span>
+        <span className="quick-entry-label"><span className="complex-visible">{w.button}</span><span className="simple-only">{w.button}</span></span>
       </button>
       <dialog ref={dialog} className="quick-entry" aria-labelledby="quick-entry-title"
         onCancel={event => { event.preventDefault(); close(); }}
         onClose={() => { document.body.style.overflow = scrollBefore.current; }}>
         <div className="flex items-center justify-between gap-3 mb-4">
-          <h2 id="quick-entry-title" className="text-lg font-semibold">Quick entry</h2>
-          <button type="button" className="icon-btn" aria-label="Close quick entry" disabled={pending} onClick={close}>×</button>
+          <h2 id="quick-entry-title" className="text-lg font-semibold">{w.title}</h2>
+          <button type="button" className="icon-btn" aria-label={w.close} disabled={pending} onClick={close}>×</button>
         </div>
         {accounts.length === 0 ? (
           <div className="space-y-4">
-            <p>Add an account before recording income or expenses.</p>
-            <Link href="/accounts" className="btn" onClick={close}>Add an account</Link>
+            <p>{w.noAccounts}</p>
+            <Link href="/accounts" className="btn" onClick={close}>{w.addAccount}</Link>
           </div>
         ) : savedId || undone ? (
           <div className="space-y-4">
-            <p role="status">{undone ? "Entry undone. The account balance has been restored." : "Entry saved."}</p>
+            <p role="status">{undone ? w.undone : w.saved}</p>
             {error && <p role="alert" className="text-sm text-[var(--red)]">{error}</p>}
             <div className="flex gap-3 flex-wrap">
-              {savedId && <Link href="/savings" className="btn" onClick={close}>Savings / cashback</Link>}
-              {savedId && <button type="button" className="btn" disabled={pending} onClick={undo}>{pending ? "Undoing…" : "Undo"}</button>}
-              <button type="button" className="btn" disabled={pending} onClick={close}>Done</button>
+              {savedId && <Link href="/savings" className="btn" onClick={close}>{w.savingsLink}</Link>}
+              {savedId && <button type="button" className="btn" disabled={pending} onClick={undo}>{pending ? w.undoing : w.undo}</button>}
+              <button type="button" className="btn" disabled={pending} onClick={close}>{w.done}</button>
             </div>
           </div>
         ) : (
           <form ref={form} onSubmit={submit} className="space-y-4">
             <fieldset disabled={pending} className="space-y-4">
-              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Transaction type">
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label={w.kind}>
                 {(["expense", "income"] as const).map(value => (
                   <button key={value} type="button" aria-pressed={type === value} className="quick-kind" onClick={() => setType(value)}>
-                    {value === "expense" ? "Expense" : "Income"}
+                    {value === "expense" ? w.expense : w.income}
                   </button>
                 ))}
               </div>
               <input type="hidden" name="type" value={type} />
-              <label className="block text-sm" htmlFor="quick-amount">Amount{currency ? ` (${currency})` : ""}
+              <label className="block text-sm" htmlFor="quick-amount">{w.amount(currency ?? null)}
                 <input id="quick-amount" name="amount" inputMode="decimal" placeholder="0,00" className="input mt-1" required autoFocus autoComplete="off" maxLength={15} />
               </label>
-              <div className="text-sm"><label htmlFor="quick-account">Account</label>
+              <div className="text-sm"><label htmlFor="quick-account">{w.account}</label>
                 <select id="quick-account" name="accountId" className="input mt-1" required value={accountId} onChange={event => setAccountId(event.target.value)}>
                   {accounts.map(account => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
                 </select>
               </div>
               <details>
-                <summary className="cursor-pointer text-sm text-[var(--muted)] py-2">Details · category, note and date</summary>
+                <summary className="cursor-pointer text-sm text-[var(--muted)] py-2">{w.details}</summary>
                 <div className="space-y-3 pt-2">
-                  <div className="text-sm"><label htmlFor="quick-category">Category</label>
+                  <div className="text-sm"><label htmlFor="quick-category">{w.category}</label>
                     <select key={type} id="quick-category" name="categoryId" className="input mt-1" defaultValue="">
-                      <option value="">No category</option>
+                      <option value="">{w.noCategory}</option>
                       {categories.filter(category => category.kind === type).map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
                     </select>
                   </div>
-                  <label className="block text-sm" htmlFor="quick-description">Description
-                    <input id="quick-description" name="description" className="input mt-1" maxLength={500} placeholder="Optional" />
+                  <label className="block text-sm" htmlFor="quick-description">{w.description}
+                    <input id="quick-description" name="description" className="input mt-1" maxLength={500} placeholder={w.optional} />
                   </label>
-                  <label className="block text-sm" htmlFor="quick-date">Date
+                  <label className="block text-sm" htmlFor="quick-date">{w.date}
                     <input id="quick-date" name="date" type="date" className="input mt-1" required value={date} onChange={event => setDate(event.target.value)} />
                   </label>
                 </div>
               </details>
               {error && <p role="alert" className="text-sm text-[var(--red)]">{error}</p>}
               {type === 'expense' && <PurchaseSavingsFields />}
-              <button type="submit" className="btn w-full">{pending ? "Saving…" : type === "expense" ? "Save expense" : "Save income"}</button>
+              <button type="submit" className="btn w-full">{pending ? w.saving : type === "expense" ? w.saveExpense : w.saveIncome}</button>
             </fieldset>
           </form>
         )}

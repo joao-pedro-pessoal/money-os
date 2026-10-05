@@ -188,7 +188,7 @@ npm run db:app-role       # makes the app's own login and points DATABASE_URL at
 npm run dev
 ```
 
-Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2777 tests),
+Before saying it works: `npx tsc --noEmit`, `npx vitest run` (2783 tests),
 `npx eslint src`, `npm run build`, and `npm run db:generate` must report
 "No schema changes".
 

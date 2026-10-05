@@ -1,14 +1,16 @@
 "use client";
 
 import { ACCENTS, useTheme } from "./ThemeContext";
+import { useLanguage } from "./LanguageContext";
 
 export default function ThemePicker() {
   const { accent, mode, signal, setAccent, setMode, setSignal } = useTheme();
+  const w = useLanguage().m.settings;
 
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-xs text-[var(--muted)] mb-2">Accent</div>
+        <div className="text-xs text-[var(--muted)] mb-2">{w.accent}</div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {ACCENTS.map((a) => (
             <button
@@ -39,7 +41,7 @@ export default function ThemePicker() {
                   border: a.id === "mono" ? "1px solid var(--border-strong, #888)" : undefined,
                 }}
               />
-              {a.label}
+              {w.accents[a.id] ?? a.label}
             </button>
           ))}
         </div>
@@ -50,7 +52,7 @@ export default function ThemePicker() {
           offering it there would be a switch that changes nothing. */}
       {accent === "mono" && (
         <div>
-          <div className="text-xs text-[var(--muted)] mb-2">Colour that means something</div>
+          <div className="text-xs text-[var(--muted)] mb-2">{w.signal}</div>
           <div className="flex gap-3">
             <button
               onClick={() => setSignal("mono")}
@@ -61,9 +63,9 @@ export default function ThemePicker() {
                 background: "var(--surface-2)",
               }}
             >
-              None
+              {w.signalNone}
               <span className="block text-[10px] text-[var(--muted)] mt-0.5">
-                A gain is brighter, a loss dimmer. Survives printing.
+                {w.signalNoneText}
               </span>
             </button>
             <button
@@ -76,7 +78,7 @@ export default function ThemePicker() {
               }}
             >
               <span className="inline-flex items-center gap-1.5">
-                Green, red and assets
+                {w.signalColour}
                 <span
                   aria-hidden
                   style={{
@@ -97,7 +99,7 @@ export default function ThemePicker() {
                 />
               </span>
               <span className="block text-[10px] text-[var(--muted)] mt-0.5">
-                The page stays black and white; only the parts that mean something get hue.
+                {w.signalColourText}
               </span>
             </button>
           </div>
@@ -105,7 +107,7 @@ export default function ThemePicker() {
       )}
 
       <div>
-        <div className="text-xs text-[var(--muted)] mb-2">Mode</div>
+        <div className="text-xs text-[var(--muted)] mb-2">{w.mode}</div>
         <div className="flex gap-3">
           <button
             onClick={() => setMode("dark")}
@@ -116,7 +118,7 @@ export default function ThemePicker() {
               background: "var(--surface-2)",
             }}
           >
-            Dark
+            {w.dark}
           </button>
           <button
             onClick={() => setMode("light")}
@@ -127,7 +129,7 @@ export default function ThemePicker() {
               background: "var(--surface-2)",
             }}
           >
-            Light
+            {w.light}
           </button>
         </div>
       </div>

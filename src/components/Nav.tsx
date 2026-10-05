@@ -10,6 +10,7 @@ import { logout } from "@/app/login/actions";
 import { useMobileMode } from "./MobileMode";
 import MobileFold from "./MobileFold";
 import { useLanguage } from "./LanguageContext";
+import { labelIn } from "@/lib/i18n/messages";
 
 /**
  * Eleven entries in three groups, down from fifteen in a flat list.
@@ -22,7 +23,7 @@ import { useLanguage } from "./LanguageContext";
  * - "Import statement" was an action masquerading as a place. It lives on the
  *   Cash Flow page, which is the data it changes, and in Settings → Your data.
  */
-const groups: { label?: string; links: { href: string; label: string }[] }[] = [
+const groups: { label?: "groupMoney" | "groupLearning" | "groupNotGuaranteed"; links: { href: string; label: string }[] }[] = [
   {
     links: [
       { href: "/", label: "Dashboard" },
@@ -30,7 +31,7 @@ const groups: { label?: string; links: { href: string; label: string }[] }[] = [
     ],
   },
   {
-    label: "Money",
+    label: "groupMoney",
     links: [
       { href: "/accounts", label: "Accounts" },
       { href: "/transactions", label: "Cash Flow" },
@@ -44,13 +45,13 @@ const groups: { label?: string; links: { href: string; label: string }[] }[] = [
     ],
   },
   {
-    label: "Learning",
+    label: "groupLearning",
     links: [
       { href: "/library", label: "Library" },
     ],
   },
   {
-    label: "Not guaranteed",
+    label: "groupNotGuaranteed",
     links: [{ href: "/investments", label: "Investments" }],
   },
 ];
@@ -70,19 +71,15 @@ export default function Nav() {
   const pathname = usePathname();
   const { setOpen } = useNav();
   const { simple } = useMobileMode();
-  const { t } = useLanguage();
+  const { t, m } = useLanguage();
   const [query, setQuery] = useState("");
   const searchInput = useRef<HTMLInputElement>(null);
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const searching = terms.length > 0;
-  const labelFor = (href: string, fallback: string) => ({
-    "/": t.dashboard, "/analytics": t.analytics, "/accounts": t.accounts, "/transactions": t.cashFlow,
-    "/savings": t.savings, "/budgets": t.budgets, "/buckets": t.buckets, "/subscriptions": t.subscriptions,
-    "/expected": t.comingIn, "/library": t.library, "/investments": t.investments, "/manual": t.manual,
-    "/settings": t.settings,
-  }[href] ?? fallback);
+  // Pages are named in English where they are defined (labelIn translates them by that name).
+  // Found by either name, so a page can be looked for in the language it is shown in.
   const matches = searchablePages.filter(link =>
-    terms.every(term => `${link.label} ${link.href}`.toLowerCase().includes(term)),
+    terms.every(term => `${link.label} ${labelIn(m, link.label)} ${link.href}`.toLowerCase().includes(term)),
   );
 
   function closeMenu() {
@@ -115,7 +112,7 @@ export default function Nav() {
                 setQuery("");
               }
             }} />
-          {query && <button type="button" className="icon-btn shrink-0" aria-label="Clear page search"
+          {query && <button type="button" className="icon-btn shrink-0" aria-label={t.clearSearch}
             onClick={() => { setQuery(""); searchInput.current?.focus(); }}>×</button>}
         </div>
       </div>
@@ -123,13 +120,13 @@ export default function Nav() {
       <div id="nav-pages" className="space-y-5 flex-1">
         {searching ? <div>
           <p role="status" className="px-3 mb-2 text-sm text-[var(--muted)]">
-            {matches.length === 0 ? t.noPages : `${matches.length} ${matches.length === 1 ? "page" : "pages"} found`}
+            {matches.length === 0 ? t.noPages : t.pagesFound(matches.length)}
           </p>
           <ul className="space-y-1">
             {matches.map(link => <li key={link.href}>
               <Link href={link.href} className={linkClass(link.href)}
                 aria-current={pathname === link.href ? "page" : undefined} onClick={closeMenu}>
-                {labelFor(link.href, link.label)}
+                {labelIn(m, link.label)}
               </Link>
             </li>)}
           </ul>
@@ -140,9 +137,9 @@ export default function Nav() {
               { href: "/savings", label: t.savings }, { href: "/budgets", label: t.budgets }, { href: "/investments", label: t.investments },
             ].map(link => <li key={link.href}><Link href={link.href} className={linkClass(link.href)} aria-current={isActive(link.href) ? "page" : undefined} onClick={() => setOpen(false)}>{link.label}</Link></li>)}
           </ul>
-          <MobileFold simpleOnly title="More pages" persistKey="simple-navigation">
+          <MobileFold simpleOnly title={t.morePages} persistKey="simple-navigation">
             <ul className="space-y-1">
-              {groups.flatMap(group => group.links).filter(link => !["/", "/accounts", "/transactions", "/savings", "/budgets", "/investments"].includes(link.href)).map(link => <li key={link.href}><Link href={link.href} className={linkClass(link.href)} aria-current={isActive(link.href) ? "page" : undefined} onClick={() => setOpen(false)}>{labelFor(link.href, link.label)}</Link></li>)}
+              {groups.flatMap(group => group.links).filter(link => !["/", "/accounts", "/transactions", "/savings", "/budgets", "/investments"].includes(link.href)).map(link => <li key={link.href}><Link href={link.href} className={linkClass(link.href)} aria-current={isActive(link.href) ? "page" : undefined} onClick={() => setOpen(false)}>{labelIn(m, link.label)}</Link></li>)}
             </ul>
           </MobileFold>
         </> : <>
@@ -150,14 +147,14 @@ export default function Nav() {
           <div key={g.label ?? i}>
             {g.label && (
               <div className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-[var(--muted)]">
-                {g.label}
+                {t[g.label]}
               </div>
             )}
             <ul className="space-y-0.5">
               {g.links.map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className={linkClass(l.href)} aria-current={isActive(l.href) ? "page" : undefined} onClick={() => setOpen(false)}>
-                    {labelFor(l.href, l.label)}
+                    {labelIn(m, l.label)}
                   </Link>
                 </li>
               ))}

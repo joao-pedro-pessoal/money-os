@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "./LanguageContext";
 
 /** What the Android app exposes to its own pages. Absent in a browser. */
 type AndroidBridge = {
@@ -22,6 +23,7 @@ function bridge(): AndroidBridge | null {
  * asked for.
  */
 export default function PhoneQuickEntrySettings() {
+  const w = useLanguage().m.settings;
   const [available, setAvailable] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [waiting, setWaiting] = useState(false);
@@ -47,12 +49,8 @@ export default function PhoneQuickEntrySettings() {
   return (
     <div className="card p-4 space-y-3">
       <div>
-        <div className="text-sm font-medium">Record an expense from outside the app</div>
-        <p className="text-xs text-[var(--muted)] mt-1 max-w-xl">
-          A notification that stays in the notification shade, with Expense and Income buttons that
-          open the quick entry form. The home-screen widget and the shortcuts on the app icon (touch
-          and hold it) do the same and need nothing switched on.
-        </p>
+        <div className="text-sm font-medium">{w.quickNotificationTitle}</div>
+        <p className="text-xs text-[var(--muted)] mt-1 max-w-xl">{w.quickNotificationText}</p>
       </div>
       <label className="flex items-center gap-3 text-sm">
         <input
@@ -64,7 +62,7 @@ export default function PhoneQuickEntrySettings() {
             bridge()?.setQuickNotification?.(event.target.checked);
           }}
         />
-        Quick entry notification
+        {w.quickNotificationToggle}
       </label>
     </div>
   );
