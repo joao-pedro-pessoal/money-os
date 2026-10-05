@@ -129,6 +129,7 @@ const en = {
 
   install: {
     installed: "Installed — you are using Money OS as an app on this device.",
+    justInstalled: "Installed. Open Money OS from its icon on your home screen.",
     androidApp: "You are in the Money OS Android app.",
     pitchTitle: "Use it like an app.",
     pitchText: "Install Money OS on this phone or computer — no store, no download.",
@@ -454,6 +455,7 @@ const pt: Messages = {
 
   install: {
     installed: "Instalada — estás a usar o Money OS como app neste aparelho.",
+    justInstalled: "Instalada. Abre o Money OS pelo ícone no ecrã principal.",
     androidApp: "Estás na app Android do Money OS.",
     pitchTitle: "Usa-o como uma app.",
     pitchText: "Instala o Money OS neste telemóvel ou computador — sem loja, sem download.",

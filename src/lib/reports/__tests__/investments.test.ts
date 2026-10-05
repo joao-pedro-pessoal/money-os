@@ -58,13 +58,71 @@ describe("the investing side of a period", () => {
   const report = buildInvestmentReport(input());
 
   it("reads the value at both ends the way net worth is read", () => {
-    expect(report.value).toEqual({ start: 1000, end: 1510, change: 510 });
+    expect(report.value).toEqual({ start: 1000, end: 1510, change: 510, startDate: "2026-02-28", endDate: "2026-03-31" });
     expect(report.valueLine[0]).toEqual({ date: "2026-03-01", value: 1001 });
   });
 
   it("separates the money paid in from what the value did beyond it", () => {
-    expect(report.flows).toEqual({ deposited: 500, withdrawn: 0, net: 500, count: 1 });
+    expect(report.flows).toEqual({ deposited: 500, withdrawn: 0, net: 500, count: 1, complete: true });
     expect(report.unexplained).toBe(10);
+    expect(report.unexplainedWithheld).toBeNull();
+  });
+
+  it("does not split the change by deposits when the deposit record is known to be incomplete", () => {
+    const incomplete = buildInvestmentReport(input({ moneyWeightedWithheld: "Deposits are incomplete." }));
+    expect(incomplete.flows.complete).toBe(false);
+    expect(incomplete.unexplained).toBeNull();
+    expect(incomplete.unexplainedWithheld).toMatch(/Not every platform/);
+    // The deposits that were recorded are still shown.
+    expect(incomplete.flows.deposited).toBe(500);
+  });
+
+  it("reads the change beyond deposits between the same two valuations as the change", () => {
+    // Last valued on 10 Feb; 300 paid in and invested on 25 Feb; the March report.
+    const report = buildInvestmentReport(
+      input({
+        values: [
+          { date: "2026-02-10", value: 1000 },
+          { date: "2026-03-15", value: 1330 },
+          { date: "2026-03-31", value: 1340 },
+        ],
+        flows: [
+          { date: "2026-01-15", amount: -1000 },
+          { date: "2026-02-25", amount: -300 },
+        ],
+      })
+    );
+    expect(report.value).toMatchObject({ start: 1000, end: 1340, startDate: "2026-02-10", endDate: "2026-03-31" });
+    // The 300 is not in the period's deposits, and not a gain either.
+    expect(report.flows.deposited).toBe(0);
+    expect(report.unexplained).toBe(40);
+  });
+
+  it("treats a deposit on the last valued day the way the time-weighted return does: not yet in that value", () => {
+    // Up 1% to 31 March, valued that morning; 500 arrives the same day.
+    const values = [
+      { date: "2026-02-28", value: 1000 },
+      { date: "2026-03-31", value: 1010 },
+    ];
+    const lastDay = buildInvestmentReport(
+      input({ values, flows: [{ date: "2026-01-15", amount: -1000 }, { date: "2026-03-31", amount: -500 }] })
+    );
+    expect(lastDay.returns.moneyWeighted).toBeCloseTo(0.01, 3);
+    expect(lastDay.returns.timeWeighted?.total).toBeCloseTo(0.01, 10);
+    expect(lastDay.unexplained).toBe(10);
+
+    // A deposit on the opening day happened after that valuation, so it is money in.
+    const firstDay = buildInvestmentReport(
+      input({
+        values: [
+          { date: "2026-02-28", value: 1000 },
+          { date: "2026-03-31", value: 1515 },
+        ],
+        flows: [{ date: "2026-01-15", amount: -1000 }, { date: "2026-02-28", amount: -500 }],
+      })
+    );
+    expect(firstDay.returns.moneyWeighted).toBeCloseTo(0.01, 3);
+    expect(firstDay.unexplained).toBe(15);
   });
 
   it("counts trades by the Trade history page's rules", () => {
@@ -164,10 +222,11 @@ describe("the investing side of a period", () => {
     };
     const now = buildInvestmentReport(input({ holdings, today: "2026-03-31" }));
     expect(now.composition).toMatchObject({ asOf: "2026-03-31", today: true, held: 1510, unrealised: 60 });
+    // Named as the Investments page names them when it groups by asset type.
     expect(now.composition?.byType.map((t) => [t.name, t.value])).toEqual([
-      ["etf", 1200],
-      ["crypto", 300],
-      ["Not classified", 10],
+      ["ETF", 1200],
+      ["Crypto", 300],
+      ["Untagged", 10],
     ]);
     expect(now.composition?.largest[1]).toMatchObject({ name: "BTC", pnl: null });
     expect(now.compositionNote).toBeNull();

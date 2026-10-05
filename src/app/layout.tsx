@@ -127,6 +127,7 @@ window.addEventListener("beforeinstallprompt", function (e) {
 });
 window.addEventListener("appinstalled", function () {
   window.__moneyosInstall = null;
+  window.__moneyosInstalled = true;
   window.dispatchEvent(new Event("moneyos-installable"));
 });
 `;

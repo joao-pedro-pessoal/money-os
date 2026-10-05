@@ -293,6 +293,8 @@ export async function getTradeAnalysis() {
   };
 
   let unconvertible = 0;
+  /** The days of the rows left out, so a report over some days can count only its own. */
+  const unconvertibleDates: string[] = [];
   /**
    * Carries the account and the original currency alongside the figures.
    *
@@ -307,6 +309,7 @@ export async function getTradeAnalysis() {
     // No rate means leave it out and say so, never count it as zero.
     if (amount === null) {
       unconvertible += 1;
+      unconvertibleDates.push(new Date(row.date).toISOString().slice(0, 10));
       continue;
     }
     const fees = row.fees === null ? null : toBase(Number(row.fees), row.currency, rates, base);
@@ -358,6 +361,7 @@ export async function getTradeAnalysis() {
     baseCurrency: base,
     /** Rows dropped because nothing could convert them. Never silently zero. */
     unconvertible,
+    unconvertibleDates,
     /** True while any row needed a rate that isn't the rate of its own day. */
     approximate: rows.some((r) => r.currency !== base),
     tradeCount: trades.length,

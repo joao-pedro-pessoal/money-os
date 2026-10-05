@@ -17,6 +17,7 @@ import {
   investmentActivities,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { cache } from "react";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { meaningOf, holdingCountsOnTop } from "@/lib/accounting/balanceScope";
@@ -478,14 +479,32 @@ export async function getPortfolioAt(date: string) {
 }
 
 /**
+ * The snapshot tables, read once per request however many series are built
+ * from them.
+ *
+ * A report draws net worth (the value line without what sits inside a
+ * balance), the value line itself, and what was held on a past day: three
+ * readings of the largest tables in the database for one page. React's `cache`
+ * keeps the rows for the rest of that request and nothing longer — the next
+ * page reads them fresh. Read here, never changed: every caller filters and
+ * maps, so sharing them is safe.
+ */
+const snapshotTables = cache(async () => {
+  const [allHoldings, holdingSnaps, positionSnaps] = await Promise.all([
+    db.select().from(holdings),
+    db.select().from(holdingSnapshots),
+    db.select().from(positionSnapshots),
+  ]);
+  return { allHoldings, holdingSnaps, positionSnaps };
+});
+
+/**
  * The snapshots behind the value line: each position's points in the base
  * currency, oldest first, and every day anything was recorded on.
  */
 async function seriesInputs(onlyWhatAddsOnTop: boolean) {
-  const [allHoldings, holdingSnaps, positionSnaps, rates, base] = await Promise.all([
-    db.select().from(holdings),
-    db.select().from(holdingSnapshots),
-    db.select().from(positionSnapshots),
+  const [{ allHoldings, holdingSnaps, positionSnaps }, rates, base] = await Promise.all([
+    snapshotTables(),
     getRates(),
     getBaseCurrency(),
   ]);

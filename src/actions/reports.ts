@@ -23,7 +23,7 @@ import { getBaseCurrency } from "./settings";
 import { localDay } from "@/lib/calendar/localDay";
 import { portfolioSummary } from "@/lib/portfolio/positionView";
 import { buildInvestmentReport, type InvestmentReport } from "@/lib/reports/investments";
-import { buildReport, customKey, parseCustomKey, reportPeriods, reportWindow, type PeriodReport } from "@/lib/reports/monthly";
+import { buildReport, customKey, parseCustomKey, reportPeriodsOf, reportWindow, type PeriodReport } from "@/lib/reports/monthly";
 import {
   isDay,
   isPeriodKey,
@@ -94,9 +94,17 @@ export async function loadReport(params: ReportParams): Promise<LoadedReport> {
   const wantsMoney = scope !== "investments";
   const wantsInvestments = scope !== "money";
 
-  const [spending, base] = await Promise.all([getSpendingAnalysis(), getBaseCurrency()]);
+  // Every movement of money is read only when the report is about money.
+  const [spending, base] = await Promise.all([wantsMoney ? getSpendingAnalysis() : null, getBaseCurrency()]);
 
-  const available = kind === "custom" ? [] : reportPeriods(spending.rows, kind);
+  const [money, investments] = await Promise.all([
+    spending !== null ? loadMoney(kind, key, current, spending.rows) : null,
+    wantsInvestments ? loadInvestments(kind, key, today) : null,
+  ]);
+
+  // The periods offered are the ones with something in the parts this report holds.
+  const days = [...(spending?.rows.map((r) => r.date) ?? []), ...(investments?.days ?? [])];
+  const available = kind === "custom" ? [] : reportPeriodsOf(days, kind);
   if (current !== null && !available.includes(current)) available.unshift(current);
   // An empty period from the address still has to be the one the picker shows.
   if (kind !== "custom" && !available.includes(key)) {
@@ -104,19 +112,14 @@ export async function loadReport(params: ReportParams): Promise<LoadedReport> {
     available.sort().reverse();
   }
 
-  const [money, investments] = await Promise.all([
-    wantsMoney ? loadMoney(kind, key, current, spending.rows) : null,
-    wantsInvestments ? loadInvestments(kind, key, today) : null,
-  ]);
-
   // Any report is the same days, whichever parts it holds.
   const window = money ?? reportWindow(kind, key);
   const noun = kind === "custom" ? "period" : kind;
   const notes: string[] = [];
-  if (wantsMoney && spending.approximate) {
+  if (spending?.approximate) {
     notes.push(`Amounts in other currencies use today's rates, so an earlier ${noun} is approximate.`);
   }
-  if (wantsMoney && spending.unconverted.length > 0) {
+  if (spending !== null && spending.unconverted.length > 0) {
     notes.push(`Left out, no exchange rate: ${spending.unconverted.join(", ")}.`);
   }
   if (investments !== null && investments.unconverted > 0) {
@@ -174,7 +177,7 @@ async function loadInvestments(
   kind: ReportKind,
   key: string,
   today: string
-): Promise<{ report: InvestmentReport; unconverted: number }> {
+): Promise<{ report: InvestmentReport; unconverted: number; days: string[] }> {
   const { from, to } = reportWindow(kind, key);
 
   const reachesToday = to >= today;
@@ -224,6 +227,13 @@ async function loadInvestments(
             },
       heldAtEnd,
     }),
-    unconverted: income.unconverted + trades.unconvertible,
+    // Only what was left out of these days: a figure from another year is not missing from this report.
+    unconverted: [...income.unconvertedDates, ...trades.unconvertibleDates].filter((d) => d >= from && d <= to).length,
+    // Every day the investments have something on, for the periods the picker offers.
+    days: [
+      ...returns.valuePoints.map((p) => p.date),
+      ...trades.rows.map((r) => r.date.slice(0, 10)),
+      ...income.payments.map((p) => p.date),
+    ],
   };
 }

@@ -104,7 +104,12 @@ export function monthLabel(month: string): string {
 
 /** Every period of `kind` that has at least one movement, newest first. */
 export function reportPeriods(rows: readonly SpendingRow[], kind: ReportPeriod): string[] {
-  return [...new Set(rows.map((r) => periodOf(kind, r.date)))].sort().reverse();
+  return reportPeriodsOf(rows.map((r) => r.date), kind);
+}
+
+/** Every period of `kind` that holds at least one of these days, newest first. */
+export function reportPeriodsOf(days: readonly string[], kind: ReportPeriod): string[] {
+  return [...new Set(days.map((day) => periodOf(kind, day)))].sort().reverse();
 }
 
 /** Every month that has at least one movement, newest first. */

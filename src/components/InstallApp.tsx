@@ -11,7 +11,12 @@ type InstallPrompt = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
-type InstallWindow = Window & { __moneyosInstall?: InstallPrompt | null; MoneyOSAndroid?: unknown };
+type InstallWindow = Window & {
+  __moneyosInstall?: InstallPrompt | null;
+  /** Set when the browser reports the app installed, by the layout's script or by the button. */
+  __moneyosInstalled?: boolean;
+  MoneyOSAndroid?: unknown;
+};
 
 /** The layout's script announces a prompt arriving or being used up with this event. */
 const CHANGED = "moneyos-installable";
@@ -33,6 +38,7 @@ function readRoute(): InstallRoute {
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true,
     androidApp: "MoneyOSAndroid" in w,
+    justInstalled: w.__moneyosInstalled === true,
     canPrompt: Boolean(w.__moneyosInstall),
     userAgent: navigator.userAgent,
     platform: navigator.platform,
@@ -60,33 +66,35 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
   const route = useSyncExternalStore(subscribe, readRoute, serverRoute);
   const w = useLanguage().m.install;
   const [showSteps, setShowSteps] = useState(false);
-  const [installed, setInstalled] = useState(false);
 
   if (route === null) return null;
 
-  if (route === "installed" || route === "android-app" || installed) {
+  if (route === "installed" || route === "just-installed" || route === "android-app") {
     if (compact) return null;
     return (
       <p className="text-sm text-[var(--muted)]">
-        {route === "android-app" ? w.androidApp : w.installed}
+        {route === "android-app" ? w.androidApp : route === "just-installed" ? w.justInstalled : w.installed}
       </p>
     );
   }
 
   async function install() {
-    const w = window as InstallWindow;
-    const prompt = w.__moneyosInstall;
+    const page = window as InstallWindow;
+    const prompt = page.__moneyosInstall;
     if (!prompt) {
       setShowSteps(true);
       return;
     }
     // A prompt can be used once; whatever the answer, it is gone.
-    w.__moneyosInstall = null;
+    page.__moneyosInstall = null;
     window.dispatchEvent(new Event(CHANGED));
     try {
       await prompt.prompt();
       const choice = await prompt.userChoice;
-      if (choice.outcome === "accepted") setInstalled(true);
+      if (choice.outcome === "accepted") {
+        page.__moneyosInstalled = true;
+        window.dispatchEvent(new Event(CHANGED));
+      }
     } catch {
       setShowSteps(true);
     }

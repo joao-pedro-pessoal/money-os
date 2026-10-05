@@ -130,6 +130,20 @@ export function rangeLabel(from: string, to: string): string {
   return `${fd}–${td} ${MONTHS[tm - 1]} ${ty}`;
 }
 
+/**
+ * A month's name for under a column: "Sep", or "Sep '26" when the columns run
+ * across more than one year and "Sep" alone would name two months.
+ */
+export function monthTick(month: string, withYear: boolean): string {
+  const name = MONTHS[Number(month.slice(5, 7)) - 1];
+  return withYear ? `${name} '${month.slice(2, 4)}` : name;
+}
+
+/** Whether a list of month keys crosses into another year. */
+export function spansYears(months: readonly string[]): boolean {
+  return months.length > 0 && months[0].slice(0, 4) !== months[months.length - 1].slice(0, 4);
+}
+
 /** The twelve months of a year, as month keys. */
 export function monthsOfYear(year: string): string[] {
   return Array.from({ length: 12 }, (_, i) => `${year}-${pad(i + 1)}`);

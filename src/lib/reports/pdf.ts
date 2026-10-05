@@ -23,9 +23,10 @@
  */
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { fmt } from "@/lib/format";
-import { barShares, columnChart, compactAmount, lineChart, shortDate, type DatedValue } from "./charts";
+import { barShares, columnChart, compactAmount, labelEvery, lineChart, shortDate, type DatedValue } from "./charts";
 import type { InvestmentReport } from "./investments";
 import type { PeriodReport } from "./monthly";
+import { monthTick, spansYears } from "./periods";
 
 export type Tone = "good" | "bad" | null;
 
@@ -159,7 +160,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
             { name: "Spent", color: "red" },
           ],
           groups: m.months.map((month) => ({
-            label: month.label.slice(0, 3) + (month.partial ? "*" : ""),
+            label: monthTick(month.key, spansYears(m.months!.map((x) => x.key))) + (month.partial ? "*" : ""),
             values: month.totals === null ? [null, null] : [month.totals.income, month.totals.spent],
           })),
           unit: input.currency,
@@ -243,13 +244,29 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
         type: "stats",
         items: [
           inv.value
-            ? { label: "Portfolio value", value: money(inv.value.end), note: `from ${money(inv.value.start)} (${signedMoney(inv.value.change)})`, tone: null }
+            ? {
+                label: "Portfolio value",
+                value: money(inv.value.end),
+                note: `from ${money(inv.value.start)} on ${shortDate(inv.value.startDate)} (${signedMoney(inv.value.change)})`,
+                tone: null,
+              }
             : { label: "Portfolio value", value: "—", note: "no valuation inside this period" },
-          { label: "Deposited", value: money(inv.flows.deposited), note: inv.flows.withdrawn > 0 ? `${money(inv.flows.withdrawn)} withdrawn` : undefined },
+          {
+            label: "Deposited",
+            value: money(inv.flows.deposited),
+            note: [
+              inv.flows.withdrawn > 0 ? `${money(inv.flows.withdrawn)} withdrawn` : null,
+              inv.flows.complete ? null : "only what platforms report",
+            ]
+              .filter(Boolean)
+              .join(" · ") || undefined,
+          },
           {
             label: "Change beyond deposits",
             value: inv.unexplained === null ? "—" : signedMoney(inv.unexplained),
-            note: "markets, and money moved without a recorded deposit or withdrawal",
+            note: inv.value
+              ? `what markets did, ${shortDate(inv.value.startDate)} to ${shortDate(inv.value.endDate)}`
+              : undefined,
             tone: inv.unexplained === null ? null : toneOf(inv.unexplained),
           },
           { label: "Dividends and interest", value: money(inv.income.total), note: `${money(inv.income.dividends)} dividends, ${money(inv.income.interest)} interest` },
@@ -300,7 +317,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
               ]),
         ],
       });
-      for (const reason of [inv.returns.timeWeightedWithheld, inv.returns.moneyWeightedWithheld]) {
+      for (const reason of [inv.unexplainedWithheld, inv.returns.timeWeightedWithheld, inv.returns.moneyWeightedWithheld]) {
         if (reason !== null) blocks.push({ type: "text", text: reason, muted: true });
       }
       if (inv.benchmark !== null && "unavailable" in inv.benchmark && twr !== null) {
@@ -705,13 +722,20 @@ class Layout {
       this.page.drawLine({ start: at(40, tick.y), end: at(WIDTH - 8, tick.y), thickness: 0.4, color: COLOURS.rule });
       this.write(compactAmount(tick.value), MARGIN.left, top + tick.y - 4, 7, this.regular, COLOURS.muted, 34, "right");
     }
-    for (const group of chart.groups) {
+    // As many month names as fit without running into each other.
+    const every = labelEvery(
+      chart.groups.length > 1 ? chart.groups[1].x - chart.groups[0].x : WIDTH,
+      Math.max(0, ...chart.groups.map((g) => this.regular.widthOfTextAtSize(pdfSafe(g.label), 7)))
+    );
+    for (const [i, group] of chart.groups.entries()) {
       group.columns.forEach((column, k) => {
         if (column.height <= 0) return;
         const { x, y } = at(column.x, column.y + column.height);
         this.page.drawRectangle({ x, y, width: column.width, height: column.height, color: COLOURS[block.legend[k]?.color ?? "accent"] });
       });
-      this.write(group.label, MARGIN.left + group.x, top + height - 12, 7, this.regular, COLOURS.muted, group.width + 4);
+      if (i % every === 0) {
+        this.write(group.label, MARGIN.left + group.x, top + height - 12, 7, this.regular, COLOURS.muted, group.width * every + 4);
+      }
     }
     this.y += height + 2;
     this.legend(block.legend.map((l) => ({ name: l.name, color: COLOURS[l.color] })));

@@ -158,8 +158,14 @@ export function columnChart(
 ): ColumnGeometry {
   const values = groups.flatMap((g) => g.values).filter((v): v is number => v !== null && Number.isFinite(v));
   if (groups.length === 0 || values.length === 0) return { groups: [], yTicks: [] };
-  const ticks = niceTicks(0, Math.max(0, ...values));
-  const high = ticks.at(-1)!;
+  /**
+   * Nothing above zero — a year of transfers only — is one line at zero and no
+   * columns. Asked for ticks between 0 and 0, `niceTicks` pads both ways, and
+   * the negative ones landed below the chart, over the labels under it.
+   */
+  const highest = Math.max(0, ...values);
+  const ticks = highest > 0 ? niceTicks(0, highest) : [0];
+  const high = ticks.at(-1)! || 1;
   const plotWidth = area.width - area.left - area.right;
   const plotHeight = area.height - area.top - area.bottom;
   const slot = plotWidth / groups.length;
@@ -209,6 +215,16 @@ function shortest(n: number): string {
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * Every how many groups a label fits under a column chart: every one when the
+ * widest label fits its slot, otherwise every second, third… so that labels
+ * never run into each other on a phone or across a long range.
+ */
+export function labelEvery(slot: number, widestLabel: number): number {
+  if (slot <= 0) return 1;
+  return Math.max(1, Math.ceil((widestLabel + 4) / slot));
+}
 
 /** "3 Mar 2026" for the ends of a time axis. */
 export function shortDate(date: string): string {

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { usePrivacy } from "./PrivacyContext";
-import { columnChart, compactAmount, lineChart, shortDate, type DatedValue } from "@/lib/reports/charts";
+import { columnChart, compactAmount, labelEvery, lineChart, shortDate, type DatedValue } from "@/lib/reports/charts";
 
 type Colour = "accent" | "muted" | "green" | "red";
 
@@ -137,8 +137,11 @@ function Columns({
   hidden,
 }: Extract<ReportChartProps, { kind: "columns" }> & { area: Area; hidden: boolean }) {
   const chart = columnChart(groups, area);
-  // Every label fits on a wide screen; on a phone, every other one.
-  const every = chart.groups.length > 0 && chart.groups[0].width < 26 ? 2 : 1;
+  // As many labels as fit without touching: about 6px a character at this size.
+  const every = labelEvery(
+    chart.groups.length > 1 ? chart.groups[1].x - chart.groups[0].x : area.width,
+    Math.max(0, ...chart.groups.map((g) => g.label.length)) * 6
+  );
   return (
     <>
       <Axis ticks={chart.yTicks} area={area} hidden={hidden} />

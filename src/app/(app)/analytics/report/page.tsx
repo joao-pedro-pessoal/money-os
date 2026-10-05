@@ -9,7 +9,7 @@ import FilterSelect from "@/components/FilterSelect";
 import { Money } from "@/components/PrivacyContext";
 import { ANALYTICS_TABS } from "@/lib/navigation";
 import { periodNoun } from "@/lib/reports/monthly";
-import { periodLabel, REPORT_KINDS, type ReportKind } from "@/lib/reports/periods";
+import { monthTick, periodLabel, REPORT_KINDS, spansYears, type ReportKind } from "@/lib/reports/periods";
 import { REPORT_SCOPES, REPORT_TITLE, reportCsv, reportFileName, type ReportScope } from "@/lib/reports/document";
 import FilterLink from "@/components/FilterLink";
 import Link from "next/link";
@@ -253,7 +253,7 @@ export default async function ReportPage({
                   kind="columns"
                   title="Income and spending"
                   groups={report.months.map((m) => ({
-                    label: m.label.slice(0, 3) + (m.partial ? "*" : ""),
+                    label: monthTick(m.key, spansYears(report.months!.map((x) => x.key))) + (m.partial ? "*" : ""),
                     values: m.totals === null ? [null, null] : [m.totals.income, m.totals.spent],
                   }))}
                   legend={[

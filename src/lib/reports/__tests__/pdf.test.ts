@@ -3,7 +3,8 @@ import { PDFDocument } from "pdf-lib";
 import type { SpendingRow } from "@/lib/spending/analyse";
 import { buildReport } from "../monthly";
 import { buildInvestmentReport } from "../investments";
-import { columnChart, compactAmount, lineChart, niceTicks } from "../charts";
+import { columnChart, compactAmount, labelEvery, lineChart, niceTicks } from "../charts";
+import { monthTick, spansYears } from "../periods";
 import { pdfSafe, renderReportPdf, reportBlocks, type Block, type ReportPdfInput } from "../pdf";
 import { reportCsv, reportFileName } from "../document";
 import { fmt } from "@/lib/format";
@@ -208,6 +209,28 @@ describe("chart geometry, shared by the page and the PDF", () => {
     );
     expect(chart.groups[1].columns.every((c) => c.height === 0 && c.value === null)).toBe(true);
     expect(chart.groups[0].columns[0].height).toBeGreaterThan(chart.groups[0].columns[1].height);
+  });
+
+  it("draws a chart with nothing above zero as one line at zero, not ticks under the chart", () => {
+    const area = { width: 300, height: 100, left: 30, right: 0, top: 0, bottom: 10 };
+    const chart = columnChart(
+      [
+        { label: "Jan", values: [0, 0] },
+        { label: "Feb", values: [null, null] },
+      ],
+      area
+    );
+    expect(chart.yTicks).toEqual([{ value: 0, y: area.height - area.bottom }]);
+    for (const g of chart.groups) for (const c of g.columns) expect(c.height).toBe(0);
+  });
+
+  it("names a month with its year when the columns cross a year, and spaces labels to fit", () => {
+    expect(monthTick("2026-09", false)).toBe("Sep");
+    expect(monthTick("2025-01", true)).toBe("Jan '25");
+    expect(spansYears(["2025-11", "2025-12", "2026-01"])).toBe(true);
+    expect(spansYears(["2026-01", "2026-12"])).toBe(false);
+    expect(labelEvery(40, 20)).toBe(1);
+    expect(labelEvery(12, 30)).toBe(3);
   });
 
   it("writes axis amounts short, and every tick as itself", () => {

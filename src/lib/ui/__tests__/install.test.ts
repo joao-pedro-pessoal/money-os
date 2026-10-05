@@ -9,6 +9,7 @@ const FIREFOX_WINDOWS = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gec
 const env = (overrides: Partial<InstallEnvironment>): InstallEnvironment => ({
   standalone: false,
   androidApp: false,
+  justInstalled: false,
   canPrompt: false,
   userAgent: ANDROID_CHROME,
   platform: "Linux armv8l",
@@ -37,5 +38,12 @@ describe("getting the app onto a device", () => {
     expect(installRoute(env({ standalone: true, canPrompt: true }))).toBe("installed");
     expect(installRoute(env({ userAgent: IPHONE, standalone: true }))).toBe("installed");
     expect(installRoute(env({ androidApp: true, canPrompt: true }))).toBe("android-app");
+  });
+
+  it("does not offer to install again right after it was installed from this tab", () => {
+    expect(installRoute(env({ justInstalled: true }))).toBe("just-installed");
+    expect(installRoute(env({ justInstalled: true, userAgent: IPHONE, platform: "iPhone" }))).toBe("just-installed");
+    // Opened from its icon, it is simply installed.
+    expect(installRoute(env({ justInstalled: true, standalone: true }))).toBe("installed");
   });
 });

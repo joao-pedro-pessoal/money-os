@@ -6,6 +6,9 @@
  * thing that actually works where it is:
  *
  * - **installed** — already running as the installed app; nothing to offer.
+ * - **just-installed** — installed a moment ago from this browser tab, which
+ *   is still a tab: the app is on the home screen now, so offering to install
+ *   it again would be wrong.
  * - **android-app** — inside the Android app in `android-shell/`, which is an
  *   app already.
  * - **prompt** — Chrome, Edge and Samsung Internet (Android and computers)
@@ -17,13 +20,15 @@
  * Pure.
  */
 
-export type InstallRoute = "installed" | "android-app" | "prompt" | "ios" | "menu";
+export type InstallRoute = "installed" | "just-installed" | "android-app" | "prompt" | "ios" | "menu";
 
 export interface InstallEnvironment {
   /** The page is open as an installed app (display-mode standalone, or iOS's `navigator.standalone`). */
   standalone: boolean;
   /** The Android app's bridge is present. */
   androidApp: boolean;
+  /** The browser said the app was installed while this page was open. */
+  justInstalled: boolean;
   /** The browser has offered an install prompt that has not been used yet. */
   canPrompt: boolean;
   userAgent: string;
@@ -42,6 +47,7 @@ export function isAppleMobile(userAgent: string, platform: string, maxTouchPoint
 export function installRoute(env: InstallEnvironment): InstallRoute {
   if (env.androidApp) return "android-app";
   if (env.standalone) return "installed";
+  if (env.justInstalled) return "just-installed";
   if (env.canPrompt) return "prompt";
   if (isAppleMobile(env.userAgent, env.platform, env.maxTouchPoints)) return "ios";
   return "menu";

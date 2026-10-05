@@ -292,9 +292,14 @@ export type DividendOverview = Awaited<ReturnType<typeof getDividendOverview>>;
  */
 export async function getIncomePayments() {
   const [loaded, fx] = await Promise.all([loadPayments(), converter()]);
+  // The days of the ones no rate could convert, so a report counts only its own period's.
+  const unconvertedDates: string[] = [];
   const payments = loaded.counted.flatMap((p) => {
     const amount = fx.convert(p.amount, p.currency);
-    if (amount === null) return [];
+    if (amount === null) {
+      unconvertedDates.push(p.paidOn.toISOString().slice(0, 10));
+      return [];
+    }
     return [
       {
         date: p.paidOn.toISOString().slice(0, 10),
@@ -304,7 +309,7 @@ export async function getIncomePayments() {
       },
     ];
   });
-  return { payments, unconverted: fx.unconverted() };
+  return { payments, unconverted: fx.unconverted(), unconvertedDates };
 }
 
 /**

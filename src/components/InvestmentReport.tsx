@@ -57,7 +57,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
           note={
             report.value ? (
               <>
-                from <Money value={report.value.start} currency={currency} /> (
+                from <Money value={report.value.start} currency={currency} /> on {report.value.startDate} (
                 <Signed value={report.value.change} currency={currency} />)
               </>
             ) : (
@@ -70,18 +70,28 @@ export default function InvestmentReportSection({ report, currency }: { report: 
         <Card
           label="Deposited"
           note={
-            report.flows.withdrawn > 0 ? (
-              <>
-                <Money value={report.flows.withdrawn} currency={currency} /> withdrawn
-              </>
-            ) : (
-              `${report.flows.count} ${report.flows.count === 1 ? "movement" : "movements"} in or out`
-            )
+            <>
+              {report.flows.withdrawn > 0 ? (
+                <>
+                  <Money value={report.flows.withdrawn} currency={currency} /> withdrawn
+                </>
+              ) : (
+                `${report.flows.count} ${report.flows.count === 1 ? "movement" : "movements"} in or out`
+              )}
+              {/* A zero here may be a deposit nobody recorded; say so rather than let it read as none. */}
+              {!report.flows.complete && " · only what platforms report"}
+            </>
           }
         >
           <Money value={report.flows.deposited} currency={currency} />
         </Card>
-        <Card label="Change beyond deposits" note="markets, and money moved in or out without a recorded deposit or withdrawal">
+        <Card
+          label="Change beyond deposits"
+          note={
+            report.unexplainedWithheld ??
+            (report.value ? `what markets did, between ${report.value.startDate} and ${report.value.endDate}` : undefined)
+          }
+        >
           {report.unexplained === null ? "—" : <Signed value={report.unexplained} currency={currency} />}
         </Card>
         <Card

@@ -30,6 +30,8 @@ import {
   type ValuePoint,
 } from "@/lib/portfolio/returns";
 import { bySymbol, cumulativePnl, isInstrumentTrade, type SymbolStats, type TradeRow } from "@/lib/trading/stats";
+import { UNTAGGED } from "@/lib/portfolio/positionView";
+import { tagLabel } from "@/lib/portfolio/tags";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const dayOf = (date: string) => date.slice(0, 10);
@@ -101,17 +103,28 @@ export interface BreakdownLine {
 export interface InvestmentReport {
   from: string;
   to: string;
-  /** Value at the start and the end; null without a valuation inside the period. */
-  value: { start: number; end: number; change: number } | null;
+  /**
+   * Value at the start and the end, and the days those valuations were taken;
+   * null without a valuation inside the period.
+   */
+  value: { start: number; end: number; change: number; startDate: string; endDate: string } | null;
   /** The value through the period, opening at the value it started from. */
   valueLine: ValuePoint[];
-  flows: { deposited: number; withdrawn: number; net: number; count: number };
   /**
-   * The change in value that deposits and withdrawals do not explain: markets,
-   * and any money paid in that no platform reported as a deposit. Null when the
-   * value at either end is unknown.
+   * Deposits and withdrawals inside the period. `complete` is false when the
+   * record of money going in cannot explain the portfolio — not every platform
+   * reports them — so a zero here may be a deposit nobody recorded.
+   */
+  flows: { deposited: number; withdrawn: number; net: number; count: number; complete: boolean };
+  /**
+   * The change in value that deposits and withdrawals do not explain: markets.
+   * Counted between the two valuations the change is read from, so a deposit
+   * just before the period started is not mistaken for a gain. Null when the
+   * value at either end is unknown, or when the deposit record is incomplete —
+   * then `unexplainedWithheld` says so.
    */
   unexplained: number | null;
+  unexplainedWithheld: string | null;
   trades: {
     bought: number;
     buys: number;
@@ -182,13 +195,38 @@ function valueBetween(sorted: readonly ValuePoint[], from: string, to: string) {
   const inside = within(sorted, from, to);
   if (inside.length === 0) return { change: null, line: [] as ValuePoint[] };
   const before = sorted.filter((p) => dayOf(p.date) < from).at(-1);
-  const start = (before ?? inside[0]).value;
-  const end = inside.at(-1)!.value;
+  const opening = before ?? inside[0];
+  const closing = inside.at(-1)!;
+  const start = opening.value;
+  const end = closing.value;
   const line = before === undefined || dayOf(inside[0].date) === from
     ? inside.map((p) => ({ date: dayOf(p.date), value: round2(p.value) }))
     : [{ date: from, value: round2(before.value) }, ...inside.map((p) => ({ date: dayOf(p.date), value: round2(p.value) }))];
-  return { change: { start: round2(start), end: round2(end), change: round2(end - start) }, line };
+  return {
+    change: {
+      start: round2(start),
+      end: round2(end),
+      change: round2(end - start),
+      startDate: dayOf(opening.date),
+      endDate: dayOf(closing.date),
+    },
+    line,
+  };
 }
+
+/**
+ * Whether a flow falls between two valuations, as `returns.ts` reads them: a
+ * valuation is taken before that day's deposits and withdrawals. So a flow on
+ * the opening day happened after it and counts; one on the closing day is not
+ * in the closing value yet and does not. Reading the closing day the other way
+ * is the "deposit on the last day used to read as a loss" bug.
+ */
+function betweenValuations(flow: { date: string }, opening: string, closing: string): boolean {
+  return dayOf(flow.date) >= opening && dayOf(flow.date) < closing;
+}
+
+const DEPOSITS_INCOMPLETE =
+  "Not every platform reports deposits and withdrawals, so how much of the change they explain cannot be told apart from what markets did.";
 
 /**
  * The valuations a return over the period is measured on.
@@ -227,6 +265,19 @@ export function buildInvestmentReport(input: InvestmentReportInput): InvestmentR
   const deposited = round2(flowsInside.filter((f) => f.amount < 0).reduce((s, f) => s - f.amount, 0));
   const withdrawn = round2(flowsInside.filter((f) => f.amount > 0).reduce((s, f) => s + f.amount, 0));
   const net = round2(deposited - withdrawn);
+  // The portfolio's own guard: a record of money in that cannot explain what is held is not the whole record.
+  const flowsComplete = input.moneyWeightedWithheld === null;
+
+  let unexplained: number | null = null;
+  let unexplainedWithheld: string | null = null;
+  if (value !== null && !flowsComplete) {
+    unexplainedWithheld = DEPOSITS_INCOMPLETE;
+  } else if (value !== null) {
+    const netBetween = input.flows
+      .filter((f) => f.amount !== 0 && betweenValuations(f, value.startDate, value.endDate))
+      .reduce((s, f) => s - f.amount, 0);
+    unexplained = round2(value.change - netBetween);
+  }
 
   // Trades, by the Trade history page's own rules: instrument trades only, results as the venues state them.
   const tradesInside = within(input.trades, from, to);
@@ -281,7 +332,7 @@ export function buildInvestmentReport(input: InvestmentReportInput): InvestmentR
       const opening = measured[0];
       const closing = measured.at(-1)!;
       const between = input.flows.filter(
-        (f) => f.amount !== 0 && dayOf(f.date) > dayOf(opening.date) && dayOf(f.date) <= dayOf(closing.date)
+        (f) => f.amount !== 0 && betweenValuations(f, dayOf(opening.date), dayOf(closing.date))
       );
       const rate = internalRateOfReturn([
         { date: dayOf(opening.date), amount: -opening.value },
@@ -357,8 +408,10 @@ export function buildInvestmentReport(input: InvestmentReportInput): InvestmentR
     const items = atEnd.items.filter((i) => i.value !== 0);
     const total = items.reduce((s, i) => s + i.value, 0);
     const share = (v: number) => (total === 0 ? 0 : round2((v / total) * 100));
+    // Grouped and named the way the Investments page groups by asset type.
     const byType = new Map<string, number>();
-    for (const i of items) byType.set(i.assetType ?? "Not classified", (byType.get(i.assetType ?? "Not classified") ?? 0) + i.value);
+    for (const i of items) byType.set(i.assetType ?? UNTAGGED, (byType.get(i.assetType ?? UNTAGGED) ?? 0) + i.value);
+    const typeName = (key: string) => (key === UNTAGGED ? "Untagged" : tagLabel(key, "assetType") ?? key);
     composition = {
       asOf: atEnd.asOf,
       today: atEnd.today,
@@ -366,7 +419,7 @@ export function buildInvestmentReport(input: InvestmentReportInput): InvestmentR
       unrealised: atEnd.unrealised,
       costUnknown: atEnd.costUnknown,
       byType: [...byType.entries()]
-        .map(([name, v]) => ({ name, value: round2(v), percent: share(v) }))
+        .map(([key, v]) => ({ name: typeName(key), value: round2(v), percent: share(v) }))
         .sort((a, b) => b.value - a.value),
       largest: [...items]
         .sort((a, b) => b.value - a.value)
@@ -384,8 +437,9 @@ export function buildInvestmentReport(input: InvestmentReportInput): InvestmentR
     to,
     value,
     valueLine,
-    flows: { deposited, withdrawn, net, count: flowsInside.length },
-    unexplained: value === null ? null : round2(value.change - net),
+    flows: { deposited, withdrawn, net, count: flowsInside.length, complete: flowsComplete },
+    unexplained,
+    unexplainedWithheld,
     trades: {
       bought: round2(buys.reduce((s, t) => s + Math.abs(t.amount), 0)),
       buys: buys.length,
