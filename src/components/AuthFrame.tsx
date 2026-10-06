@@ -1,6 +1,8 @@
+import Link from "next/link";
 import InstallApp from "./InstallApp";
 import LanguagePicker from "./LanguagePicker";
 import { currentLanguage, words } from "@/actions/language";
+import { LEGAL_PATHS } from "@/lib/legal/paths";
 
 /**
  * The frame of the way in: signing in, making an account, recovering one. On a wide screen the left half says what this is; on a phone it
@@ -11,7 +13,8 @@ import { currentLanguage, words } from "@/actions/language";
  */
 export default async function AuthFrame({ children }: { children: React.ReactNode }) {
   const language = await currentLanguage();
-  const w = (await words()).auth;
+  const m = await words();
+  const w = m.auth;
   return (
     <div translate="no" lang={language} className="app-frame grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <aside className="auth-hero hidden lg:flex flex-col justify-between gap-10 p-12 xl:p-16">
@@ -58,6 +61,18 @@ export default async function AuthFrame({ children }: { children: React.ReactNod
           </div>
           {children}
           <InstallApp compact />
+          {/* Readable before an account exists: an app store requires it, and so does fairness. */}
+          <nav aria-label={m.legal.pages} className="flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-[var(--muted)]">
+            <Link href={LEGAL_PATHS.privacy} className="hover:underline">
+              {m.legal.privacy}
+            </Link>
+            <Link href={LEGAL_PATHS.terms} className="hover:underline">
+              {m.legal.terms}
+            </Link>
+            <Link href={LEGAL_PATHS.deletion} className="hover:underline">
+              {m.legal.deletion}
+            </Link>
+          </nav>
         </div>
       </main>
     </div>

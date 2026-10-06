@@ -27,6 +27,8 @@ mesma base de dados.
    | `APP_SECRET` | O mesmo do `.env`, ou um novo (um novo fecha as sessões abertas). |
    | `COOKIE_SECURE` | `true`. Na internet o cookie da sessão só deve viajar cifrado. |
    | `MAX_ACCOUNTS` | Quantas contas o site aceita no total (por defeito 10). |
+   | `OPERATOR_NAME` | O teu nome, como responsável na política de privacidade (`/privacy`). |
+   | `CONTACT_EMAIL` | O email para pedidos de privacidade e de apagar conta. Aparece **publicamente** em `/privacy`, `/terms` e `/delete-account`. |
 
    A `DATABASE_ADMIN_URL` também **não** vai para a Vercel: serve só para mudar
    a estrutura da base de dados, e isso faz-se a partir do teu PC.

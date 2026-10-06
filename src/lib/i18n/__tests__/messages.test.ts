@@ -62,7 +62,7 @@ describe("Portuguese", () => {
    * The few words that are the same in both. Anything else equal to English is a
    * sentence someone forgot to translate.
    */
-  const SAME_IN_BOTH = new Set(["nav.manual", "auth.email", "settings.baseMark", "phone.widgetsTitle"]);
+  const SAME_IN_BOTH = new Set(["nav.manual", "auth.email", "settings.baseMark", "phone.widgetsTitle", "legal.agreeEnd", "legal.back"]);
 
   it("translates every sentence English has", () => {
     const untranslated = leaves(pt).filter(

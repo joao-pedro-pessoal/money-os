@@ -35,6 +35,8 @@ services:
       APP_EMAIL: ${APP_EMAIL:-}
       APP_PASSWORD: ${APP_PASSWORD:?set APP_PASSWORD in .env}
       MAX_ACCOUNTS: ${MAX_ACCOUNTS:-}
+      OPERATOR_NAME: ${OPERATOR_NAME:-}
+      CONTACT_EMAIL: ${CONTACT_EMAIL:-}
       APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env}
       # Required to store API secrets for Bybit, Trading 212, Kraken, Binance,
       # OKX or MEXC. Losing it loses the secrets — keep a copy off the server.

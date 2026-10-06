@@ -5,3 +5,8 @@ build/
 app/build/
 local.properties
 *.iml
+
+# Signing keys and the bundles they sign never belong in the repository.
+*.jks
+*.keystore
+*.aab

@@ -2,6 +2,33 @@ plugins {
     id 'com.android.application'
 }
 
+/*
+ * Two builds of the same app.
+ *
+ * home  - opens the copy of Money OS on the owner's computer, whose address is
+ *         typed in on the first start (http, on the home Wi-Fi). Debug-signed
+ *         and installed by cable, as before.
+ * store - opens the published site, fixed when it is built, https only. The
+ *         one that goes to Google Play, signed with the upload key.
+ *
+ * Same applicationId: they are one app pointed at two places, and
+ * res/xml/shortcuts.xml names the package literally. A phone holds one or the
+ * other, and going from one to the other means uninstalling first, because
+ * their signatures differ.
+ */
+def siteUrl = (project.findProperty('siteUrl') ?: 'https://money-os-brown.vercel.app').toString()
+// Written as MainActivity.originOf writes an origin, or the page's bridge never answers.
+if (!siteUrl.startsWith('https://') || siteUrl.endsWith('/') || siteUrl.contains('"') || siteUrl != siteUrl.toLowerCase()) {
+    throw new GradleException("siteUrl must be a lower-case https origin with no trailing slash, not '${siteUrl}'.")
+}
+
+// The upload key lives outside the repository (docs/PLAY_STORE.md). Where it is
+// and its password come from the environment of the one command that signs,
+// CRIAR_APP_PLAY_STORE.cmd, and nowhere else.
+def uploadKeystore = System.getenv('MONEYOS_UPLOAD_KEYSTORE')
+def uploadPassword = System.getenv('MONEYOS_UPLOAD_PASSWORD')
+def canSign = uploadKeystore && uploadPassword
+
 android {
     namespace = 'com.joaonovais.moneyos.shell'
     compileSdk = 36
@@ -13,18 +40,57 @@ android {
         // 29 is where saving to Downloads needs no storage permission.
         minSdk = 29
         targetSdk = 36
-        versionCode = 9
-        versionName = '0.7.2'
+        // Google Play refuses an upload whose versionCode is not higher than the last.
+        versionCode = 10
+        versionName = '0.8.0'
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    flavorDimensions = ['where']
+    productFlavors {
+        home {
+            dimension = 'where'
+            // Empty: the address is typed in on the phone.
+            buildConfigField 'String', 'SITE_URL', '""'
+        }
+        store {
+            dimension = 'where'
+            buildConfigField 'String', 'SITE_URL', "\"${siteUrl}\""
+        }
+    }
+
+    signingConfigs {
+        if (canSign) {
+            upload {
+                storeFile = file(uploadKeystore)
+                storePassword = uploadPassword
+                keyAlias = 'upload'
+                keyPassword = uploadPassword
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled = false
+            if (canSign) signingConfig = signingConfigs.upload
         }
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+// A store release without the upload key would be an unsigned bundle that
+// Google Play refuses only after the upload. It is refused here instead.
+gradle.taskGraph.whenReady { graph ->
+    def releasing = graph.allTasks.any { it.project == project && it.name.toLowerCase().contains('storerelease') }
+    if (releasing && !canSign) {
+        throw new GradleException('A store release needs the upload key. Build it with CRIAR_APP_PLAY_STORE.cmd, which asks for the password and sets MONEYOS_UPLOAD_KEYSTORE and MONEYOS_UPLOAD_PASSWORD for that build only.')
     }
 }

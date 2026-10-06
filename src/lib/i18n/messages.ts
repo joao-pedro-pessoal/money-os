@@ -82,7 +82,7 @@ const en = {
     oneViewTitle: "Everything in one view",
     oneViewText: "Accounts, cash flow, budgets and investments — what you have and where it went.",
     yoursTitle: "Yours alone",
-    yoursText: "Your own account. What you record is kept apart from everyone else's, and only you see it.",
+    yoursText: "Your own account. What you record is kept apart from everyone else's, and no other user can see it.",
     phoneTitle: "On your phone too",
     phoneText: "Open it in your phone's browser and add it to the home screen: it installs like an app.",
     footer: "Private by design. Open source, under the AGPL.",
@@ -141,6 +141,22 @@ const en = {
       "In Safari, tap **Share** (the square with an arrow), then **Add to Home Screen**, then **Add**. Money OS then opens from its own icon.",
     menuSteps:
       "Open your browser's menu (**⋮** or **⋯**) and choose **Install app** or **Add to Home screen**. On a computer, Chrome and Edge also show an install icon at the end of the address bar.",
+  },
+
+  legal: {
+    privacy: "Privacy",
+    terms: "Terms",
+    deletion: "Delete account",
+    privacyNotice: "Privacy notice",
+    termsOfUse: "Terms of use",
+    agreeStart: "By creating an account you accept the ",
+    agreeAnd: " and the ",
+    agreeEnd: ".",
+    settingsTitle: "Privacy and terms",
+    settingsText:
+      "What is kept about you and who handles it, the terms of use, and how to delete the account, from inside the app or out of it.",
+    back: "Money OS",
+    pages: "Legal pages",
   },
 
   quickEntry: {
@@ -253,7 +269,7 @@ const en = {
     quickNotificationToggle: "Quick entry notification",
     alertsTitle: "Alerts on this phone",
     alertsText:
-      "A notification for what the bell would show you: a budget over or running ahead, a subscription about to charge or waiting to be confirmed, a balance not updated in two months, a connection that stopped syncing, a watchlist price reached. Each one once. The phone checks about every half hour, and only hears while it can reach this computer: on the same Wi-Fi, with the site running.",
+      "A notification for what the bell would show you: a budget over or running ahead, a subscription about to charge or waiting to be confirmed, a balance not updated in two months, a connection that stopped syncing, a watchlist price reached. Each one once. The phone checks about every half hour, whenever it can reach this site: anywhere with internet for the published site, or on the same Wi-Fi for a copy running on your computer.",
     alertsToggle: "Alert notifications",
   },
 
@@ -428,7 +444,7 @@ const pt: Messages = {
     oneViewTitle: "Tudo numa só vista",
     oneViewText: "Contas, movimentos, orçamentos e investimentos — o que tens e para onde foi.",
     yoursTitle: "Só teu",
-    yoursText: "A tua própria conta. O que registas fica separado do de toda a gente, e só tu o vês.",
+    yoursText: "A tua própria conta. O que registas fica separado do de toda a gente, e mais nenhum utilizador o vê.",
     phoneTitle: "Também no telemóvel",
     phoneText: "Abre-o no navegador do telemóvel e adiciona-o ao ecrã principal: instala-se como uma app.",
     footer: "Privado de raiz. Código aberto, com a licença AGPL.",
@@ -486,6 +502,22 @@ const pt: Messages = {
       "No Safari, toca em **Partilhar** (o quadrado com uma seta), depois em **Adicionar ao ecrã principal** e em **Adicionar**. O Money OS passa a abrir pelo seu próprio ícone.",
     menuSteps:
       "Abre o menu do navegador (**⋮** ou **⋯**) e escolhe **Instalar app** ou **Adicionar ao ecrã principal**. No computador, o Chrome e o Edge também mostram um ícone de instalar no fim da barra de endereço.",
+  },
+
+  legal: {
+    privacy: "Privacidade",
+    terms: "Termos",
+    deletion: "Apagar conta",
+    privacyNotice: "Política de privacidade",
+    termsOfUse: "Termos de utilização",
+    agreeStart: "Ao criar a conta, aceitas os ",
+    agreeAnd: " e a ",
+    agreeEnd: ".",
+    settingsTitle: "Privacidade e termos",
+    settingsText:
+      "O que é guardado sobre ti e quem lhe toca, os termos de utilização, e como apagar a conta, dentro ou fora da app.",
+    back: "Money OS",
+    pages: "Páginas legais",
   },
 
   quickEntry: {
@@ -598,7 +630,7 @@ const pt: Messages = {
     quickNotificationToggle: "Notificação de registo rápido",
     alertsTitle: "Alertas neste telemóvel",
     alertsText:
-      "Uma notificação para o que o sino te mostraria: um orçamento ultrapassado ou a gastar depressa demais, uma subscrição prestes a cobrar ou à espera de confirmação, um saldo sem atualização há dois meses, uma ligação que deixou de sincronizar, um preço da lista A seguir atingido. Cada um uma vez. O telemóvel verifica mais ou menos de meia em meia hora, e só ouve enquanto chega a este computador: no mesmo Wi-Fi, com o site a correr.",
+      "Uma notificação para o que o sino te mostraria: um orçamento ultrapassado ou a gastar depressa demais, uma subscrição prestes a cobrar ou à espera de confirmação, um saldo sem atualização há dois meses, uma ligação que deixou de sincronizar, um preço da lista A seguir atingido. Cada um uma vez. O telemóvel verifica mais ou menos de meia em meia hora, sempre que consegue chegar a este site: em qualquer lado com internet no site publicado, ou no mesmo Wi-Fi numa cópia a correr no teu computador.",
     alertsToggle: "Notificações de alertas",
   },
 

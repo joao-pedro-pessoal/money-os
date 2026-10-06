@@ -53,7 +53,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * The Money OS site, full screen, from the computer that runs it.
+ * The Money OS site, full screen: the published site in the store build, the
+ * computer that runs it in the home build (see app/build.gradle).
  *
  * The pages, the numbers and the login all come from the site, so the phone
  * shows exactly what the computer shows. The one thing kept on the phone is the
@@ -120,7 +121,7 @@ public class MainActivity extends Activity {
         // Normally already scheduled; this only restores a check the system dropped.
         Alerts.schedule(this);
 
-        String saved = prefs().getString(KEY_ADDRESS, null);
+        String saved = Site.address(this);
         if (saved == null) showAddressForm(null, null);
         else openSite(saved, savedInstanceState);
     }
@@ -528,16 +529,24 @@ public class MainActivity extends Activity {
         LinearLayout box = column();
         box.addView(text("Sem ligação ao Money OS", 24, INK, true));
         box.addView(text("Não consegui abrir " + address + ".", 16, INK, false));
-        box.addView(text("Confirma que o computador está ligado, que o site está a correr e que o "
-                + "telemóvel está no mesmo Wi-Fi. Se o endereço do computador mudou, escreve o novo.",
-                14, MUTED, false));
+        if (Site.fixedAddress()) {
+            box.addView(text("Confirma que o telemóvel tem internet, por Wi-Fi ou dados móveis, e tenta "
+                    + "outra vez.", 14, MUTED, false));
+        } else {
+            box.addView(text("Confirma que o computador está ligado, que o site está a correr e que o "
+                    + "telemóvel está no mesmo Wi-Fi. Se o endereço do computador mudou, escreve o novo.",
+                    14, MUTED, false));
+        }
         box.addView(text(detail, 12, MUTED, false));
         Button retry = button("Tentar outra vez");
         retry.setOnClickListener(v -> openSite(address, null));
-        Button change = button("Mudar endereço");
-        change.setOnClickListener(v -> showAddressForm(null, address));
         box.addView(retry);
-        box.addView(change);
+        // The store build's address is the published site's: there is nothing to change it to.
+        if (!Site.fixedAddress()) {
+            Button change = button("Mudar endereço");
+            change.setOnClickListener(v -> showAddressForm(null, address));
+            box.addView(change);
+        }
         show(box);
     }
 

@@ -26,6 +26,7 @@ import { OWNER_USER_ID } from "@/db/schema";
 import { currentLanguage } from "@/actions/language";
 import { localeOf } from "@/lib/i18n/languages";
 import { messagesFor } from "@/lib/i18n/messages";
+import { LEGAL_PATHS } from "@/lib/legal/paths";
 
 export default async function SettingsGeneralPage() {
   const baseCurrency = await getBaseCurrency();
@@ -41,6 +42,7 @@ export default async function SettingsGeneralPage() {
   const email = await accountEmail();
   const language = await currentLanguage();
   const w = messagesFor(language).settings;
+  const legal = messagesFor(language).legal;
 
   return (
     <div translate="no" lang={language} className="space-y-6">
@@ -206,6 +208,19 @@ export default async function SettingsGeneralPage() {
               {w.logOutOthers}
             </button>
           </form>
+        </SettingRow>
+        <SettingRow title={legal.settingsTitle} description={legal.settingsText}>
+          <div className="flex flex-col gap-1 text-sm">
+            <Link href={LEGAL_PATHS.privacy} className="text-[var(--accent)]">
+              {legal.privacyNotice}
+            </Link>
+            <Link href={LEGAL_PATHS.terms} className="text-[var(--accent)]">
+              {legal.termsOfUse}
+            </Link>
+            <Link href={LEGAL_PATHS.deletion} className="text-[var(--accent)]">
+              {legal.deletion}
+            </Link>
+          </div>
         </SettingRow>
       </div>
 

@@ -177,8 +177,10 @@ normaliza no commit.
   `C:\Users\joao2\AppData\Local\Programs\Eclipse Adoptium\jdk-17.0.20.101-hotspot`.
   O utilizador precisa do Java habitual para a faculdade: definir `JAVA_HOME`/`PATH`
   **só no processo** que compila, nunca globalmente.
-- Compilar a app Android antiga: `android-shell\gradlew.bat assembleDebug` com o
-  JDK 17. `lintDebug` tem dois erros antigos conhecidos.
+- Compilar a app Android: `android-shell\gradlew.bat assembleHomeDebug` (a de casa) ou
+  `assembleStoreDebug` (a da loja), com o JDK 17. A versão para a Play Store só se cria
+  assinada, com `CRIAR_APP_PLAY_STORE.cmd` (docs/PLAY_STORE.md). `lintDebug` tem dois
+  erros antigos conhecidos.
 - Emulador `Pixel_10_Pro_XL` (API 37.1); tem PIN e não é desbloqueado pelo agente.
 - Não alterar firewall nem definições do Windows; pedir ao utilizador o que exigir
   a presença dele (iniciar sessão, desbloquear o telemóvel, aceitar termos).

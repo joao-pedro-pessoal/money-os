@@ -33,9 +33,24 @@ final class Site {
 
     private Site() {}
 
+    /**
+     * The site's origin, or null when none has been given yet. Fixed in the
+     * store build (BuildConfig.SITE_URL, the published site); typed in on the
+     * phone in the home build, where the computer's address changes.
+     */
+    static String address(Context context) {
+        if (!BuildConfig.SITE_URL.isEmpty()) return BuildConfig.SITE_URL;
+        return QuickEntry.prefs(context).getString("address", null);
+    }
+
+    /** True when the address is the published site's, built in: nothing to type or change. */
+    static boolean fixedAddress() {
+        return !BuildConfig.SITE_URL.isEmpty();
+    }
+
     /** The body of a GET to `path` on the site. Blocking: call off the main thread. */
     static String get(Context context, String path) throws Unavailable {
-        String address = QuickEntry.prefs(context).getString("address", null);
+        String address = address(context);
         if (address == null) throw new Unavailable(PROBLEM_NO_ADDRESS);
         String cookie = null;
         try {

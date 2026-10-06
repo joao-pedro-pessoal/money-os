@@ -434,6 +434,17 @@ message that can't be acted on costs a round trip every time.
   confusing message.
 - `src/app/**` — pages. Server components by default.
 
+## The privacy notice is a claim about this code
+
+`/privacy`, `/terms` and `/delete-account` (text in `src/lib/legal/documents.ts`)
+say what is kept, which providers see it, which cookies exist and how deletion
+works. Google Play and the GDPR hold the site to those words. A change that adds
+a provider, a field about someone, a cookie, a place data travels or a way it is
+kept changes that file in the same commit, both languages, and moves
+`LEGAL_UPDATED`. The tests there check the two languages match, that the steps
+name the app's real buttons, and that nothing promised is forbidden by
+`docs/LEGAL_SECURITY_CHECKLIST.md`.
+
 ## A phone on the Wi-Fi is not a secure context
 
 The phone reaches the site on the computer as `http://192.168.x.x:3000` — the

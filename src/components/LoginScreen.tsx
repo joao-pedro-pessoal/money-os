@@ -9,6 +9,7 @@ import { localeOf } from "@/lib/i18n/languages";
 import { serverMessageIn } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageContext";
 import { safeReturnPath } from "@/lib/accounts/returnPath";
+import { LEGAL_PATHS } from "@/lib/legal/paths";
 
 type Step = "sign-in" | "sign-up" | "recover" | "code";
 
@@ -238,6 +239,18 @@ export default function LoginScreen({ signUps, destination = "/" }: { signUps: b
             {passwordField(w.password, "new-password", w.newPasswordHint)}
             {problemNotice}
             {submit(w.createMyAccount, w.creating)}
+            {/* In a new tab, so reading them does not lose what was typed here. */}
+            <p className="text-xs text-center text-[var(--muted)]">
+              {m.legal.agreeStart}
+              <a href={LEGAL_PATHS.terms} target="_blank" rel="noopener" className="text-[var(--accent)] hover:underline">
+                {m.legal.termsOfUse}
+              </a>
+              {m.legal.agreeAnd}
+              <a href={LEGAL_PATHS.privacy} target="_blank" rel="noopener" className="text-[var(--accent)] hover:underline">
+                {m.legal.privacyNotice}
+              </a>
+              {m.legal.agreeEnd}
+            </p>
           </>
         )}
         {switchTo(w.haveAccount, w.signIn, "sign-in")}

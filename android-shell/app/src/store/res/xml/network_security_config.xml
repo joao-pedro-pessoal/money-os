@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The store build opens only the published site, over https. Plain http is
+  refused for everything, so nothing the app loads can be read or changed on
+  the way. The home build (src/main) allows it for the computer on the Wi-Fi.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

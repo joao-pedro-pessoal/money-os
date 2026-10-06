@@ -10,11 +10,15 @@ cifrados só lá) continua no [PLANO_MOBILE.md](PLANO_MOBILE.md), e a app em `mo
 é a base dele. As duas apps têm identificadores diferentes e podem estar instaladas ao
 mesmo tempo.
 
-**Versão atual da app: 0.7.2** (21 de setembro de 2026). Resumo do que tem: o site
+**Versão atual da app: 0.8.0** (6 de outubro de 2026). Resumo do que tem: o site
 completo, disposição própria no telemóvel com modos Simple e Complex, registo rápido
 a partir de widget, atalhos do ícone, definições rápidas e notificação, nove
 widgets com valores e alertas como notificações. Detalhes nas secções abaixo.
 
+- **0.8.0:** duas versões no mesmo código. **home** é a de sempre (pede o endereço do
+  PC). **store** abre o site publicado, só por https, e é a que vai para a Play Store
+  (ver [PLAY_STORE.md](PLAY_STORE.md)). Têm o mesmo identificador: um telemóvel tem uma
+  ou a outra, e para trocar é preciso desinstalar primeiro.
 - **0.7.2:** a sessão do site passou a expirar ao fim de 30 dias sem uso e a ser
   renovada todos os dias em que é usada; a app guarda a sessão renovada que chega com
   a resposta de um widget, para os widgets não a perderem entre visitas. **Depois desta
@@ -41,10 +45,10 @@ deve ser retirado e colocado outra vez.
      pasta vazia.
    - No Explorador: **Este PC → (o teu telemóvel) → Armazenamento interno → Download**.
    - Arrasta para lá o ficheiro
-     `C:\Users\joao2\Projects\money-os\android-shell\app\build\outputs\apk\debug\app-debug.apk`.
+     `C:\Users\joao2\Projects\money-os\android-shell\app\build\outputs\apk\home\debug\app-home-debug.apk`.
      Não está no Git: é o resultado de compilar (ver "Compilar", abaixo).
 3. **Instala-a no telemóvel**: abre o **Gestor de ficheiros** → **Transferências** →
-   toca em `app-debug.apk`. O Android pede para autorizar o Gestor de ficheiros a
+   toca em `app-home-debug.apk`. O Android pede para autorizar o Gestor de ficheiros a
    instalar apps desconhecidas; autoriza e carrega em **Instalar**. Os telemóveis Xiaomi
    e POCO podem mostrar ainda um aviso de segurança antes de instalar.
 4. Abre a app **Money OS**, escreve o endereço do passo 1 e inicia sessão com a
@@ -90,8 +94,13 @@ da faculdade:
 ```bat
 cd /d C:\Users\joao2\Projects\money-os\android-shell
 set "JAVA_HOME=C:\Users\joao2\AppData\Local\Programs\Eclipse Adoptium\jdk-17.0.20.101-hotspot"
-gradlew.bat assembleDebug
+gradlew.bat assembleHomeDebug
 ```
+
+Isto compila a versão **home** (a do Wi-Fi de casa). `assembleStoreDebug` compila a da
+loja para testar por cabo, em `app\build\outputs\apk\store\debug\app-store-debug.apk`.
+A versão que vai para a Play Store é assinada e só se cria com
+`CRIAR_APP_PLAY_STORE.cmd` ([PLAY_STORE.md](PLAY_STORE.md)); sem a chave, o Gradle recusa-a.
 
 O `local.properties` (fora do Git) aponta para o SDK com barras normais:
 `sdk.dir=C:/Users/joao2/AppData/Local/Android/Sdk`. Com barras invertidas por escapar,
