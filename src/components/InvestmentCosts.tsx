@@ -64,7 +64,7 @@ export default function InvestmentCosts({
                   <tbody>
                     {costs.funds.map((f) => (
                       <tr key={f.name}>
-                        <td title={f.name}>{shortName(f.name)}</td>
+                        <td title={f.name}><span translate="no">{shortName(f.name)}</span></td>
                         <td className="text-right"><Money value={f.value} currency={currency} /></td>
                         <td className="text-right">{percent(f.ter)}</td>
                         <td className="text-right font-medium"><Money value={f.yearly} currency={currency} /></td>
@@ -80,7 +80,7 @@ export default function InvestmentCosts({
                 {costs.unknown.map((u, i) => (
                   <span key={u.name + i}>
                     {i > 0 && ", "}
-                    {shortName(u.name)} (<Money value={u.value} currency={currency} />)
+                    <span translate="no">{shortName(u.name)}</span> (<Money value={u.value} currency={currency} />)
                   </span>
                 ))}
                 . Press <em>Look up sectors &amp; countries</em> above to read it.
@@ -121,7 +121,7 @@ export default function InvestmentCosts({
                           {y.accounts.map((a, i) => (
                             <span key={a.name}>
                               {i > 0 && " · "}
-                              {a.name} <Money value={a.total} currency={currency} />
+                              <span translate="no">{a.name}</span> <Money value={a.total} currency={currency} />
                             </span>
                           ))}
                         </div>

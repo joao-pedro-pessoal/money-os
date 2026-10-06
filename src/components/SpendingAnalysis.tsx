@@ -347,7 +347,7 @@ export default function SpendingAnalysis({
                               : set("subcategoryName", g.name)
                       }
                     >
-                      <td>{g.name}</td>
+                      <td><span translate="no">{g.name}</span></td>
                       <td className="text-right">
                         <Money value={g.spent} currency={currency} />
                       </td>

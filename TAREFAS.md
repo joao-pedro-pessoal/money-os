@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **5 de outubro de 2026**.
+Atualizado em **6 de outubro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -18,9 +18,11 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
   Simple e Complex mantêm o nome.
 - **Última funcionalidade entregue:** F17 — relatórios à medida, com período
   livre, dinheiro e/ou investimentos, em PDF com gráficos e em CSV (01/10/2026, H28).
-- **Trabalho em curso (05/10/2026):** branch `f17-relatorios` na pasta
-  `C:\Users\joao2\Projects\money-os-f17`, por juntar ao `main`. Corrigir B01–B09
-  (secção 2) antes de juntar. Passagem de trabalho: [CONTINUAR_NO_CODEX.md](CONTINUAR_NO_CODEX.md).
+- **Trabalho local (06/10/2026):** B01–B09 corrigidos no branch `f17-relatorios`,
+  na pasta `C:\Users\joao2\Projects\money-os-f17`, com testes. Sem push nem junção
+  ao `main`. B01 ainda exige confirmação da tradução automática num telemóvel real.
+  Evidência: [verificação B01–B09](docs/VERIFICACAO_B01_B09.md).
+  Passagem de trabalho: [CONTINUAR_NO_CODEX.md](CONTINUAR_NO_CODEX.md).
 - **Próxima prioridade de manutenção:** A01–A03 concluídos a 17/09. Seguem
   A04–A08 e os ecrãs do telemóvel que ainda forem reportados.
 - **Evolução futura, quando pedida:** usar a mesma experiência com dados locais,
@@ -41,15 +43,15 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 | A06 | Unificar as preferências de painéis | Definir a precedência entre preferências no servidor e escolhas no browser, incluindo Simple/Complex. Preservar escolhas guardadas e verificar recarregamento e mudança de dispositivo. |
 | A07 | Afinar os ecrãs que ainda apresentam dificuldades no telemóvel | Trabalho contínuo orientado pelos problemas reportados. As correções recentes de menu, símbolo USD e ordem dos gráficos estão concluídas na secção 5. |
 | A08 | Confirmar o destino das contas arquivadas com saldo | A auditoria recente ainda nomeia contas antigas arquivadas. Confirmar se são histórico, duplicados ou contas a reativar; continuam fora dos totais. Não apagar nem reativar com base apenas nas notas antigas de consolidação. |
-| B01 | Português escolhido bloqueia a tradução das páginas por traduzir | `src/app/layout.tsx:146` (`translate="no"` e `lang` na página inteira). Antes do branch, o Chrome traduzia o Painel; agora fica em inglês. Proposta e critério em CONTINUAR_NO_CODEX.md, secção 3. Confirmar num telemóvel real. |
-| B02 | Install app no site de casa (http pelo Wi-Fi) | `src/lib/ui/install.ts:47`. Não é contexto seguro: o browser não instala. Dizer para usar o endereço publicado. |
-| B03 | Atalho com sessão expirada perde o pedido | `src/proxy.ts:43` não guarda o destino; depois de entrar fica no painel. `next` só com caminhos relativos (`/`, nunca `//`). |
-| B04 | Escolha de língua local nunca limpa | `src/components/LanguageContext.tsx:39`; duas abas ficam com línguas misturadas. |
-| B05 | Erros do registo rápido em inglês com Português | `src/components/QuickEntry.tsx:108`; juntar as mensagens da validação ao mapa `server` de `src/lib/i18n/messages.ts`. |
-| B06 | `lang="pt"` em páginas ainda em inglês | Mesmo sítio que B01; resolve-se com B01. |
-| B07 | Firefox no computador recebe instruções de instalação impossíveis | `src/lib/ui/install.ts:47`; o Firefox de computador não instala sites. |
-| B08 | CSV não diz porque falta "Change not explained by deposits" | `src/lib/reports/investments.ts:489`; pôr a razão (`unexplainedWithheld`). |
-| B09 | Traduções das abas presas ao texto inglês sem teste que o apanhe | `src/lib/i18n/messages.ts:637`; o teste deve percorrer as listas reais de páginas e abas. |
+| B01 | Português escolhido bloqueia a tradução das páginas por traduzir | **Código corrigido (06/10/2026).** Português permite a tradução do conteúdo ainda em inglês; menus e regiões já traduzidas, nomes e valores têm proteção própria. Inclui as abas de Definições ainda em inglês. Testes de renderização e verificação local a 390 px. **Falta confirmar no Chrome de um telemóvel real.** |
+| B02 | Install app no site de casa (http pelo Wi-Fi) | **Corrigido (06/10/2026).** Sem contexto seguro, mostra a explicação e ligação ao site publicado, sem prometer instalação local. A página No telemóvel explica a mesma limitação. Testes da decisão, incluindo um prompt antigo num contexto inseguro. |
+| B03 | Atalho com sessão expirada perde o pedido | **Corrigido (06/10/2026).** Proxy conserva caminho e parâmetros em `next`; entrada e continuação voltam ao destino validado. Recusa URLs externas, `//`, barras invertidas, controlos e caminhos que passam a começar por `//` após normalização. Testes e login real com conta temporária: abriu o registo rápido pedido. |
+| B04 | Escolha de língua local nunca limpa | **Corrigido (06/10/2026).** Escolha provisória termina quando o servidor a confirma/substitui; evento de outra aba pede atualização. Testes de reconciliação e mudança entre duas abas verificada. |
+| B05 | Erros do registo rápido em inglês com Português | **Corrigido (06/10/2026).** Validações de valor, data, poupanças, conta, categoria e repetição têm tradução. Testes usam as recusas reais; valor negativo verificado no formulário em português. |
+| B06 | `lang="pt"` em páginas ainda em inglês | **Corrigido (06/10/2026).** Documento continua `lang="en"`; só regiões traduzidas declaram a língua escolhida. Testes de renderização e atributo confirmado no navegador. |
+| B07 | Firefox no computador recebe instruções de instalação impossíveis | **Corrigido (06/10/2026).** Orienta para Chrome/Edge; Firefox Android mantém a indicação do menu. Testes separados para computador e Android. |
+| B08 | CSV não diz porque falta "Change not explained by deposits" | **Corrigido (06/10/2026).** A linha inclui `unexplainedWithheld`, mantendo o valor indisponível vazio. Testes com depósitos completos e incompletos. |
+| B09 | Traduções das abas presas ao texto inglês sem teste que o apanhe | **Corrigido (06/10/2026).** Teste percorre as listas reais das abas, grupos do menu e pesquisa, agora partilhadas em `lib/navigation.ts`. Uma alteração sem tradução falha o teste. |
 
 ## 3. Funcionalidades por desenvolver
 

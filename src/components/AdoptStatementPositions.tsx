@@ -35,7 +35,7 @@ export default function AdoptStatementPositions({
           <form key={a.accountId} action={action} className="flex items-center gap-3">
             <input type="hidden" name="accountId" value={a.accountId} />
             <span className="text-xs flex-1 truncate">
-              {a.accountName}
+              <span translate="no">{a.accountName}</span>
               <span className="text-[var(--muted)]">
                 {" "}
                 · {a.instruments} instrument{a.instruments === 1 ? "" : "s"}

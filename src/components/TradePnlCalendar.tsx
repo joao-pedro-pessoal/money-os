@@ -56,7 +56,7 @@ export default function TradePnlCalendar({ rows, currency }: { rows: TradeHistor
     {selected && <div className="mt-4 border-t pt-3" style={{ borderColor: 'var(--border)' }}>
       <h3 className="text-sm font-medium">Trades closed on {selected.date}</h3>
       <ul className="mt-2 space-y-2">{selected.trades.map(t => <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span><Link className="hover:underline" href={`/investments/asset/${encodeURIComponent(t.symbol!)}`}>{t.symbol}</Link> · {t.accountName} · {new Date(t.date).toISOString().slice(11, 19)} UTC</span>
+        <span><Link className="hover:underline" href={`/investments/asset/${encodeURIComponent(t.symbol!)}`}><span translate="no">{t.symbol}</span></Link> · <span translate="no">{t.accountName}</span> · {new Date(t.date).toISOString().slice(11, 19)} UTC</span>
         <span style={{ color: color(t.realizedPnl!) }}><Money value={t.realizedPnl!} currency={currency} /></span>
       </li>)}</ul>
     </div>}

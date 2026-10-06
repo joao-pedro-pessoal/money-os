@@ -350,7 +350,7 @@ export default function TradeHistory({
             <p className="text-xs text-[var(--muted)]">Showing {Math.min(visibleCount, completedTrades.length)} of {completedTrades.length} trades</p>
             {completedTrades.slice(0, visibleCount).map(r => <article key={r.id} className="trade-phone-card">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0"><div className="font-semibold break-words">{r.symbol ? <Link href={`/investments/asset/${encodeURIComponent(r.symbol)}`}>{r.symbol}</Link> : "Unknown asset"}</div><div className="text-xs text-[var(--muted)] break-words">{r.accountName}</div></div>
+                <div className="min-w-0"><div className="font-semibold break-words">{r.symbol ? <Link href={`/investments/asset/${encodeURIComponent(r.symbol)}`}><span translate="no">{r.symbol}</span></Link> : "Unknown asset"}</div><div className="text-xs text-[var(--muted)] break-words"><span translate="no">{r.accountName}</span></div></div>
                 <div className="shrink-0 text-right"><div className={`font-semibold ${toneOf(r.realizedPnl!)}`}><Money value={r.realizedPnl!} currency={currency} /></div><div className="text-[10px] text-[var(--muted)]">Realized P&amp;L</div></div>
               </div>
               <div className="text-xs text-[var(--muted)] mt-2">{r.date.slice(0, 10)} · {r.type}</div>
@@ -358,7 +358,7 @@ export default function TradeHistory({
                 <summary className="cursor-pointer text-[var(--accent)] py-2">Trade details</summary>
                 <div className="space-y-3 pt-2 break-words">
                   <p>Closed: {r.date.replace("T", " ").replace("Z", " UTC")}</p>
-                  <p>{r.description ?? "No description"}</p>
+                  <p><span translate="no">{r.description ?? "No description"}</span></p>
                   <div className="grid grid-cols-2 gap-3"><div>Quantity<br />{r.quantity ?? "Unavailable"}</div><div>Net amount<br /><Money value={r.amount} currency={currency} /></div></div>
                   <OpeningDetails match={matches.get(r.id)} />
                   <TradeRowTags id={r.id} classification={r.classification} playlists={playlists} />
@@ -389,10 +389,10 @@ export default function TradeHistory({
                     <td>{r.date.replace("T", " ").replace("Z", " UTC")}
                       <OpeningDetails match={matches.get(r.id)} />
                     </td>
-                    <td>{r.accountName}</td>
+                    <td><span translate="no">{r.accountName}</span></td>
                     <td>{r.type}</td>
-                    <td>{r.symbol ? <Link href={`/investments/asset/${encodeURIComponent(r.symbol)}`} className="hover:underline">{r.symbol}</Link> : "—"}</td>
-                    <td className="max-w-64 truncate">{r.description ?? "—"}</td>
+                    <td>{r.symbol ? <Link href={`/investments/asset/${encodeURIComponent(r.symbol)}`} className="hover:underline"><span translate="no">{r.symbol}</span></Link> : "—"}</td>
+                    <td className="max-w-64 truncate"><span translate="no">{r.description ?? "—"}</span></td>
                     <td><TradeRowTags id={r.id} classification={r.classification} playlists={playlists} /></td>
                     <td className="text-right">{r.quantity ?? "—"}</td>
                     <td className={`text-right ${toneOf(r.amount)}`}>
@@ -466,7 +466,7 @@ function Select({
       >
         <option value="">All</option>
         {options.map((o) => (
-          <option key={o} value={o}>
+          <option translate={label === "Account" || label === "Instrument" ? "no" : undefined} key={o} value={o}>
             {o}
           </option>
         ))}

@@ -71,7 +71,7 @@ export default async function BucketsPage() {
                     {rank}
                   </span>
                   <Link href={`/buckets/${g.id}`} className="flex-1 truncate hover:underline">
-                    {g.name}
+                    <span translate="no">{g.name}</span>
                   </Link>
                   <span className="text-[10px] text-[var(--accent)] whitespace-nowrap w-12 text-right">
                     {shareOf.get(g.id)?.toFixed(1) ?? "0"}%
@@ -166,7 +166,7 @@ export default async function BucketsPage() {
                   .filter((p) => p.totals.invested > 0)
                   .map((p) => (
                     <tr key={p.id}>
-                      <td className="font-medium">{p.name}</td>
+                      <td className="font-medium"><span translate="no">{p.name}</span></td>
                       <td className="text-right">
                         <Money value={p.totals.cash} currency={withInvestments.baseCurrency} />
                       </td>
@@ -221,14 +221,14 @@ export default async function BucketsPage() {
           <form action={addToAllocation} className="space-y-3">
             <select name="accountId" className="input" required>
               {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name} — free: {a.free.toFixed(2)} {a.currency}
                 </option>
               ))}
             </select>
             <select name="bucketId" className="input" required>
               {buckets.map((b) => (
-                <option key={b.id} value={b.id}>
+                <option translate="no" key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}
@@ -254,7 +254,7 @@ export default async function BucketsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Link href={`/buckets/${b.id}`} className="text-sm font-medium hover:underline truncate">
-                    {b.name}
+                    <span translate="no">{b.name}</span>
                   </Link>
                   {goalReached && (
                     <span className="badge border border-[var(--green)] text-[var(--green)] shrink-0">
@@ -295,7 +295,7 @@ export default async function BucketsPage() {
               <div className="space-y-1">
                 {b.allocations.map((a) => (
                   <div key={a.id} className="flex justify-between text-xs text-[var(--muted)]">
-                    <span>{a.accountName}</span>
+                    <span><span translate="no">{a.accountName}</span></span>
                     <Money value={a.amount} />
                   </div>
                 ))}

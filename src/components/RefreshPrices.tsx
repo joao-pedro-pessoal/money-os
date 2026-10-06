@@ -47,7 +47,7 @@ export default function RefreshPrices() {
         <ul className="mt-1 space-y-0.5">
           {failures.map((f) => (
             <li key={f.symbol} className="text-[10px]" style={{ color: "var(--amber)" }}>
-              {f.symbol}: {f.note}
+              <span translate="no">{f.symbol}</span>: {f.note}
             </li>
           ))}
         </ul>

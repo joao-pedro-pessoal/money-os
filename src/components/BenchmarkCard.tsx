@@ -36,7 +36,7 @@ export default async function BenchmarkCard() {
             className="input input-narrow text-xs"
           >
             {BENCHMARKS.map((b) => (
-              <option key={b.id} value={b.id}>
+              <option translate="no" key={b.id} value={b.id}>
                 {b.name}
               </option>
             ))}
@@ -51,7 +51,7 @@ export default async function BenchmarkCard() {
           lookup — it is a silently wrong comparison, and the only defence is
           that the symbol priced is visible enough to be checked. */}
       <p className="text-xs text-[var(--muted)] mb-4">
-        Priced as {data.benchmark.symbol} — {data.benchmark.note}
+        Priced as <span translate="no">{data.benchmark.symbol}</span> — {data.benchmark.note}
       </p>
 
       {data.comparison === null ? (
@@ -64,7 +64,7 @@ export default async function BenchmarkCard() {
           </div>
           <form action={refresh} className="mt-3">
             <button type="submit" className="btn text-xs">
-              Fetch the {data.benchmark.name} series
+              Fetch the <span translate="no">{data.benchmark.name}</span> series
             </button>
             {freshness.lastDate !== null && (
               <span className="text-xs text-[var(--muted)] ml-3">
@@ -90,7 +90,7 @@ export default async function BenchmarkCard() {
               <div className="text-[10px] text-[var(--muted)]">deposits taken out</div>
             </div>
             <div>
-              <div className="text-xs text-[var(--muted)] mb-1">{data.benchmark.name}</div>
+              <div className="text-xs text-[var(--muted)] mb-1"><span translate="no">{data.benchmark.name}</span></div>
               <div
                 className="text-lg font-semibold"
                 style={{ color: data.comparison.indexReturn >= 0 ? "var(--green)" : "var(--red)" }}

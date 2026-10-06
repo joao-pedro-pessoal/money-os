@@ -156,7 +156,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
     <div className="space-y-4">
       <select className="input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
         {accounts.map((a) => (
-          <option key={a.id} value={a.id}>
+          <option translate="no" key={a.id} value={a.id}>
             {a.name}
           </option>
         ))}
@@ -291,7 +291,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
                     {rows.slice(0, 200).map((r, i) => (
                       <tr key={i} style={r.problem || r.duplicate ? { opacity: 0.5 } : undefined}>
                         <td>{r.date ? r.date.toISOString().slice(0, 10) : "—"}</td>
-                        <td className="max-w-[18rem] truncate">{r.description || r.merchant}</td>
+                        <td className="max-w-[18rem] truncate"><span translate="no">{r.description || r.merchant}</span></td>
                         <td
                           className={`text-right ${
                             (r.amount ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"

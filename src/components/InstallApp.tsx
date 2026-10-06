@@ -34,6 +34,7 @@ function subscribe(onChange: () => void): () => void {
 function readRoute(): InstallRoute {
   const w = window as InstallWindow;
   return installRoute({
+    secure: window.isSecureContext,
     standalone:
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true,
@@ -64,7 +65,8 @@ function serverRoute(): InstallRoute | null {
  */
 export default function InstallApp({ compact = false }: { compact?: boolean }) {
   const route = useSyncExternalStore(subscribe, readRoute, serverRoute);
-  const w = useLanguage().m.install;
+  const { m, language } = useLanguage();
+  const w = m.install;
   const [showSteps, setShowSteps] = useState(false);
 
   if (route === null) return null;
@@ -72,7 +74,7 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
   if (route === "installed" || route === "just-installed" || route === "android-app") {
     if (compact) return null;
     return (
-      <p className="text-sm text-[var(--muted)]">
+      <p translate="no" lang={language} className="text-sm text-[var(--muted)]">
         {route === "android-app" ? w.androidApp : route === "just-installed" ? w.justInstalled : w.installed}
       </p>
     );
@@ -100,8 +102,19 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
     }
   }
 
+  if (route === "insecure" || route === "unsupported") {
+    return (
+      <div translate="no" lang={language} className={compact ? "card p-4 space-y-2" : "space-y-2"}>
+        <p className="text-xs text-[var(--muted)] leading-relaxed max-w-sm" role="status">
+          {route === "insecure" ? w.insecureSteps : w.unsupportedSteps}
+        </p>
+        {route === "insecure" && <a className="text-sm underline" href="https://money-os-brown.vercel.app">{w.publishedSite}</a>}
+      </div>
+    );
+  }
+
   return (
-    <div className={compact ? "card p-4 space-y-2" : "space-y-2"}>
+    <div translate="no" lang={language} className={compact ? "card p-4 space-y-2" : "space-y-2"}>
       {compact && (
         <p className="text-sm">
           <span className="font-medium">{w.pitchTitle}</span>{" "}

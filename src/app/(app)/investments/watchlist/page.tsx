@@ -47,16 +47,16 @@ export default async function WatchlistPage() {
                 {items.map((w) => (
                   <tr key={w.id}>
                     <td>
-                      <Link href={`/investments/asset/${encodeURIComponent(w.symbol)}?type=${encodeURIComponent(w.assetType ?? "")}&name=${encodeURIComponent(w.name ?? "")}`} className="font-medium hover:underline">{w.symbol}</Link>
+                      <Link href={`/investments/asset/${encodeURIComponent(w.symbol)}?type=${encodeURIComponent(w.assetType ?? "")}&name=${encodeURIComponent(w.name ?? "")}`} className="font-medium hover:underline"><span translate="no">{w.symbol}</span></Link>
                       {w.reached && (
                         <span className="badge ml-2 text-[var(--green)] border border-[var(--green)]">
                           at target
                         </span>
                       )}
-                      {w.name && <div className="text-xs text-[var(--muted)]">{w.name}</div>}
+                      {w.name && <div className="text-xs text-[var(--muted)]"><span translate="no">{w.name}</span></div>}
                     </td>
                     <td>{tagLabel(w.assetType, "assetType") ?? "—"}</td>
-                    <td>{w.playlistName ?? "—"}</td>
+                    <td><span translate="no">{w.playlistName ?? "—"}</span></td>
                     <td className="text-right">
                       {w.currentPrice === null ? "—" : <Money value={w.currentPrice} currency={w.currency} />}
                     </td>
@@ -105,7 +105,7 @@ export default async function WatchlistPage() {
             <select name="playlistId" className="input" defaultValue="">
               <option value="">Playlist — none</option>
               {playlistList.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option translate="no" key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}

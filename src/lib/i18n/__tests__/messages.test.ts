@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { labelIn, messagesFor, serverMessageIn } from "../messages";
 import { DEFAULT_LANGUAGE, languageOf, LANGUAGES, localeOf } from "../languages";
-import { ACCOUNTS_TABS, ANALYTICS_TABS, INVESTMENT_TABS } from "@/lib/navigation";
+import { ACCOUNTS_TABS, ANALYTICS_TABS, INVESTMENT_TABS, NAV_GROUPS, SEARCHABLE_PAGES, SETTINGS_TABS } from "@/lib/navigation";
 import { registrationRefusal } from "@/lib/accounts/limits";
 import { passwordProblem } from "@/lib/accounts/password";
+import { manualAmount, manualDate } from "@/lib/money/manualEntry";
+import { purchaseSavings } from "@/lib/money/savings";
+import { readFileSync } from "node:fs";
 
 const en = messagesFor("en");
 const pt = messagesFor("pt");
@@ -34,6 +37,27 @@ describe("the languages", () => {
 });
 
 describe("Portuguese", () => {
+  it("translates validation failures actually emitted by quick entry", () => {
+    const invalid = [
+      () => manualAmount("-1"),
+      () => manualDate("2026-02-30"),
+      () => purchaseSavings("expense", "20", { originalPrice: "10" }),
+      () => purchaseSavings("expense", "20", { originalPrice: "30", discount: "5" }),
+      () => purchaseSavings("income", "20", { expected: "2" }),
+    ];
+    for (const validate of invalid) {
+      let message: string | undefined;
+      try { validate(); } catch (error) { message = (error as Error).message; }
+      expect(message).toBeDefined();
+      expect(serverMessageIn(pt, message!)).not.toBe(message);
+    }
+    // Includes guards that need a database to execute. Read their actual messages,
+    // so changing or adding a refusal in this path cannot silently lose Portuguese.
+    const source = readFileSync("src/actions/transactions.ts", "utf8").split("export async function undoQuickTransaction")[0];
+    const messages = [...source.matchAll(/(?:new Error\(|error:\s*)"([^"]+)"/g)].map(match => match[1]);
+    expect(messages.length).toBeGreaterThan(5);
+    for (const message of messages) expect(serverMessageIn(pt, message), message).not.toBe(message);
+  });
   /**
    * The few words that are the same in both. Anything else equal to English is a
    * sentence someone forgot to translate.
@@ -52,11 +76,9 @@ describe("Portuguese", () => {
       ...ANALYTICS_TABS,
       ...ACCOUNTS_TABS,
       ...INVESTMENT_TABS,
-      ...["Dashboard", "Analytics", "Accounts", "Cash Flow", "Savings", "Budgets", "Buckets", "Subscriptions"].map(
-        (label) => ({ label })
-      ),
-      ...["Coming in", "Library", "Investments", "Manual", "Settings", "Import statement"].map((label) => ({ label })),
-      ...["General", "Categories", "Currency & rates", "Your data", "On your phone"].map((label) => ({ label })),
+      ...NAV_GROUPS.flatMap(group => group.links),
+      ...SEARCHABLE_PAGES,
+      ...SETTINGS_TABS,
     ].map((t) => t.label);
     const missing = names.filter((name) => name !== "Manual" && labelIn(pt, name) === name);
     expect(missing).toEqual([]);

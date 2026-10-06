@@ -73,10 +73,10 @@ export default async function AccountsPage() {
           <tbody>
             {accounts.map((a) => (
               <tr key={a.id} role="row">
-                <td role="cell" data-label="Institution">{a.institution}</td>
+                <td role="cell" data-label="Institution"><span translate="no">{a.institution}</span></td>
                 <td role="cell" data-label="Name" className="record-name">
                   <Link href={`/accounts/${a.id}`} className="hover:underline">
-                    {a.name}
+                    <span translate="no">{a.name}</span>
                   </Link>
                 </td>
                 <td role="cell" data-label="Balance">
@@ -183,8 +183,8 @@ export default async function AccountsPage() {
             <tbody>
               {archived.map((a) => (
                 <tr key={a.id}>
-                  <td>{a.institution}</td>
-                  <td>{a.name}</td>
+                  <td><span translate="no">{a.institution}</span></td>
+                  <td><span translate="no">{a.name}</span></td>
                   <td>
                     <Money value={Number(a.balance)} currency={a.currency} />
                   </td>

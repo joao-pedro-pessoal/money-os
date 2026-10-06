@@ -66,7 +66,7 @@ export default function ReportChart(props: ReportChartProps) {
           {legend.map((l) => (
             <span key={l.name} className="inline-flex items-center gap-1.5">
               <span className="inline-block w-3 h-1 rounded" style={{ background: `var(--${l.color})` }} />
-              {l.name}
+              <span translate="no">{l.name}</span>
             </span>
           ))}
         </div>

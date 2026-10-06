@@ -43,7 +43,7 @@ export default async function SettingsGeneralPage() {
   const w = messagesFor(language).settings;
 
   return (
-    <>
+    <div translate="no" lang={language} className="space-y-6">
       <div className="card">
         <SettingRow
           title={w.appTitle}
@@ -156,7 +156,7 @@ export default async function SettingsGeneralPage() {
             >
               <option value="">{w.noDefault}</option>
               {activeAccounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}
@@ -220,6 +220,6 @@ export default async function SettingsGeneralPage() {
           <span className="text-[var(--accent)] text-sm whitespace-nowrap">{w.open}</span>
         </div>
       </Link>
-    </>
+    </div>
   );
 }

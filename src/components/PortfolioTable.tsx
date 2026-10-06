@@ -305,7 +305,7 @@ export default function PortfolioTable({
     >
       <option value="">{all}</option>
       {values.map((v) => (
-        <option key={v} value={v}>
+        <option translate={key === "account" || key === "playlist" ? "no" : undefined} key={v} value={v}>
           {label(v)}
         </option>
       ))}
@@ -453,14 +453,14 @@ export default function PortfolioTable({
                           total sitting under the wrong heading. */}
                       {labelSpan > 0 && (
                         <td colSpan={labelSpan} className="font-medium text-xs">
-                          {label(g.key)}
+                          <span translate={group === "account" || group === "playlist" ? "no" : undefined}>{label(g.key)}</span>
                           <span className="text-[var(--muted)] ml-2">
                             {g.items.length} · {g.percent}%
                           </span>
                         </td>
                       )}
                       {visible.includes("value") && (
-                        <td className="text-right font-medium text-xs">{fmt(g.value, currency)}</td>
+                        <td className="text-right font-medium text-xs"><span translate="no">{fmt(g.value, currency)}</span></td>
                       )}
                       {visible.includes("pnl") && (
                         <td
@@ -468,7 +468,7 @@ export default function PortfolioTable({
                           style={{ color: g.pnl >= 0 ? "var(--green)" : "var(--red)" }}
                         >
                           {g.pnl >= 0 ? "+" : "−"}
-                          {fmt(Math.abs(g.pnl), currency)}
+                          <span translate="no">{fmt(Math.abs(g.pnl), currency)}</span>
                         </td>
                       )}
                     </tr>
@@ -518,7 +518,7 @@ export default function PortfolioTable({
                                 <span className="flex items-start gap-2">
                                   <AssetLogo image={logoOf(i, logos)} name={i.symbol} />
                                   <span className="min-w-0">
-                                    <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-words hover:underline">{shortName(i.symbol)}</Link>
+                                    <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-words hover:underline"><span translate="no">{shortName(i.symbol)}</span></Link>
                                     {/* The listing, where the name is not already
                                         one: a fund stored by its legal name is not
                                         something you can type into a broker. */}
@@ -533,7 +533,7 @@ export default function PortfolioTable({
                           case "symbol":
                             return (
                               <td key={c.key} className="font-medium">
-                                <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-all hover:underline">{i.symbol}</Link>
+                                <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-all hover:underline"><span translate="no">{i.symbol}</span></Link>
                                 {badges}
                               </td>
                             );
@@ -560,7 +560,7 @@ export default function PortfolioTable({
                                 className="text-xs text-[var(--muted)] truncate"
                                 title={i.playlistName ?? undefined}
                               >
-                                {i.playlistName ?? "—"}
+                                <span translate="no">{i.playlistName ?? "—"}</span>
                                 {badges}
                               </td>
                             );
@@ -571,21 +571,21 @@ export default function PortfolioTable({
                                 className="text-xs text-[var(--muted)] truncate"
                                 title={i.accountName}
                               >
-                                {i.accountName}
+                                <span translate="no">{i.accountName}</span>
                                 {badges}
                               </td>
                             );
                           case "value":
                             return (
                               <td key={c.key} className="text-right">
-                                {fmt(i.value, currency)}
+                                <span translate="no">{fmt(i.value, currency)}</span>
                                 {/* Leverage means the position controls far more
                                     than it cost you. Showing the notional as
                                     "value" would overstate the portfolio by the
                                     leverage factor. */}
                                 {i.leverage !== null && i.leverage > 1 && (
                                   <div className="text-[10px] text-[var(--muted)]">
-                                    {i.leverage}× · {fmt(i.notional, currency)}
+                                    {i.leverage}× · <span translate="no">{fmt(i.notional, currency)}</span>
                                   </div>
                                 )}
                               </td>
@@ -610,7 +610,7 @@ export default function PortfolioTable({
                                       className="text-[var(--green)]"
                                       title={`${i.apr}% a year on ${fmt(i.value, currency)}`}
                                     >
-                                      +{fmt(yearlyYield(i)!, currency)}/yr
+                                      +<span translate="no">{fmt(yearlyYield(i)!, currency)}</span>/yr
                                     </span>
                                   )}
                                 </td>
@@ -653,7 +653,7 @@ export default function PortfolioTable({
                                 style={{ color: i.pnl >= 0 ? "var(--green)" : "var(--red)" }}
                               >
                                 {i.pnl >= 0 ? "+" : "−"}
-                                {fmt(Math.abs(i.pnl), currency)}
+                                <span translate="no">{fmt(Math.abs(i.pnl), currency)}</span>
                               </td>
                             );
                         }
@@ -674,11 +674,11 @@ export default function PortfolioTable({
           {filtered.length > 0 && (
             <div className="text-xs text-[var(--muted)] mt-3">
               {filtered.length} position{filtered.length === 1 ? "" : "s"} ·{" "}
-              {fmt(total, currency)} held
+              <span translate="no">{fmt(total, currency)}</span> held
               {totalNotional > total && ` · ${fmt(totalNotional, currency)} exposure`} ·{" "}
               <span style={{ color: totalPnl >= 0 ? "var(--green)" : "var(--red)" }}>
                 {totalPnl >= 0 ? "+" : "−"}
-                {fmt(Math.abs(totalPnl), currency)}
+                <span translate="no">{fmt(Math.abs(totalPnl), currency)}</span>
               </span>
               {/* A total that quietly omits rows looks exactly like one that
                   counted them at zero. This says which. */}

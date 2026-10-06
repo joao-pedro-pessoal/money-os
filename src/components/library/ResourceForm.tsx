@@ -219,7 +219,7 @@ export default function ResourceForm({
                 checked={chosenCategories.includes(c.id)}
                 onChange={() => toggleCategory(c.id)}
               />
-              <span className="truncate">{c.name}</span>
+              <span className="truncate"><span translate="no">{c.name}</span></span>
             </label>
           ))}
         </div>
@@ -233,12 +233,12 @@ export default function ResourceForm({
             .filter((c) => chosenCategories.includes(c.id))
             .map((c) => (
               <div key={c.id}>
-                <div className="text-[10px] text-[var(--muted)] mb-1">{c.name}</div>
+                <div className="text-[10px] text-[var(--muted)] mb-1"><span translate="no">{c.name}</span></div>
                 <div className="flex gap-2 flex-wrap">
                   {c.subtags.map((s) => (
                     <label key={s.id} className="flex items-center gap-1 text-xs">
                       <input type="checkbox" name="subtagIds" value={s.id} />
-                      <span>{s.name}</span>
+                      <span><span translate="no">{s.name}</span></span>
                     </label>
                   ))}
                 </div>

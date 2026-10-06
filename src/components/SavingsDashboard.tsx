@@ -62,8 +62,8 @@ export default function SavingsDashboard({ data, initialPurchase = '' }: { data:
         {period === 'month' && <label>Month<input className="input" type="month" value={month} onChange={e => setMonth(e.target.value)} /></label>}
         {period === 'year' && <label>Year<input className="input" type="number" min="1900" max="9999" value={year} onChange={e => setYear(e.target.value)} /></label>}
         {period === 'custom' && <><label>From<input type="date" className="input" value={from} onChange={e => setFrom(e.target.value)} /></label><label>To<input type="date" className="input" value={to} onChange={e => setTo(e.target.value)} /></label></>}
-        <label className="text-sm">Purchase account<select aria-label="Purchase account" className="input" value={accountId} onChange={e => setAccountId(e.target.value)}><option value="">All accounts</option>{data.accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
-        <label className="text-sm">Category<select aria-label="Category" className="input" value={categoryId} onChange={e => setCategoryId(e.target.value)}><option value="">All categories</option>{data.categories.filter(c => c.kind === 'expense').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        <label className="text-sm">Purchase account<select aria-label="Purchase account" className="input" value={accountId} onChange={e => setAccountId(e.target.value)}><option value="">All accounts</option>{data.accounts.map(a => <option translate="no" key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+        <label className="text-sm">Category<select aria-label="Category" className="input" value={categoryId} onChange={e => setCategoryId(e.target.value)}><option value="">All categories</option>{data.categories.filter(c => c.kind === 'expense').map(c => <option translate="no" key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       </div>
       <p className="text-xs text-[var(--muted)] mt-3">Filters select purchases. Cashback includes all receipts and reversals linked to those purchases, even if received later. Currencies are kept separate.</p>
     </PanelFrame>
@@ -73,7 +73,7 @@ export default function SavingsDashboard({ data, initialPurchase = '' }: { data:
     <PanelFrame persistKey="savings-history" essential title="Purchase savings history" className="card p-4">
       {!report.rows.length && <p className="text-sm mt-3">No savings recorded for these filters. Select a purchase below to add a discount or cashback.</p>}
       <div className="divide-y divide-[var(--border)]">{report.rows.slice(0, visible).map(row => <div key={row.purchase.id} className="py-4 space-y-2">
-        <button type="button" className="text-left underline" onClick={() => setSelected(row.purchase.id)}>{row.purchase.description || 'Purchase'} · {row.purchase.date.slice(0, 10)}</button>
+        <button type="button" className="text-left underline" onClick={() => setSelected(row.purchase.id)}><span translate="no">{row.purchase.description || 'Purchase'}</span> · {row.purchase.date.slice(0, 10)}</button>
         <p className="text-xs text-[var(--muted)]">{labels.get(row.purchase.accountId)} · Paid <Money value={Math.abs(Number(row.purchase.amount))} currency={row.purchase.currency} /></p>
         <p className="text-sm">Saved <Money value={row.total} currency={row.purchase.currency} /> · discount <Money value={row.discount} currency={row.purchase.currency} /> · cashback <Money value={row.received} currency={row.purchase.currency} /> · pending <Money value={row.pending} currency={row.purchase.currency} /></p>
       </div>)}</div>
@@ -100,7 +100,7 @@ export default function SavingsDashboard({ data, initialPurchase = '' }: { data:
             <ActionForm action={recordCashback} label="Record cashback movement" once>
               <input type="hidden" name="cashbackForId" value={purchase.id} /><input type="hidden" name="description" value={`Cashback · ${purchase.description || purchase.date.slice(0, 10)}`} />
               <label className="block text-sm">Movement<select aria-label="Movement" name="type" className="input"><option value="income">Received</option><option value="expense">Reversed / taken back</option></select></label>
-              <label className="block text-sm">Receipt account<select aria-label="Receipt account" name="accountId" className="input" required defaultValue={purchase.accountId}>{data.accounts.filter(a => a.active && a.currency === purchase.currency).map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</select></label>
+              <label className="block text-sm">Receipt account<select aria-label="Receipt account" name="accountId" className="input" required defaultValue={purchase.accountId}>{data.accounts.filter(a => a.active && a.currency === purchase.currency).map(a => <option translate="no" key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</select></label>
               <label className="block text-sm">Amount ({purchase.currency})<input name="amount" className="input" inputMode="decimal" required /></label>
               <label className="block text-sm">Receipt date<input name="date" className="input" type="date" defaultValue={localDay()} required /></label>
             </ActionForm>

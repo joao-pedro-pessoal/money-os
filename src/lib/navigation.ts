@@ -52,3 +52,67 @@ export const INVESTMENT_TABS = [
   { href: "/positions", label: "Open positions" },
   { href: "/connections", label: "Connections" },
 ];
+
+/**
+ * Eleven entries in three groups, down from fifteen in a flat list.
+ *
+ * What changed and why:
+ * - Money Map showed the same two breakdowns as Analytics; it redirects there.
+ * - Statistics is a tab inside Analytics — both answer "how is this going?".
+ * - Interest is a tab inside Accounts; interest is received *by* an account.
+ * - Open Positions and Connections are tabs inside Investments.
+ * - "Import statement" was an action masquerading as a place. It lives on the
+ *   Cash Flow page, which is the data it changes, and in Settings → Your data.
+ */
+export const NAV_GROUPS: { label?: "groupMoney" | "groupLearning" | "groupNotGuaranteed"; links: { href: string; label: string }[] }[] = [
+  {
+    links: [
+      { href: "/", label: "Dashboard" },
+      { href: "/analytics", label: "Analytics" },
+    ],
+  },
+  {
+    label: "groupMoney",
+    links: [
+      { href: "/accounts", label: "Accounts" },
+      { href: "/transactions", label: "Cash Flow" },
+      { href: "/savings", label: "Savings" },
+      { href: "/budgets", label: "Budgets" },
+      { href: "/buckets", label: "Buckets" },
+      { href: "/subscriptions", label: "Subscriptions" },
+      // The other direction. Subscriptions forecast what leaves; this is what
+      // is due to arrive, and neither is counted in a balance.
+      { href: "/expected", label: "Coming in" },
+    ],
+  },
+  {
+    label: "groupLearning",
+    links: [
+      { href: "/library", label: "Library" },
+    ],
+  },
+  {
+    label: "groupNotGuaranteed",
+    links: [{ href: "/investments", label: "Investments" }],
+  },
+];
+
+// Reuse the page tabs so search follows the same destinations and labels.
+export const SEARCHABLE_PAGES = [
+  ...NAV_GROUPS.flatMap(group => group.links),
+  ...ACCOUNTS_TABS,
+  ...ANALYTICS_TABS,
+  ...INVESTMENT_TABS,
+  { href: "/import", label: "Import statement" },
+  { href: "/manual", label: "Manual" },
+  { href: "/settings", label: "Settings" },
+].filter((link, index, pages) => pages.findIndex(page => page.href === link.href) === index);
+
+
+export const SETTINGS_TABS = [
+  { href: "/settings", label: "General" },
+  { href: "/settings/categories", label: "Categories" },
+  { href: "/settings/rates", label: "Currency & rates" },
+  { href: "/settings/data", label: "Your data" },
+  { href: "/settings/phone", label: "On your phone" },
+];

@@ -108,7 +108,7 @@ export default function Distributor({
 
       {valid && value > available && (
         <div className="text-xs text-[var(--amber)]">
-          That&apos;s more than the {fmt(available, currency)} of free cash you have. The plan will
+          That&apos;s more than the <span translate="no">{fmt(available, currency)}</span> of free cash you have. The plan will
           show what can actually be funded.
         </div>
       )}
@@ -126,13 +126,13 @@ export default function Distributor({
           {shares.map((s) => (
             <div key={s.id} className="flex items-center gap-2 text-xs">
               <span className="flex-1 truncate text-[var(--foreground)]" title={s.name}>
-                {s.name}
+                <span translate="no">{s.name}</span>
               </span>
               {/* What this share is worth at the amount typed — a percentage of
                   an unknown number is hard to judge, a euro figure isn't. */}
               {valid && (
                 <span className="text-[10px] text-[var(--muted)] whitespace-nowrap">
-                  {fmt((value * s.percent) / 100, currency)}
+                  <span translate="no">{fmt((value * s.percent) / 100, currency)}</span>
                 </span>
               )}
               <input
@@ -183,10 +183,10 @@ export default function Distributor({
                 <tbody>
                   {plan.sourcedMoves.map((m, i) => (
                     <tr key={i}>
-                      <td className="font-medium">{fmt(m.amount, plan.baseCurrency)}</td>
-                      <td className="text-[var(--muted)]">{m.accountName}</td>
+                      <td className="font-medium"><span translate="no">{fmt(m.amount, plan.baseCurrency)}</span></td>
+                      <td className="text-[var(--muted)]"><span translate="no">{m.accountName}</span></td>
                       <td>
-                        {m.bucketName}
+                        <span translate="no">{m.bucketName}</span>
                         {m.completes && <span className="text-[var(--green)] ml-1">✓</span>}
                       </td>
                       <td className="text-[var(--muted)] max-w-[18rem] truncate" title={m.reason}>
@@ -201,16 +201,16 @@ export default function Distributor({
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
             <span className="text-[var(--green)]">
-              {fmt(plan.distributed, plan.baseCurrency)} allocated
+              <span translate="no">{fmt(plan.distributed, plan.baseCurrency)}</span> allocated
             </span>
             {plan.leftOver > 0 && (
               <span className="text-[var(--muted)]">
-                {fmt(plan.leftOver, plan.baseCurrency)} left over — every goal is full
+                <span translate="no">{fmt(plan.leftOver, plan.baseCurrency)}</span> left over — every goal is full
               </span>
             )}
             {plan.unfunded > 0 && (
               <span className="text-[var(--amber)]">
-                {fmt(plan.unfunded, plan.baseCurrency)} couldn&apos;t be funded from free cash
+                <span translate="no">{fmt(plan.unfunded, plan.baseCurrency)}</span> couldn&apos;t be funded from free cash
               </span>
             )}
           </div>
@@ -218,10 +218,10 @@ export default function Distributor({
           {plan.stillShort.length > 0 && (
             <div className="text-xs text-[var(--muted)]">
               Still short:{" "}
-              {plan.stillShort
+              <span translate="no">{plan.stillShort
                 .slice(0, 4)
                 .map((s) => `${s.name} (${fmt(s.missing, plan.baseCurrency)})`)
-                .join(", ")}
+                .join(", ")}</span>
               {plan.stillShort.length > 4 && ` +${plan.stillShort.length - 4}`}
             </div>
           )}

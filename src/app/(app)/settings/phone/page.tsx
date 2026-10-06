@@ -1,7 +1,8 @@
 import InstallApp from "@/components/InstallApp";
 import Rich from "@/components/Rich";
 import TryQuickEntry from "@/components/TryQuickEntry";
-import { words } from "@/actions/language";
+import { currentLanguage } from "@/actions/language";
+import { messagesFor } from "@/lib/i18n/messages";
 
 /**
  * Money OS on a phone, step by step: installing it, the shortcuts on its icon,
@@ -15,9 +16,10 @@ import { words } from "@/actions/language";
  * steps name them as the phone will show them.
  */
 export default async function PhoneSettingsPage() {
-  const w = (await words()).phone;
+  const language = await currentLanguage();
+  const w = messagesFor(language).phone;
   return (
-    <>
+    <div translate="no" lang={language} className="space-y-6">
       <section className="card p-4 space-y-3" aria-labelledby="phone-install">
         <h2 id="phone-install" className="text-sm font-medium">{w.installTitle}</h2>
         <p className="text-xs text-[var(--muted)] max-w-2xl">{w.installText}</p>
@@ -48,6 +50,6 @@ export default async function PhoneSettingsPage() {
         <p className="text-sm max-w-2xl">{w.widgetsText}</p>
         <p className="text-xs text-[var(--muted)] max-w-2xl">{w.widgetsMore}</p>
       </section>
-    </>
+    </div>
   );
 }

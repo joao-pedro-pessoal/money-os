@@ -38,10 +38,10 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
   const { hidden, toggle } = usePrivacy();
   const { mode, toggleMode } = useTheme();
   const { open, setOpen } = useNav();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
-    <div className="app-topbar flex items-center gap-2 px-4 md:px-8 pt-4 md:pt-6">
+    <div lang={language} className="app-topbar flex items-center gap-2 px-4 md:px-8 pt-4 md:pt-6">
       {/*
         Opens the nav drawer. Only exists where the nav is a drawer.
 
@@ -51,7 +51,7 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
         `md:hidden` written directly on an `.icon-btn` is silently ignored.
       */}
       <div className="md:hidden">
-        <button
+        <button translate="no"
           onClick={() => setOpen(!open)}
           className="icon-btn"
           aria-label={t.openMenu}
@@ -70,7 +70,7 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
       {/* Only rendered when there is something to say; see AlertBell. */}
       <AlertBell alerts={alerts} />
 
-      <button
+      <button translate="no"
         onClick={toggle}
         className="icon-btn"
         aria-label={hidden ? t.showValues : t.hideValues}
@@ -78,7 +78,7 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
       >
         <EyeIcon open={!hidden} />
       </button>
-      <button
+      <button translate="no"
         onClick={toggleMode}
         className="icon-btn"
         aria-label={mode === "light" ? t.switchDark : t.switchLight}

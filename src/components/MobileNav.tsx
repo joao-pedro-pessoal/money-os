@@ -24,11 +24,11 @@ export default function MobileNav() {
   const pathname = usePathname();
   const { open, setOpen } = useNav();
   const { simple } = useMobileMode();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const moreActive = !shortcuts.some(({ href }) => (!simple || href !== "/investments") && isNavigationActive(pathname, href));
 
   return (
-    <nav className="mobile-bottom-nav" aria-label={t.quickNavigation}>
+    <nav translate="no" lang={language} className="mobile-bottom-nav" aria-label={t.quickNavigation}>
       {shortcuts.map(({ href, word, path }) => (
         <Link key={href} href={href} aria-current={isNavigationActive(pathname, href) ? "page" : undefined}>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={path} /></svg>

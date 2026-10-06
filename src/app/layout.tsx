@@ -29,18 +29,7 @@ export const metadata: Metadata = {
    * it. This meta is Dark Reader's own convention for "this site has themes of
    * its own; leave it alone".
    */
-  /**
-   * `google: notranslate`, with `translate="no"` on the page below: the
-   * browser's own translation is turned away.
-   *
-   * A phone set to Portuguese translated the whole app on its own, sign-in
-   * included, so it no longer read as the English interface it is. It also
-   * translates what is yours — account names, shops, categories — which this
-   * app never changes, and it rewrites the page under React, which can break
-   * it. The app has its own language choice, in Settings and on the sign-in
-   * page (`lib/i18n`).
-   */
-  other: { "darkreader-lock": "true", google: "notranslate" },
+  other: { "darkreader-lock": "true" },
 };
 
 /**
@@ -143,7 +132,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
      * every page for exactly this. Scoped to this element, so a real mismatch
      * anywhere inside still reports.
      */
-    <html lang={language} translate="no" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="en" translate={language === "en" ? "no" : "yes"} className="h-full antialiased" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: applyStoredTheme }} />
         <script dangerouslySetInnerHTML={{ __html: registerServiceWorker }} />

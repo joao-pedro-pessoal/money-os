@@ -119,8 +119,8 @@ export default function QuoteProbe({ suggestions }: { suggestions: string[] }) {
               <tbody>
                 {result.candidates.slice(0, 8).map((c) => (
                   <tr key={c.conid} className="border-t border-[var(--border)]">
-                    <td className="py-1">{c.symbol ?? "—"}</td>
-                    <td className="py-1 text-[var(--muted)] truncate max-w-[16rem]">{c.name ?? ""}</td>
+                    <td className="py-1"><span translate="no">{c.symbol ?? "—"}</span></td>
+                    <td className="py-1 text-[var(--muted)] truncate max-w-[16rem]"><span translate="no">{c.name ?? ""}</span></td>
                     <td className="py-1 text-right">{c.exchange ?? "—"}</td>
                     <td className="py-1 text-right font-medium">{c.currency ?? "—"}</td>
                   </tr>

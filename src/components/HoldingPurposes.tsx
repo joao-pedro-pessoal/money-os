@@ -30,7 +30,7 @@ export default async function HoldingPurposes({ holdingId }: { holdingId: string
         <ul className="space-y-2 mb-3">
           {data.allocations.map((a) => (
             <li key={a.id} className="flex items-center gap-2 text-sm">
-              <span className="flex-1 truncate">{a.bucketName}</span>
+              <span className="flex-1 truncate"><span translate="no">{a.bucketName}</span></span>
               <form action={setHoldingAllocation} className="flex items-center gap-1">
                 <input type="hidden" name="holdingId" value={holdingId} />
                 <input type="hidden" name="bucketId" value={a.bucketId} />
@@ -70,7 +70,7 @@ export default async function HoldingPurposes({ holdingId }: { holdingId: string
           <input type="hidden" name="holdingId" value={holdingId} />
           <select name="bucketId" className="input text-xs" required>
             {data.available.map((b) => (
-              <option key={b.id} value={b.id}>
+              <option translate="no" key={b.id} value={b.id}>
                 {b.name}
               </option>
             ))}

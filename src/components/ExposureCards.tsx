@@ -91,10 +91,10 @@ export default function ExposureCards({
               <li key={m.lookup + m.name} className="flex items-center justify-between gap-3 text-sm">
                 <div className="min-w-0">
                   <div className="truncate" title={m.name}>
-                    {shortName(m.name)}
+                    <span translate="no">{shortName(m.name)}</span>
                   </div>
                   <div className="text-xs text-[var(--muted)]">
-                    {m.symbol ? `${m.symbol}${m.quoteType ? ` · ${m.quoteType}` : ""}` : m.looked ? "not found" : "not looked up yet"}
+                    <span translate="no">{m.symbol ? `${m.symbol}${m.quoteType ? ` · ${m.quoteType}` : ""}` : m.looked ? "not found" : "not looked up yet"}</span>
                   </div>
                 </div>
                 {m.symbol && (
@@ -127,7 +127,7 @@ function ExposureCard({ title, data, currency }: { title: string; data: Exposure
             {data.slices.map((s) => (
               <div key={s.name}>
                 <div className="flex justify-between gap-3 text-sm mb-1">
-                  <span className={s.name === UNCLASSIFIED ? "text-[var(--muted)]" : undefined}>{s.name}</span>
+                  <span className={s.name === UNCLASSIFIED ? "text-[var(--muted)]" : undefined}><span translate="no">{s.name}</span></span>
                   <span className="text-[var(--muted)] shrink-0">
                     <Money value={s.value} currency={currency} /> · {s.percent.toFixed(1)}%
                   </span>

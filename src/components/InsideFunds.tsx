@@ -410,10 +410,10 @@ export default function InsideFunds({
                         <AssetLogo image={c.symbol ? logos[c.symbol] : null} name={c.name} />
                         <div className="min-w-0">
                           <div>
-                            {c.name}
+                            <span translate="no">{c.name}</span>
                             {/* The listing it trades under: the name is what a fund
                                 writes, the symbol is what you type into a broker. */}
-                            {c.symbol && <span className="text-[11px] text-[var(--muted)] ml-2">{c.symbol}</span>}
+                            {c.symbol && <span className="text-[11px] text-[var(--muted)] ml-2"><span translate="no">{c.symbol}</span></span>}
                           </div>
                           {c.funds.length > 0 && (
                             <div className="text-[11px] text-[var(--muted)]">via {c.funds.map(shortName).join(", ")}</div>

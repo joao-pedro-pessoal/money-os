@@ -51,7 +51,7 @@ export default async function TransactionsPage() {
               defaultValue={defaultAccountId ?? ""}
             >
               {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}
@@ -64,7 +64,7 @@ export default async function TransactionsPage() {
             <select name="categoryId" aria-label="Category" className="input">
               <option value="">No category</option>
               {categories.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option translate="no" key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
@@ -93,14 +93,14 @@ export default async function TransactionsPage() {
           <form action={createTransfer} className="space-y-3">
             <select name="fromAccountId" aria-label="From account" className="input" required>
               {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}
             </select>
             <select name="toAccountId" aria-label="To account" className="input" required>
               {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}

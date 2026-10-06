@@ -98,7 +98,7 @@ export default function FlowBars({
       {shape.unclassified.length > 0 && (
         <div className="text-[10px] text-[var(--muted)]">
           Not marked fixed or variable yet:{" "}
-          {shape.unclassified.slice(0, 3).map((c) => c.name).join(", ")}
+          <span translate="no">{shape.unclassified.slice(0, 3).map((c) => c.name).join(", ")}</span>
           {shape.unclassified.length > 3 && ` +${shape.unclassified.length - 3}`}.{" "}
           <Link href="/settings/categories" className="text-[var(--accent)]">
             Classify

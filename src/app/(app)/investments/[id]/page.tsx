@@ -53,15 +53,15 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div className="text-xs text-[var(--muted)]">
-            {holdingAccount?.name ?? holding.platform ?? "No account linked"}
+            <span translate="no">{holdingAccount?.name ?? holding.platform ?? "No account linked"}</span>
             {holding.assetType && <span> · {tagLabel(holding.assetType, "assetType")}</span>}
           </div>
           <h1 className="text-lg font-semibold">
-            {holding.symbol}
+            <span translate="no">{holding.symbol}</span>
             {holding.direction === "short" && (
               <span className="badge ml-2 align-middle text-[var(--red)] border border-[var(--red)]">SHORT</span>
             )}
-            {holding.name && <span className="text-[var(--muted)] font-normal"> — {holding.name}</span>}
+            {holding.name && <span className="text-[var(--muted)] font-normal"> — <span translate="no">{holding.name}</span></span>}
           </h1>
           <HoldingTags
             riskLevel={holding.riskLevel}
@@ -287,7 +287,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           <select name="accountId" defaultValue={holding.accountId ?? ""} className="input" required>
             <option value="">Account holding this position…</option>
             {accountList.map((a) => (
-              <option key={a.id} value={a.id}>
+              <option translate="no" key={a.id} value={a.id}>
                 {a.institution} — {a.name}
               </option>
             ))}
@@ -295,7 +295,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           <select name="playlistId" className="input" defaultValue={holding.playlistId ?? ""}>
             <option value="">Playlist — none</option>
             {playlistList.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option translate="no" key={p.id} value={p.id}>
                 {p.name}
               </option>
             ))}

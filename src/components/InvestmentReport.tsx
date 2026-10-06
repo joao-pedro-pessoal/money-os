@@ -154,7 +154,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
           </div>
           {report.benchmark !== null && (
             <div>
-              <div className="text-xs text-[var(--muted)]">{report.benchmark.name}</div>
+              <div className="text-xs text-[var(--muted)]"><span translate="no">{report.benchmark.name}</span></div>
               <div className="text-lg font-semibold">{index ? indexPercent(index.indexReturn) : "—"}</div>
               {index && (
                 // Your return minus the index's, so it reveals yours: hidden like it.
@@ -215,7 +215,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
               <tbody>
                 {report.trades.bySymbol.map((s) => (
                   <tr key={s.symbol}>
-                    <td>{s.symbol}</td>
+                    <td><span translate="no">{s.symbol}</span></td>
                     <td className="text-right">{s.closedTrades}</td>
                     <td className="text-right"><Signed value={s.realized} currency={currency} /></td>
                     <td className="text-right"><Money value={s.fees} currency={currency} /></td>
@@ -235,7 +235,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
             {report.income.byInstrument.map((d) => (
               <div key={d.name} className="flex justify-between gap-3 text-sm">
                 <span>
-                  {d.name} <span className="text-xs text-[var(--muted)]">· {d.payments} {d.payments === 1 ? "payment" : "payments"}</span>
+                  <span translate="no">{d.name}</span> <span className="text-xs text-[var(--muted)]">· {d.payments} {d.payments === 1 ? "payment" : "payments"}</span>
                 </span>
                 <Money value={d.amount} currency={currency} />
               </div>
@@ -258,7 +258,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
             {report.composition.byType.map((t) => (
               <div key={t.name}>
                 <div className="flex justify-between text-xs gap-3">
-                  <span>{t.name}</span>
+                  <span><span translate="no">{t.name}</span></span>
                   <span className="text-[var(--muted)]">
                     <Money value={t.value} currency={currency} /> · <Percent value={t.percent} />
                   </span>
@@ -283,7 +283,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
               <tbody>
                 {report.composition.largest.map((p, i) => (
                   <tr key={`${p.name}-${i}`}>
-                    <td>{p.name}</td>
+                    <td><span translate="no">{p.name}</span></td>
                     <td className="text-[var(--muted)]">{p.account}</td>
                     <td className="text-right"><Money value={p.value} currency={currency} /></td>
                     <td className="text-right"><Percent value={p.percent} /></td>

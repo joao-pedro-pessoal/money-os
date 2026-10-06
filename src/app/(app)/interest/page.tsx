@@ -151,7 +151,7 @@ export default async function InterestPage() {
                 {outlook.map((o) => (
                   <tr key={o.accountId}>
                     <td className="font-medium">
-                      {o.name}
+                      <span translate="no">{o.name}</span>
                       <div className="text-[10px] text-[var(--muted)]">
                         since{" "}
                         {o.lastPaid
@@ -202,7 +202,7 @@ export default async function InterestPage() {
           <form action={setAccountRate} className="space-y-3">
             <select name="accountId" className="input" required>
               {accountList.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}
@@ -276,7 +276,7 @@ export default async function InterestPage() {
             {payments.map((p) => (
               <tr key={p.id}>
                 <td>{new Date(p.date).toLocaleDateString("pt-PT")}</td>
-                <td>{p.accountName}</td>
+                <td><span translate="no">{p.accountName}</span></td>
                 <td>
                   <Money value={Number(p.amount)} />
                 </td>

@@ -89,8 +89,8 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
         <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <div className="text-xs text-[var(--muted)]">{account.institution}</div>
-          <h1 className="text-lg font-semibold">{account.name}</h1>
+          <div className="text-xs text-[var(--muted)]"><span translate="no">{account.institution}</span></div>
+          <h1 className="text-lg font-semibold"><span translate="no">{account.name}</span></h1>
           {/* The facts that were only discoverable by scrolling to the edit
               form and reading two unlabelled dropdowns. */}
           <div className="flex gap-1.5 flex-wrap mt-2">
@@ -273,7 +273,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             <tbody>
               {myAllocations.map((a) => (
                 <tr key={a.id}>
-                  <td>{a.bucketName}</td>
+                  <td><span translate="no">{a.bucketName}</span></td>
                   <td>
                     <Money value={a.amount} currency={account.currency} />
                   </td>
@@ -285,7 +285,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             <input type="hidden" name="accountId" value={account.id} />
             <select name="bucketId" className="input" required>
               {buckets.map((b) => (
-                <option key={b.id} value={b.id}>
+                <option translate="no" key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}

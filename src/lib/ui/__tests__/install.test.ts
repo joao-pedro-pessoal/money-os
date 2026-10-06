@@ -7,6 +7,7 @@ const IPAD_AS_MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit
 const FIREFOX_WINDOWS = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0";
 
 const env = (overrides: Partial<InstallEnvironment>): InstallEnvironment => ({
+  secure: true,
   standalone: false,
   androidApp: false,
   justInstalled: false,
@@ -18,6 +19,12 @@ const env = (overrides: Partial<InstallEnvironment>): InstallEnvironment => ({
 });
 
 describe("getting the app onto a device", () => {
+  it("requires a secure context even when a stale prompt is present", () => {
+    expect(installRoute(env({ secure: false }))).toBe("insecure");
+    expect(installRoute(env({ secure: false, canPrompt: true }))).toBe("insecure");
+    expect(installRoute(env({ secure: false, androidApp: true }))).toBe("android-app");
+    expect(installRoute(env({ secure: false, standalone: true }))).toBe("installed");
+  });
   it("installs with one tap where the browser offers a prompt", () => {
     expect(installRoute(env({ canPrompt: true }))).toBe("prompt");
   });
@@ -29,9 +36,10 @@ describe("getting the app onto a device", () => {
     expect(isAppleMobile(IPAD_AS_MAC, "MacIntel", 0)).toBe(false);
   });
 
-  it("sends any other browser to its own menu", () => {
+  it("uses the menu on Android, but never invents an installation menu on desktop Firefox", () => {
     expect(installRoute(env({}))).toBe("menu");
-    expect(installRoute(env({ userAgent: FIREFOX_WINDOWS, platform: "Win32", maxTouchPoints: 0 }))).toBe("menu");
+    expect(installRoute(env({ userAgent: "Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0" }))).toBe("menu");
+    expect(installRoute(env({ userAgent: FIREFOX_WINDOWS, platform: "Win32", maxTouchPoints: 0 }))).toBe("unsupported");
   });
 
   it("offers nothing once it is installed, or inside the Android app", () => {

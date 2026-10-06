@@ -97,7 +97,7 @@ export default async function BudgetsPage({
             <div key={b.id} className="card p-4">
               <div className="flex justify-between items-baseline gap-3 flex-wrap mb-2">
                 <div>
-                  <span className="text-sm font-medium">{b.name}</span>
+                  <span className="text-sm font-medium"><span translate="no">{b.name}</span></span>
                   <span className="text-xs text-[var(--muted)] ml-2">
                     {PERIODS.find((p) => p.value === b.period)?.label.toLowerCase()} · {b.bounds.label}
                   </span>
@@ -215,7 +215,7 @@ export default async function BudgetsPage({
           {unbudgeted.categories.length > 0 && (
             <div className="text-[var(--muted)]">
               No budget watches:{" "}
-              {unbudgeted.categories.slice(0, 5).map((c) => `${c.name} (${c.amount.toFixed(0)})`).join(", ")}
+              <span translate="no">{unbudgeted.categories.slice(0, 5).map((c) => `${c.name} (${c.amount.toFixed(0)})`).join(", ")}</span>
               {unbudgeted.categories.length > 5 && ` +${unbudgeted.categories.length - 5}`}
             </div>
           )}
@@ -262,7 +262,7 @@ export default async function BudgetsPage({
                 {data.availableCategories.map((c) => (
                   <label key={c.id} className="flex items-center gap-1.5 text-xs">
                     <input type="checkbox" name="categoryIds" value={c.id} />
-                    <span className="truncate">{c.name}</span>
+                    <span className="truncate"><span translate="no">{c.name}</span></span>
                   </label>
                 ))}
               </div>

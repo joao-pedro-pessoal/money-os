@@ -90,15 +90,15 @@ export function usePrivacy() {
  */
 export function Bare({ value }: { value: number }) {
   const { hidden } = usePrivacy();
-  if (hidden) return <span>••••••</span>;
+  if (hidden) return <span translate="no">••••••</span>;
   return (
-    <span>{new Intl.NumberFormat("pt-PT", { minimumFractionDigits: 2 }).format(value)}</span>
+    <span translate="no">{new Intl.NumberFormat("pt-PT", { minimumFractionDigits: 2 }).format(value)}</span>
   );
 }
 
 export function Money({ value, currency = "EUR" }: { value: number; currency?: string }) {
   const { hidden } = usePrivacy();
-  if (hidden) return <span>••••••</span>;
+  if (hidden) return <span translate="no">••••••</span>;
   const formatted = fmt(value, currency);
-  return <span>{formatted}</span>;
+  return <span translate="no">{formatted}</span>;
 }

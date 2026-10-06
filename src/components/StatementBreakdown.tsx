@@ -128,7 +128,7 @@ export default function StatementBreakdown({
                 style={{ color: data.gain.unrealized >= 0 ? "var(--green)" : "var(--red)" }}
               >
                 {data.gain.unrealized >= 0 ? "+" : "−"}
-                {fmt(Math.abs(data.gain.unrealized), c)}
+                <span translate="no">{fmt(Math.abs(data.gain.unrealized), c)}</span>
                 {data.gain.unrealizedPercent !== null && (
                   <span className="text-xs font-normal">
                     {" "}
@@ -176,7 +176,7 @@ export default function StatementBreakdown({
               {held.map((h) => (
                 <tr key={`${h.currency}:${h.key}`} className="border-t border-[var(--border)]">
                   <td className="py-1.5">
-                    <div>{h.symbol ?? h.key}</div>
+                    <div><span translate="no">{h.symbol ?? h.key}</span></div>
                     {h.isin && <div className="text-[10px] text-[var(--muted)]">{h.isin}</div>}
                     {h.incomplete && (
                       <div className="text-[10px]" style={{ color: "var(--amber)" }}>
@@ -210,13 +210,13 @@ export default function StatementBreakdown({
             </div>
             {closed.map((h) => (
               <div key={`${h.currency}:${h.key}`} className="flex justify-between text-xs py-0.5">
-                <span>{h.symbol ?? h.key}</span>
+                <span><span translate="no">{h.symbol ?? h.key}</span></span>
                 <span
                   className="tabular-nums"
                   style={{ color: h.realizedPnl >= 0 ? "var(--green)" : "var(--red)" }}
                 >
                   {h.realizedPnl >= 0 ? "+" : "−"}
-                  {fmt(Math.abs(h.realizedPnl), h.currency)}
+                  <span translate="no">{fmt(Math.abs(h.realizedPnl), h.currency)}</span>
                 </span>
               </div>
             ))}
@@ -259,7 +259,7 @@ export default function StatementBreakdown({
 
       <div className="text-[10px] text-[var(--muted)] leading-snug">
         From {data.events} imported rows, up to {data.lastEvent ?? "—"}. Fees paid:{" "}
-        {fmt(data.fees, c)}. Profit on sales, {fmt(data.realizedPnl, c)}, is this app&apos;s own
+        <span translate="no">{fmt(data.fees, c)}</span>. Profit on sales, <span translate="no">{fmt(data.realizedPnl, c)}</span>, is this app&apos;s own
         calculation using average cost — your broker may state a different figure using a different
         method.
       </div>
@@ -345,7 +345,7 @@ function PaymentList({
               {rows.map((r) => (
                 <div key={r.key} className="flex justify-between text-[11px]">
                   <span className="text-[var(--muted)]">{r.left}</span>
-                  <span className="tabular-nums">{fmt(r.right, r.currency)}</span>
+                  <span className="tabular-nums"><span translate="no">{fmt(r.right, r.currency)}</span></span>
                 </div>
               ))}
             </div>

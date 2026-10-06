@@ -50,7 +50,7 @@ export default function SavedViews({
               color: isCurrent ? "var(--accent)" : "var(--muted)",
             }}
           >
-            <FilterLink href={`?${v.query}`}>{v.name}</FilterLink>
+            <FilterLink href={`?${v.query}`}><span translate="no">{v.name}</span></FilterLink>
             <form action={deleteAction} className="contents">
               <input type="hidden" name="id" value={v.id} />
               <button
@@ -68,7 +68,7 @@ export default function SavedViews({
 
       {alreadySaved ? (
         <span className="text-xs text-[var(--muted)]">
-          This view is saved as &quot;{alreadySaved.name}&quot;
+          This view is saved as &quot;<span translate="no">{alreadySaved.name}</span>&quot;
         </span>
       ) : saving ? (
         <form action={saveAction} className="flex items-center gap-1">

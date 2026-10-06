@@ -142,7 +142,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                     </div>
                   )}
                   <div className="connection-extra text-xs text-[var(--muted)] mt-1 break-words">
-                    feeds <span className="text-[var(--foreground)]">{c.accountName}</span> ·{" "}
+                    feeds <span className="text-[var(--foreground)]"><span translate="no">{c.accountName}</span></span> ·{" "}
                     <span className="font-mono">{c.externalIdMasked}</span>
                     {c.hasSecret && (
                       <span className="ml-2 badge border border-[var(--border)] text-[var(--muted)]">
@@ -252,7 +252,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                 <summary className="cursor-pointer text-[var(--accent)] py-2">Details</summary>
                 <div className="space-y-2 pt-1 text-[var(--muted)] break-words">
                   <div>
-                    Feeds <span className="text-[var(--foreground)]">{c.accountName}</span> ·{" "}
+                    Feeds <span className="text-[var(--foreground)]"><span translate="no">{c.accountName}</span></span> ·{" "}
                     <span className="font-mono">{c.externalIdMasked}</span>
                     {c.hasSecret && " · secret encrypted"}
                   </div>

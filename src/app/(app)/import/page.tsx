@@ -104,7 +104,7 @@ export default async function ImportPage() {
               <tbody>
                 {imported.map((s) => (
                   <tr key={s.accountId} className="border-t border-[var(--border)] first:border-0">
-                    <td className="py-1.5">{s.accountName}</td>
+                    <td className="py-1.5"><span translate="no">{s.accountName}</span></td>
                     <td className="py-1.5 text-[var(--muted)]">
                       {s.from} → {s.to}
                     </td>
@@ -196,7 +196,7 @@ export default async function ImportPage() {
                   <tr key={i.id}>
                     <td>{new Date(i.createdAt).toLocaleString("pt-PT")}</td>
                     <td className="max-w-[14rem] truncate">{i.fileName}</td>
-                    <td>{i.accountName}</td>
+                    <td><span translate="no">{i.accountName}</span></td>
                     <td className="text-right">{i.rowsImported}</td>
                     <td className="text-right">
                       <form action={undoImport}>

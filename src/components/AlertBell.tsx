@@ -60,7 +60,7 @@ export default function AlertBell({ alerts }: { alerts: Alert[] }) {
   const worst = alerts[0].severity;
 
   return (
-    <div className="relative">
+    <div lang="en" className="relative">
       <div>
         <button
           ref={trigger}

@@ -57,12 +57,12 @@ export default function AssetSearch({ navigate = false }: { navigate?: boolean }
       {results.map((r, i) => <li key={r.symbol} role="option" aria-selected={i === active} id={`${id}-${i}`}>
         <button type="button" tabIndex={-1} onMouseDown={e => e.preventDefault()} onClick={() => choose(r)} className="block w-full text-left p-2 text-xs hover:bg-[var(--surface-2)]"
           style={{ background: i === active ? 'var(--surface-2)' : undefined }}>
-          <strong>{r.symbol}</strong> · {r.name}<span className="block text-[var(--muted)]">{r.assetType ?? 'Unclassified'} · {r.exchange ?? 'Exchange not reported'} · {r.source}</span>
+          <strong><span translate="no">{r.symbol}</span></strong> · <span translate="no">{r.name}</span><span className="block text-[var(--muted)]">{r.assetType ?? 'Unclassified'} · {r.exchange ?? 'Exchange not reported'} · {r.source}</span>
         </button>
       </li>)}
     </ul>}
     <div role="status" className="text-xs text-[var(--muted)]">{message}</div>
-    {selected && !navigate && <p className="text-xs text-[var(--muted)]">Selected: {selected.symbol} · {selected.exchange ?? 'Exchange not reported'}. Check the asset type and currency below.</p>}
+    {selected && !navigate && <p className="text-xs text-[var(--muted)]">Selected: <span translate="no">{selected.symbol}</span> · {selected.exchange ?? 'Exchange not reported'}. Check the asset type and currency below.</p>}
     {!navigate && <input name="name" aria-label="Asset name" value={name} onChange={e => setName(e.target.value)} placeholder="Name (optional)" className="input w-full" />}
   </div>;
 }

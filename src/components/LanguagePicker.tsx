@@ -7,6 +7,7 @@ export default function LanguagePicker({ className = "input min-w-0" }: { classN
   const { language, setLanguage, m } = useLanguage();
   return (
     <select
+      translate="no" lang={language}
       aria-label={m.language.label}
       className={className}
       value={language}

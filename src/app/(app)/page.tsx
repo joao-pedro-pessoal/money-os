@@ -393,9 +393,9 @@ export default async function DashboardPage({
       {subs.activeCount > 0 && (
         <div className="card p-3 text-xs flex items-center justify-between gap-3 flex-wrap">
           <span className="text-[var(--muted)]">
-            <span className="text-[var(--foreground)]">{fmt(inDisplay(subs.monthly), base)}</span> a month is
+            <span className="text-[var(--foreground)]"><span translate="no">{fmt(inDisplay(subs.monthly), base)}</span></span> a month is
             already committed across {subs.activeCount} subscription
-            {subs.activeCount === 1 ? "" : "s"} — {fmt(inDisplay(subs.yearly), base)} a year. Not counted in the
+            {subs.activeCount === 1 ? "" : "s"} — <span translate="no">{fmt(inDisplay(subs.yearly), base)}</span> a year. Not counted in the
             figures above; those charges arrive as normal transactions.
           </span>
           <Link href="/subscriptions" className="text-[var(--accent)] whitespace-nowrap">
@@ -426,7 +426,7 @@ export default async function DashboardPage({
           {warnings.map((a) => (
             <div key={a.id} className="text-sm text-[var(--muted)] flex items-center justify-between">
               <span>
-                {a.state === "OVERALLOCATED" ? "⚠️" : "🕒"} {a.name} — {a.state === "OVERALLOCATED" ? `overallocated by €${a.overallocatedBy.toFixed(2)}` : "balance is stale"}
+                {a.state === "OVERALLOCATED" ? "⚠️" : "🕒"} <span translate="no">{a.name}</span> — {a.state === "OVERALLOCATED" ? `overallocated by €${a.overallocatedBy.toFixed(2)}` : "balance is stale"}
               </span>
               <Link href={`/accounts/${a.id}`} className="text-[var(--accent)] text-xs">
                 Reconcile
@@ -513,7 +513,7 @@ export default async function DashboardPage({
                 <div key={b.id}>
                   <div className="flex justify-between items-baseline text-xs mb-1">
                     <Link href={`/buckets/${b.id}`} className="hover:underline">
-                      {b.name}
+                      <span translate="no">{b.name}</span>
                     </Link>
                     <span className="text-[var(--muted)]">
                       <Money value={inDisplay(b.totals.total)} currency={base} />
@@ -598,7 +598,7 @@ export default async function DashboardPage({
             {recentTx.map((t) => (
               <tr key={t.id}>
                 <td>{new Date(t.date).toLocaleDateString("pt-PT")}</td>
-                <td>{t.description || t.categoryName || t.type}</td>
+                <td><span translate="no">{t.description || t.categoryName || t.type}</span></td>
                 <td>
                   <Money value={Number(t.amount)} currency={recentTxData.baseCurrency} />
                 </td>

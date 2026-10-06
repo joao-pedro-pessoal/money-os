@@ -63,10 +63,10 @@ export default async function SubscriptionsPage() {
         </div>
         <div className="card p-4">
           <div className="text-xs text-[var(--muted)]">Most expensive</div>
-          <div className="text-2xl font-semibold mt-1">{active[0]?.name ?? "—"}</div>
+          <div className="text-2xl font-semibold mt-1"><span translate="no">{active[0]?.name ?? "—"}</span></div>
           {active[0] && (
             <div className="text-xs text-[var(--muted)] mt-1">
-              {fmt(active[0].yearly, active[0].currency)} a year
+              <span translate="no">{fmt(active[0].yearly, active[0].currency)}</span> a year
             </div>
           )}
         </div>
@@ -107,9 +107,9 @@ export default async function SubscriptionsPage() {
                 {active.map((s) => (
                   <tr key={s.id}>
                     <td className="font-medium">
-                      {s.name}
+                      <span translate="no">{s.name}</span>
                       {s.categoryName && (
-                        <div className="text-[10px] text-[var(--muted)]">{s.categoryName}</div>
+                        <div className="text-[10px] text-[var(--muted)]"><span translate="no">{s.categoryName}</span></div>
                       )}
                     </td>
                     <td className="text-right">
@@ -139,7 +139,7 @@ export default async function SubscriptionsPage() {
                         <span className="text-[var(--muted)]">—</span>
                       )}
                     </td>
-                    <td className="text-xs text-[var(--muted)]">{s.accountName ?? "—"}</td>
+                    <td className="text-xs text-[var(--muted)]"><span translate="no">{s.accountName ?? "—"}</span></td>
                     <td className="text-right">
                       <form action={toggleSubscription}>
                         <input type="hidden" name="id" value={s.id} />
@@ -166,7 +166,7 @@ export default async function SubscriptionsPage() {
             <tbody>
               {cancelled.map((s) => (
                 <tr key={s.id} style={{ opacity: 0.6 }}>
-                  <td>{s.name}</td>
+                  <td><span translate="no">{s.name}</span></td>
                   <td className="text-right">
                     <Money value={s.yearly} currency={s.currency} /> / year saved
                   </td>
@@ -228,7 +228,7 @@ export default async function SubscriptionsPage() {
             <select name="accountId" className="input" defaultValue="">
               <option value="">Account — optional</option>
               {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}
@@ -236,7 +236,7 @@ export default async function SubscriptionsPage() {
             <select name="categoryId" className="input" defaultValue="">
               <option value="">Category — optional</option>
               {expenseCategories.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option translate="no" key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}

@@ -127,7 +127,7 @@ export default function HoldingFormFields({
             <select name="playlistId" className="input" defaultValue={defaultPlaylistId}>
               <option value="">Playlist — none</option>
               {playlistOptions.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option translate="no" key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}

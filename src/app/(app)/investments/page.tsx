@@ -293,7 +293,7 @@ export default async function InvestmentsPage() {
           <select name="accountId" className="input" required defaultValue="">
             <option value="">Account holding this position…</option>
             {accountList.map((a) => (
-              <option key={a.id} value={a.id}>
+              <option translate="no" key={a.id} value={a.id}>
                 {a.institution} — {a.name}
               </option>
             ))}

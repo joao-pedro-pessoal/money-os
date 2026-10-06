@@ -20,7 +20,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
   const requestId = useRef("");
   const scrollBefore = useRef("");
   const router = useRouter();
-  const { m } = useLanguage();
+  const { m, language } = useLanguage();
   const w = m.quickEntry;
   const [type, setType] = useState<"expense" | "income">("expense");
   const [accountId, setAccountId] = useState(defaultAccountId ?? accounts[0]?.id ?? "");
@@ -138,11 +138,11 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
 
   return (
     <>
-      <button type="button" className="icon-btn quick-entry-trigger" aria-label={w.open} title={w.openTitle} onClick={() => open()}>
+      <button translate="no" lang={language} type="button" className="icon-btn quick-entry-trigger" aria-label={w.open} title={w.openTitle} onClick={() => open()}>
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
         <span className="quick-entry-label"><span className="complex-visible">{w.button}</span><span className="simple-only">{w.button}</span></span>
       </button>
-      <dialog ref={dialog} className="quick-entry" aria-labelledby="quick-entry-title"
+      <dialog translate="no" lang={language} ref={dialog} className="quick-entry" aria-labelledby="quick-entry-title"
         onCancel={event => { event.preventDefault(); close(); }}
         onClose={() => { document.body.style.overflow = scrollBefore.current; }}>
         <div className="flex items-center justify-between gap-3 mb-4">

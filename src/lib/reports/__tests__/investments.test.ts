@@ -66,6 +66,8 @@ describe("the investing side of a period", () => {
     expect(report.flows).toEqual({ deposited: 500, withdrawn: 0, net: 500, count: 1, complete: true });
     expect(report.unexplained).toBe(10);
     expect(report.unexplainedWithheld).toBeNull();
+    expect(investmentCsvLines(report).find(row => row[0] === "Change not explained by deposits"))
+      .toEqual(["Change not explained by deposits", 10, null]);
   });
 
   it("does not split the change by deposits when the deposit record is known to be incomplete", () => {
@@ -73,6 +75,8 @@ describe("the investing side of a period", () => {
     expect(incomplete.flows.complete).toBe(false);
     expect(incomplete.unexplained).toBeNull();
     expect(incomplete.unexplainedWithheld).toMatch(/Not every platform/);
+    expect(investmentCsvLines(incomplete).find(row => row[0] === "Change not explained by deposits"))
+      .toEqual(["Change not explained by deposits", null, incomplete.unexplainedWithheld]);
     // The deposits that were recorded are still shown.
     expect(incomplete.flows.deposited).toBe(500);
   });

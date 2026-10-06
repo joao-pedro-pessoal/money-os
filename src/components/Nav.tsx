@@ -5,67 +5,12 @@ import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useNav } from "./NavContext";
 import NavFrame, { navLinkClass } from "./NavFrame";
-import { ACCOUNTS_TABS, ANALYTICS_TABS, INVESTMENT_TABS, isNavigationActive } from "@/lib/navigation";
+import { NAV_GROUPS as groups, SEARCHABLE_PAGES as searchablePages, isNavigationActive } from "@/lib/navigation";
 import { logout } from "@/app/login/actions";
 import { useMobileMode } from "./MobileMode";
 import MobileFold from "./MobileFold";
 import { useLanguage } from "./LanguageContext";
 import { labelIn } from "@/lib/i18n/messages";
-
-/**
- * Eleven entries in three groups, down from fifteen in a flat list.
- *
- * What changed and why:
- * - Money Map showed the same two breakdowns as Analytics; it redirects there.
- * - Statistics is a tab inside Analytics — both answer "how is this going?".
- * - Interest is a tab inside Accounts; interest is received *by* an account.
- * - Open Positions and Connections are tabs inside Investments.
- * - "Import statement" was an action masquerading as a place. It lives on the
- *   Cash Flow page, which is the data it changes, and in Settings → Your data.
- */
-const groups: { label?: "groupMoney" | "groupLearning" | "groupNotGuaranteed"; links: { href: string; label: string }[] }[] = [
-  {
-    links: [
-      { href: "/", label: "Dashboard" },
-      { href: "/analytics", label: "Analytics" },
-    ],
-  },
-  {
-    label: "groupMoney",
-    links: [
-      { href: "/accounts", label: "Accounts" },
-      { href: "/transactions", label: "Cash Flow" },
-      { href: "/savings", label: "Savings" },
-      { href: "/budgets", label: "Budgets" },
-      { href: "/buckets", label: "Buckets" },
-      { href: "/subscriptions", label: "Subscriptions" },
-      // The other direction. Subscriptions forecast what leaves; this is what
-      // is due to arrive, and neither is counted in a balance.
-      { href: "/expected", label: "Coming in" },
-    ],
-  },
-  {
-    label: "groupLearning",
-    links: [
-      { href: "/library", label: "Library" },
-    ],
-  },
-  {
-    label: "groupNotGuaranteed",
-    links: [{ href: "/investments", label: "Investments" }],
-  },
-];
-
-// Reuse the page tabs so search follows the same destinations and labels.
-const searchablePages = [
-  ...groups.flatMap(group => group.links),
-  ...ACCOUNTS_TABS,
-  ...ANALYTICS_TABS,
-  ...INVESTMENT_TABS,
-  { href: "/import", label: "Import statement" },
-  { href: "/manual", label: "Manual" },
-  { href: "/settings", label: "Settings" },
-].filter((link, index, pages) => pages.findIndex(page => page.href === link.href) === index);
 
 export default function Nav() {
   const pathname = usePathname();

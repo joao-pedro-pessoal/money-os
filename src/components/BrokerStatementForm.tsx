@@ -110,7 +110,7 @@ export default function BrokerStatementForm({
           required
         >
           {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
+            <option translate="no" key={a.id} value={a.id}>
               {a.institution} — {a.name}
             </option>
           ))}
@@ -320,7 +320,7 @@ function ReadableReport({ preview }: { preview: Readable }) {
             <tbody>
               {preview.holdings.map((h) => (
                 <tr key={h.key}>
-                  <td className="py-0.5">{h.symbol ?? h.key}</td>
+                  <td className="py-0.5"><span translate="no">{h.symbol ?? h.key}</span></td>
                   <td className="py-0.5 text-[var(--muted)]">{h.isin ?? "—"}</td>
                   <td className="py-0.5 text-right">{h.quantity}</td>
                   <td className="py-0.5 text-right text-[var(--muted)]">

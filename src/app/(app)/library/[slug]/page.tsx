@@ -183,7 +183,7 @@ export default async function ResourceDetailPage({
       {r.description && (
         <div className="card p-4">
           <div className="text-sm font-medium mb-2">About</div>
-          <p className="text-sm text-[var(--muted)] whitespace-pre-line">{r.description}</p>
+          <p className="text-sm text-[var(--muted)] whitespace-pre-line"><span translate="no">{r.description}</span></p>
         </div>
       )}
 
@@ -245,7 +245,7 @@ export default async function ResourceDetailPage({
                         key={s.id}
                         className="badge border border-[var(--border)] text-[var(--muted)] text-[10px]"
                       >
-                        {s.name}
+                        <span translate="no">{s.name}</span>
                       </span>
                     ))}
                   </div>
@@ -276,7 +276,7 @@ export default async function ResourceDetailPage({
           {isRelevant(r.type, "channelName") && field("Channel", r.meta.channelName)}
           {isRelevant(r.type, "hostName") && field("Host", r.meta.hostName)}
           {isRelevant(r.type, "guestName") && field("Guest", r.meta.guestName)}
-          {isRelevant(r.type, "institution") && field("Institution", r.meta.institution)}
+          <span translate="no">{isRelevant(r.type, "institution") && field("Institution", r.meta.institution)}</span>
           {isRelevant(r.type, "instructor") && field("Instructor", r.meta.instructor)}
           {isRelevant(r.type, "lessonCount") && field("Lessons", r.meta.lessonCount)}
           {isRelevant(r.type, "estimatedHours") &&

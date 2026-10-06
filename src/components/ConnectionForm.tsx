@@ -116,7 +116,7 @@ export default function ConnectionForm({
         {accounts.length > 0 && (
           <optgroup label="Or feed an existing account">
             {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
+              <option translate="no" key={a.id} value={a.id}>
                 {a.institution} — {a.name}
               </option>
             ))}

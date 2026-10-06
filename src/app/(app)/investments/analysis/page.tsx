@@ -243,7 +243,7 @@ export default async function PortfolioAnalysisPage({
               <tbody>
                 {a.needsTags.map((g) => (
                   <tr key={g.symbol}>
-                    <td className="max-w-64 truncate">{g.symbol}</td>
+                    <td className="max-w-64 truncate"><span translate="no">{g.symbol}</span></td>
                     <td className="text-right">
                       <Money value={g.value} currency="EUR" />
                     </td>
@@ -482,7 +482,7 @@ export default async function PortfolioAnalysisPage({
                       <tr key={m.id ?? m.symbol} style={{ background: "var(--surface-2)" }}>
                         {/* Indented, so a member is visibly subordinate to the
                             group above it now that both are in one table. */}
-                        <td className="max-w-64 truncate pl-8">{m.symbol}<div className="text-xs text-[var(--muted)]">{m.accountName} · {m.status}{m.date ? ` · ${m.date}` : ""}</div></td>
+                        <td className="max-w-64 truncate pl-8"><span translate="no">{m.symbol}</span><div className="text-xs text-[var(--muted)]"><span translate="no">{m.accountName}</span> · {m.status}{m.date ? ` · ${m.date}` : ""}</div></td>
                         <td className="text-right">{m.shareOfGroup.toFixed(1)}%</td>
                         <td className="text-right">
                           {m.status === "closed" ? "N/A" : <Money value={m.value} />}
@@ -606,7 +606,7 @@ export default async function PortfolioAnalysisPage({
           ))}
           {a.mismatches.map((m) => (
             <div key={m.id} className="text-sm text-[var(--muted)]">
-              🕒 <span className="text-[var(--foreground)]">{m.symbol}</span> is tagged short term but{" "}
+              🕒 <span className="text-[var(--foreground)]"><span translate="no">{m.symbol}</span></span> is tagged short term but{" "}
               {tagLabel(m.riskLevel, "risk")?.toLowerCase()} — money you may need soon sitting in a volatile position.
             </div>
           ))}
@@ -668,10 +668,10 @@ export default async function PortfolioAnalysisPage({
               <tr key={h.id}>
                 <td>
                   <Link href={`/investments/${h.id}`} className="hover:underline font-medium">
-                    {h.symbol}
+                    <span translate="no">{h.symbol}</span>
                   </Link>
                 </td>
-                <td>{h.accountName ?? "—"}</td>
+                <td><span translate="no">{h.accountName ?? "—"}</span></td>
                 <td>{tagLabel(h.assetType, "assetType") ?? "—"}</td>
                 <td style={{ color: riskColor(h.riskLevel) }}>{tagLabel(h.riskLevel, "risk") ?? "—"}</td>
                 <td>{tagLabel(h.timeHorizon, "timeHorizon") ?? "—"}</td>
@@ -788,7 +788,7 @@ function MoversTable({
           <tr key={r.id}>
             <td>
               <Link href={`/investments/${r.id}`} className="hover:underline">
-                {r.symbol}
+                <span translate="no">{r.symbol}</span>
               </Link>
             </td>
             <td>

@@ -119,7 +119,7 @@ export default async function LiabilitiesPage() {
                 {data.items.map((l) => (
                   <tr key={l.id}>
                     <td>
-                      <div className="font-medium">{l.name}</div>
+                      <div className="font-medium"><span translate="no">{l.name}</span></div>
                       <div className="text-[10px] text-[var(--muted)]">
                         {liabilityLabel(l.kind)}
                         {/* A debt already inside an account balance is shown but
@@ -129,7 +129,7 @@ export default async function LiabilitiesPage() {
                             className="ml-1"
                             title="This account's balance is already negative by this amount, so it is counted once, there."
                           >
-                            · in {l.accountName}
+                            · in <span translate="no">{l.accountName}</span>
                           </span>
                         )}
                       </div>
@@ -280,7 +280,7 @@ export default async function LiabilitiesPage() {
             <select name="accountId" className="input mt-1" defaultValue="">
               <option value="">No — subtract it from my net worth</option>
               {data.accounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   Yes, it&apos;s {a.name}&apos;s balance — count it once, there
                 </option>
               ))}

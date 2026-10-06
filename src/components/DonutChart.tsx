@@ -52,7 +52,7 @@ export default function DonutChart({
         inside this box, so it rendered on top of the doughnut and the labels
         collided into each other.
       */}
-      <div className="dashboard-chart" style={{ width: "100%", height: 200 }}>
+      <div translate="no" className="dashboard-chart" style={{ width: "100%", height: 200 }}>
         <ResponsiveContainer>
           <PieChart>
             <Pie
@@ -89,7 +89,7 @@ export default function DonutChart({
 
       {/* One row per slice, with its share. Chips wrapped mid-word and stacked
           on top of each other; a list stays readable however long the names. */}
-      <ul className="mt-3 space-y-1">
+      <ul translate="no" className="mt-3 space-y-1">
         {data.map((d, i) => (
           <li key={d.name} className="flex items-center gap-2 text-xs">
             <span
@@ -102,7 +102,7 @@ export default function DonutChart({
               }}
             />
             <span className="truncate text-[var(--muted)]" title={d.name}>
-              {d.name}
+              <span translate="no">{d.name}</span>
             </span>
             <span className="ml-auto shrink-0 text-[var(--muted)]">{share(d.value)}%</span>
             {!hidden && (

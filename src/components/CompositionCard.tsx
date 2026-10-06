@@ -96,7 +96,7 @@ export default function CompositionCard({
           {sorted.map((d, i) => (
             <div key={d.name}>
               <div className="flex items-baseline justify-between gap-2 text-xs mb-0.5">
-                <span className="truncate">{d.name}</span>
+                <span className="truncate"><span translate="no">{d.name}</span></span>
                 <span className="text-[var(--muted)] shrink-0">
                   <Money value={d.value} currency={currency} />
                 </span>
@@ -126,7 +126,7 @@ export default function CompositionCard({
                     className="inline-block w-2 h-2 rounded-full mr-2 align-middle"
                     style={{ background: COLORS[i % COLORS.length] }}
                   />
-                  {d.name}
+                  <span translate="no">{d.name}</span>
                 </td>
                 <td className="py-1.5 text-right text-[var(--muted)] tabular-nums">
                   {total > 0 ? `${Math.round((d.value / total) * 1000) / 10}%` : "—"}
@@ -189,7 +189,7 @@ export function BudgetBars({
         return (
           <div key={b.id}>
             <div className="flex items-baseline justify-between gap-2 text-xs mb-1">
-              <span className="truncate">{b.name}</span>
+              <span className="truncate"><span translate="no">{b.name}</span></span>
               <span className="text-[var(--muted)] shrink-0 tabular-nums">
                 <Money value={b.spent} currency={currency} /> of{" "}
                 <Money value={b.limit} currency={currency} />

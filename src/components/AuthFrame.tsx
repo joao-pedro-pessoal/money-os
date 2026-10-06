@@ -1,6 +1,6 @@
 import InstallApp from "./InstallApp";
 import LanguagePicker from "./LanguagePicker";
-import { words } from "@/actions/language";
+import { currentLanguage, words } from "@/actions/language";
 
 /**
  * The frame of the way in: signing in, making an account, recovering one. On a wide screen the left half says what this is; on a phone it
@@ -10,9 +10,10 @@ import { words } from "@/actions/language";
  * own version of it, the light ones included.
  */
 export default async function AuthFrame({ children }: { children: React.ReactNode }) {
+  const language = await currentLanguage();
   const w = (await words()).auth;
   return (
-    <div className="app-frame grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+    <div translate="no" lang={language} className="app-frame grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <aside className="auth-hero hidden lg:flex flex-col justify-between gap-10 p-12 xl:p-16">
         {/* First, so everything after it is drawn on top. */}
         <Trend />

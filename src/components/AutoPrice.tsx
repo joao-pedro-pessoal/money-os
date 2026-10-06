@@ -109,7 +109,7 @@ export default function AutoPrice() {
               {/* The whole note, wrapped rather than clipped: it names every
                   symbol that was tried and what each answered, which is the
                   only thing that turns "no quote" into a next step. */}
-              <span className="font-medium">{r.symbol}</span> — {r.note}
+              <span className="font-medium"><span translate="no">{r.symbol}</span></span> — {r.note}
             </li>
           ))}
         </ul>

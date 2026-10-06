@@ -5,13 +5,7 @@ import { usePathname } from "next/navigation";
 import { useLanguage } from "./LanguageContext";
 import { labelIn } from "@/lib/i18n/messages";
 
-const TABS = [
-  { href: "/settings", label: "General" },
-  { href: "/settings/categories", label: "Categories" },
-  { href: "/settings/rates", label: "Currency & rates" },
-  { href: "/settings/data", label: "Your data" },
-  { href: "/settings/phone", label: "On your phone" },
-];
+import { SETTINGS_TABS as TABS } from "@/lib/navigation";
 
 /**
  * Settings used to be one long scroll with six unrelated cards, which is how
@@ -20,10 +14,10 @@ const TABS = [
  */
 export default function SettingsTabs() {
   const pathname = usePathname();
-  const { m } = useLanguage();
+  const { m, language } = useLanguage();
 
   return (
-    <nav aria-label={m.nav.settingsPages} className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
+    <nav translate="no" lang={language} aria-label={m.nav.settingsPages} className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
       {TABS.map((t) => {
         const active = pathname === t.href;
         return (

@@ -133,7 +133,7 @@ export default async function DividendsPage() {
                 <tbody>
                   {o.sources.map((s) => (
                     <tr key={`${s.accountId}-${s.kind}`}>
-                      <td>{s.accountName}</td>
+                      <td><span translate="no">{s.accountName}</span></td>
                       <td>{s.kind === "interest" ? "interest" : "distributions"}</td>
                       <td>{s.source}</td>
                       <td className="text-[var(--muted)]">
@@ -376,7 +376,7 @@ export default async function DividendsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm break-words">{p.instrumentName ?? p.ticker}</div>
                         <div className="text-[11px] text-[var(--muted)] break-words">
-                          {dateLabel(p.paidOn)} · {p.accountName}
+                          {dateLabel(p.paidOn)} · <span translate="no">{p.accountName}</span>
                           {p.grossPerShare !== null && ` · ${p.grossPerShare} per share`}
                         </div>
                       </div>
@@ -415,7 +415,7 @@ export default async function DividendsPage() {
                       <td>
                         <Money value={p.amount} currency={p.currency} />
                       </td>
-                      <td className="text-xs text-[var(--muted)]">{p.accountName}</td>
+                      <td className="text-xs text-[var(--muted)]"><span translate="no">{p.accountName}</span></td>
                     </tr>
                   ))}
                 </tbody>

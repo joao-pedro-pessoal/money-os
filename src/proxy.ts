@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME, endedBy, newSessionValue, readSession, sessionCookieOptions } from "@/lib/auth";
 import { sessionsNotBefore } from "@/actions/session";
+import { safeReturnPath } from "@/lib/accounts/returnPath";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -41,6 +42,7 @@ export async function proxy(req: NextRequest) {
 
   if (!session.valid || ended) {
     const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("next", safeReturnPath(req.nextUrl.pathname + req.nextUrl.search));
     return NextResponse.redirect(loginUrl);
   }
 

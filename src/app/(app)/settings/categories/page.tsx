@@ -30,7 +30,7 @@ function CategoryColumn({
         <ul className="text-sm mb-3 divide-y divide-[var(--border)]">
           {items.map((c) => (
             <li key={c.id} className="flex justify-between items-center py-2 gap-2 group">
-              <span className="truncate">{c.name}</span>
+              <span className="truncate"><span translate="no">{c.name}</span></span>
               <div className="flex items-center gap-2 shrink-0">
                 {/* One click to flip. A toggle beats a form here because this
                     is a judgement you'll revise as you see the numbers. */}

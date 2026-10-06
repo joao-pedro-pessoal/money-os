@@ -128,7 +128,7 @@ export default function QuoteSymbolField({
           className="text-[10px]"
           style={{ color: check.mismatch ? "var(--red)" : "var(--green)" }}
         >
-          {check.quote.symbol} — {check.quote.close} {check.symbolCurrency ?? ""} · {check.note}
+          <span translate="no">{check.quote.symbol}</span> — {check.quote.close} {check.symbolCurrency ?? ""} · {check.note}
         </div>
       )}
     </div>

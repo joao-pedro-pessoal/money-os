@@ -162,7 +162,7 @@ export default async function LibraryPage({
             href={qs({ category: null })}
             className="badge border border-[var(--accent)] text-[var(--accent)] text-xs"
           >
-            {taxonomy.find((c) => c.slug === activeCategory)?.name ?? activeCategory} ×
+            <span translate="no">{taxonomy.find((c) => c.slug === activeCategory)?.name ?? activeCategory}</span> ×
           </FilterLink>
         )}
       </div>
@@ -265,7 +265,7 @@ export default async function LibraryPage({
                   href={qs({ category: c.slug })}
                   className="card px-3 py-2 hover:opacity-90 transition-opacity"
                 >
-                  <div className="text-xs font-medium">{c.name}</div>
+                  <div className="text-xs font-medium"><span translate="no">{c.name}</span></div>
                   <div className="text-[10px] text-[var(--muted)]">
                     {c.count} {c.count === 1 ? "resource" : "resources"} · {c.subtags.length} subtags
                   </div>

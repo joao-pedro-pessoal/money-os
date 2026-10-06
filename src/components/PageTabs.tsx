@@ -15,10 +15,10 @@ import { labelIn } from "@/lib/i18n/messages";
 export default function PageTabs({ tabs }: { tabs: { href: string; label: string }[] }) {
   const pathname = usePathname();
   // Tabs are named in English in `lib/navigation.ts` and translated by that name.
-  const { m } = useLanguage();
+  const { m, language } = useLanguage();
 
   return (
-    <nav aria-label={m.nav.relatedPages} className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
+    <nav translate="no" lang={language} aria-label={m.nav.relatedPages} className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
       {tabs.map((t) => {
         const active = pathname === t.href;
         return (

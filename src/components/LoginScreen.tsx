@@ -8,6 +8,7 @@ import { passwordProblem } from "@/lib/accounts/password";
 import { localeOf } from "@/lib/i18n/languages";
 import { serverMessageIn } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageContext";
+import { safeReturnPath } from "@/lib/accounts/returnPath";
 
 type Step = "sign-in" | "sign-up" | "recover" | "code";
 
@@ -23,7 +24,7 @@ type Step = "sign-in" | "sign-up" | "recover" | "code";
  * A new account, a recovered one and the owner's first sign-in each end on the
  * recovery code, shown once: the only way back in without the password.
  */
-export default function LoginScreen({ signUps }: { signUps: boolean }) {
+export default function LoginScreen({ signUps, destination = "/" }: { signUps: boolean; destination?: string }) {
   const router = useRouter();
   const { m, language } = useLanguage();
   const w = m.auth;
@@ -46,7 +47,7 @@ export default function LoginScreen({ signUps }: { signUps: boolean }) {
     setCode("");
   };
 
-  const enter = () => router.replace("/");
+  const enter = () => router.replace(safeReturnPath(destination));
 
   /** Runs one step with the button busy, and says any failure in its own words. */
   const attempt = async (work: () => Promise<void>) => {

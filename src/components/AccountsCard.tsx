@@ -187,9 +187,9 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{a.name}</div>
+                  <div className="text-sm font-medium truncate"><span translate="no">{a.name}</span></div>
                   <div className="text-[10px] text-[var(--muted)] truncate">
-                    {a.institution}
+                    <span translate="no">{a.institution}</span>
                     {" · "}
                     {TYPE_LABELS[a.accountType] ?? a.accountType}
                     {a.connected && <span style={{ color: "var(--green)" }}> · synced</span>}
@@ -206,13 +206,13 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                       style={{ color: pnlUp ? "var(--green)" : "var(--red)" }}
                     >
                       {pnlUp ? "+" : "−"}
-                      {fmt(Math.abs(a.pnlInBase ?? a.unrealizedPnl), a.baseCurrency)}
+                      <span translate="no">{fmt(Math.abs(a.pnlInBase ?? a.unrealizedPnl), a.baseCurrency)}</span>
                     </div>
                   )}
                   {/* One currency everywhere; the platform's own is a note. */}
                   {a.currency !== a.baseCurrency && (
                     <div className="text-[10px] text-[var(--muted)]">
-                      {fmt(a.displayValue, a.currency)}
+                      <span translate="no">{fmt(a.displayValue, a.currency)}</span>
                     </div>
                   )}
                 </div>
@@ -232,7 +232,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                     />
                   </div>
                   <div className="text-[10px] text-[var(--muted)] mt-1">
-                    {fmt(a.floating, a.baseCurrency)} can move with the market
+                    <span translate="no">{fmt(a.floating, a.baseCurrency)}</span> can move with the market
                   </div>
                 </div>
               )}
@@ -248,7 +248,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                 {a.inTrade !== undefined && a.inTrade > 0 && (
                   <div className="text-right">
                     <div className="text-[10px] text-[var(--muted)]">Committed to trades</div>
-                    <div className="text-sm">{fmt(a.inTrade, a.baseCurrency)}</div>
+                    <div className="text-sm"><span translate="no">{fmt(a.inTrade, a.baseCurrency)}</span></div>
                   </div>
                 )}
               </div>

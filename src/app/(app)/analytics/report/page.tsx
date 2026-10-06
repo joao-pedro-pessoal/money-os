@@ -316,7 +316,7 @@ export default async function ReportPage({
                     {report.categories.map((c) => (
                       <tr key={c.name}>
                         <td>
-                          {c.name}
+                          <span translate="no">{c.name}</span>
                           <div className="text-[10px] text-[var(--muted)]">{c.count} {c.count === 1 ? "payment" : "payments"}</div>
                         </td>
                         <td className="text-right"><Money value={c.spent} currency={base} /></td>
@@ -355,7 +355,7 @@ export default async function ReportPage({
                 {report.budgets.map((b) => (
                   <div key={b.name}>
                     <div className="flex justify-between text-xs gap-3">
-                      <span>{b.name}</span>
+                      <span><span translate="no">{b.name}</span></span>
                       <span className={b.status === "over" ? "text-[var(--red)]" : "text-[var(--muted)]"}>
                         <Money value={b.spent} currency={base} /> of <Money value={b.limit} currency={base} /> · {b.percent}%
                       </span>
@@ -392,7 +392,7 @@ export default async function ReportPage({
                     {report.topExpenses.map((e, i) => (
                       <tr key={`${e.date}-${i}`}>
                         <td>
-                          {e.name}
+                          <span translate="no">{e.name}</span>
                           {e.category && e.category !== e.name && (
                             <div className="text-[10px] text-[var(--muted)]">{e.category}</div>
                           )}

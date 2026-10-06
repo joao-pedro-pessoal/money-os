@@ -134,6 +134,9 @@ const en = {
     pitchTitle: "Use it like an app.",
     pitchText: "Install Money OS on this phone or computer — no store, no download.",
     button: "Install app",
+    insecureSteps: "This Wi-Fi address cannot install the app. Open the published site over HTTPS in a supported browser, then install it there. A bookmark here does not provide app shortcuts or the offline page.",
+    unsupportedSteps: "This browser cannot install this site as an app on a computer. Open it in Chrome or Edge to install it.",
+    publishedSite: "Open the published site →",
     iosSteps:
       "In Safari, tap **Share** (the square with an arrow), then **Add to Home Screen**, then **Add**. Money OS then opens from its own icon.",
     menuSteps:
@@ -280,7 +283,7 @@ const en = {
   phone: {
     installTitle: "1 · Install Money OS",
     installText:
-      "There is no store and no download: your browser installs this site as an app, with its own icon. It works anywhere with internet, and it updates itself whenever a new version is published.",
+      "Use the published HTTPS address to install with a supported browser. The home Wi-Fi address (HTTP) only allows a bookmark, without app shortcuts or the offline page. The published app works anywhere with internet and updates when a new version is published.",
     shortcutsTitle: "2 · Shortcuts on the icon",
     shortcutsAndroid:
       "**Android:** touch and hold the **Money OS** icon. A list opens with **Record expense**, **Record income**, **Cash Flow** and **Investments**.",
@@ -381,6 +384,22 @@ const pt: Messages = {
   },
 
   server: {
+    "Enter a positive amount with at most two decimal places.": "Escreve um valor positivo com, no máximo, duas casas decimais.",
+    "Choose a valid date.": "Escolhe uma data válida.",
+    "Original price must be at least the amount paid.": "O preço original não pode ser inferior ao valor pago.",
+    "Discount and original price describe different savings. Enter just one, or make them agree.": "O desconto e o preço original indicam poupanças diferentes. Preenche só um ou corrige os valores.",
+    "Discounts and expected cashback belong to expenses only.": "Os descontos e o cashback previsto só se aplicam a despesas.",
+    "Your session has expired. Sign in again.": "A tua sessão terminou. Entra outra vez.",
+    "Invalid transaction type.": "Tipo de movimento inválido.",
+    "Purchase not found.": "Compra não encontrada.",
+    "Choose an active account.": "Escolhe uma conta ativa.",
+    "Choose a category for this transaction type.": "Escolhe uma categoria para este tipo de movimento.",
+    "This request was already saved with different details. Check Cash Flow before adding another.": "Este pedido já foi guardado com outros dados. Confirma nos Movimentos antes de acrescentar outro.",
+    "Choose a purchase, not another cashback movement.": "Escolhe uma compra, não outro movimento de cashback.",
+    "Cashback needs an income receipt or an expense reversal.": "O cashback precisa de uma receita ou da devolução de uma despesa.",
+    "Choose a cashback movement in the purchase currency.": "Escolhe um movimento de cashback na moeda da compra.",
+    "A purchase with savings cannot also be a cashback receipt.": "Uma compra com poupanças não pode também ser um recebimento de cashback.",
+    "This movement is already linked to another purchase. Unlink it first.": "Este movimento já está associado a outra compra. Remove primeiro essa associação.",
     "The server is busy with other sign-ins. Try again in a moment.":
       "O servidor está ocupado com outras entradas. Tenta outra vez daqui a pouco.",
     "An account with this email already exists. Sign in instead.":
@@ -460,6 +479,9 @@ const pt: Messages = {
     pitchTitle: "Usa-o como uma app.",
     pitchText: "Instala o Money OS neste telemóvel ou computador — sem loja, sem download.",
     button: "Instalar app",
+    insecureSteps: "Este endereço de Wi-Fi não permite instalar a app. Abre o site publicado por HTTPS num navegador compatível e instala-a lá. Um marcador aqui não dá atalhos da app nem a página sem ligação.",
+    unsupportedSteps: "Este navegador não permite instalar este site como app no computador. Abre-o no Chrome ou no Edge para o instalar.",
+    publishedSite: "Abrir o site publicado →",
     iosSteps:
       "No Safari, toca em **Partilhar** (o quadrado com uma seta), depois em **Adicionar ao ecrã principal** e em **Adicionar**. O Money OS passa a abrir pelo seu próprio ícone.",
     menuSteps:
@@ -606,7 +628,7 @@ const pt: Messages = {
   phone: {
     installTitle: "1 · Instalar o Money OS",
     installText:
-      "Não há loja nem download: o navegador instala este site como uma app, com o seu próprio ícone. Funciona em qualquer lado com internet e atualiza-se sozinho sempre que sai uma versão nova.",
+      "Usa o endereço publicado por HTTPS para instalar num navegador compatível. O endereço de casa pelo Wi-Fi (HTTP) só permite um marcador, sem atalhos da app nem a página sem ligação. A app publicada funciona em qualquer lado com internet e atualiza-se quando sai uma versão nova.",
     shortcutsTitle: "2 · Atalhos no ícone",
     shortcutsAndroid:
       "**Android:** carrega uns segundos no ícone **Money OS**. Abre uma lista com **Record expense**, **Record income**, **Cash Flow** e **Investments**.",

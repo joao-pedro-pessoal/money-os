@@ -111,7 +111,7 @@ export default function ResourceCard({ resource }: { resource: LibraryResource }
           <LevelBadge level={r.level as Level} />
           {r.categories.slice(0, 2).map((c) => (
             <span key={c.id} className="text-[10px] text-[var(--accent)]">
-              {c.name}
+              <span translate="no">{c.name}</span>
             </span>
           ))}
         </div>

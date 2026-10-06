@@ -212,7 +212,7 @@ export default async function PositionsPage() {
                   <div className="min-w-0">
                     <Link href={`/investments/asset/${encodeURIComponent(g.coin)}?type=${encodeURIComponent(g.parts[0]?.assetType ?? "")}`} className="font-semibold hover:underline break-words">{g.coin}</Link>
                     <div className="text-xs text-[var(--muted)] break-words">
-                      {g.parts.length === 1 ? g.parts[0].accountName : `across ${g.parts.length} accounts`}
+                      <span translate="no">{g.parts.length === 1 ? g.parts[0].accountName : `across ${g.parts.length} accounts`}</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0 font-semibold">
@@ -257,7 +257,7 @@ export default async function PositionsPage() {
                   g.parts.map((b) => (
                     <div key={b.id} className="position-part">
                       <div className="flex items-start justify-between gap-3 text-xs">
-                        <div className="min-w-0 break-words">{b.accountName}</div>
+                        <div className="min-w-0 break-words"><span translate="no">{b.accountName}</span></div>
                         <div className="text-right shrink-0">
                           {b.usdValue === null ? "—" : <Money value={b.usdValue} currency={b.currency} />}
                           <div className="text-[10px] text-[var(--muted)]">
@@ -351,7 +351,7 @@ export default async function PositionsPage() {
                         )}
                       </td>
                       <td className="text-[var(--muted)]">
-                        {g.parts.length === 1 ? g.parts[0].accountName : "—"}
+                        <span translate="no">{g.parts.length === 1 ? g.parts[0].accountName : "—"}</span>
                       </td>
                       <td className="text-right font-medium">{round8(g.total)}</td>
                       <td className="text-right">{round8(g.available)}</td>
@@ -402,7 +402,7 @@ export default async function PositionsPage() {
                               entryFor="balance"
                             />
                           </td>
-                          <td>{b.accountName}</td>
+                          <td><span translate="no">{b.accountName}</span></td>
                           <td className="text-right">{b.total}</td>
                           <td className="text-right">
                             {b.available}
@@ -465,12 +465,12 @@ export default async function PositionsPage() {
                     <AssetLogo image={logoOf(h.id)} name={h.symbol} size={20} />
                     <div className="min-w-0">
                     <Link href={`/investments/asset/${encodeURIComponent(h.symbol)}?type=${encodeURIComponent(h.assetType ?? "")}&name=${encodeURIComponent(h.name ?? "")}`} className="font-semibold hover:underline break-words">
-                      {h.symbol}
+                      <span translate="no">{h.symbol}</span>
                     </Link>
                     {h.name && h.name !== h.symbol && (
-                      <div className="text-[11px] text-[var(--muted)] break-words">{h.name}</div>
+                      <div className="text-[11px] text-[var(--muted)] break-words"><span translate="no">{h.name}</span></div>
                     )}
-                    <div className="text-xs text-[var(--muted)] break-words">{h.accountName ?? "No account"}</div>
+                    <div className="text-xs text-[var(--muted)] break-words"><span translate="no">{h.accountName ?? "No account"}</span></div>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -539,11 +539,11 @@ export default async function PositionsPage() {
                         <AssetLogo image={logoOf(h.id)} name={h.symbol} />
                         <span className="min-w-0">
                           <Link href={`/investments/asset/${encodeURIComponent(h.symbol)}?type=${encodeURIComponent(h.assetType ?? "")}&name=${encodeURIComponent(h.name ?? "")}`} className="hover:underline">
-                            {h.symbol}
+                            <span translate="no">{h.symbol}</span>
                           </Link>
                           {/* The ISIN, when a statement supplied one. */}
                           {h.name && h.name !== h.symbol && (
-                            <span className="block text-[10px] text-[var(--muted)]">{h.name}</span>
+                            <span className="block text-[10px] text-[var(--muted)]"><span translate="no">{h.name}</span></span>
                           )}
                         </span>
                       </span>
@@ -570,7 +570,7 @@ export default async function PositionsPage() {
                         ticker={h.symbol}
                       />
                     </td>
-                    <td className="text-xs">{h.accountName ?? "—"}</td>
+                    <td className="text-xs"><span translate="no">{h.accountName ?? "—"}</span></td>
                     <td className="text-right tabular-nums">{h.quantity}</td>
                     <td className="text-right tabular-nums">
                       <Money value={h.avgEntryPrice} currency={h.currency} />
@@ -695,7 +695,7 @@ export default async function PositionsPage() {
                         )}
                       </div>
                       <div className="text-xs text-[var(--muted)] mt-0.5 break-words">
-                        {p.accountName} · <span className="capitalize">{p.platform}</span>
+                        <span translate="no">{p.accountName}</span> · <span className="capitalize">{p.platform}</span>
                       </div>
                     </div>
                     <div className={`text-right shrink-0 ${(p.unrealizedPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
@@ -813,7 +813,7 @@ export default async function PositionsPage() {
                         </span>
                       </td>
                       <td>
-                        {p.accountName}
+                        <span translate="no">{p.accountName}</span>
                         <div className="text-xs text-[var(--muted)] capitalize">{p.platform}</div>
                       </td>
                       <td className="text-right">{p.size}</td>

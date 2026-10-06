@@ -48,7 +48,7 @@ export default function UnitemisedInvestments({
         {items.map((a) => (
           <li key={a.id} className="flex items-baseline justify-between gap-2 text-xs">
             <span className="truncate">
-              {a.institution} — {a.name}
+              <span translate="no">{a.institution}</span> — <span translate="no">{a.name}</span>
               {a.itemised && (
                 <span className="text-[var(--muted)]"> · some instruments already recorded</span>
               )}

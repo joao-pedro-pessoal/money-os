@@ -91,7 +91,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
           )}
 
           <p className="text-xs text-[var(--muted)] mt-2 max-w-2xl leading-relaxed line-clamp-3">
-            {r.description}
+            <span translate="no">{r.description}</span>
           </p>
 
           {r.categories.length > 0 && (
@@ -103,7 +103,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
                   className="badge border text-[10px]"
                   style={{ borderColor: EDITORIAL_LINE, color: EDITORIAL }}
                 >
-                  {c.name}
+                  <span translate="no">{c.name}</span>
                 </Link>
               ))}
             </div>

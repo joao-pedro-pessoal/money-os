@@ -15,14 +15,17 @@
  *   handed the page an install prompt, so one tap installs it.
  * - **ios** — an iPhone or iPad. Safari has no install prompt for a page to
  *   open; the only way is Share → Add to Home Screen, so that is what it says.
- * - **menu** — any other browser: the option lives in its own menu.
+ * - **insecure** — plain HTTP on the home network: use the published HTTPS site.
+ * - **unsupported** — desktop Firefox: use Chrome or Edge.
+ * - **menu** — other supported browsers: the option lives in their own menu.
  *
  * Pure.
  */
 
-export type InstallRoute = "installed" | "just-installed" | "android-app" | "prompt" | "ios" | "menu";
+export type InstallRoute = "installed" | "just-installed" | "android-app" | "prompt" | "ios" | "menu" | "insecure" | "unsupported";
 
 export interface InstallEnvironment {
+  secure: boolean;
   /** The page is open as an installed app (display-mode standalone, or iOS's `navigator.standalone`). */
   standalone: boolean;
   /** The Android app's bridge is present. */
@@ -48,7 +51,9 @@ export function installRoute(env: InstallEnvironment): InstallRoute {
   if (env.androidApp) return "android-app";
   if (env.standalone) return "installed";
   if (env.justInstalled) return "just-installed";
+  if (!env.secure) return "insecure";
   if (env.canPrompt) return "prompt";
   if (isAppleMobile(env.userAgent, env.platform, env.maxTouchPoints)) return "ios";
+  if (/Firefox\//.test(env.userAgent) && !/Android/.test(env.userAgent)) return "unsupported";
   return "menu";
 }

@@ -23,7 +23,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
           <select name="categoryId" defaultValue={tx.categoryId ?? ""} className="input">
             <option value="">No category</option>
             {relevantCategories.map((c) => (
-              <option key={c.id} value={c.id}>
+              <option translate="no" key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}

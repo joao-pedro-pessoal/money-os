@@ -191,7 +191,7 @@ export default function InvestmentActivityImporter({
                 }}
               >
                 {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
+                  <option translate="no" key={account.id} value={account.id}>
                     {account.name} · {account.currency}
                   </option>
                 ))}
@@ -304,8 +304,8 @@ export default function InvestmentActivityImporter({
                     const duplicate = item.row ? existing.has(investmentActivityFingerprint(item.row)) : false;
                     return (
                       <tr key={index} style={item.problem || duplicate ? { opacity: 0.55 } : undefined}>
-                        <td>{item.row?.date ?? "—"}</td><td>{item.row?.type ?? "—"}</td><td>{item.row?.symbol || "—"}</td>
-                        <td className="max-w-64 truncate">{item.row?.description || "—"}</td>
+                        <td>{item.row?.date ?? "—"}</td><td>{item.row?.type ?? "—"}</td><td><span translate="no">{item.row?.symbol || "—"}</span></td>
+                        <td className="max-w-64 truncate"><span translate="no">{item.row?.description || "—"}</span></td>
                         <td className={`text-right ${(item.row?.amount ?? 0) > 0 ? "text-[var(--green)]" : (item.row?.amount ?? 0) < 0 ? "text-[var(--red)]" : "text-[var(--accent)]"}`}>
                           {item.row ? `${item.row.amount.toFixed(2)} ${item.row.currency}` : "—"}
                         </td>

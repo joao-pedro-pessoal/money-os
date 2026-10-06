@@ -94,7 +94,7 @@ export default function PositionTagsForm({
         )}
         {playlistId && (
           <div className="text-xs text-[var(--muted)] mt-1">
-            {playlists.find((p) => p.id === playlistId)?.name}
+            <span translate="no">{playlists.find((p) => p.id === playlistId)?.name}</span>
           </div>
         )}
         <button
@@ -183,7 +183,7 @@ export default function PositionTagsForm({
         <select name="playlistId" className="input py-1 text-xs" defaultValue={playlistId ?? ""}>
           <option value="">Playlist — none</option>
           {playlists.map((p) => (
-            <option key={p.id} value={p.id}>
+            <option translate="no" key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}

@@ -5,10 +5,12 @@ import { usePathname } from 'next/navigation';
 import { panelValue, startsCollapsed } from '@/lib/ui/panels';
 import { useMobileMode } from './MobileMode';
 
-export default function PanelFrame({ as: Element = 'div', persistKey, title, summary, defaultOpen = true, essential = false, children, className, contentClassName, ...props }:
+export default function PanelFrame({ as: Element = 'div', persistKey, title, titleTranslate, summary, defaultOpen = true, essential = false, children, className, contentClassName, ...props }:
   HTMLAttributes<HTMLElement> & { as?: 'div' | 'section' | 'article'; persistKey: string; title?: string; summary?: ReactNode; defaultOpen?: boolean;
     /** Open on a phone too. Without it, a phone opens this panel only when asked — see startsCollapsed. */
     essential?: boolean;
+    /** User-supplied headings, such as playlist names, must not be translated. */
+    titleTranslate?: 'yes' | 'no';
     /** Spacing between the children goes here, never in `className` — see the content element below. */
     contentClassName?: string }) {
   // Typed as the div the JSX union resolves to; section and article are both
@@ -59,7 +61,7 @@ export default function PanelFrame({ as: Element = 'div', persistKey, title, sum
       aria-expanded={!collapsed} aria-controls={bodyId} title={collapsed ? 'Expand panel' : 'Minimize panel'} onClick={toggle}>
       <span aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
     </button>
-    {(title || collapsed) && <div className="panel-heading text-sm font-medium pr-8"><button type="button" className="panel-heading-button" onClick={toggle} aria-expanded={!collapsed} aria-controls={bodyId}>{title ?? label}</button>{summary && <span className="panel-summary ml-3 text-xs text-[var(--muted)]">{summary}</span>}</div>}
+    {(title || collapsed) && <div className="panel-heading text-sm font-medium pr-8"><button type="button" className="panel-heading-button" onClick={toggle} aria-expanded={!collapsed} aria-controls={bodyId}><span translate={titleTranslate}>{title ?? label}</span></button>{summary && <span className="panel-summary ml-3 text-xs text-[var(--muted)]">{summary}</span>}</div>}
     {/* `display: contents` is what lets a panel wrap a grid without becoming a
         box in the middle of it — and it is also why a spacing class on the card
         does nothing: `.space-y-8 > *` matches this wrapper, which has no box to

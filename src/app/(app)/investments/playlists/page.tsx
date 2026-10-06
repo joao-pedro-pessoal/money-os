@@ -53,9 +53,9 @@ export default async function PlaylistsPage() {
                             className="inline-block shrink-0"
                           />
                         )}
-                        <a href={`#playlist-${p.id}`} className="font-medium hover:underline">{p.name}</a>
+                        <a href={`#playlist-${p.id}`} className="font-medium hover:underline"><span translate="no">{p.name}</span></a>
                       </div>
-                      {p.description && <div className="text-xs text-[var(--muted)]">{p.description}</div>}
+                      {p.description && <div className="text-xs text-[var(--muted)]"><span translate="no">{p.description}</span></div>}
                     </td>
                     <td className="text-right">{p.count}</td>
                     <td className="text-right">
@@ -101,6 +101,7 @@ export default async function PlaylistsPage() {
               as="section"
               persistKey={`playlist-${p.id}`}
               title={p.name}
+              titleTranslate="no"
               summary={<>{p.count} {p.count === 1 ? "position" : "positions"} · <Money value={p.value} currency={p.currency} /></>}
               className="card p-4 scroll-mt-20"
             >
@@ -129,12 +130,12 @@ export default async function PlaylistsPage() {
                           <tr key={i.id}>
                             <td className="font-medium" title={i.symbol}>
                               <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-words hover:underline">
-                                {shortName(i.symbol)}
+                                <span translate="no">{shortName(i.symbol)}</span>
                               </Link>
                               {i.side === "short" && <span className="text-[10px] text-[var(--muted)] ml-1">short</span>}
                               {i.leverage !== null && i.leverage > 1 && <span className="text-[10px] text-[var(--muted)] ml-1">{i.leverage}×</span>}
                             </td>
-                            <td className="text-xs text-[var(--muted)]">{i.accountName}</td>
+                            <td className="text-xs text-[var(--muted)]"><span translate="no">{i.accountName}</span></td>
                             <td className="text-right">
                               <Money value={i.value} currency={p.currency} />
                               {i.atCost && <div className="text-[10px] text-[var(--muted)]">at cost</div>}

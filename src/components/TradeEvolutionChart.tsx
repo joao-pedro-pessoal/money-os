@@ -29,7 +29,7 @@ export default function TradeEvolutionChart({ pnl, currency, accounts, accountNa
       {mode === 'account' && <label className="text-xs">Account <select aria-label="Chart account" className="input ml-2" value={account?.id ?? ''}
         onChange={e => { const chosen = accounts.find(a => a.id === e.target.value); if (chosen) onAccount(chosen.name); }}>
         {!account && <option value="">No account selected</option>}
-        {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
+        {accounts.map(a => <option translate="no" key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
       </select></label>}
     </div>
     <p className="text-xs text-[var(--muted)] mb-3">{mode === 'pnl'

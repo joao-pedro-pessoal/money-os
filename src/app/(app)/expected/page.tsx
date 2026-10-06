@@ -102,7 +102,7 @@ export default async function ExpectedPage({
           summary={`${data.unscheduled.length} missing`}
         >
           <p className="text-xs text-[var(--muted)] mt-1 mb-3 max-w-prose leading-relaxed">
-            {data.unscheduled.map((c) => c.name).join(", ")}{" "}
+            <span translate="no">{data.unscheduled.map((c) => c.name).join(", ")}</span>{" "}
             {data.unscheduled.length === 1 ? "is marked" : "are marked"} fixed — money that
             arrives whether you act or not. A category says what kind of money it is, not how
             much or when, so those are the two things left to fill in.
@@ -118,7 +118,7 @@ export default async function ExpectedPage({
                   color: filling?.id === c.id ? "var(--accent)" : "var(--muted)",
                 }}
               >
-                Schedule {c.name}
+                Schedule <span translate="no">{c.name}</span>
               </Link>
             ))}
           </div>
@@ -148,9 +148,9 @@ export default async function ExpectedPage({
                 {data.rows.map((r) => (
                   <tr key={r.id}>
                     <td className="font-medium">
-                      {r.name}
+                      <span translate="no">{r.name}</span>
                       {r.categoryName && (
-                        <div className="text-[10px] text-[var(--muted)]">{r.categoryName}</div>
+                        <div className="text-[10px] text-[var(--muted)]"><span translate="no">{r.categoryName}</span></div>
                       )}
                     </td>
                     <td className="text-[var(--muted)]">
@@ -176,7 +176,7 @@ export default async function ExpectedPage({
                         </>
                       )}
                     </td>
-                    <td className="text-[var(--muted)]">{r.accountName ?? "—"}</td>
+                    <td className="text-[var(--muted)]"><span translate="no">{r.accountName ?? "—"}</span></td>
                     <td className="text-right font-medium">
                       <Money value={r.amount} currency={r.currency} />
                     </td>
@@ -254,7 +254,7 @@ export default async function ExpectedPage({
             <select name="accountId" className="input" defaultValue="">
               <option value="">Landing account — not decided</option>
               {options.accounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}
@@ -265,7 +265,7 @@ export default async function ExpectedPage({
             <select name="categoryId" className="input" defaultValue={filling?.id ?? ""}>
               <option value="">Category — none</option>
               {options.categories.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option translate="no" key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}

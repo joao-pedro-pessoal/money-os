@@ -101,10 +101,10 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
     <div className="rounded-lg border border-[var(--border)] p-3 space-y-2">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-medium break-words">{charge.name}</div>
+          <div className="font-medium break-words"><span translate="no">{charge.name}</span></div>
           <div className="text-xs text-[var(--muted)]">
             due {dayLabel(charge.dueOn)}
-            {charge.categoryName && ` · ${charge.categoryName}`}
+            <span translate="no">{charge.categoryName && ` · ${charge.categoryName}`}</span>
           </div>
         </div>
         <div className="font-semibold shrink-0">
@@ -116,7 +116,7 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
         <p className="text-xs">
           <span className="text-[var(--amber)]">Looks already recorded:</span> {charge.match.label},{" "}
           {dayLabel(charge.match.date)}, <Money value={charge.match.amount} currency={charge.match.currency} /> ·{" "}
-          {charge.match.accountName}
+          <span translate="no">{charge.match.accountName}</span>
         </p>
       )}
 
@@ -127,7 +127,7 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
             <select className="input mt-1" value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={pending}>
               <option value="">Choose…</option>
               {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}

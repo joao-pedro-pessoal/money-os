@@ -133,7 +133,7 @@ export default function TransactionList({
           >
             <option value="">Every account</option>
             {options.accounts.map((a) => (
-              <option key={a} value={a}>
+              <option translate="no" key={a} value={a}>
                 {a}
               </option>
             ))}
@@ -148,7 +148,7 @@ export default function TransactionList({
           >
             <option value="">Every category</option>
             {options.categories.map((c) => (
-              <option key={c} value={c}>
+              <option translate="no" key={c} value={c}>
                 {c}
               </option>
             ))}
@@ -208,9 +208,9 @@ export default function TransactionList({
                 return (
                   <tr key={t.id} role="row">
                     <td role="cell" data-label="Date"><span className="cash-flow-phone-only">{new Date(t.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span><span className="cash-flow-desktop-only">{new Date(t.date).toLocaleDateString("pt-PT")}</span></td>
-                    <td role="cell" data-label="Account">{t.accountName ?? "—"}</td>
+                    <td role="cell" data-label="Account"><span translate="no">{t.accountName ?? "—"}</span></td>
                     <td role="cell" data-label="Category">
-                      {t.categoryName ?? "—"}
+                      <span translate="no">{t.categoryName ?? "—"}</span>
                       {/* The type says more than the direction for this one:
                           money leaving to be invested is not spending. */}
                       {t.type === "investment_contribution" && (
@@ -220,7 +220,7 @@ export default function TransactionList({
                         <div className="text-[10px] text-[var(--muted)]">internal transfer</div>
                       )}
                     </td>
-                    <td role="cell" data-label="Description" className="record-description max-w-64 truncate"><span className="cash-flow-phone-only">{t.description || t.merchant || t.categoryName || (t.type === "transfer" ? "Internal transfer" : t.type === "investment_contribution" ? "Investment contribution" : out ? "Expense" : "Income")}</span><span className="cash-flow-desktop-only">{t.description || t.merchant || t.categoryName || "—"}</span></td>
+                    <td role="cell" data-label="Description" className="record-description max-w-64 truncate"><span className="cash-flow-phone-only"><span translate="no">{t.description || t.merchant || t.categoryName || (t.type === "transfer" ? "Internal transfer" : t.type === "investment_contribution" ? "Investment contribution" : out ? "Expense" : "Income")}</span></span><span className="cash-flow-desktop-only"><span translate="no">{t.description || t.merchant || t.categoryName || "—"}</span></span></td>
                     <td
                       role="cell" data-label="Amount"
                       className={`text-right font-medium ${

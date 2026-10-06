@@ -32,9 +32,9 @@ export default async function PricingCrossCheck() {
 
             <p className="text-xs text-[var(--muted)] leading-snug">
               {accountName} says it holds{" "}
-              <span className="text-[var(--foreground)]">{fmt(check.declared, currency)}</span>. The
+              <span className="text-[var(--foreground)]"><span translate="no">{fmt(check.declared, currency)}</span></span>. The
               instruments come to{" "}
-              <span className="text-[var(--foreground)]">{fmt(check.estimate, currency)}</span>
+              <span className="text-[var(--foreground)]"><span translate="no">{fmt(check.estimate, currency)}</span></span>
               {check.unpricedCount > 0 && (
                 <>
                   {" "}
@@ -47,7 +47,7 @@ export default async function PricingCrossCheck() {
 
             {check.suspicious ? (
               <p className="text-xs mt-2 leading-snug" style={{ color: "var(--amber)" }}>
-                They differ by {fmt(Math.abs(check.difference), currency)}
+                They differ by <span translate="no">{fmt(Math.abs(check.difference), currency)}</span>
                 {check.percent !== null && ` (${Math.abs(check.percent).toFixed(1)}%)`}, which is
                 more than a few days of market movement. The likeliest cause is a price matched to
                 the wrong listing — the same fund on another exchange, or a different share class.

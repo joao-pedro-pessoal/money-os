@@ -131,7 +131,7 @@ export default function HoldingTagsForm({
             >
               <option value="">—</option>
               {playlists.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option translate="no" key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}

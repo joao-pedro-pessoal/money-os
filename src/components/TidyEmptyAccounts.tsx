@@ -58,9 +58,9 @@ export default function TidyEmptyAccounts({
                   checked={selected.has(a.id)}
                   onChange={() => toggle(a.id)}
                 />
-                <span>{a.name}</span>
+                <span><span translate="no">{a.name}</span></span>
                 {a.institution !== a.name && (
-                  <span className="text-xs text-[var(--muted)]">{a.institution}</span>
+                  <span className="text-xs text-[var(--muted)]"><span translate="no">{a.institution}</span></span>
                 )}
               </label>
             </li>

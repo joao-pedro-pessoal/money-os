@@ -67,7 +67,7 @@ export default function TimeSeriesCard({
               style={{ color: change.change >= 0 ? "var(--green)" : "var(--red)" }}
             >
               {change.change >= 0 ? "+" : "−"}
-              {fmt(Math.abs(change.change), currency)}
+              <span translate="no">{fmt(Math.abs(change.change), currency)}</span>
               {change.percent !== null && ` (${change.percent.toFixed(1)}%)`}
             </span>
           )}

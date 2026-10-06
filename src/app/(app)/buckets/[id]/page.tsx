@@ -17,7 +17,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <h1 className="text-lg font-semibold">{bucket.name}</h1>
+        <h1 className="text-lg font-semibold"><span translate="no">{bucket.name}</span></h1>
         <form action={deleteBucket}>
           <input type="hidden" name="id" value={bucket.id} />
           <ConfirmSubmitButton
@@ -67,7 +67,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
             <tbody>
               {withTotals.allocations.map((a) => (
                 <tr key={a.id}>
-                  <td>{a.accountName}</td>
+                  <td><span translate="no">{a.accountName}</span></td>
                   <td>
                     <Money value={a.amount} />
                   </td>
@@ -79,7 +79,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
             <input type="hidden" name="bucketId" value={bucket.id} />
             <select name="accountId" className="input" required>
               {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
+                <option translate="no" key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}

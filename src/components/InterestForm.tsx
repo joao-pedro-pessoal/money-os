@@ -77,7 +77,7 @@ export default function InterestForm({
         required
       >
         {accounts.map((a) => (
-          <option key={a.id} value={a.id}>
+          <option translate="no" key={a.id} value={a.id}>
             {a.name}
             {a.apr ? ` — ${a.apr}%` : " — no rate set"}
           </option>

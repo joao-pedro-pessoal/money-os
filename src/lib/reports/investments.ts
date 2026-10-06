@@ -486,7 +486,7 @@ export function investmentCsvLines(report: InvestmentReport): (string | number |
     ["Value change", report.value?.change ?? null],
     ["Deposited", report.flows.deposited],
     ["Withdrawn", report.flows.withdrawn],
-    ["Change not explained by deposits", report.unexplained],
+    ["Change not explained by deposits", report.unexplained, report.unexplainedWithheld],
     ["Bought", report.trades.bought],
     ["Sold", report.trades.sold],
     ["Realised from trades", report.trades.realised],

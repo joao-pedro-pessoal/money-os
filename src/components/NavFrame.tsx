@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "./LanguageContext";
 import { useNav } from "./NavContext";
 
 /** How a menu entry looks, current or not — the same on both sides. */
@@ -30,13 +31,14 @@ export default function NavFrame({
   children: React.ReactNode;
 }) {
   const { open } = useNav();
+  const { language, t } = useLanguage();
 
   return (
     <>
       {/* Covers the page while the drawer is over it, and closes on a tap. */}
       {open && <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={onClose} aria-hidden="true" />}
 
-      <nav
+      <nav translate="no" lang={language}
         id="app-nav"
         className={`
           app-nav border-r border-[var(--border)] p-4 flex flex-col
@@ -59,7 +61,7 @@ export default function NavFrame({
             `display` later in globals.css and would win against the utility.
           */}
           <div className="md:hidden">
-            <button type="button" onClick={onClose} className="icon-btn" aria-label="Close menu">
+            <button type="button" onClick={onClose} className="icon-btn" aria-label={t.closeMenu}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 6 6 18M6 6l12 12" />
               </svg>

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isLanguage, LANGUAGE_COOKIE, type Language } from "@/lib/i18n/languages";
 import { messagesFor, type Messages } from "@/lib/i18n/messages";
+import { pendingLanguage, type PendingLanguage } from "@/lib/i18n/pendingLanguage";
 
 export { LANGUAGES, type Language } from "@/lib/i18n/languages";
 
@@ -36,8 +37,10 @@ const OLD_KEY = "moneyos_language";
  */
 export function LanguageProvider({ language, children }: { language: Language; children: React.ReactNode }) {
   const router = useRouter();
-  const [chosen, setChosen] = useState<Language | null>(null);
-  const active = chosen ?? language;
+  const [chosen, setChosen] = useState<PendingLanguage | null>(null);
+  const pending = pendingLanguage(language, chosen);
+  if (pending !== chosen) setChosen(pending);
+  const active = pending?.value ?? language;
 
   const setLanguage = (next: Language) => {
     document.cookie = `${LANGUAGE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
@@ -46,10 +49,25 @@ export function LanguageProvider({ language, children }: { language: Language; c
     } catch {
       // The cookie is what counts; storage only remembers it for the old reader.
     }
-    document.documentElement.lang = next;
-    setChosen(next);
+    setChosen({ from: language, value: next });
     router.refresh();
   };
+
+  useEffect(() => {
+    // Most pages are still English. Only translated regions declare the choice.
+    document.documentElement.lang = "en";
+    document.documentElement.translate = active !== "en";
+  }, [active]);
+
+  useEffect(() => {
+    const changed = (event: StorageEvent) => {
+      if (event.key !== OLD_KEY) return;
+      setChosen(null);
+      router.refresh();
+    };
+    window.addEventListener("storage", changed);
+    return () => window.removeEventListener("storage", changed);
+  }, [router]);
 
   /**
    * A choice made before the cookie existed lived only in this browser's

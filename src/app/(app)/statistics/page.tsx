@@ -235,7 +235,7 @@ export default async function StatisticsPage() {
             {s.bucketProgress.map((b) => (
               <div key={b.id}>
                 <div className="flex flex-wrap justify-between gap-2 text-sm mb-1">
-                  <span>{b.name}</span>
+                  <span><span translate="no">{b.name}</span></span>
                   <span className="text-[var(--muted)]">
                     <Money value={b.current} currency={c} /> / <Money value={b.target} currency={c} />
                     {b.months === 0 ? (
