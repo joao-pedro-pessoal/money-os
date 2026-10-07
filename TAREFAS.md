@@ -18,14 +18,16 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
   Simple e Complex mantêm o nome.
 - **Última funcionalidade entregue:** F17 — relatórios à medida, com período
   livre, dinheiro e/ou investimentos, em PDF com gráficos e em CSV (01/10/2026, H28).
-- **Trabalho local (06/10/2026):** B01–B09 corrigidos no branch `f17-relatorios`,
-  na pasta `C:\Users\joao2\Projects\money-os-f17`, com testes. Sem push nem junção
-  ao `main`. B01 ainda exige confirmação da tradução automática num telemóvel real.
-  Evidência: [verificação B01–B09](docs/VERIFICACAO_B01_B09.md).
+- **Publicado a 07/10/2026:** o `main` passou a incluir F17 (relatórios), B01–B09,
+  a preparação da Play Store (H33) e o Realized P&L único (H34), feitos na pasta
+  `C:\Users\joao2\Projects\money-os-f17` (branch `f19-play-store`). B01 ainda exige
+  confirmação da tradução automática num telemóvel real
+  ([verificação B01–B09](docs/VERIFICACAO_B01_B09.md)). A pasta principal continua
+  com o trabalho de privacidade por publicar de outra sessão, sobre o `main` antigo:
+  ao juntá-lo, há conflitos a resolver nos mesmos ficheiros.
   Passagem de trabalho: [CONTINUAR_NO_CODEX.md](CONTINUAR_NO_CODEX.md).
-- **Play Store, fase 1 (06/10/2026):** código feito no branch `f19-play-store`
-  (criado a partir de `f17-relatorios`, na mesma pasta), sem push (H33). Os passos
-  do utilizador estão em [PLAY_STORE.md](docs/PLAY_STORE.md).
+- **Play Store, fase 1:** os passos do utilizador estão em
+  [PLAY_STORE.md](docs/PLAY_STORE.md).
 - **Próxima prioridade de manutenção:** A01–A03 concluídos a 17/09. Seguem
   A04–A08 e os ecrãs do telemóvel que ainda forem reportados.
 - **Evolução futura, quando pedida:** usar a mesma experiência com dados locais,
