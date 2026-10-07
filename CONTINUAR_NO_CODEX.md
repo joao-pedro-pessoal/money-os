@@ -1,7 +1,7 @@
 # Continuar o Money OS no Codex local
 
-Atualizado a **5 de outubro de 2026**. Substitui a versão de 17 de setembro, que
-descrevia um site de uma só pessoa e um cofre que já não existem.
+Atualizado a **7 de outubro de 2026**. Substitui a versão de 5 de outubro, que
+pedia a correção de B01–B09 — já feita e publicada.
 
 Ler primeiro, por esta ordem: [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md) (as
 regras do código — tudo o que lá está já correu mal pelo menos uma vez) e
@@ -18,13 +18,12 @@ que está feito, o que é proposta e o que depende dele.
 
 | Pasta | O que é | Pode mexer? |
 | --- | --- | --- |
-| `C:\Users\joao2\Projects\money-os-f17` | **Pasta de trabalho.** Branch `f17-relatorios`. | **Sim. Trabalhar só aqui.** |
-| `C:\Users\joao2\Projects\money-os` | Pasta principal, branch `main` (= `adb5a72`, o que está publicado). Tem **49 ficheiros alterados e 3 novos por publicar de outra sessão** (modo privacidade: componente `Private`, `src/lib/privacy.ts`). É também a pasta de onde corre o site de casa. | **Não.** Não fazer commit, não apagar, não mudar de branch (as duas pastas partilham o repositório; mudar de branch lá mudava a pasta da outra sessão), não correr `next dev` lá. |
+| `C:\Users\joao2\Projects\money-os-f17` | **Pasta de trabalho.** Branch `f19-play-store`, igual ao `main` publicado (`04c6e78`). | **Sim. Trabalhar só aqui.** |
+| `C:\Users\joao2\Projects\money-os` | Pasta principal, branch `main` local **parado em `adb5a72`** (antes da publicação de 07/10). Tem **cerca de 52 ficheiros alterados por publicar de outra sessão** (modo privacidade: componente `Private`, `src/lib/privacy.ts`). É também a pasta de onde corre o site de casa. | **Não.** Não fazer commit, não apagar, não mudar de branch nem fazer `git pull` (as duas pastas partilham o repositório; mexer lá mexe no trabalho da outra sessão), não correr `next dev` lá. |
 
-O branch `f17-relatorios` já está no GitHub e tem um endereço de teste na Vercel
-(protegido por login Vercel). **Não fazer push nem juntar ao `main` sem o
-utilizador pedir, de cada vez** — o repositório é público e o `main` publica o site.
-Fazer commits locais no branch está bem.
+**Não fazer push nem juntar ao `main` sem o utilizador pedir, de cada vez** — o
+repositório é público e o `main` publica o site na Vercel. Commits locais no
+branch estão bem.
 
 A pasta de trabalho tem uma **cópia real** de `node_modules` (copiada com
 `robocopy /E /XJ`), não uma ligação. O `npm ci` falha nesta máquina: a
@@ -39,98 +38,80 @@ nunca o pôr num commit, nunca copiar valores para documentação ou mensagens.*
 
 - **Site publicado:** https://money-os-brown.vercel.app — várias pessoas, conta
   por email e palavra-passe (a palavra-passe nunca sai do browser; vai uma chave
-  derivada), código de recuperação, até `MAX_ACCOUNTS` contas.
+  derivada), código de recuperação, até `MAX_ACCOUNTS` contas. Funções na Vercel
+  em Frankfurt (`vercel.json`), ao lado da base de dados.
 - **Separação entre pessoas:** no próprio Postgres (Neon), por *row-level
   security*: cada tabela tem `user_id` e uma política. A app liga-se como
-  `moneyos_app`, que não a consegue contornar. Ver a secção "Every person's rows
-  are Postgres's to keep apart" do `CLAUDE.md`.
+  `moneyos_app`, que não a consegue contornar. Ver "Every person's rows are
+  Postgres's to keep apart" no `CLAUDE.md`.
 - **Chaves das corretoras:** cifradas na base de dados; só a `ENCRYPTION_KEY` do
   `.env` do PC as abre. **A Vercel não tem essa chave, de propósito** — no site
   publicado as ligações com chave estão desligadas para toda a gente. A Trading
   212 e a MEXC do dono só sincronizam enquanto o `SITE_PARA_TELEMOVEL.cmd` está
-  aberto no PC (de 15 em 15 minutos). A Hyperliquid não usa chave e sincroniza em
-  qualquer lado. A IBKR precisa do Client Portal Gateway ligado no PC.
-- **No branch `f17-relatorios`** (por cima do `main`):
-  - `ad5fc8d`, `e9ed41d` — relatórios à medida (F17): período livre, dinheiro e/ou
-    investimentos, PDF com gráficos desenhado pela app (`pdf-lib`), CSV.
-  - `b448f2d` — botão **Install app** e bloqueio da tradução automática do browser.
-  - `6ca412f` — **Settings → On your phone** e atalhos no ícone (Record expense / income).
-  - `610bfbb` — **português**, fase 1 (F18): escolha num cookie lido também pelo
-    servidor; menus, abas, entrada, registo rápido e Definições traduzidos.
-    Palavras em `src/lib/i18n/messages.ts`.
-  - `17b8586` — 10 erros dos relatórios corrigidos (H32 no `TAREFAS.md`).
+  aberto no PC. A Hyperliquid não usa chave. A IBKR precisa do Client Portal Gateway.
+- **Publicado a 07/10/2026** (histórico H28–H34 no `TAREFAS.md`):
+  - relatórios à medida (F17): período livre, dinheiro e/ou investimentos, PDF com
+    gráficos (`pdf-lib`) e CSV;
+  - botão **Install app**, **Settings → On your phone**, atalhos no ícone;
+  - **português**, fase 1 (F18) e as correções B01–B09 (tradução por regiões,
+    instalação em http e Firefox, atalhos que passam pelo login, etc.);
+  - **Play Store, fase 1** (F19): versão `store` da app Android
+    (`android-shell/app/build.gradle`), páginas públicas `/privacy`, `/terms`,
+    `/delete-account` (texto em `src/lib/legal/documents.ts`),
+    `CRIAR_APP_PLAY_STORE.cmd`, guia em `docs/PLAY_STORE.md`;
+  - **um só Realized P&L** (`realisedTradeTotal` em `src/lib/trading/realised.ts`)
+    em Investments, Analysis e "Where the gains came from", e classificação de
+    trades partilhada pelos fills do mesmo trade
+    (`src/lib/trading/sharedClassification.ts`), usada pelas playlists.
 
-## 3. Trabalho pedido agora: os erros B01–B09
+## 3. Trabalho pedido agora: procurar erros
 
-Encontrados numa revisão do branch a 05/10/2026; estão também na secção 2 do
-`TAREFAS.md`. Corrigir no branch, com um teste para cada um que seja lógica.
-Linhas referem-se ao commit `17b8586`.
+O utilizador quer uma **revisão à procura de erros** no código publicado. Onde
+procurar primeiro, por ser o mais recente e o menos visto com dados reais:
 
-**B01 — Com Português escolhido, as páginas ainda não traduzidas deixaram de poder
-ser traduzidas pelo browser.** `src/app/layout.tsx:146` põe `translate="no"` e
-`lang={language}` na página inteira. Antes deste branch, o Chrome do utilizador
-traduzia o Painel, as Contas e os Investimentos; agora ficam em inglês sem
-alternativa até serem traduzidos (F18). *Proposta:* com uma língua diferente de
-inglês, não bloquear a tradução na página inteira; marcar com `translate="no"` e
-`lang` da língua escolhida só o que já está traduzido (menus, Definições, registo
-rápido, entrada) e, sempre, o que é do utilizador (nomes de contas, categorias,
-lojas e valores — o componente `Money` é o sítio óbvio). As páginas por traduzir
-ficam com `lang="en"` (resolve também B06). Confirmar num telemóvel real que o
-Chrome oferece traduzir o resto e respeita as partes marcadas.
+1. **Números de investimentos:** `src/lib/trading/realised.ts`
+   (`realisedTradeTotal`, `deriveRealisedPnl`), `src/lib/trading/sharedClassification.ts`,
+   `src/actions/investmentActivity.ts` (`loadTradeRows`, `getRealisedTrades`),
+   `src/actions/dividends.ts` (`getRealisedTotal`, `getGainAttribution`),
+   `src/actions/playlists.ts`, `src/lib/portfolio/classifiedPerformance.ts`.
+   O erro recorrente é o de "A second definition is worse than a wrong one" e
+   "Double counting is the recurring bug" no `CLAUDE.md`: duas páginas a responder
+   à mesma pergunta de maneiras diferentes, ou a mesma coisa somada duas vezes.
+2. **Relatórios (F17):** `src/lib/reports/*`, `src/actions/reports.ts`,
+   `src/app/api/report/pdf/route.ts` — períodos nos limites, moedas sem taxa,
+   meses parciais, PDF com textos que as fontes padrão não desenham.
+3. **Língua (F18):** `src/lib/i18n/*`, `src/components/LanguageContext.tsx`,
+   `src/app/layout.tsx` — texto que fica em inglês com Português escolhido, ou
+   nomes do utilizador traduzidos.
+4. **Contas e páginas públicas:** `src/actions/auth.ts`, `src/proxy.ts`,
+   `src/lib/accounts/publicPaths.ts`, `src/lib/accounts/returnPath.ts` — tudo o que
+   abre sem sessão ou redireciona.
+5. **App Android:** `android-shell/` — versões `home` e `store`, widgets, alertas.
 
-**B02 — O botão Install app promete uma instalação que o browser não faz no site de
-casa.** `src/lib/ui/install.ts:47`. Pelo Wi-Fi o site é
-`http://192.168.x.x:3000`, que não é um contexto seguro (secção "A phone on the
-Wi-Fi is not a secure context" do `CLAUDE.md`): o Chrome só lá põe um marcador,
-sem atalhos nem página offline. *Proposta:* acrescentar
-`secure: window.isSecureContext` ao `InstallEnvironment` e uma rota própria que
-diz para abrir o endereço publicado; a página `settings/phone` deve dizer o
-mesmo. Testes em `src/lib/ui/__tests__/install.test.ts`.
+Regras para o que se encontrar:
 
-**B03 — Um atalho com a sessão expirada perde o pedido.** `src/proxy.ts:43`
-redireciona para `/login` sem guardar o destino, e `LoginScreen` faz
-`router.replace("/")`. Quem usa o atalho "Record expense" depois de 30 dias sem
-entrar fica no painel sem o formulário. *Proposta:* `/login?next=<caminho>` e,
-depois de entrar, voltar a esse caminho — **só caminhos relativos que comecem por
-`/` e não por `//`** (senão é um redirecionamento aberto). Testar a validação.
+- **Registar** cada erro na secção 2 do `TAREFAS.md` como **B10, B11…**, com
+  ficheiro e linha, o que falha (com um exemplo concreto) e a correção proposta.
+- **Corrigir** os que forem claros, **com um teste** para cada um que seja lógica,
+  em commits locais no branch. Os que dependem de uma decisão do utilizador ficam
+  só registados.
+- **Diagnosticar antes de adivinhar** ("Diagnose before you guess" no `CLAUDE.md`):
+  quando um número parece errado, confirmar com os dados, só a ler — ver secção 4.
+- No fim, dizer ao utilizador o que foi encontrado, o que foi corrigido e o que
+  precisa dele, e **perguntar antes de publicar**.
 
-**B04 — A escolha de língua local nunca é limpa.** `src/components/LanguageContext.tsx:39`:
-`chosen` sobrepõe-se ao valor do servidor para sempre. Com duas abas, mudar a
-língua numa deixa a outra com metade em cada língua até recarregar. *Proposta:*
-largar `chosen` quando o valor vindo do servidor mudar ou o igualar.
+Já conhecidos — **não voltar a reportar**:
 
-**B05 — Erros do registo rápido em inglês com Português escolhido.**
-`src/components/QuickEntry.tsx:108` só traduz as mensagens conhecidas em
-`messages.ts` (`server`); as que `createQuickTransaction` passa da validação
-(`error.message`) aparecem em inglês. *Proposta:* juntar essas mensagens ao mapa
-`server` (há um teste em `src/lib/i18n/__tests__/messages.test.ts` que verifica as
-mensagens de recusa; fazer o mesmo para estas).
-
-**B06 — `lang="pt"` em páginas cujo texto ainda é inglês.** Mesmo sítio que B01;
-um leitor de ecrã pronuncia o inglês com regras portuguesas. Resolve-se com B01.
-
-**B07 — Firefox no computador recebe instruções para um menu que não existe.**
-`src/lib/ui/install.ts:47` devolve `menu` para o Firefox de Windows (o próprio
-teste o afirma); o Firefox de computador não instala sites. *Proposta:* uma rota
-que diz que este browser não instala e sugere Chrome ou Edge; o Firefox de
-Android continua em `menu`.
-
-**B08 — O CSV não diz porque falta um valor.** `src/lib/reports/investments.ts:489`:
-quando o registo de depósitos está incompleto, "Change not explained by deposits"
-fica vazio sem a razão (`unexplainedWithheld`), ao contrário do ecrã e do PDF. Pôr
-a razão na linha. Ver "Zero is not a measurement" no `CLAUDE.md`.
-
-**B09 — Nomes das abas traduzidos pelo texto inglês.** `src/lib/i18n/messages.ts:637`
-(`labelIn`). Renomear uma aba em `src/lib/navigation.ts` perde a tradução sem
-nenhum teste falhar. *Proposta mínima:* o teste deve percorrer as listas reais
-(as de `lib/navigation.ts`, os grupos do `Nav.tsx` — exportá-los ou passá-los
-para `lib/navigation.ts` — e `TABS` de `SettingsTabs.tsx`), não uma lista escrita
-à mão.
-
-Pendente da revisão anterior, menor: a lista de posições de hoje
-(`getPortfolioItems`) é lida duas vezes por relatório. Usada em 13 sítios, alguns
-nas páginas por publicar da outra sessão — não partilhar o resultado sem rever
-cada um.
+- Os trades de HYPE (7,01 €) não contam na playlist Sato, embora a posição HYPE
+  esteja lá: por regra, uma posição não reclama trades. Pergunta feita ao
+  utilizador, sem resposta ainda.
+- `getPortfolioItems` é lido mais de uma vez por pedido (usado em 13 sítios,
+  alguns nas páginas por publicar da outra sessão).
+- Páginas ainda em inglês com Português escolhido (resto do F18) e textos da app
+  Android a misturar inglês e português.
+- `OPERATOR_NAME`, `CONTACT_EMAIL` e `MAX_ACCOUNTS=40` ainda por pôr na Vercel
+  (passo do utilizador); até lá as páginas legais remetem para a Play Store.
+- B01 ainda precisa de confirmação num telemóvel real.
 
 ## 4. Como verificar
 
@@ -144,23 +125,28 @@ npx eslint src
 npm run build
 ```
 
-No commit `17b8586`: tipos sem erros, **2789 testes**, lint com 3 avisos antigos
+No commit `04c6e78`: tipos sem erros, **2836 testes**, lint com 3 avisos antigos
 (`src/lib/connectors/bybit/__tests__/connector.test.ts`) e 0 erros, build a passar.
-Depois de correr o servidor de desenvolvimento, o Next reescreve `next-env.d.ts`:
-repor com `git checkout -- next-env.d.ts` antes de fazer commit.
+Depois de correr o servidor de desenvolvimento, o Next pode reescrever
+`next-env.d.ts`: repor com `git checkout -- next-env.d.ts` antes de fazer commit.
 
 Para ver no browser: servidor de desenvolvimento **na pasta de trabalho, na porta
 3001** (`npm run dev -- --port 3001`). Nunca na pasta principal: os tipos que o
-Next gera em `.next/dev/types` ficaram a apontar para ficheiros deste branch e
-partiram o site de casa (corrigido a 05/10 apagando só `.next/dev/types`).
+Next gera em `.next/dev/types` ficaram uma vez a apontar para ficheiros deste
+branch e partiram o site de casa.
 
-**A base de dados é a real (Neon, a de produção).** Para testar com sessão:
-criar uma conta de teste pela página de entrada em `localhost` (email e
-palavra-passe inventados), pôr dados de exemplo só nessa conta com um script que
-use `asUser(<id dela>)`, e **apagá-la no fim** (`db.delete(users)` dentro de
-`asUser` apaga tudo em cascata; confirmar que ficam 0 linhas). Scripts temporários
-numa pasta `.f17-tmp/` (ignorada pelo git). Nunca tocar na conta `owner` nem ler
-dados de outras pessoas. Limite de criação de contas: 5 por hora, 20 por dia.
+**A base de dados é a real (Neon, a de produção).**
+
+- **Para testar com sessão:** criar uma conta de teste pela página de entrada em
+  `localhost` (email e palavra-passe inventados), pôr dados de exemplo só nessa
+  conta com um script que use `asUser(<id dela>)`, e **apagá-la no fim** (Definições
+  → Apagar a minha conta, ou `db.delete(users)` dentro de `asUser`; confirmar que
+  ficam 0 linhas). Limite de criação de contas: 5 por hora, 20 por dia.
+- **Para diagnosticar um número da conta do dono:** um script em `.f17-tmp/`
+  (ignorada pelo git) que corre as funções das páginas dentro de
+  `asUser(OWNER_USER_ID, …)`, **só a ler**. Nunca escrever na conta `owner` nem ler
+  dados de outras pessoas. Não pôr valores reais do dono em commits sem lhe
+  perguntar: o repositório é público.
 
 Se algum dia for preciso apagar a pasta de trabalho: primeiro listar e remover
 com `cmd /c rmdir` qualquer ligação (*reparse point*) lá dentro, sobretudo em
@@ -179,16 +165,20 @@ normaliza no commit.
   **só no processo** que compila, nunca globalmente.
 - Compilar a app Android: `android-shell\gradlew.bat assembleHomeDebug` (a de casa) ou
   `assembleStoreDebug` (a da loja), com o JDK 17. A versão para a Play Store só se cria
-  assinada, com `CRIAR_APP_PLAY_STORE.cmd` (docs/PLAY_STORE.md). `lintDebug` tem dois
-  erros antigos conhecidos.
-- Emulador `Pixel_10_Pro_XL` (API 37.1); tem PIN e não é desbloqueado pelo agente.
+  assinada, com `CRIAR_APP_PLAY_STORE.cmd` (`docs/PLAY_STORE.md`); a chave de envio fica em
+  `%USERPROFILE%\MoneyOS-PlayStore` e **nunca** é criada nem usada pelo agente.
+  `lintDebug` tem dois erros antigos conhecidos.
+- O emulador `Pixel_10_Pro_XL` (API 37.1) tem PIN e não é desbloqueado pelo agente.
+  Para testar a app, criar um emulador temporário com o mesmo system image
+  (`avdmanager create avd`, `-no-window -wipe-data`) e apagá-lo no fim.
 - Não alterar firewall nem definições do Windows; pedir ao utilizador o que exigir
   a presença dele (iniciar sessão, desbloquear o telemóvel, aceitar termos).
 
-## 6. Depois dos erros
+## 6. Depois da revisão
 
-Por ordem, conforme o `TAREFAS.md`: o utilizador experimentar o endereço de teste
-e decidir juntar o branch ao `main`; o sincronizador leve no PC; as restantes
-páginas em português (F18), depois de publicado o trabalho de privacidade da outra
-sessão; e o plano da Play Store (F19, F20), que ainda tem decisões do utilizador
-por tomar.
+Conforme o `TAREFAS.md`: os passos da Play Store do utilizador
+(`docs/PLAY_STORE.md`); o que falta de código antes da produção (limites por
+endereço e anti-robô na criação de conta, registo de erros, cópias de segurança);
+as restantes páginas em português (F18), depois de publicado o trabalho de
+privacidade da outra sessão; e a fase 2 da Play Store (F20), que ainda tem
+decisões do utilizador por tomar.
