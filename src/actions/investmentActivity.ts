@@ -1,10 +1,12 @@
 "use server";
 
+import { cache } from "react";
 import { hasSession } from "./session";
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import {
+  accountConnections,
   accounts,
   auditLog,
   imports,
@@ -34,7 +36,9 @@ import {
 import { toBase } from "@/lib/fx";
 import { tradeFilterOptions, type TradeHistoryRow } from "@/lib/trading/filter";
 import { getPortfolioItems } from "./dashboard";
-import { deriveRealisedPnl } from "@/lib/trading/realised";
+import { deriveRealisedPnl, realisedTradeTotal } from "@/lib/trading/realised";
+import { shareTradeClassification } from "@/lib/trading/sharedClassification";
+import { isRealisedTrade } from "@/lib/trading/tradeMatches";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 
@@ -246,8 +250,16 @@ export async function undoInvestmentActivityImport(formData: FormData) {
  * they do not have — the same treatment the net-worth series gives backfilled
  * points.
  */
-export async function getTradeAnalysis() {
-  const [rows, accountRows, tagLinks, tagRows, metaRows, playlistRows, portfolio, rates, base] =
+/**
+ * Every stored trade event, converted to the base currency, with a result
+ * worked out where the venue states none and each fill's classification
+ * shared with the rest of its trade (`shareTradeClassification`).
+ *
+ * The rows every trade figure is built from — the history, Analysis, the
+ * playlists and the realised total — read once per request.
+ */
+const loadTradeRows = cache(async () => {
+  const [rows, accountRows, tagLinks, tagRows, metaRows, playlistRows, rates, base] =
     await Promise.all([
     db
       .select()
@@ -258,7 +270,6 @@ export async function getTradeAnalysis() {
     db.select().from(tags),
     db.select().from(tradeClassifications),
     db.select().from(playlists),
-    getPortfolioItems(),
     getRates(),
     getBaseCurrency(),
   ]);
@@ -352,7 +363,24 @@ export async function getTradeAnalysis() {
     const key = JSON.stringify([row.accountId, row.connectionId, row.currency]);
     accountsForPnl.set(key, [...(accountsForPnl.get(key) ?? []), row]);
   }
-  const enriched = [...accountsForPnl.values()].flatMap(deriveRealisedPnl).sort((a, b) => b.date.localeCompare(a.date));
+  const enriched = shareTradeClassification(
+    [...accountsForPnl.values()].flatMap(deriveRealisedPnl).sort((a, b) => b.date.localeCompare(a.date))
+  );
+
+  return {
+    rows: enriched,
+    base,
+    unconvertible,
+    unconvertibleDates,
+    approximate: rows.some((r) => r.currency !== base),
+  };
+});
+
+export async function getTradeAnalysis() {
+  const [{ rows: enriched, base, unconvertible, unconvertibleDates, approximate }, portfolio] = await Promise.all([
+    loadTradeRows(),
+    getPortfolioItems(),
+  ]);
 
   const periods = holdingPeriods(enriched);
   const trades = enriched.filter(isInstrumentTrade);
@@ -363,7 +391,7 @@ export async function getTradeAnalysis() {
     unconvertible,
     unconvertibleDates,
     /** True while any row needed a rate that isn't the rate of its own day. */
-    approximate: rows.some((r) => r.currency !== base),
+    approximate,
     tradeCount: trades.length,
     closedCount: trades.filter((r) => r.realizedPnl !== null).length,
     pnl: cumulativePnl(enriched),
@@ -403,6 +431,39 @@ export async function getTradeAnalysis() {
   };
 }
 
+
+/**
+ * What closed trades have made, all-time, in the base currency, by the rule in
+ * `realisedTradeTotal`: closed fills where an account has any, the platform's
+ * own total where it has none.
+ */
+export async function getRealisedTrades() {
+  const [{ rows, base }, connections, rates] = await Promise.all([
+    loadTradeRows(),
+    db.select().from(accountConnections),
+    getRates(),
+  ]);
+  const fills = rows
+    .filter(isRealisedTrade)
+    .map((r) => ({ accountId: r.accountId ?? null, realized: r.realizedPnl!, derived: r.pnlDerived }));
+  let unconverted = 0;
+  const venues = connections.map((c) => {
+    if (c.lastRealizedPnl === null) return { accountId: c.accountId, platform: c.platform, realized: null };
+    // Each platform states its total in its own currency.
+    const realized = toBase(Number(c.lastRealizedPnl), c.reportingCurrency ?? "USD", rates, base);
+    if (realized === null) unconverted += 1;
+    return { accountId: c.accountId, platform: c.platform, realized };
+  });
+  const withFills = new Set(fills.map((f) => f.accountId ?? ""));
+  return {
+    ...realisedTradeTotal(fills, venues),
+    currency: base,
+    /** Totals left out because nothing could convert them. */
+    unconverted,
+    /** Connected platforms with nothing said about closed trades: no fill with a result, no total. */
+    silentPlatforms: venues.filter((v) => v.realized === null && !withFills.has(v.accountId ?? "")).map((v) => v.platform),
+  };
+}
 
 /** Every tag in the vocabulary, for offering what already exists. */
 export async function listTagNames(): Promise<string[]> {

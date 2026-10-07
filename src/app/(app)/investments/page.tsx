@@ -1,6 +1,5 @@
 import AssetSearch from "@/components/AssetSearch";
 import {
-  listHoldingsWithPnL,
   createHolding,
   getPortfolioValueOverTime,
   listAccountsForHoldings,
@@ -23,6 +22,7 @@ import HoldingFormFields from "@/components/HoldingFormFields";
 import Link from "next/link";
 import StatementHistory from "@/components/StatementHistory";
 import { getRealisedTotal } from "@/actions/dividends";
+import { realisedNote } from "@/lib/trading/realised";
 import PortfolioAudit from "@/components/PortfolioAudit";
 import UnitemisedInvestments from "@/components/UnitemisedInvestments";
 import { getUnitemisedInvestments } from "@/actions/investments";
@@ -45,13 +45,11 @@ async function adoptAction(formData: FormData) {
 
 export default async function InvestmentsPage() {
   const [
-    { holdings },
     valueSeries,
     accountList,
     playlistList,
     lastPricedAt,
   ] = await Promise.all([
-    listHoldingsWithPnL(),
     getPortfolioValueOverTime(),
     listAccountsForHoldings(),
     listPlaylists(),
@@ -80,30 +78,19 @@ export default async function InvestmentsPage() {
   const base = portfolioItems.baseCurrency;
   const pnlColor =
     summary.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
-  /** Sales you closed on positions you keep yourself. */
-  const realizedTotal =
-    Math.round(
-      (holdings.reduce((s, h) => s + (h.realizedPnl ?? 0), 0) +
-        Number.EPSILON) *
-        100,
-    ) / 100;
-
   /**
-   * Says what the figure is made of, so it can't be read as sales alone.
-   *
-   * `realizedTotal` is listed here because the card adds it. It was left out
-   * while it happened to be zero, which meant the note would have stopped
-   * explaining the number above it the moment a manual position was sold —
-   * the one case where you'd most want to know where the money came from.
+   * Says what the figure is made of, so it can't be read as sales alone. The
+   * same words as on Analysis, from the same parts: the two cards used to be
+   * built two ways and disagreed (`realisedTradeTotal`).
    */
-  const realisedNote = [
-    realised.tradesUnknown ? null : `${realised.trades!.toFixed(2)} platform trades`,
-    realizedTotal === 0 ? null : `${realizedTotal.toFixed(2)} manual sales`,
-    realised.dividends === 0 ? null : `${realised.dividends.toFixed(2)} dividends`,
-    realised.interest === 0 ? null : `${realised.interest.toFixed(2)} interest`,
-  ]
-    .filter(Boolean)
-    .join(" + ") || "nothing realised yet";
+  const realisedText = realisedNote({
+    tradesKnown: !realised.tradesUnknown,
+    tradesReported: realised.tradesReported,
+    tradesDerived: realised.tradesDerived,
+    manualSales: realised.manualSales,
+    dividends: realised.dividends,
+    interest: realised.interest,
+  });
 
   return (
     <div className="holdings-page space-y-8">
@@ -196,17 +183,17 @@ export default async function InvestmentsPage() {
         />
         <Stat
           label="Realized P&L"
-          value={realised.total + realizedTotal}
+          value={realised.total}
           currency={base}
           className={
-            realised.total + realizedTotal >= 0
+            realised.total >= 0
               ? "text-[var(--green)]"
               : "text-[var(--red)]"
           }
           // Everything that has actually been paid: sales closed, dividends
           // received and interest credited. Interest and dividends belong here
           // — they arrived and stayed, and nothing about them is on paper.
-          note={realisedNote}
+          note={realisedText}
         />
       </div>
 

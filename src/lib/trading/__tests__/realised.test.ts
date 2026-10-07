@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveRealisedPnl, realisedProvenance } from "../realised";
+import { deriveRealisedPnl, realisedNote, realisedProvenance, realisedTradeTotal } from "../realised";
 import { isCurrencyConversion, isInstrumentTrade, type TradeRow } from "../stats";
 
 const row = (over: Partial<TradeRow> = {}): TradeRow => ({
@@ -204,5 +204,40 @@ describe("saying where each result came from", () => {
       open: 0,
       conversions: 0,
     });
+  });
+});
+
+describe("the one realised total", () => {
+  // The live account on 7 October 2026, in euros.
+  const fills = [
+    { accountId: "hl", realized: 25.41, derived: false },
+    { accountId: "mexc", realized: -3.23, derived: false },
+    { accountId: "ibkr", realized: 0.79, derived: true },
+  ];
+  const venues = [
+    { accountId: "hl", realized: 25.37 }, // the sum of the same fills
+    { accountId: "mexc", realized: null }, // states no total
+    { accountId: "ibkr", realized: 0 }, // states 0.00 beside a sale the feed shows
+    { accountId: "t212", realized: 0 }, // no closed fill at all
+  ];
+
+  it("takes an account's closed fills over its platform total, never both", () => {
+    expect(realisedTradeTotal(fills, venues)).toEqual({ reported: 22.18, derived: 0.79, total: 22.97, known: true });
+  });
+
+  it("uses a platform's own total for an account whose sales never reached the feed", () => {
+    expect(realisedTradeTotal([], [{ accountId: "t212", realized: 12.5 }])).toMatchObject({ total: 12.5, known: true });
+  });
+
+  it("is unknown, not zero, when nothing states anything", () => {
+    expect(realisedTradeTotal([], [{ accountId: "mexc", realized: null }])).toMatchObject({ total: 0, known: false });
+    expect(realisedTradeTotal([], [])).toMatchObject({ known: false });
+  });
+
+  it("says what the figure is made of, stated and worked out apart", () => {
+    expect(realisedNote({ tradesKnown: true, tradesReported: 22.18, tradesDerived: 0.79, manualSales: 0, dividends: 2.88, interest: 2.17 }))
+      .toBe("22.18 trades as platforms state + 0.79 trades worked out from buys and sells + 2.88 dividends + 2.17 interest");
+    expect(realisedNote({ tradesKnown: true, tradesReported: 0, tradesDerived: 0, manualSales: 0, dividends: 0, interest: 0 })).toBe("nothing realised yet");
+    expect(realisedNote({ tradesKnown: false, tradesReported: 0, tradesDerived: 0, manualSales: 0, dividends: 0, interest: 0 })).toBe("no platform reports closed trades yet");
   });
 });

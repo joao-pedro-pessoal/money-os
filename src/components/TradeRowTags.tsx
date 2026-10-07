@@ -15,6 +15,7 @@ export default function TradeRowTags({ id, classification: c, playlists }: {
   return <details className="min-w-48 whitespace-normal">
     <summary className="cursor-pointer text-[var(--accent)]">{c ? 'Edit tags' : 'Add tags'}</summary>
     {c && <p className="text-xs"><span translate="no">{[tagLabel(c.riskLevel, 'risk'), tagLabel(c.timeHorizon, 'timeHorizon'), c.playlistName].filter(Boolean).join(' / ')}</span></p>}
+    {c?.sharedFrom && <p className="text-xs text-[var(--muted)]">From another fill of the same trade.</p>}
     <form action={(data) => startTransition(async () => {
       setMessage("");
       try { await setTradeClassification(data); setMessage("Saved"); }
@@ -34,7 +35,7 @@ export default function TradeRowTags({ id, classification: c, playlists }: {
       <label className="block text-xs">Notes<textarea name="notes" aria-label="Trade notes" maxLength={10000} defaultValue={c?.notes ?? ''} className="input" /></label>
       <button type="submit" disabled={pending} className="btn text-xs">{pending ? 'Saving...' : 'Save'}</button>
       <span role="status" className="block text-xs">{message}</span>
-      <p className="text-xs text-[var(--muted)]">Applies only to this trade.</p>
+      <p className="text-xs text-[var(--muted)]">Saved on this fill. The other fills of the same order, and the fills that close what it opened, share it unless they have their own.</p>
     </form>
   </details>;
 }

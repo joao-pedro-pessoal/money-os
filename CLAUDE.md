@@ -42,6 +42,8 @@ rather than because one of them is wrong.
 | Where a holding comes from | `lib/portfolio/holdingSource.ts` |
 | A rebuilt position | `lib/portfolio/reconstruct.ts` |
 | Which dividends are whose | `lib/portfolio/dividendSource.ts` |
+| What closed trades made (every "Realized P&L") | `lib/trading/realised.ts` — `realisedTradeTotal` |
+| Which playlist a fill belongs to | `lib/trading/sharedClassification.ts` |
 
 This list is the one to trust; keep it complete. It was out of date once and
 disagreed with the shorter list further down, which is the doc committing the

@@ -7,6 +7,7 @@ import {
   positions,
   accountConnections,
   brokerEvents,
+  holdings,
   investmentActivities,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -28,6 +29,7 @@ import {
 import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
+import { getRealisedTrades } from "./investmentActivity";
 
 /**
  * Everything realised, converted before anything is added.
@@ -320,35 +322,39 @@ export async function getIncomePayments() {
  * a zero reads as a measurement rather than as a missing category.
  */
 export async function getRealisedTotal() {
-  const [loaded, connections, fx] = await Promise.all([
+  const [loaded, trades, manual, fx] = await Promise.all([
     loadPayments(),
-    db.select().from(accountConnections),
+    getRealisedTrades(),
+    db.select().from(holdings),
     converter(),
   ]);
 
   const payments = loaded.counted;
   const dividends = fx.sum(payments.filter((p) => !isInterest(p.type)));
   const interest = fx.sum(payments.filter((p) => isInterest(p.type)));
-
-  // Each platform reports in its own currency, which travels with the figure.
-  const reported = connections
-    .filter((c) => c.lastRealizedPnl !== null)
-    .map((c) => ({
-      amount: Number(c.lastRealizedPnl),
-      currency: c.reportingCurrency ?? "USD",
-    }));
-  const trades = reported.length === 0 ? null : fx.sum(reported);
+  // Sales recorded on positions you keep yourself, each in its own currency.
+  // Investments used to add these unconverted.
+  const manualSales = fx.sum(
+    manual
+      .filter((h) => h.realizedPnl !== null && Number(h.realizedPnl) !== 0)
+      .map((h) => ({ amount: Number(h.realizedPnl), currency: h.currency }))
+  );
 
   return {
-    trades,
+    /** Closed trades, as `realisedTradeTotal` counts them; null when nothing says. */
+    trades: trades.known ? trades.total : null,
+    tradesReported: trades.reported,
+    tradesDerived: trades.derived,
+    tradesUnknown: !trades.known,
+    silentPlatforms: trades.silentPlatforms,
+    manualSales,
     dividends,
     interest,
-    total: Math.round(((trades ?? 0) + dividends + interest + Number.EPSILON) * 100) / 100,
-    tradesUnknown: trades === null,
+    total: Math.round((trades.total + manualSales + dividends + interest + Number.EPSILON) * 100) / 100,
     /** Everything above is in this currency, and now genuinely is. */
     currency: fx.base,
     /** Figures left out because nothing could convert them. */
-    unconverted: fx.unconverted(),
+    unconverted: fx.unconverted() + trades.unconverted,
   };
 }
 
@@ -362,8 +368,8 @@ export async function getRealisedTotal() {
  * broker's own and there would be no way to tell which was right.
  */
 export async function getGainAttribution() {
-  const [loaded, openPositions, connections, fx] = await Promise.all([
-    loadPayments(),
+  const [realised, openPositions, connections, fx] = await Promise.all([
+    getRealisedTotal(),
     db.select().from(positions),
     db.select().from(accountConnections),
     converter(),
@@ -381,24 +387,18 @@ export async function getGainAttribution() {
       }))
   );
 
-  const reported = connections
-    .filter((c) => c.lastRealizedPnl !== null)
-    .map((c) => ({
-      amount: Number(c.lastRealizedPnl),
-      currency: c.reportingCurrency ?? "USD",
-    }));
-
+  // The same realised figures as the Realized P&L cards: one answer, three screens.
+  // Manual sales are closed trades too, recorded by hand.
   return {
     attribution: attribute({
       unrealised,
-      realisedTrades: reported.length === 0 ? null : fx.sum(reported),
-      dividends: fx.sum(loaded.counted.filter((p) => !isInterest(p.type))),
-      interest: fx.sum(loaded.counted.filter((p) => isInterest(p.type))),
+      realisedTrades: realised.tradesUnknown && realised.manualSales === 0 ? null : (realised.trades ?? 0) + realised.manualSales,
+      dividends: realised.dividends,
+      interest: realised.interest,
     }),
     /** Everything in the attribution is in this currency. */
     currency: fx.base,
-    /** Which platforms answered, so the interface can name what's missing. */
-    reportingPlatforms: connections.filter((c) => c.lastRealizedPnl !== null).map((c) => c.platform),
-    silentPlatforms: connections.filter((c) => c.lastRealizedPnl === null).map((c) => c.platform),
+    /** Platforms that said nothing about closed trades, so the interface can name what's missing. */
+    silentPlatforms: realised.silentPlatforms,
   };
 }

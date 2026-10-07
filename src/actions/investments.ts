@@ -649,7 +649,7 @@ export async function addRewards(formData: FormData) {
  * uses, so the two cannot drift apart again.
  */
 export async function getPortfolioAnalysis(includeStable = true) {
-  const [{ items }, trades] = await Promise.all([getPortfolioItems(), getTradeAnalysis()]);
+  const { items } = await getPortfolioItems();
 
   /**
    * A portfolio item carries value, cost and P&L directly; the analysis
@@ -730,8 +730,9 @@ export async function getPortfolioAnalysis(includeStable = true) {
     tagging: taggingSummary(taggable),
     needsTags: positionsNeedingTags(taggable),
     coverage: axisCoverage(taggable),
-    realizedTotal:
-      classifiedPerformance([], trades.rows.filter(t => includeStable || !isStableAsset(t.symbol ?? "", t.classification?.assetType ?? null)), "account").reduce((sum, g) => sum + g.realized, 0),
+    // The realised total is not here: the page reads `getRealisedTotal`, the
+    // figure Investments shows. Summing closed fills here as well made the two
+    // "Realized P&L" cards disagree.
   };
 }
 

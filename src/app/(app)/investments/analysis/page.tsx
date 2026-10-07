@@ -22,6 +22,8 @@ import SavedViews from "@/components/SavedViews";
 import FilterLink from "@/components/FilterLink";
 import FilterSelect from "@/components/FilterSelect";
 import GainAttribution from "@/components/GainAttribution";
+import { getRealisedTotal } from "@/actions/dividends";
+import { realisedNote } from "@/lib/trading/realised";
 import ContributionBreakdown from "@/components/ContributionBreakdown";
 import StatementBreakdown from "@/components/StatementBreakdown";
 import { getStatementBreakdown } from "@/actions/brokerImport";
@@ -66,6 +68,7 @@ export default async function PortfolioAnalysisPage({
 
   const statement = await getStatementBreakdown();
   const a = await getPortfolioAnalysis(includeSynced);
+  const realised = await getRealisedTotal();
   const returns = await getPortfolioReturns();
   const windowPreferences = await getDashboardWindowPreferences();
   /**
@@ -310,10 +313,17 @@ export default async function PortfolioAnalysisPage({
         <Stat label="Unrealized P&L" value={a.totals.totalPnL} percent={a.totals.totalCost > 0 ? a.totals.totalPnLPercent : null} note="Return on known cost of open positions" className={pnlColor} />
         <Stat
           label="Realized P&L"
-          value={a.realizedTotal}
+          value={realised.total}
           percent={null}
-          note="Percentage unavailable: cost of closed positions is not available in this summary."
-          className={a.realizedTotal >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}
+          note={`${realisedNote({
+            tradesKnown: !realised.tradesUnknown,
+            tradesReported: realised.tradesReported,
+            tradesDerived: realised.tradesDerived,
+            manualSales: realised.manualSales,
+            dividends: realised.dividends,
+            interest: realised.interest,
+          })}. The same figure as Investments; no percentage, since the cost of closed positions is not in this summary.`}
+          className={realised.total >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}
         />
       </div>
 

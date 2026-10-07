@@ -35,7 +35,11 @@ export interface TradeHistoryRow extends TradeRow {
    * labelled, and an unlabelled row is not a row labelled "none".
    */
   tags: string[];
-  /** Classification saved for this event only; no live-position inheritance. */
+  /**
+   * This event's classification: its own, or shared from another fill of the
+   * same trade (`sharedFrom`, see lib/trading/sharedClassification.ts). Never
+   * inherited from a live position.
+   */
   classification?: {
     /** Legacy optional fields retained for older callers. Not storage keys. */
     connectionId?: string;
@@ -51,6 +55,8 @@ export interface TradeHistoryRow extends TradeRow {
     playlistId: string | null;
     playlistName: string | null;
     notes: string | null;
+    /** The fill this classification was saved on, when it is not this one. */
+    sharedFrom?: string;
   } | null;
 }
 

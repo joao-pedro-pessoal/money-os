@@ -168,3 +168,74 @@ export function realisedProvenance(
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
+
+/**
+ * What closed trades have made, all-time: the one figure behind every
+ * "Realized P&L" — Investments, Analysis and where the gains came from.
+ *
+ * Those three used to answer it three ways. Investments added up what each
+ * platform states as its total (`lastRealizedPnl`), Analysis added up the
+ * closed fills, and on a live account they missed different things: MEXC
+ * states no total, so −3.23 of closed futures vanished from Investments;
+ * Interactive Brokers states 0.00 while the feed shows FEMY bought and sold
+ * for 0.79. Hyperliquid's total is the sum of the same fills Analysis reads.
+ *
+ * So, per account:
+ * - where any closed fill carries a result, the fills are the answer — the
+ *   venue's figure per fill where it states one, worked out from buys and
+ *   sells where it does not (`deriveRealisedPnl`);
+ * - otherwise the platform's own total, when it states one (an account whose
+ *   sales never reached the feed);
+ * - nothing at all stated is unknown, never zero.
+ *
+ * Never both for one account: the total is made of the same fills, and adding
+ * it to them would count every trade twice. Stated and worked-out results stay
+ * separate in the answer, so a screen that shows the total can say what it is
+ * made of (CLAUDE.md, "A venue that reports no result…").
+ */
+export function realisedTradeTotal(
+  fills: readonly { accountId: string | null; realized: number; derived: boolean }[],
+  venues: readonly { accountId: string | null; realized: number | null }[]
+): { reported: number; derived: number; total: number; known: boolean } {
+  const withFills = new Set(fills.map((f) => f.accountId ?? ""));
+  let reported = 0;
+  let derived = 0;
+  for (const fill of fills) {
+    if (fill.derived) derived += fill.realized;
+    else reported += fill.realized;
+  }
+  let stated = false;
+  for (const venue of venues) {
+    if (venue.realized === null || withFills.has(venue.accountId ?? "")) continue;
+    reported += venue.realized;
+    stated = true;
+  }
+  return {
+    reported: round2(reported),
+    derived: round2(derived),
+    total: round2(reported + derived),
+    known: fills.length > 0 || stated,
+  };
+}
+
+/** What a "Realized P&L" figure is made of, in the words under it. */
+export function realisedNote(parts: {
+  tradesKnown: boolean;
+  tradesReported: number;
+  tradesDerived: number;
+  manualSales: number;
+  dividends: number;
+  interest: number;
+}): string {
+  return (
+    [
+      parts.tradesKnown && parts.tradesReported !== 0 ? `${parts.tradesReported.toFixed(2)} trades as platforms state` : null,
+      parts.tradesDerived !== 0 ? `${parts.tradesDerived.toFixed(2)} trades worked out from buys and sells` : null,
+      parts.manualSales !== 0 ? `${parts.manualSales.toFixed(2)} manual sales` : null,
+      parts.dividends !== 0 ? `${parts.dividends.toFixed(2)} dividends` : null,
+      parts.interest !== 0 ? `${parts.interest.toFixed(2)} interest` : null,
+    ]
+      .filter(Boolean)
+      .join(" + ") || (parts.tradesKnown ? "nothing realised yet" : "no platform reports closed trades yet")
+  );
+}

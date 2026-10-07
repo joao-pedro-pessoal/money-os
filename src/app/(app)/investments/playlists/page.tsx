@@ -38,7 +38,7 @@ export default async function PlaylistsPage() {
                   <th className="text-right">Value</th>
                   <th className="text-right">Cost</th>
                   <th className="text-right">Unrealized P&amp;L</th>
-                  <th className="text-right">Realized</th>
+                  <th className="text-right" title="Closed trades put in this playlist, a trade split into several fills counted whole, and manual sales. Dividends and interest are not split by playlist.">Realized</th>
                   <th></th>
                 </tr>
               </thead>
