@@ -149,11 +149,13 @@ export default async function AccountsPage() {
                 <option value="EUR">EUR</option>
                 <option value="USD">USD</option>
               </select>
+              {/* Required: an empty balance is not a zero one (manualBalance). */}
               <input
                 name="balance"
                 type="number"
                 step="0.01"
-                placeholder="Starting balance"
+                required
+                placeholder="Balance today (0 if empty)"
                 className="input"
               />
             </div>

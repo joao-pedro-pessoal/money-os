@@ -230,7 +230,12 @@ export function realisedNote(parts: {
   manualSales: number;
   dividends: number;
   interest: number;
+  /** Movements and totals left out because nothing could convert them. */
+  unconverted?: number;
 }): string {
+  const missing = parts.unconverted
+    ? ` · ${parts.unconverted} ${parts.unconverted === 1 ? "movement" : "movements"} left out: no exchange rate`
+    : "";
   return (
     [
       parts.tradesKnown && parts.tradesReported !== 0 ? `${parts.tradesReported.toFixed(2)} trades as platforms state` : null,
@@ -241,5 +246,5 @@ export function realisedNote(parts: {
     ]
       .filter(Boolean)
       .join(" + ") || (parts.tradesKnown ? "nothing realised yet" : "no platform reports closed trades yet")
-  );
+  ) + missing;
 }

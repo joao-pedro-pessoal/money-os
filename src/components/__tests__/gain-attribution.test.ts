@@ -20,7 +20,7 @@ describe("the gains panel uses the currency its figures were computed in", () =>
     expect(html).toContain("25 GBP");
     expect(html).toContain("50 GBP");
     expect(html).toContain("whose cost is unknown");
-    expect(html).toContain("realised figures left out: no exchange rate");
+    expect(html).toContain("1 movement left out of what was realised: no exchange rate");
     expect(html).not.toContain("EUR");
   });
 });

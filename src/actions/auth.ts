@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { asUser, db } from "@/db/client";
-import { categories, OWNER_USER_ID, users } from "@/db/schema";
+import { categories, exchangeRates, OWNER_USER_ID, users } from "@/db/schema";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/db/defaultCategories";
 import { newSessionValue, ownerPassword, sessionCookieOptions, SESSION_COOKIE_NAME } from "@/lib/auth";
 import {
@@ -21,6 +21,7 @@ import { afterFailedLogin, lockedUntil, maxAccounts, registrationRefusal } from 
 import { hashPassword, needsRehash, PASSWORD_MAX, verifyPassword } from "@/lib/accounts/password";
 import type { DeleteOutcome, RecoveryOutcome, SignInOutcome, SignUpOutcome } from "@/lib/accounts/outcomes";
 import { currentUserId } from "./session";
+import { refreshRates } from "./fx";
 
 /**
  * Sign-in accounts: making one, signing into one, and getting back into one.
@@ -222,9 +223,30 @@ function isUniqueViolation(error: unknown): boolean {
  * Run as the account, so the rows are its own.
  */
 async function ensureStartingData(): Promise<void> {
+  await ensureRates();
   const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(categories);
   if (row && row.n > 0) return;
   await seedNewAccount();
+}
+
+/** How long a sign-in waits for the rate provider before going ahead without it. */
+const RATES_WAIT_MS = 5000;
+
+/**
+ * Exchange rates, for an account that has none.
+ *
+ * They are each person's own rows (`exchange_rates` has a `user_id`), and a new
+ * account started with none at all: a dollar share or a USD account was left
+ * out of every total — Analysis said "Nothing to analyse yet" beside a position
+ * — until the person happened to open Connections or the rates page, or the
+ * home computer's scheduled sync ran. A provider that fails or hangs leaves it
+ * as it was: `refreshRates` never throws, and signing in waits for it at most
+ * `RATES_WAIT_MS`.
+ */
+async function ensureRates(): Promise<void> {
+  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(exchangeRates);
+  if (row && row.n > 0) return;
+  await Promise.race([refreshRates(), new Promise((resolve) => setTimeout(resolve, RATES_WAIT_MS))]);
 }
 
 /** What every new account starts with. */
@@ -264,7 +286,10 @@ export async function signUp(raw: unknown): Promise<SignUpOutcome> {
     if (isUniqueViolation(error)) return { kind: "refused", reason: taken };
     throw error;
   }
-  await asUser(userId, seedNewAccount);
+  await asUser(userId, async () => {
+    await seedNewAccount();
+    await ensureRates();
+  });
   await startSession(userId);
   return { kind: "ok", recoveryCode };
 }

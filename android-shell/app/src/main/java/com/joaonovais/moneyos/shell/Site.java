@@ -43,6 +43,22 @@ final class Site {
         return QuickEntry.prefs(context).getString("address", null);
     }
 
+    /**
+     * Why a read cannot start, from what the WebView's cookie store said; null
+     * when there is a session to send.
+     *
+     * A store that could not be read at all — the WebView being updated by the
+     * Play Store, or not loadable in this process — says nothing about the
+     * session, so it is offline, never login. A login answer wipes the widgets'
+     * copy (WidgetData.recordProblem) and takes the alert notifications down,
+     * forgetting which were shown (Alerts), so a passing WebView update used to
+     * blank the widgets and bring every alert back as new.
+     */
+    static String cookieProblem(String cookie, boolean storeReadable) {
+        if (!storeReadable) return PROBLEM_OFFLINE;
+        return cookie == null || cookie.isEmpty() ? PROBLEM_LOGIN : null;
+    }
+
     /** True when the address is the published site's, built in: nothing to type or change. */
     static boolean fixedAddress() {
         return !BuildConfig.SITE_URL.isEmpty();
@@ -53,12 +69,14 @@ final class Site {
         String address = address(context);
         if (address == null) throw new Unavailable(PROBLEM_NO_ADDRESS);
         String cookie = null;
+        boolean readable = true;
         try {
             cookie = CookieManager.getInstance().getCookie(address);
-        } catch (RuntimeException ignored) {
-            // No WebView on this phone state; treated as not logged in.
+        } catch (RuntimeException e) {
+            readable = false;
         }
-        if (cookie == null || cookie.isEmpty()) throw new Unavailable(PROBLEM_LOGIN);
+        String problem = cookieProblem(cookie, readable);
+        if (problem != null) throw new Unavailable(problem);
 
         HttpURLConnection connection = null;
         try {

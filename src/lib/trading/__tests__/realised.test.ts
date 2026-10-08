@@ -263,4 +263,11 @@ describe("the one realised total", () => {
     expect(realisedNote({ tradesKnown: true, tradesReported: 0, tradesDerived: 0, manualSales: 0, dividends: 0, interest: 0 })).toBe("nothing realised yet");
     expect(realisedNote({ tradesKnown: false, tradesReported: 0, tradesDerived: 0, manualSales: 0, dividends: 0, interest: 0 })).toBe("no platform reports closed trades yet");
   });
+
+  it("says when movements were left out for want of an exchange rate, on every card that shows the total", () => {
+    const parts = { tradesKnown: true, tradesReported: 10, tradesDerived: 0, manualSales: 0, dividends: 0, interest: 0 };
+    expect(realisedNote({ ...parts, unconverted: 0 })).toBe("10.00 trades as platforms state");
+    expect(realisedNote({ ...parts, unconverted: 1 })).toBe("10.00 trades as platforms state · 1 movement left out: no exchange rate");
+    expect(realisedNote({ ...parts, unconverted: 3 })).toMatch(/· 3 movements left out: no exchange rate$/);
+  });
 });

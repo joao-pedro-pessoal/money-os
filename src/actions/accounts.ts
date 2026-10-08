@@ -21,6 +21,7 @@ import { getAccountPlatformTotals } from "./platformTotals";
 import { isAbandoned, reasonsToKeep, type AccountUsage } from "@/lib/accounting/abandoned";
 import { meaningOf } from "@/lib/accounting/balanceScope";
 import { writeSnapshot } from "./snapshots";
+import { manualBalance } from "@/lib/money/manualEntry";
 
 export async function listAccountsWithState() {
   const [allAccounts, allAllocations, platformTotals] = await Promise.all([
@@ -116,7 +117,7 @@ export async function createAccount(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const accountType = String(formData.get("accountType") ?? "other");
   const currency = String(formData.get("currency") ?? "EUR");
-  const balance = String(formData.get("balance") ?? "0");
+  const balance = manualBalance(String(formData.get("balance") ?? ""));
   const balanceMeaning = meaningOf(String(formData.get("balanceMeaning") ?? ""));
 
   if (!institution || !name) throw new Error("Institution and name are required");

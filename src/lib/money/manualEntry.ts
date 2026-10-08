@@ -7,6 +7,22 @@ export function manualAmount(value: string): string {
   return Number(normalized).toFixed(2);
 }
 
+/**
+ * An account's balance as typed: zero and overdrawn are real balances, so
+ * unlike `manualAmount` it takes a sign and 0. Left empty, it is refused rather
+ * than read as zero — an account whose balance nobody gave is not an empty
+ * one — and the database used to refuse it instead, with a numeric-syntax error
+ * the person adding their first account could do nothing with.
+ */
+export function manualBalance(value: string): string {
+  const normalized = value.trim().replace(",", ".");
+  if (!/^-?\d{1,12}(\.\d{1,2})?$/.test(normalized)) {
+    throw new Error("Write the account's balance today, with at most two decimal places. 0 if it is empty.");
+  }
+  const amount = Number(normalized);
+  return (Object.is(amount, -0) ? 0 : amount).toFixed(2);
+}
+
 export function manualDate(value: string): Date {
   const date = new Date(`${value}T12:00:00Z`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {

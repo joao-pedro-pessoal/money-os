@@ -68,6 +68,9 @@ export default async function PortfolioAnalysisPage({
 
   const statement = await getStatementBreakdown();
   const a = await getPortfolioAnalysis(includeSynced);
+  // The base currency, which need not be euros: every amount here was
+  // converted to it, and used to be drawn with a euro sign regardless.
+  const currency = a.currency;
   const realised = await getRealisedTotal();
   const returns = await getPortfolioReturns();
   const windowPreferences = await getDashboardWindowPreferences();
@@ -195,7 +198,7 @@ export default async function PortfolioAnalysisPage({
           <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl leading-relaxed">
             The breakdowns above group anything unanswered under <em>unset</em>, so where that
             slice is large they are mostly drawing the absence of an answer.{" "}
-            <Money value={a.tagging.incompleteValue} currency="EUR" /> sits in positions missing
+            <Money value={a.tagging.incompleteValue} currency={currency} /> sits in positions missing
             at least one axis.
           </p>
 
@@ -225,7 +228,7 @@ export default async function PortfolioAnalysisPage({
                 <div className="text-[10px] text-[var(--muted)]">
                   {c.untagged === 0
                     ? "every position answered"
-                    : `${c.untagged} unanswered · ${c.untaggedValue.toFixed(2)} EUR`}
+                    : `${c.untagged} unanswered · ${c.untaggedValue.toFixed(2)} ${currency}`}
                 </div>
               </div>
             ))}
@@ -248,7 +251,7 @@ export default async function PortfolioAnalysisPage({
                   <tr key={g.symbol}>
                     <td className="max-w-64 truncate"><span translate="no">{g.symbol}</span></td>
                     <td className="text-right">
-                      <Money value={g.value} currency="EUR" />
+                      <Money value={g.value} currency={currency} />
                     </td>
                     <td className="text-[var(--amber)]">
                       {g.missing.map((m) => m.label).join(", ")}
@@ -269,7 +272,7 @@ export default async function PortfolioAnalysisPage({
         {/* Independent of the risk analysis above: these read the imported
             statement and the account history, not the tagged positions. */}
         <GainAttribution />
-        <ContributionBreakdown currency="EUR" />
+        <ContributionBreakdown />
 
         {statement && (
           <div>
@@ -308,10 +311,11 @@ export default async function PortfolioAnalysisPage({
       {/* ---- Headline numbers ---- */}
       <Section title="Portfolio overview" essential defaultOpen persistKey="analysis-overview">
       <div className="grid grid-cols-1 min-[390px]:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat label="Portfolio Value" value={a.totals.totalValue} />
-        <Stat label="Cost Basis" value={a.totals.totalCost} />
-        <Stat label="Unrealized P&L" value={a.totals.totalPnL} percent={a.totals.totalCost > 0 ? a.totals.totalPnLPercent : null} note="Return on known cost of open positions" className={pnlColor} />
+        <Stat currency={currency} label="Portfolio Value" value={a.totals.totalValue} />
+        <Stat currency={currency} label="Cost Basis" value={a.totals.totalCost} />
+        <Stat currency={currency} label="Unrealized P&L" value={a.totals.totalPnL} percent={a.totals.totalCost > 0 ? a.totals.totalPnLPercent : null} note="Return on known cost of open positions" className={pnlColor} />
         <Stat
+          currency={currency}
           label="Realized P&L"
           value={realised.total}
           percent={null}
@@ -322,6 +326,7 @@ export default async function PortfolioAnalysisPage({
             manualSales: realised.manualSales,
             dividends: realised.dividends,
             interest: realised.interest,
+            unconverted: realised.unconverted,
           })}. The same figure as Investments; no percentage, since the cost of closed positions is not in this summary.`}
           className={realised.total >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}
         />
@@ -334,13 +339,13 @@ export default async function PortfolioAnalysisPage({
           <div>
             <div className="text-xs text-[var(--muted)] mb-1">Cash &amp; stablecoins</div>
             <div className="text-lg font-semibold text-[var(--green)]">
-              <Money value={a.split.stable} />
+              <Money value={a.split.stable} currency={currency} />
             </div>
           </div>
           <div>
             <div className="text-xs text-[var(--muted)] mb-1">Floating (market-exposed)</div>
             <div className="text-lg font-semibold text-[var(--amber)]">
-              <Money value={a.split.floating} />
+              <Money value={a.split.floating} currency={currency} />
             </div>
           </div>
           <div>
@@ -400,7 +405,7 @@ export default async function PortfolioAnalysisPage({
         </div>
 
         <p className="text-xs text-[var(--muted)] mt-2">This filter applies to this performance breakdown and its details.</p>
-        {status !== "closed" && <DonutChart data={grouped.filter((g) => g.value > 0).map((g) => ({ name: label(g.key), value: g.value }))} />}
+        {status !== "closed" && <DonutChart data={grouped.filter((g) => g.value > 0).map((g) => ({ name: label(g.key), value: g.value }))} currency={currency} />}
 
         <div className="overflow-x-auto mt-4">
           <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
@@ -439,19 +444,19 @@ export default async function PortfolioAnalysisPage({
                   </td>
                   <td className="text-right">{g.openCount ?? g.count} open / {g.closedCount ?? 0} closed</td>
                   <td className="text-right">
-                    {status === "closed" ? "N/A" : <Money value={g.value} />}
+                    {status === "closed" ? "N/A" : <Money value={g.value} currency={currency} />}
                   </td>
                   <td className="text-right">
-                    {status === "closed" ? "N/A" : <Money value={g.cost} />}
+                    {status === "closed" ? "N/A" : <Money value={g.cost} currency={currency} />}
                   </td>
                   <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    {status === "closed" ? "N/A" : <Money value={g.pnl} />}
+                    {status === "closed" ? "N/A" : <Money value={g.pnl} currency={currency} />}
                   </td>
                   <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                     {status === "closed" ? "N/A" : `${g.pnlPercent.toFixed(1)}%`}
                   </td>
                   <td className={`text-right ${g.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    {status === "open" ? "N/A" : <Money value={g.realized} />}
+                    {status === "open" ? "N/A" : <Money value={g.realized} currency={currency} />}
                   </td>
                 </tr>
 
@@ -495,15 +500,15 @@ export default async function PortfolioAnalysisPage({
                         <td className="max-w-64 truncate pl-8"><span translate="no">{m.symbol}</span><div className="text-xs text-[var(--muted)]"><span translate="no">{m.accountName}</span> · {m.status}{m.date ? ` · ${m.date}` : ""}</div></td>
                         <td className="text-right">{m.shareOfGroup.toFixed(1)}%</td>
                         <td className="text-right">
-                          {m.status === "closed" ? "N/A" : <Money value={m.value} />}
+                          {m.status === "closed" ? "N/A" : <Money value={m.value} currency={currency} />}
                         </td>
                         <td className="text-right">
-                          {m.status === "closed" || m.pnlKnown === false ? "N/A" : <Money value={m.cost} />}
+                          {m.status === "closed" || m.pnlKnown === false ? "N/A" : <Money value={m.cost} currency={currency} />}
                         </td>
                         <td
                           className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
                         >
-                          {m.pnlKnown === false ? "N/A" : <Money value={m.pnl} />}
+                          {m.pnlKnown === false ? "N/A" : <Money value={m.pnl} currency={currency} />}
                         </td>
                         <td
                           className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
@@ -513,7 +518,7 @@ export default async function PortfolioAnalysisPage({
                         <td
                           className={`text-right ${m.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
                         >
-                          {m.status === "open" ? "N/A" : <Money value={m.realized} />}
+                          {m.status === "open" ? "N/A" : <Money value={m.realized} currency={currency} />}
                         </td>
                       </tr>
                     ))}
@@ -538,8 +543,8 @@ export default async function PortfolioAnalysisPage({
 
       <Section title="Portfolio allocation" persistKey="analysis-allocation">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BreakdownCard title="By account / wallet" rows={a.byAccount} donut />
-        <BreakdownCard title="By asset type" rows={a.byAssetType} axis="assetType" translate donut />
+        <BreakdownCard currency={currency} title="By account / wallet" rows={a.byAccount} donut />
+        <BreakdownCard currency={currency} title="By asset type" rows={a.byAssetType} axis="assetType" translate donut />
       </div>
       </Section>
 
@@ -570,7 +575,7 @@ export default async function PortfolioAnalysisPage({
       </Section>}
 
       {windowPreferences["gain-attribution"] !== "hidden" && <Section title="Where the gains came from" defaultOpen={windowPreferences["gain-attribution"] === "visible"}><GainAttribution /></Section>}
-      {windowPreferences.contributions !== "hidden" && <Section title="Money added versus money made" defaultOpen={windowPreferences.contributions === "visible"}><ContributionBreakdown currency="EUR" /></Section>}
+      {windowPreferences.contributions !== "hidden" && <Section title="Money added versus money made" defaultOpen={windowPreferences.contributions === "visible"}><ContributionBreakdown /></Section>}
 
       {/* ---- Staking / yield ---- */}
       {(a.staking.stakedValue > 0 || a.staking.rewardsEarned > 0) && (
@@ -579,7 +584,7 @@ export default async function PortfolioAnalysisPage({
             <div>
               <div className="text-xs text-[var(--muted)] mb-1">Earning yield</div>
               <div className="text-lg font-semibold">
-                <Money value={a.staking.stakedValue} />
+                <Money value={a.staking.stakedValue} currency={currency} />
               </div>
             </div>
             <div>
@@ -589,13 +594,13 @@ export default async function PortfolioAnalysisPage({
             <div>
               <div className="text-xs text-[var(--muted)] mb-1">Projected / year</div>
               <div className="text-lg font-semibold text-[var(--accent)]">
-                <Money value={a.staking.projectedAnnual} />
+                <Money value={a.staking.projectedAnnual} currency={currency} />
               </div>
             </div>
             <div>
               <div className="text-xs text-[var(--muted)] mb-1">Rewards received</div>
               <div className="text-lg font-semibold text-[var(--green)]">
-                <Money value={a.staking.rewardsEarned} />
+                <Money value={a.staking.rewardsEarned} currency={currency} />
               </div>
             </div>
           </div>
@@ -626,8 +631,8 @@ export default async function PortfolioAnalysisPage({
       {/* ---- Breakdowns ---- */}
       <Section title="Risk and time horizon">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BreakdownCard title="By risk level" rows={a.byRisk} axis="risk" translate colorByRisk />
-        <BreakdownCard title="By time horizon" rows={a.byTimeHorizon} axis="timeHorizon" translate />
+        <BreakdownCard currency={currency} title="By risk level" rows={a.byRisk} axis="risk" translate colorByRisk />
+        <BreakdownCard currency={currency} title="By time horizon" rows={a.byTimeHorizon} axis="timeHorizon" translate />
       </div>
       </Section>
 
@@ -645,14 +650,14 @@ export default async function PortfolioAnalysisPage({
           <div className="text-[10px] text-[var(--muted)] mb-3">
             On paper — nothing here has been sold.
           </div>
-          <MoversTable rows={a.movers.winners} positive />
+          <MoversTable currency={currency} rows={a.movers.winners} positive />
         </div>
         <div className="card p-4">
           <div className="text-sm font-medium">Biggest losses</div>
           <div className="text-[10px] text-[var(--muted)] mb-3">
             On paper — a price move can take these back.
           </div>
-          <MoversTable rows={a.movers.losers} />
+          <MoversTable currency={currency} rows={a.movers.losers} />
         </div>
       </div>
 
@@ -686,7 +691,7 @@ export default async function PortfolioAnalysisPage({
                 <td style={{ color: riskColor(h.riskLevel) }}>{tagLabel(h.riskLevel, "risk") ?? "—"}</td>
                 <td>{tagLabel(h.timeHorizon, "timeHorizon") ?? "—"}</td>
                 <td>
-                  <Money value={h.quantity * h.currentPrice} />
+                  <Money value={h.quantity * h.currentPrice} currency={currency} />
                 </td>
                 <td>{h.apr ? `${h.apr.toFixed(2)}%` : "—"}</td>
               </tr>
@@ -712,12 +717,12 @@ function CashExplanation() {
   );
 }
 
-function Stat({ label, value, percent, note, className = "" }: { label: string; value: number; percent?: number | null; note?: string; className?: string }) {
+function Stat({ label, value, percent, note, className = "", currency }: { label: string; value: number; percent?: number | null; note?: string; className?: string; currency: string }) {
   return (
     <div className="min-w-0">
       <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
       <div className={`text-xl font-semibold truncate ${className}`}>
-        <Money value={value} />
+        <Money value={value} currency={currency} />
       </div>
       {percent !== undefined && <div className={`text-sm mt-1 ${className}`}>{percent === null ? "Percentage unavailable" : `${percent.toFixed(2)}%`}</div>}
       {note && <p className="text-xs text-[var(--muted)] mt-1">{note}</p>}
@@ -732,8 +737,10 @@ function BreakdownCard({
   axis,
   donut = false,
   colorByRisk = false,
+  currency,
 }: {
   title: string;
+  currency: string;
   rows: Breakdown[];
   translate?: boolean;
   /** Which vocabulary the keys come from, so a shared value is labelled right. */
@@ -746,14 +753,14 @@ function BreakdownCard({
   return (
     <div className="card p-4">
       <div className="text-sm font-medium mb-3">{title}</div>
-      {donut && <DonutChart data={rows.map((r) => ({ name: label(r.key), value: r.value }))} />}
+      {donut && <DonutChart data={rows.map((r) => ({ name: label(r.key), value: r.value }))} currency={currency} />}
       <div className="space-y-2 mt-2">
         {rows.map((r) => (
           <div key={r.key}>
             <div className="flex justify-between text-sm mb-1">
               <span style={colorByRisk ? { color: riskColor(r.key) } : undefined}>{label(r.key)}</span>
               <span className="text-[var(--muted)]">
-                <Money value={r.value} /> · {r.percent.toFixed(1)}%
+                <Money value={r.value} currency={currency} /> · {r.percent.toFixed(1)}%
               </span>
             </div>
             <div className="h-1.5 w-full rounded-full bg-[var(--surface-2)] overflow-hidden">
@@ -775,7 +782,9 @@ function BreakdownCard({
 function MoversTable({
   rows,
   positive = false,
+  currency,
 }: {
+  currency: string;
   rows: { id: string; symbol: string; pnl: number; value: number }[];
   positive?: boolean;
 }) {
@@ -802,10 +811,10 @@ function MoversTable({
               </Link>
             </td>
             <td>
-              <Money value={r.value} />
+              <Money value={r.value} currency={currency} />
             </td>
             <td className={positive ? "text-[var(--green)]" : "text-[var(--red)]"}>
-              <Money value={r.pnl} />
+              <Money value={r.pnl} currency={currency} />
             </td>
           </tr>
         ))}

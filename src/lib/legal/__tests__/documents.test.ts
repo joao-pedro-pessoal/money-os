@@ -41,6 +41,17 @@ describe("the two languages", () => {
     }
   });
 
+  it("put each paragraph in the same place, so a reader switching language finds it", () => {
+    for (const kind of LEGAL_KINDS) {
+      const lead = (code: "en" | "pt") =>
+        legalDocument(kind, code, someone).sections.map((s) => s.paragraphs.map((p) => /^\*\*[^*]+:\*\*/.test(p)));
+      expect(lead("pt")).toEqual(lead("en"));
+    }
+    const where = (code: "en" | "pt", word: string) =>
+      legalDocument("privacy", code, someone).sections.flatMap((s) => s.paragraphs).findIndex((p) => p.includes(word));
+    expect(where("pt", "Widgets Android")).toBe(where("en", "Android widgets"));
+  });
+
   it("date the text in each language's own way", () => {
     expect(updatedOn("en")).toMatch(/^\d{1,2} [A-Z][a-z]+ \d{4}$/);
     expect(updatedOn("pt")).toMatch(/^\d{1,2} de [a-zç]+ de \d{4}$/);

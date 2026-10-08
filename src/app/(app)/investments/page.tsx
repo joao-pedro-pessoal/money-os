@@ -90,6 +90,7 @@ export default async function InvestmentsPage() {
     manualSales: realised.manualSales,
     dividends: realised.dividends,
     interest: realised.interest,
+    unconverted: realised.unconverted,
   });
 
   return (

@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { isQuickEntryId, manualAmount, manualDate } from "../manualEntry";
+import { isQuickEntryId, manualAmount, manualBalance, manualDate } from "../manualEntry";
+
+describe("an account's starting balance", () => {
+  it("takes zero, an overdraft and a decimal comma", () => {
+    expect(manualBalance("0")).toBe("0.00");
+    expect(manualBalance("-0")).toBe("0.00");
+    expect(manualBalance(" -125,5 ")).toBe("-125.50");
+    expect(manualBalance("1500.25")).toBe("1500.25");
+  });
+  it.each(["", "   ", "abc", "1e3", "1,234.56", "0.001", "--1"])("refuses %s with a sentence, not a database error", (value) => {
+    expect(() => manualBalance(value)).toThrow(/balance/);
+  });
+});
 
 describe("manual entry validation", () => {
   it("accepts a decimal comma or point without guessing thousands separators", () => {

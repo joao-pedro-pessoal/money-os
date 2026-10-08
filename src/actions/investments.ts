@@ -649,7 +649,7 @@ export async function addRewards(formData: FormData) {
  * uses, so the two cannot drift apart again.
  */
 export async function getPortfolioAnalysis(includeStable = true) {
-  const { items } = await getPortfolioItems();
+  const { items, baseCurrency } = await getPortfolioItems();
 
   /**
    * A portfolio item carries value, cost and P&L directly; the analysis
@@ -707,6 +707,8 @@ export async function getPortfolioAnalysis(includeStable = true) {
   const adjustedTotals = { ...portfolioTotals(enriched), totalPnL: summary.pnl, totalCost: summary.cost, totalPnLPercent: summary.pnlPercent };
 
   return {
+    /** Every amount below is in this currency: the base, which need not be euros. */
+    currency: baseCurrency,
     totals: adjustedTotals,
     holdings: enriched,
     byAccount: breakdownBy(enriched, (h) => h.accountName, "No account"),

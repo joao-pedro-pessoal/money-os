@@ -122,7 +122,7 @@ function ExposureCard({ title, data, currency }: { title: string; data: Exposure
         <p className="text-sm text-[var(--muted)]">Nothing to show yet.</p>
       ) : (
         <>
-          <DonutChart data={data.slices.map((s) => ({ name: s.name, value: s.value }))} />
+          <DonutChart data={data.slices.map((s) => ({ name: s.name, value: s.value }))} currency={currency} />
           <div className="space-y-2 mt-2">
             {data.slices.map((s) => (
               <div key={s.name}>

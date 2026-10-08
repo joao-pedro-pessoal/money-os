@@ -18,7 +18,7 @@ function NotMeasured() {
   return <span className="text-[var(--muted)]">—</span>;
 }
 
-export default async function ContributionBreakdown({ currency }: { currency: string }) {
+export default async function ContributionBreakdown() {
   const b = await getContributionBreakdown();
 
   if (b === null) {
@@ -36,6 +36,9 @@ export default async function ContributionBreakdown({ currency }: { currency: st
       </div>
     );
   }
+
+  // The currency the action converted to, not one the page assumes.
+  const currency = b.currency;
 
   /**
    * The figures, in the base currency, or nothing.

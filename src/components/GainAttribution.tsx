@@ -89,7 +89,7 @@ export default async function GainAttribution() {
       )}
       {unconverted > 0 && (
         <p className="text-[10px] text-[var(--muted)] mt-2">
-          {unconverted} realised figures left out: no exchange rate.
+          {unconverted} {unconverted === 1 ? "movement" : "movements"} left out of what was realised: no exchange rate.
         </p>
       )}
       {banked !== null && (

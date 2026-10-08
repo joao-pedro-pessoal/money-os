@@ -13,7 +13,18 @@ public final class WidgetCacheTest {
         check("login", false);
         check("address", false);
         check("offline", true);
-        System.out.println("Widget cache: 3 regression cases passed");
+        session(null, false, "offline");
+        session(null, true, "login");
+        session("", true, "login");
+        session("money_os_session=x", true, null);
+        System.out.println("Widget cache: 3 regression cases passed; session check: 4 cases passed");
+    }
+
+    /** An unreadable cookie store must never be read as a refused session. */
+    private static void session(String cookie, boolean readable, String expected) {
+        String problem = Site.cookieProblem(cookie, readable);
+        if (expected == null ? problem != null : !expected.equals(problem))
+            throw new AssertionError("cookieProblem(" + cookie + ", " + readable + ") = " + problem);
     }
 
     private static void check(String reason, boolean retained) {
