@@ -77,6 +77,17 @@ describe('a trade split into several fills is classified whole', () => {
     expect(rows.find((r) => r.id === 'c3')!.classification).toBeNull();
   });
 
+  it('does not resolve conflicting closing fills by borrowing an opening classification', () => {
+    const rows = shareTradeClassification([
+      fill('o', '2026-09-01T10:00:00.000Z', 'Open Short', 3, null, { classification: sato }),
+      fill('a', '2026-09-02T10:00:00.000Z', 'Close Short', 1, 2, { classification: sato }),
+      fill('b', '2026-09-02T10:00:00.000Z', 'Close Short', 1, 3, { classification: other }),
+      fill('c', '2026-09-02T10:00:00.000Z', 'Close Short', 1, 7),
+    ]);
+    expect(rows[3].classification).toBeNull();
+    expect(playlistRealised(rows, 'p-sato')).toBe(2);
+  });
+
   it('keeps other instruments, accounts and moments apart', () => {
     const rows = shareTradeClassification([
       fill('c1', '2026-08-26T15:49:24.000Z', 'Close Short', 1, 1, { classification: sato }),

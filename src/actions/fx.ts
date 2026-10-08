@@ -15,12 +15,17 @@ import { fetchRates, DEFAULT_BASE_CURRENCY, type RateMap } from "@/lib/fx";
 export async function getRates(): Promise<RateMap> {
   const rows = await db.select().from(exchangeRates);
   const rates: RateMap = { [DEFAULT_BASE_CURRENCY]: 1 };
-  for (const r of rows) rates[r.quote] = Number(r.rate);
+  for (const r of rows) {
+    if (r.quote !== DEFAULT_BASE_CURRENCY) rates[r.quote] = Number(r.rate);
+  }
   return rates;
 }
 
 export async function listRates() {
-  return db.select().from(exchangeRates);
+  const rows = await db.select().from(exchangeRates);
+  return rows.map((row) => row.quote === DEFAULT_BASE_CURRENCY
+    ? { ...row, rate: "1", manual: false, source: "reference" }
+    : row);
 }
 
 /**
@@ -71,6 +76,9 @@ export async function setManualRate(formData: FormData) {
   const rate = Number(formData.get("rate") ?? "0");
   if (!quote || !Number.isFinite(rate) || rate <= 0) {
     throw new Error("Enter a currency and a rate greater than zero");
+  }
+  if (quote === DEFAULT_BASE_CURRENCY) {
+    throw new Error(`The ${DEFAULT_BASE_CURRENCY} reference rate is always 1`);
   }
 
   const [existing] = await db.select().from(exchangeRates).where(eq(exchangeRates.quote, quote));

@@ -72,6 +72,9 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 | B21 | Parágrafo dos widgets em posições diferentes nas duas línguas | **Corrigido (08/10/2026).** Na política de privacidade o parágrafo novo vinha depois do dos cookies em inglês e antes em português. Teste: os parágrafos com título ficam na mesma posição nas duas línguas. |
 | B22 | Criar uma conta com o saldo em branco dava erro | **Corrigido (08/10/2026).** `createAccount` mandava `""` para uma coluna numérica e a base de dados recusava (erro 500, conta não criada) — o primeiro passo de qualquer testador. O campo passa a ser obrigatório ("0 if empty") e `manualBalance` aceita zero, negativos e vírgula, recusando o vazio com uma frase (testado). Visto no site local. |
 | B23 | Conta nova sem taxas de câmbio | **Corrigido (08/10/2026).** As taxas são de cada pessoa e uma conta nova começava sem nenhuma: posições ou contas fora do euro ficavam fora de todos os totais (Analysis dizia "Nothing to analyse yet") até abrir Connections, a página das taxas, ou correr a sincronização do PC de casa. Agora a criação de conta e cada entrada sem taxas pedem-nas (no máximo 5 s de espera). Visto no site local: conta nova com 29 taxas logo após a criação. |
+| B24 | Conflito entre playlists ignorado ao consultar a abertura | **Corrigido localmente (08/10/2026).** `src/lib/trading/sharedClassification.ts:65`: três fills fecham a mesma ordem; dois têm playlists diferentes, mas o terceiro herdava a playlist da abertura. Exemplo sintético: ganhos 2 e 3 classificados em listas distintas e 7 sem classificação faziam a primeira lista contar 9. Preservar a ambiguidade do fecho e deixar o terceiro fill sem atribuição; teste reproduziu a falha. |
+| B25 | Taxa manual do euro altera todos os câmbios com EUR | **Corrigido localmente (08/10/2026).** `src/actions/fx.ts:18` e `:81`: o formulário aceitava EUR=2 e `getRates` substituía a referência EUR=1. Com USD=1,25, 125 USD passavam a valer 200 EUR em vez de 100. Recusar alterações à referência e ignorar valores antigos incorretos ao ler/calcular/mostrar taxas; testes das duas conversões e da recusa, sem alterar dados reais. |
+| B26 | Formulário de câmbio pede taxas na moeda errada | **Corrigido localmente (08/10/2026).** `src/app/(app)/settings/rates/page.tsx:16`: ao escolher USD para os totais, tabela e formulário diziam “per 1 USD”, mas continuavam a guardar e interpretar taxas por EUR. Uma taxa introduzida conforme essa indicação distorcia os totais. Indicar EUR na tabela e no campo, explicando que é independente da moeda dos totais. Teste de renderização com preferência USD reproduziu a falha. |
 
 Revisão de 07/10/2026, secção 3 do `CONTINUAR_NO_CODEX.md`: auditoria executada
 na conta do dono, só a ler. **A02 reaberto:** continua a existir um movimento
@@ -100,6 +103,12 @@ registados de F18/B01 mantêm-se. As alterações de componentes foram revistas
 quanto a fronteira servidor/cliente, acessibilidade e preservação dos valores.
 Sem push nem publicação. A02/A03 dependem da reconciliação dos dados pelo
 utilizador; as correções de código B10–B17 ficam apenas neste branch.
+
+**Validação B24–B26 (08/10/2026):** os três erros foram reproduzidos antes
+das correções, com dados sintéticos. 2861 testes aprovados (5 novos), TypeScript
+e build aprovados; lint sem erros e com os mesmos 3 avisos antigos Bybit.
+Nenhum dado real alterado. Verificação do formulário por renderização automática,
+sem teste interativo no navegador. Commit local no `f19-play-store`, sem push.
 
 ## 3. Funcionalidades por desenvolver
 

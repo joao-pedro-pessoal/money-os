@@ -39,6 +39,14 @@ export function shareTradeClassification<T extends TradeHistoryRow>(rows: readon
 
   /** Own, or agreed by the rest of the order: the first stage. */
   const fromOrder = new Map<string, { classification: Classification; from: string }>();
+  const conflicted = new Set<string>();
+  for (const [key, group] of orders) {
+    const signatures = new Set(group.flatMap((row) => {
+      const c = own.get(row.id);
+      return c ? [signature(c)] : [];
+    }));
+    if (signatures.size > 1) conflicted.add(key);
+  }
   for (const row of rows) {
     const mine = own.get(row.id);
     if (mine) {
@@ -53,7 +61,8 @@ export function shareTradeClassification<T extends TradeHistoryRow>(rows: readon
   const openings = matchTradeOpenings(rows);
   const settled = new Map(fromOrder);
   for (const row of rows) {
-    if (settled.has(row.id)) continue;
+    // An explicit disagreement is not missing information that an opening can fill.
+    if (settled.has(row.id) || conflicted.has(orderKey(row))) continue;
     const match = openings.get(row.id);
     if (!match || match.openings.length === 0) continue;
     const opened = match.openings.map((o) => fromOrder.get(o.id)).filter((c) => c !== undefined);

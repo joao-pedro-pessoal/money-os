@@ -1,6 +1,7 @@
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listRates, refreshRatesAction, setManualRate, unpinRate } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
+import { DEFAULT_BASE_CURRENCY } from "@/lib/fx";
 import SettingRow from "@/components/SettingRow";
 
 export default async function SettingsRatesPage() {
@@ -12,7 +13,7 @@ export default async function SettingsRatesPage() {
         title="Exchange rates"
         description={
           <>
-            Rates are per 1 {baseCurrency} and refresh automatically. A rate you set by hand is kept and
+            Rates are per 1 {DEFAULT_BASE_CURRENCY}, even when totals are shown in {baseCurrency}, and refresh automatically. A rate you set by hand is kept and
             never overwritten by a refresh — an automatic update must not undo a deliberate choice.
           </>
         }
@@ -36,7 +37,7 @@ export default async function SettingsRatesPage() {
               <thead>
                 <tr>
                   <th>Currency</th>
-                  <th className="text-right">Per 1 {baseCurrency}</th>
+                  <th className="text-right">Per 1 {DEFAULT_BASE_CURRENCY}</th>
                   <th>Source</th>
                   <th>Updated</th>
                   <th></th>
@@ -79,7 +80,7 @@ export default async function SettingsRatesPage() {
 
       <SettingRow
         title="Pin a rate by hand"
-        description="Useful for a currency the provider doesn't cover, or to hold a rate steady while checking figures."
+        description={`Useful for a currency the provider doesn't cover, or to hold a rate steady while checking figures. ${DEFAULT_BASE_CURRENCY} is the reference and always equals 1.`}
         stacked
       >
         <form action={setManualRate} className="flex gap-2 max-w-md">
@@ -88,7 +89,7 @@ export default async function SettingsRatesPage() {
             name="rate"
             type="number"
             step="0.0001"
-            placeholder={`Units per 1 ${baseCurrency}`}
+            placeholder={`Units per 1 ${DEFAULT_BASE_CURRENCY}`}
             className="input"
             required
           />
