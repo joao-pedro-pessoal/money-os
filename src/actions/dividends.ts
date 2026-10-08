@@ -30,6 +30,8 @@ import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 import { getRealisedTrades } from "./investmentActivity";
+import { getPortfolioItems } from "./dashboard";
+import { portfolioSummary } from "@/lib/portfolio/positionView";
 
 /**
  * Everything realised, converted before anything is added.
@@ -362,42 +364,29 @@ export async function getRealisedTotal() {
  * Where the portfolio's gains and losses actually came from.
  *
  * Four sources, kept apart because they behave differently — see
- * lib/portfolio/attribution. The realised trade figure is taken from whatever
- * the platforms report and is null when none of them does; it is never
- * reconstructed here, because a number we derived would disagree with the
- * broker's own and there would be no way to tell which was right.
+ * lib/portfolio/attribution. Both halves use the same arbiters as Investments:
+ * getRealisedTotal for money received and portfolioSummary for open gains.
  */
 export async function getGainAttribution() {
-  const [realised, openPositions, connections, fx] = await Promise.all([
+  const [realised, portfolio] = await Promise.all([
     getRealisedTotal(),
-    db.select().from(positions),
-    db.select().from(accountConnections),
-    converter(),
+    getPortfolioItems(),
   ]);
-
-  // A position's P&L is in its platform's currency, not the app's. Summing a
-  // euro position's gain onto a dollar one's was the same bug as below.
-  const currencyOf = new Map(connections.map((c) => [c.id, c.reportingCurrency ?? "USD"]));
-  const unrealised = fx.sum(
-    openPositions
-      .filter((p) => p.unrealizedPnl !== null)
-      .map((p) => ({
-        amount: Number(p.unrealizedPnl),
-        currency: currencyOf.get(p.connectionId) ?? "USD",
-      }))
-  );
+  const summary = portfolioSummary(portfolio.items);
 
   // The same realised figures as the Realized P&L cards: one answer, three screens.
   // Manual sales are closed trades too, recorded by hand.
   return {
     attribution: attribute({
-      unrealised,
+      unrealised: summary.pnl,
       realisedTrades: realised.tradesUnknown && realised.manualSales === 0 ? null : (realised.trades ?? 0) + realised.manualSales,
       dividends: realised.dividends,
       interest: realised.interest,
     }),
     /** Everything in the attribution is in this currency. */
-    currency: fx.base,
+    currency: portfolio.baseCurrency,
+    costUnknown: summary.costUnknown,
+    unconverted: realised.unconverted,
     /** Platforms that said nothing about closed trades, so the interface can name what's missing. */
     silentPlatforms: realised.silentPlatforms,
   };

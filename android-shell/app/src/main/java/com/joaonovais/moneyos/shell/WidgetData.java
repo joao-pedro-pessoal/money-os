@@ -190,10 +190,19 @@ final class WidgetData {
                     .remove(KEY_PROBLEM)
                     .apply();
         } catch (Site.Unavailable e) {
-            prefs.edit().putString(KEY_PROBLEM, e.reason).apply();
+            recordProblem(prefs, e.reason);
         } catch (JSONException | RuntimeException e) {
-            prefs.edit().putString(KEY_PROBLEM, PROBLEM_OFFLINE).apply();
+            recordProblem(prefs, PROBLEM_OFFLINE);
         }
+    }
+
+    /** Offline readings may stay; a refused session no longer owns a cache. */
+    static void recordProblem(SharedPreferences prefs, String reason) {
+        SharedPreferences.Editor edit = prefs.edit().putString(KEY_PROBLEM, reason);
+        if (PROBLEM_LOGIN.equals(reason) || PROBLEM_NO_ADDRESS.equals(reason)) {
+            edit.remove(KEY_JSON).remove(KEY_READ_AT);
+        }
+        edit.apply();
     }
 
     /** As the site writes money: pt-PT, and dollars as "$" rather than "US$". */

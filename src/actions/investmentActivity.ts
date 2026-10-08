@@ -304,6 +304,7 @@ const loadTradeRows = cache(async () => {
   };
 
   let unconvertible = 0;
+  let unconvertibleTrades = 0;
   /** The days of the rows left out, so a report over some days can count only its own. */
   const unconvertibleDates: string[] = [];
   /**
@@ -320,6 +321,7 @@ const loadTradeRows = cache(async () => {
     // No rate means leave it out and say so, never count it as zero.
     if (amount === null) {
       unconvertible += 1;
+      if (isInstrumentTrade(row)) unconvertibleTrades += 1;
       unconvertibleDates.push(new Date(row.date).toISOString().slice(0, 10));
       continue;
     }
@@ -371,13 +373,14 @@ const loadTradeRows = cache(async () => {
     rows: enriched,
     base,
     unconvertible,
+    unconvertibleTrades,
     unconvertibleDates,
     approximate: rows.some((r) => r.currency !== base),
   };
 });
 
 export async function getTradeAnalysis() {
-  const [{ rows: enriched, base, unconvertible, unconvertibleDates, approximate }, portfolio] = await Promise.all([
+  const [{ rows: enriched, base, unconvertible, unconvertibleTrades, unconvertibleDates, approximate }, portfolio] = await Promise.all([
     loadTradeRows(),
     getPortfolioItems(),
   ]);
@@ -389,6 +392,7 @@ export async function getTradeAnalysis() {
     baseCurrency: base,
     /** Rows dropped because nothing could convert them. Never silently zero. */
     unconvertible,
+    unconvertibleTrades,
     unconvertibleDates,
     /** True while any row needed a rate that isn't the rate of its own day. */
     approximate,
@@ -438,7 +442,7 @@ export async function getTradeAnalysis() {
  * own total where it has none.
  */
 export async function getRealisedTrades() {
-  const [{ rows, base }, connections, rates] = await Promise.all([
+  const [{ rows, base, unconvertibleTrades }, connections, rates] = await Promise.all([
     loadTradeRows(),
     db.select().from(accountConnections),
     getRates(),
@@ -446,7 +450,7 @@ export async function getRealisedTrades() {
   const fills = rows
     .filter(isRealisedTrade)
     .map((r) => ({ accountId: r.accountId ?? null, realized: r.realizedPnl!, derived: r.pnlDerived }));
-  let unconverted = 0;
+  let unconverted = unconvertibleTrades;
   const venues = connections.map((c) => {
     if (c.lastRealizedPnl === null) return { accountId: c.accountId, platform: c.platform, realized: null };
     // Each platform states its total in its own currency.

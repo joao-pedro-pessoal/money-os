@@ -28,7 +28,7 @@ export const SOURCES = [
     value: "realisedTrades",
     label: "Realised on sales",
     realised: true,
-    help: "Profit and loss on positions you actually closed, as the platform reports it.",
+    help: "Profit and loss on closed trades: reported by platforms, derived from known purchases, or recorded as manual sales.",
   },
   {
     value: "dividends",

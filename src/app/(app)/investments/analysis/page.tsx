@@ -268,7 +268,7 @@ export default async function PortfolioAnalysisPage({
 
         {/* Independent of the risk analysis above: these read the imported
             statement and the account history, not the tagged positions. */}
-        <GainAttribution currency="EUR" />
+        <GainAttribution />
         <ContributionBreakdown currency="EUR" />
 
         {statement && (
@@ -569,7 +569,7 @@ export default async function PortfolioAnalysisPage({
       />
       </Section>}
 
-      {windowPreferences["gain-attribution"] !== "hidden" && <Section title="Where the gains came from" defaultOpen={windowPreferences["gain-attribution"] === "visible"}><GainAttribution currency="EUR" /></Section>}
+      {windowPreferences["gain-attribution"] !== "hidden" && <Section title="Where the gains came from" defaultOpen={windowPreferences["gain-attribution"] === "visible"}><GainAttribution /></Section>}
       {windowPreferences.contributions !== "hidden" && <Section title="Money added versus money made" defaultOpen={windowPreferences.contributions === "visible"}><ContributionBreakdown currency="EUR" /></Section>}
 
       {/* ---- Staking / yield ---- */}

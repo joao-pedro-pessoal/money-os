@@ -47,7 +47,7 @@ const TRADE_TYPES = new Set(["BUY", "SELL"]);
  * between "a trade row" and "a position worth measuring" is real, and the
  * narrower one is built on this.
  */
-export function isTrade(row: TradeRow): boolean {
+export function isTrade(row: Pick<TradeRow, "type">): boolean {
   return TRADE_TYPES.has(row.type.toUpperCase());
 }
 
@@ -73,7 +73,7 @@ export function isCurrencyConversion(symbol: string | null | undefined): boolean
  * conversions outnumbered every real position, and each of the six figures in
  * this file was counting them.
  */
-export function isInstrumentTrade(row: TradeRow): boolean {
+export function isInstrumentTrade(row: Pick<TradeRow, "type" | "symbol">): boolean {
   return isTrade(row) && !isCurrencyConversion(row.symbol);
 }
 

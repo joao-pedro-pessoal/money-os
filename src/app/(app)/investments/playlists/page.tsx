@@ -24,6 +24,11 @@ export default async function PlaylistsPage() {
       </div>
 
       <div className="card p-4">
+        {lists.some(p => p.tradesMayBeIncomplete) && (
+          <p className="text-xs text-[var(--muted)] mb-3">
+            Some trades have no exchange rate and are left out. Playlist results may be incomplete.
+          </p>
+        )}
         {lists.length === 0 ? (
           <div className="text-sm text-[var(--muted)] py-8 text-center">
             No playlists yet. Create one below, then pick it when adding or editing a position.
@@ -70,6 +75,7 @@ export default async function PlaylistsPage() {
                     </td>
                     <td className={`text-right ${p.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                       <Money value={p.realized} currency={p.currency} />
+                      {p.unconverted > 0 && <div className="text-xs text-[var(--muted)]">{p.unconverted} manual sales left out: no exchange rate</div>}
                     </td>
                     <td className="text-right">
                       <form action={deletePlaylist}>

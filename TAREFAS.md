@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **6 de outubro de 2026**.
+Atualizado em **7 de outubro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -28,8 +28,9 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
   Passagem de trabalho: [CONTINUAR_NO_CODEX.md](CONTINUAR_NO_CODEX.md).
 - **Play Store, fase 1:** os passos do utilizador estão em
   [PLAY_STORE.md](docs/PLAY_STORE.md).
-- **Próxima prioridade de manutenção:** A01–A03 concluídos a 17/09. Seguem
-  A04–A08 e os ecrãs do telemóvel que ainda forem reportados.
+- **Próxima prioridade de manutenção:** A01 concluído a 17/09; A02/A03
+  reabertos pela auditoria de 07/10. Seguem A04–A08 e os ecrãs do telemóvel
+  que ainda forem reportados.
 - **Evolução futura, quando pedida:** usar a mesma experiência com dados locais,
   offline e sincronização entre PC e telemóvel. A interface separada de `mobile/`
   não é o modelo visual escolhido; o seu armazenamento, conectores e cofre podem
@@ -41,8 +42,8 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 | ID | Tarefa | Estado e critério de conclusão |
 | --- | --- | --- |
 | A01 | Validar a app Android num telemóvel real | **Concluído pelo utilizador (17/09/2026).** Critério original: Por validar: abrir, autenticar, importar ficheiro, exportar para Transferências, voltar, teclado e ecrã sem ligação. Confirmar também gráficos por toque, privacidade e modos Simple/Complex. |
-| A02 | Reconciliar a Interactive Brokers | **Concluído pelo utilizador (17/09/2026).** Critério original: A auditoria de 15/09 voltou a encontrar um movimento de 100 EUR numa conta USD, saldo guardado de 134,24 USD e leitura do conector de 34,24 USD. Investigar a origem e preparar a correção antes de modificar dados. Concluir quando moeda, saldo e dinheiro livre estiverem reconciliados. A nota antiga de “resolvido” não descreve os dados atuais. |
-| A03 | Atualizar saldo e valor investido da Trade Republic | **Concluído pelo utilizador (17/09/2026).** Critério original: Depende dos valores atuais da corretora. A última auditoria encontrou 450,83 EUR declarados como investidos e 456,09 EUR em holdings: diferença de 5,26 EUR. Reconciliar sem somar investimentos já incluídos no saldo. |
+| A02 | Reconciliar a Interactive Brokers | **Reaberto pela auditoria de 07/10/2026:** moeda do movimento e saldo guardado continuam divergentes. Só diagnosticado; depende de reconciliação pelo utilizador. Histórico: concluído pelo utilizador a 17/09/2026. Critério original: A auditoria de 15/09 voltou a encontrar um movimento de 100 EUR numa conta USD, saldo guardado de 134,24 USD e leitura do conector de 34,24 USD. Investigar a origem e preparar a correção antes de modificar dados. Concluir quando moeda, saldo e dinheiro livre estiverem reconciliados. A nota antiga de “resolvido” não descreve os dados atuais. |
+| A03 | Atualizar saldo e valor investido da Trade Republic | **Reaberto pela auditoria de 07/10/2026:** valor investido declarado e holdings continuam divergentes. Não alterados. Histórico: concluído pelo utilizador a 17/09/2026. Critério original: Depende dos valores atuais da corretora. A última auditoria encontrou 450,83 EUR declarados como investidos e 456,09 EUR em holdings: diferença de 5,26 EUR. Reconciliar sem somar investimentos já incluídos no saldo. |
 | A04 | Completar a validação funcional por área | Existem testes e verificações parciais. Testar receitas/despesas, transferências, subscrições, objetivos e orçamentos: criar, editar, cancelar, repetir pedidos, desfazer e persistência. Incluir várias moedas, falhas de rede e estados preenchidos. |
 | A05 | Corrigir totais de extratos com várias moedas | **Feito a 21/09/2026** (H26 na secção 5). Critério original: custos, juros, dividendos e taxas somados em bruto em `getStatementBreakdown`; converter antes de totalizar e nomear o que não pode ser convertido. |
 | A06 | Unificar as preferências de painéis | Definir a precedência entre preferências no servidor e escolhas no browser, incluindo Simple/Complex. Preservar escolhas guardadas e verificar recarregamento e mudança de dispositivo. |
@@ -57,6 +58,42 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 | B07 | Firefox no computador recebe instruções de instalação impossíveis | **Corrigido (06/10/2026).** Orienta para Chrome/Edge; Firefox Android mantém a indicação do menu. Testes separados para computador e Android. |
 | B08 | CSV não diz porque falta "Change not explained by deposits" | **Corrigido (06/10/2026).** A linha inclui `unexplainedWithheld`, mantendo o valor indisponível vazio. Testes com depósitos completos e incompletos. |
 | B09 | Traduções das abas presas ao texto inglês sem teste que o apanhe | **Corrigido (06/10/2026).** Teste percorre as listas reais das abas, grupos do menu e pesquisa, agora partilhadas em `lib/navigation.ts`. Uma alteração sem tradução falha o teste. |
+| B10 | Playlist partilhada entre posições diferentes | **Corrigido localmente (07/10/2026).** `src/lib/trading/sharedClassification.ts:71`: a chave de agrupamento ignora `brokerPositionId`. Dois resumos de posições distintas do mesmo ativo fechados no mesmo segundo herdam a mesma playlist. Exemplo sintético: resultados 3 e 7 passam a contar 10 na playlist da primeira posição. Incluir o identificador da posição; teste reproduziu a falha. |
+| B11 | Lucro parcial apresentado como resultado da venda inteira | **Corrigido localmente (07/10/2026).** `src/lib/trading/realised.ts:115`: com compra conhecida de 2 unidades por 20 e venda de 5 por 100, apresenta lucro 20, apesar de faltar o custo de 3 unidades. Consumir as unidades conhecidas mas deixar o resultado indisponível quando não se conhece o custo da venda inteira. Teste reproduziu a falha; tolerar apenas resíduos de ponto flutuante. |
+| B12 | Realized P&L omite movimentos sem câmbio sem os contar no aviso | **Corrigido localmente (07/10/2026).** `src/actions/investmentActivity.ts:442`: `loadTradeRows` conta movimentos excluídos, mas `getRealisedTrades` só devolve o número de totais de plataformas sem conversão. Exemplo: venda em moeda sem taxa desaparece e `unconverted` continua 0. Propagar a contagem dos trades excluídos até ao resumo. |
+| B13 | Código de recuperação aceite duas vezes em simultâneo | **Corrigido localmente (07/10/2026).** `src/actions/auth.ts:301`: dois pedidos podem ler o mesmo código válido antes do hash lento, substituir a palavra-passe e ambos receber sessão e novo código; o primeiro novo código deixa de funcionar. A atualização deve exigir que o código guardado ainda seja o apresentado, e só emitir sessão se uma linha tiver sido atualizada. Validar concorrência com dados simulados, sem escrever na produção. |
+| B14 | Widgets conservam valores depois de o servidor recusar a sessão | **Corrigido localmente (07/10/2026).** `android-shell/app/src/main/java/com/joaonovais/moneyos/shell/WidgetData.java:194`: uma resposta de login guarda apenas o erro e mantém `widget_json`; os widgets e o botão de património continuam a ler os valores antigos. Apagar a cópia quando a sessão é recusada, conservando-a apenas nas falhas de ligação; retirar também notificações financeiras antigas quando a sessão é recusada. |
+| B15 | Playlists escondem vendas manuais sem câmbio | **Corrigido localmente (07/10/2026).** `src/actions/playlists.ts:31` somava `toBase(...) ?? 0`: uma venda com ganho 5 em moeda sem taxa aparecia como 0, sem aviso. Usar `sumInBase` e indicar as vendas excluídas na própria linha; aviso geral quando o histórico de trades tem moedas sem taxa. Teste da ação com moedas diferentes reproduziu a falha. |
+| B16 | Atribuição de ganhos exclui holdings manuais | **Corrigido localmente (07/10/2026).** `src/actions/dividends.ts:370` lia apenas `positions` para o não realizado. Exemplo sintético: holding manual com ganho 20, sem posições sincronizadas, mostrava 0 em “Where the gains came from”. Confirmada divergência com a conta do dono, só a ler. Usar `getPortfolioItems` e `portfolioSummary`, com a mesma escolha de fontes e aviso de custo desconhecido; teste da ação. |
+| B17 | Atribuição de ganhos mostra sempre euros | **Corrigido localmente (07/10/2026).** `src/app/(app)/investments/analysis/page.tsx:271` e `:572` passavam EUR ao painel, apesar de a ação converter para a moeda escolhida. Exemplo: escolher GBP apresenta o resultado em libras com símbolo de euros. O painel passa a usar a moeda devolvida pela ação, sem parâmetro independente; teste de renderização com GBP. |
+
+Revisão de 07/10/2026, secção 3 do `CONTINUAR_NO_CODEX.md`: auditoria executada
+na conta do dono, só a ler. **A02 reaberto:** continua a existir um movimento
+cuja moeda difere da conta e um saldo guardado diferente do conector.
+**A03 reaberto:** o investimento declarado continua diferente dos holdings.
+A08 mantém-se. Nenhum dado real foi alterado; os novos valores privados não são
+copiados para este documento público.
+
+**Validação B10–B17:** 2846 testes do site aprovados (10 novos), TypeScript e
+build aprovados, lint sem erros (os 3 avisos antigos dos testes Bybit).
+`db:generate`: sem alterações de esquema. Regressões B10–B13, B15 e B16
+reproduzidas antes da correção; B17 testado por renderização com GBP.
+Comparação de leitura na conta do dono: a atribuição não realizada não coincidia
+com `portfolioSummary` antes de B16 e coincide depois, na mesma moeda.
+Android: `assembleHomeDebug` e `assembleStoreDebug` aprovados; 3 casos de cache
+(sessão recusada, sem endereço, sem ligação) aprovados em cada versão pelo
+comando `C:\Users\joao2\Projects\money-os-f17\android-shell\tests\run-cache-tests.cmd`.
+O teste Android usa preferências simuladas e o código compilado da app; não
+substitui confirmar widgets/notificações num telemóvel. Não foi feita validação
+visual no navegador nem instalação num dispositivo nesta revisão.
+
+Também revistos os períodos, meses parciais, conversões e PDF dos relatórios,
+as fronteiras de tradução e preferências de língua, e os caminhos públicos e
+retorno após login: sem novos erros confirmados nessas partes; os limites já
+registados de F18/B01 mantêm-se. As alterações de componentes foram revistas
+quanto a fronteira servidor/cliente, acessibilidade e preservação dos valores.
+Sem push nem publicação. A02/A03 dependem da reconciliação dos dados pelo
+utilizador; as correções de código B10–B17 ficam apenas neste branch.
 
 ## 3. Funcionalidades por desenvolver
 

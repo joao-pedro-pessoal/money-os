@@ -109,7 +109,11 @@ export function deriveRealisedPnl<T extends TradeRow>(
     /** Proceeds are the positive side of a sale. */
     const proceeds = Math.abs(row.amount) * (sold / quantity);
 
-    derived.set(row, round2(proceeds - costOfSold));
+    // Missing earlier purchases leave the *whole* sale's result unknown.
+    // Consume the known shares below, but never label their partial gain as
+    // the gain on the full execution. Allow only relative floating-point dust.
+    const tolerance = Number.EPSILON * 8 * Math.max(quantity, position.quantity);
+    if (quantity - sold <= tolerance) derived.set(row, round2(proceeds - costOfSold));
 
     position.quantity -= sold;
     position.cost -= costOfSold;

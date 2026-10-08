@@ -10,8 +10,8 @@ import { PLATFORM_LABELS } from "@/lib/connectors/constants";
  * gain can evaporate tomorrow; a dividend is already in the bank. This splits
  * them and says which half is actually yours.
  */
-export default async function GainAttribution({ currency }: { currency: string }) {
-  const { attribution: a, silentPlatforms } = await getGainAttribution();
+export default async function GainAttribution() {
+  const { attribution: a, silentPlatforms, currency, costUnknown, unconverted } = await getGainAttribution();
   const banked = realisedShare(a);
 
   const colour = (amount: number) =>
@@ -82,6 +82,16 @@ export default async function GainAttribution({ currency }: { currency: string }
         </div>
       </div>
 
+      {costUnknown > 0 && (
+        <p className="text-[10px] text-[var(--muted)] mt-2">
+          Unrealised gains leave out <Money value={costUnknown} currency={currency} /> whose cost is unknown.
+        </p>
+      )}
+      {unconverted > 0 && (
+        <p className="text-[10px] text-[var(--muted)] mt-2">
+          {unconverted} realised figures left out: no exchange rate.
+        </p>
+      )}
       {banked !== null && (
         <p className="text-[10px] text-[var(--muted)] mt-3">
           {banked}% of everything that has moved is money you actually hold.
@@ -93,8 +103,7 @@ export default async function GainAttribution({ currency }: { currency: string }
           No connected platform reports realised profit on closed trades
           {silentPlatforms.length > 0 &&
             ` (${silentPlatforms.map((p) => PLATFORM_LABELS[p] ?? p).join(", ")})`}
-          . It isn&apos;t computed here: working it out needs a cost-basis method, and the figure
-          would quietly disagree with your broker&apos;s.
+          . No result could be measured from the available trade history either.
         </p>
       )}
     </div>

@@ -83,6 +83,11 @@ final class Alerts {
     private static void stop(Context context) {
         JobScheduler scheduler = context.getSystemService(JobScheduler.class);
         if (scheduler != null) scheduler.cancel(JOB_ID);
+        clearNotifications(context);
+    }
+
+    /** A refused session cannot leave its financial notifications on screen. */
+    private static void clearNotifications(Context context) {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         if (manager != null) {
             for (StatusBarNotification shown : manager.getActiveNotifications()) {
@@ -106,8 +111,13 @@ final class Alerts {
         JSONArray alerts;
         try {
             alerts = new JSONObject(Site.get(context, "/api/alerts")).getJSONArray("alerts");
-        } catch (Site.Unavailable | JSONException | RuntimeException e) {
-            // Unreachable or logged out: say nothing, and take nothing down on a guess.
+        } catch (Site.Unavailable e) {
+            if (Site.PROBLEM_LOGIN.equals(e.reason) || Site.PROBLEM_NO_ADDRESS.equals(e.reason)) {
+                clearNotifications(context);
+            }
+            return;
+        } catch (JSONException | RuntimeException e) {
+            // An unreachable site is not evidence of an ended session.
             return;
         }
 

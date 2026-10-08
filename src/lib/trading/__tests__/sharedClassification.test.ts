@@ -33,6 +33,17 @@ const playlistRealised = (rows: TradeHistoryRow[], playlistId: string) =>
     .reduce((s, r) => s + r.realizedPnl!, 0) * 100) / 100;
 
 describe('a trade split into several fills is classified whole', () => {
+  it('does not merge different broker positions closed in the same second', () => {
+    const rows = shareTradeClassification([
+      fill('a', '2026-09-01T10:00:00.000Z', 'Close Short', 1, 3,
+        { brokerPositionId: 'position-a', brokerPositionSummary: true, classification: sato }),
+      fill('b', '2026-09-01T10:00:00.000Z', 'Close Short', 1, 7,
+        { brokerPositionId: 'position-b', brokerPositionSummary: true }),
+    ]);
+    expect(rows[1].classification).toBeNull();
+    expect(playlistRealised(rows, 'p-sato')).toBe(3);
+  });
+
   it('counts the whole result in the playlist, not the one fill that was clicked', () => {
     expect(playlistRealised(zro(), 'p-sato')).toBe(1.91);
     expect(playlistRealised(shareTradeClassification(zro()), 'p-sato')).toBe(5.68);

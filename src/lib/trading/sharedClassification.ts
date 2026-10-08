@@ -72,6 +72,8 @@ function orderKey(row: TradeHistoryRow): string {
   return JSON.stringify([
     row.accountId ?? '', row.connectionId ?? '', row.currency, row.symbol ?? '', row.type,
     row.description ?? '', row.date.slice(0, 19),
+    // A broker lifecycle is stronger evidence than the same closing second.
+    row.brokerPositionId?.trim() || null,
   ]);
 }
 

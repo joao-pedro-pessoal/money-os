@@ -9,7 +9,7 @@ import {
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { toBase } from "@/lib/fx";
+import { sumInBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 import { getPortfolioItems } from "./dashboard";
@@ -28,8 +28,9 @@ export async function listPlaylistsWithTotals() {
     const summary = portfolioSummary(items);
     const closed = trades.rows.filter(t => isRealisedTrade(t) && t.classification?.playlistId === p.id);
     // Manual sales are recorded on holdings, separately from imported executions.
-    const manualRealized = manual.filter(h => h.playlistId === p.id).reduce((sum, h) =>
-      sum + (toBase(Number(h.realizedPnl ?? 0), h.currency, rates, base) ?? 0), 0);
+    const manualRealized = sumInBase(manual
+      .filter(h => h.playlistId === p.id && h.realizedPnl !== null && Number(h.realizedPnl) !== 0)
+      .map(h => ({ amount: Number(h.realizedPnl), currency: h.currency })), rates, base);
     // The positions themselves, largest first, so a playlist can be opened to
     // see what makes up its totals — the same items the totals are built from.
     const positions = [...items].sort((a, b) => b.value - a.value).map(i => ({
@@ -39,7 +40,10 @@ export async function listPlaylistsWithTotals() {
     }));
     return { ...p, positions, count: items.length, value: summary.held, cost: summary.cost,
       pnl: summary.pnl, pnlPercent: summary.pnlPercent,
-      realized: Math.round((manualRealized + closed.reduce((sum, t) => sum + t.realizedPnl!, 0)) * 100) / 100,
+      realized: Math.round((manualRealized.total + closed.reduce((sum, t) => sum + t.realizedPnl!, 0)) * 100) / 100,
+      unconverted: manualRealized.unconverted.length,
+      // Dropped trades cannot reliably be assigned to a playlist after sharing classifications.
+      tradesMayBeIncomplete: trades.unconvertibleTrades > 0,
       currency: base };
   }).sort((a, b) => b.value - a.value);
 }

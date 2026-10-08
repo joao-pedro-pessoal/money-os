@@ -18,7 +18,7 @@ import type { LegalKind } from "./paths";
 export { LEGAL_KINDS, LEGAL_PATHS, type LegalKind } from "./paths";
 
 /** The day the text last changed in substance. */
-export const LEGAL_UPDATED = "2026-10-06";
+export const LEGAL_UPDATED = "2026-10-07";
 
 /** Who runs this copy of Money OS, and how to reach them. Either may be unset. */
 export interface Operator {
@@ -95,6 +95,7 @@ function en(op: Operator): Record<LegalKind, LegalDocument> {
             "**Wallet addresses** you add to follow a public blockchain account, such as a Hyperliquid address.",
             "**Broker API keys are not accepted on the published site.** Connections that need a key only work on a copy of Money OS that you run on your own computer.",
             "**In your browser or the app:** a sign-in cookie (it lasts until the account goes 30 days unused), a cookie with your language, and display preferences such as the theme and which panels are open, kept in the browser's own storage.",
+            "**Android widgets:** the last financial figures read are kept on the phone, with their reading time, to display while offline. That copy is removed when a refresh finds the session is no longer accepted or no site is configured. Financial alert notifications are also removed when their refresh finds this; simply losing the connection does not erase them.",
             "**Technical records:** like every website, the hosting provider records requests — IP address, time, page asked for — and keeps them for a short time to run and protect the service.",
           ],
         },
@@ -270,6 +271,7 @@ function pt(op: Operator): Record<LegalKind, LegalDocument> {
             "**O que registas:** as contas, saldos, movimentos, categorias, orçamentos, investimentos, notas e outros registos que escreves ou importas, e o nome e uma impressão digital (hash) de cada ficheiro que importas, para o mesmo extrato não entrar duas vezes. Ficam as linhas lidas de um ficheiro importado; o ficheiro em si não.",
             "**Endereços de carteiras** que acrescentas para acompanhar uma conta pública numa blockchain, como um endereço Hyperliquid.",
             "**O site publicado não aceita chaves de API de corretoras.** As ligações que precisam de chave só funcionam numa cópia da Money OS a correr no teu próprio computador.",
+            "**Widgets Android:** os últimos valores financeiros lidos ficam guardados no telemóvel, com a hora da leitura, para aparecerem sem ligação. Essa cópia é removida quando uma atualização deteta que a sessão já não é aceite ou que não há site configurado. As notificações de alertas financeiros também são retiradas quando a sua atualização deteta isto; perder apenas a ligação não as apaga.",
             "**No teu navegador ou na app:** um cookie de sessão (dura até a conta passar 30 dias sem uso), um cookie com a tua língua, e preferências de apresentação, como o tema e os painéis abertos, guardadas no armazenamento do próprio navegador.",
             "**Registos técnicos:** como em qualquer site, o fornecedor de alojamento regista os pedidos — endereço IP, hora, página pedida — e guarda-os pouco tempo, para manter e proteger o serviço.",
           ],

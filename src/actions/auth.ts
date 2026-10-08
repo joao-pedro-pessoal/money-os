@@ -298,7 +298,7 @@ export async function recoverAccount(raw: unknown): Promise<RecoveryOutcome> {
   const hashed = await hashes.run(() => hashPassword(key, random));
   if (!hashed.ok) return { kind: "refused", reason: BUSY };
   const next = newRecoveryCode(random);
-  await db
+  const [recovered] = await db
     .update(users)
     .set({
       passwordHash: hashed.value,
@@ -308,7 +308,11 @@ export async function recoverAccount(raw: unknown): Promise<RecoveryOutcome> {
       lockedUntil: null,
       sessionsNotBefore: now,
     })
-    .where(eq(users.id, user.id));
+    // The slow hash allows another request to consume or replace the code.
+    // Check it again atomically with the write, not in a second SELECT.
+    .where(and(eq(users.id, user.id), eq(users.recoveryHash, presented)))
+    .returning({ id: users.id });
+  if (!recovered) return { kind: "wrong" };
   await startSession(user.id);
   return { kind: "ok", recoveryCode: next };
 }

@@ -61,6 +61,29 @@ describe("a currency conversion is not a trade", () => {
  * of its 22 rows, and the app only ever read the venue's figure.
  */
 describe("deriving a result the venue does not state", () => {
+  it("does not present the known fraction of a sale as its whole result", () => {
+    const rows = deriveRealisedPnl([
+      row({ date: "2026-01-01", type: "BUY", quantity: 2, amount: -20 }),
+      row({ date: "2026-01-02", type: "SELL", quantity: 5, amount: 100 }),
+      row({ date: "2026-01-03", type: "SELL", quantity: 1, amount: 20 }),
+      row({ date: "2026-01-04", type: "BUY", quantity: 1, amount: -10 }),
+      row({ date: "2026-01-05", type: "SELL", quantity: 1, amount: 15 }),
+    ]);
+    expect(rows[1].realizedPnl).toBeNull();
+    expect(rows[1].pnlDerived).toBe(false);
+    // The known shares were still consumed, and a later complete trade works.
+    expect(rows[2].realizedPnl).toBeNull();
+    expect(rows[4].realizedPnl).toBe(5);
+  });
+
+  it("tolerates floating point dust when the full purchase is sold", () => {
+    const rows = deriveRealisedPnl([
+      row({ date: "2026-01-01", type: "BUY", quantity: 0.3, amount: -30 }),
+      row({ date: "2026-01-02", type: "SELL", quantity: 0.1 + 0.2, amount: 35 }),
+    ]);
+    expect(rows[1].realizedPnl).toBe(5);
+  });
+
   const FEMY = [
     row({ date: "2026-08-12T10:00:00.000Z", type: "BUY", symbol: "FEMY", quantity: 3.465, amount: -7.85 }),
     row({ date: "2026-08-25T10:00:00.000Z", type: "SELL", symbol: "FEMY", quantity: 3.465, amount: 8.62 }),
