@@ -10,7 +10,7 @@ vi.mock("@/db/client", () => ({ db: {
     where: async () => fake.rows,
   }) }),
   update: () => ({ set: (value: unknown) => ({ where: async () => fake.write(value) }) }),
-  insert: () => ({ values: async (value: unknown) => fake.write(value) }),
+  insert: () => ({ values: (value: unknown) => ({ onConflictDoUpdate: async () => fake.write(value) }) }),
 } }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 import { getRates, listRates, setManualRate } from "../fx";

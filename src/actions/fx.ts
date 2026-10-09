@@ -35,26 +35,18 @@ export async function listRates() {
 export async function refreshRates() {
   try {
     const fetched = await fetchRates();
-    const existing = await db.select().from(exchangeRates);
-    const manual = new Set(existing.filter((r) => r.manual).map((r) => r.quote));
-
     for (const [quote, rate] of Object.entries(fetched)) {
-      if (quote === DEFAULT_BASE_CURRENCY || manual.has(quote)) continue;
-
-      const row = existing.find((r) => r.quote === quote);
-      if (row) {
-        await db
-          .update(exchangeRates)
-          .set({ rate: String(rate), fetchedAt: new Date(), source: "frankfurter" })
-          .where(eq(exchangeRates.quote, quote));
-      } else {
-        await db.insert(exchangeRates).values({
-          base: DEFAULT_BASE_CURRENCY,
-          quote,
-          rate: String(rate),
-          source: "frankfurter",
+      if (quote === DEFAULT_BASE_CURRENCY) continue;
+      const values = { rate: String(rate), fetchedAt: new Date(), source: "frankfurter" };
+      // Check the manual flag when writing, not in a snapshot that another
+      // request can change. The unique key also serializes first-time inserts.
+      await db.insert(exchangeRates)
+        .values({ base: DEFAULT_BASE_CURRENCY, quote, ...values })
+        .onConflictDoUpdate({
+          target: [exchangeRates.userId, exchangeRates.quote],
+          set: values,
+          setWhere: eq(exchangeRates.manual, false),
         });
-      }
     }
 
     revalidatePath("/settings");
@@ -81,17 +73,10 @@ export async function setManualRate(formData: FormData) {
     throw new Error(`The ${DEFAULT_BASE_CURRENCY} reference rate is always 1`);
   }
 
-  const [existing] = await db.select().from(exchangeRates).where(eq(exchangeRates.quote, quote));
-  if (existing) {
-    await db
-      .update(exchangeRates)
-      .set({ rate: String(rate), manual: true, fetchedAt: new Date(), source: "manual" })
-      .where(eq(exchangeRates.quote, quote));
-  } else {
-    await db
-      .insert(exchangeRates)
-      .values({ base: DEFAULT_BASE_CURRENCY, quote, rate: String(rate), manual: true, source: "manual" });
-  }
+  const values = { rate: String(rate), manual: true, fetchedAt: new Date(), source: "manual" };
+  await db.insert(exchangeRates)
+    .values({ base: DEFAULT_BASE_CURRENCY, quote, ...values })
+    .onConflictDoUpdate({ target: [exchangeRates.userId, exchangeRates.quote], set: values });
 
   revalidatePath("/settings");
   revalidatePath("/");

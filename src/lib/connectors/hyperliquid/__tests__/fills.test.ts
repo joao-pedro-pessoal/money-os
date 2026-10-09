@@ -83,6 +83,11 @@ describe("turning a fill into an activity row", () => {
     expect(fillToActivity(openLong)!.realizedPnl).toBeNull();
   });
 
+  it("preserves an explicitly closed break-even fill as a measured zero", () => {
+    expect(fillToActivity({ ...closeLong, closedPnl: "0" })!.realizedPnl).toBe(0);
+    expect(fillToActivity({ ...closeLong, dir: "Close Short", closedPnl: "0" })!.realizedPnl).toBe(0);
+  });
+
   it("skips a fill it cannot read rather than storing a zero", () => {
     // A trade recorded at a price of nothing looks like a real event and would
     // feed every chart built on top of it.

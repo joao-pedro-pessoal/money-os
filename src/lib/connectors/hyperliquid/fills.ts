@@ -44,6 +44,14 @@ function round(n: number, places: number): number {
   return Math.round((n + Number.EPSILON) * f) / f;
 }
 
+/** A stated close can break even; zero on an opening is not a realised result. */
+export function closedFillPnl(value: unknown, direction: unknown): number | null {
+  const pnl = num(value);
+  if (pnl === null) return null;
+  const closes = typeof direction === "string" && /^Close (Long|Short)$/i.test(direction.trim());
+  return pnl !== 0 || closes ? pnl : null;
+}
+
 /**
  * Which way the money went.
  *
@@ -97,7 +105,7 @@ export function fillToActivity(fill: RawFill, currency = "USD"): FillActivity | 
   const amount = fillAmount(fill);
   if (amount === null) return null;
 
-  const closed = num(fill.closedPnl);
+  const closed = closedFillPnl(fill.closedPnl, fill.dir);
 
   return {
     date: new Date(time).toISOString(),
@@ -112,12 +120,7 @@ export function fillToActivity(fill: RawFill, currency = "USD"): FillActivity | 
     // The venue's own id, which is what makes re-syncing the same fill a no-op
     // instead of a duplicate row.
     externalId: fill.tid === undefined ? "" : String(fill.tid),
-    /**
-     * Zero here means the fill opened a position rather than closing one, so
-     * there is nothing realised to record. Storing it as 0.00 would put a
-     * break-even trade in the history that never happened.
-     */
-    realizedPnl: closed === null || closed === 0 ? null : round(closed, 4),
+    realizedPnl: closed === null ? null : round(closed, 4),
   };
 }
 

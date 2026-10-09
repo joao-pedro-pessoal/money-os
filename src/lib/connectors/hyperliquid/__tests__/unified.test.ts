@@ -252,6 +252,13 @@ describe("the fallback heuristic, for when the endpoint is unreachable", () => {
  * `userFills`, which the connector never asked for.
  */
 describe("realised P&L from closed fills", () => {
+  it("counts explicit break-even closes without counting zero-valued openings", () => {
+    expect(parseRealizedPnl([
+      { dir: "Open Long", closedPnl: "0" },
+      { dir: "Close Long", closedPnl: "0" },
+      { dir: "Close Short", closedPnl: "0" },
+    ])).toMatchObject({ realized: 0, fillCount: 2 });
+  });
   it("sums what the venue calls closed P&L", () => {
     const fills = [
       { coin: "FIL", closedPnl: "1.973376", fee: "0.007759" },

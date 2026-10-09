@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **8 de outubro de 2026**.
+Atualizado em **9 de outubro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -75,6 +75,10 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 | B24 | Conflito entre playlists ignorado ao consultar a abertura | **Corrigido localmente (08/10/2026).** `src/lib/trading/sharedClassification.ts:65`: três fills fecham a mesma ordem; dois têm playlists diferentes, mas o terceiro herdava a playlist da abertura. Exemplo sintético: ganhos 2 e 3 classificados em listas distintas e 7 sem classificação faziam a primeira lista contar 9. Preservar a ambiguidade do fecho e deixar o terceiro fill sem atribuição; teste reproduziu a falha. |
 | B25 | Taxa manual do euro altera todos os câmbios com EUR | **Corrigido localmente (08/10/2026).** `src/actions/fx.ts:18` e `:81`: o formulário aceitava EUR=2 e `getRates` substituía a referência EUR=1. Com USD=1,25, 125 USD passavam a valer 200 EUR em vez de 100. Recusar alterações à referência e ignorar valores antigos incorretos ao ler/calcular/mostrar taxas; testes das duas conversões e da recusa, sem alterar dados reais. |
 | B26 | Formulário de câmbio pede taxas na moeda errada | **Corrigido localmente (08/10/2026).** `src/app/(app)/settings/rates/page.tsx:16`: ao escolher USD para os totais, tabela e formulário diziam “per 1 USD”, mas continuavam a guardar e interpretar taxas por EUR. Uma taxa introduzida conforme essa indicação distorcia os totais. Indicar EUR na tabela e no campo, explicando que é independente da moeda dos totais. Teste de renderização com preferência USD reproduziu a falha. |
+| B27 | Atualização automática substitui uma taxa acabada de fixar | **Corrigido localmente (08/10/2026).** `src/actions/fx.ts:39`: a atualização lia quais as taxas manuais antes de escrever. Se a pessoa fixasse USD=1,5 entretanto, o pedido automático substituía-o por 1,25, mantendo a marca manual. Verificar essa marca no próprio comando de escrita (`onConflictDoUpdate`, `setWhere`), dentro da chave única por pessoa e moeda. Teste com intercalação de pedidos reproduziu a perda da escolha. |
+| B28 | Pedidos simultâneos de câmbio colidem na primeira gravação | **Corrigido localmente (08/10/2026).** `src/actions/fx.ts:43` e `:79`: dois pedidos que não encontravam a moeda tentavam inseri-la; o segundo falhava por chave duplicada. Afetava duas atualizações iniciais e uma taxa manual guardada enquanto o automático criava a mesma moeda. Usar inserção/atualização atómica nos dois caminhos, com prioridade à escolha manual. Dois testes reproduziram os erros sem ligar à base real. |
+| B29 | Fechos sem ganho nem perda desaparecem da contagem Hyperliquid | **Corrigido localmente (08/10/2026).** `src/lib/connectors/hyperliquid/fills.ts:120` e `parse.ts:413` descartavam qualquer `closedPnl=0`, mesmo com `dir="Close Long"` ou `"Close Short"`. O histórico perdia o resultado medido e o resumo não contava o fecho. Partilhar a leitura do resultado, preservando zero em fechos explícitos e ausência de resultado nas aberturas. Testes dos dois caminhos reproduziram o erro. Linhas antigas só serão relidas quando voltarem numa sincronização; não foi executada sincronização nem alterado histórico real. |
+| B30 | Registos simultâneos ultrapassam os limites de contas | **Corrigido localmente (09/10/2026).** `src/actions/auth.ts:270`: a contagem era verificada antes do hash lento e não voltava a ser verificada ao criar a conta. Com 9 contas e limite 10, dois pedidos criavam a décima e a décima primeira; os limites de 5 por hora e 20 por dia tinham a mesma falha. Revalidar os três limites e inserir dentro da mesma transação, com bloqueio transacional partilhado entre processos. Três testes reproduziram a falha, sem criar contas reais. |
 
 Revisão de 07/10/2026, secção 3 do `CONTINUAR_NO_CODEX.md`: auditoria executada
 na conta do dono, só a ler. **A02 reaberto:** continua a existir um movimento
@@ -109,6 +113,19 @@ das correções, com dados sintéticos. 2861 testes aprovados (5 novos), TypeScr
 e build aprovados; lint sem erros e com os mesmos 3 avisos antigos Bybit.
 Nenhum dado real alterado. Verificação do formulário por renderização automática,
 sem teste interativo no navegador. Commit local no `f19-play-store`, sem push.
+
+**Validação B27–B29 (08/10/2026):** 2866 testes aprovados (5 novos), TypeScript
+e build aprovados; lint sem erros, com os mesmos 3 avisos antigos Bybit.
+Os cinco testes novos falharam antes das correções. Concorrência reproduzida com
+dados simulados e as condições SQL geradas pela ação; sem teste contra Postgres
+real, sem sincronização de corretoras e sem alteração de dados reais.
+Commit local no `f19-play-store`, sem push.
+
+**Validação B30 (09/10/2026):** 2869 testes aprovados (3 novos), TypeScript e
+build aprovados, lint sem erros e com os mesmos 3 avisos antigos Bybit.
+Os três limites foram ultrapassados nos testes antes da correção; depois,
+apenas um dos dois pedidos simultâneos ocupa a última vaga. Base simulada,
+sem criar contas reais. B27–B30 guardados no branch local, sem push.
 
 ## 3. Funcionalidades por desenvolver
 

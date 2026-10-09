@@ -14,6 +14,7 @@ import type {
   NormalizedPosition,
 } from "../types";
 import { USD_PEGGED_SYMBOLS } from "@/lib/portfolio/tags";
+import { closedFillPnl } from "./fills";
 
 /** Parses Hyperliquid's stringified numbers. Returns null when unusable. */
 export function num(value: unknown): number | null {
@@ -407,9 +408,9 @@ export function parseRealizedPnl(
   let fees = 0;
   let closedFills = 0;
 
-  for (const fill of raw as { closedPnl?: unknown; fee?: unknown }[]) {
-    const pnl = num(fill?.closedPnl);
-    if (pnl !== null && pnl !== 0) {
+  for (const fill of raw as { closedPnl?: unknown; fee?: unknown; dir?: unknown }[]) {
+    const pnl = closedFillPnl(fill?.closedPnl, fill?.dir);
+    if (pnl !== null) {
       realized += pnl;
       closedFills += 1;
     }

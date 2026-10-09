@@ -196,8 +196,8 @@ export async function signIn(raw: unknown): Promise<SignInOutcome> {
 }
 
 /** Accounts made so far, and in the last hour and day, for `registrationRefusal`. */
-async function registrationCounts() {
-  const [counts] = await db
+async function registrationCounts(reader: Pick<typeof db, "select"> = db) {
+  const [counts] = await reader
     .select({
       total: sql<number>`count(*)::int`,
       lastHour: sql<number>`count(*) filter (where ${users.createdAt} > now() - interval '1 hour')::int`,
@@ -277,11 +277,20 @@ export async function signUp(raw: unknown): Promise<SignUpOutcome> {
   const recoveryCode = newRecoveryCode(random);
   let userId: string;
   try {
-    const [made] = await db
-      .insert(users)
-      .values({ email: address, passwordHash: hashed.value, passwordKind: "keyed", recoveryHash: recoveryHashOf(recoveryCode) })
-      .returning({ id: users.id });
-    userId = made.id;
+    const result = await db.transaction(async (tx) => {
+      // Serialize the final capacity check across server processes. Hashing
+      // stays outside the lock; counts and insertion share this transaction.
+      await tx.execute(sql`select pg_advisory_xact_lock(1297040207, 1)`);
+      const reason = registrationRefusal(await registrationCounts(tx), maxAccounts(process.env));
+      if (reason) return { kind: "refused" as const, reason };
+      const [made] = await tx
+        .insert(users)
+        .values({ email: address, passwordHash: hashed.value, passwordKind: "keyed", recoveryHash: recoveryHashOf(recoveryCode) })
+        .returning({ id: users.id });
+      return { kind: "created" as const, id: made.id };
+    });
+    if (result.kind === "refused") return result;
+    userId = result.id;
   } catch (error) {
     if (isUniqueViolation(error)) return { kind: "refused", reason: taken };
     throw error;
