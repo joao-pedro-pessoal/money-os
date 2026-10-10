@@ -2,6 +2,7 @@ import AuthFrame from "@/components/AuthFrame";
 import LoginScreen from "@/components/LoginScreen";
 import { maxAccounts } from "@/lib/accounts/limits";
 import { safeReturnPath } from "@/lib/accounts/returnPath";
+import { hasInviteSecret, registrationMode } from "@/lib/accounts/registration";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +13,12 @@ export const dynamic = "force-dynamic";
  */
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
   const destination = safeReturnPath((await searchParams).next);
-  const signUps = maxAccounts(process.env) !== null;
+  const mode = registrationMode(process.env);
+  const signUps = maxAccounts(process.env) !== null && mode !== "closed"
+    && (mode !== "invite" || hasInviteSecret(process.env));
   return (
     <AuthFrame>
-      <LoginScreen signUps={signUps} destination={destination} />
+      <LoginScreen signUps={signUps} inviteRequired={mode === "invite"} destination={destination} />
     </AuthFrame>
   );
 }

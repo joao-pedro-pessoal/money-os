@@ -64,15 +64,19 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("registration limits across simultaneous requests", () => {
   it.each([
-    { name: "total", limit: "10", total: 9, lastHour: 0, lastDay: 0 },
-    { name: "hour", limit: "100", total: 9, lastHour: 4, lastDay: 4 },
-    { name: "day", limit: "100", total: 30, lastHour: 0, lastDay: 19 },
-  ])("allows only the last available place at the $name limit", async ({ limit, total, lastHour, lastDay }) => {
+    { name: "total", mode: "open", limit: "10", total: 9, lastHour: 0, lastDay: 0 },
+    { name: "hour", mode: "open", limit: "100", total: 9, lastHour: 4, lastDay: 4 },
+    { name: "day", mode: "open", limit: "100", total: 30, lastHour: 0, lastDay: 19 },
+    { name: "total with invitations", mode: "invite", limit: "10", total: 9, lastHour: 0, lastDay: 0 },
+  ])("allows only the last available place at the $name limit", async ({ mode, limit, total, lastHour, lastDay }) => {
     vi.stubEnv("MAX_ACCOUNTS", limit);
+    vi.stubEnv("REGISTRATION_MODE", mode);
+    const inviteCode = "0123456789abcdef".repeat(3);
+    vi.stubEnv("REGISTRATION_INVITE_CODE", inviteCode);
     fake.counts = { total, lastHour, lastDay };
     const results = await Promise.all([
-      signUp({ email: "first@example.com", signInKey: "a".repeat(64) }),
-      signUp({ email: "second@example.com", signInKey: "b".repeat(64) }),
+      signUp({ email: "first@example.com", signInKey: "a".repeat(64), inviteCode }),
+      signUp({ email: "second@example.com", signInKey: "b".repeat(64), inviteCode }),
     ]);
     expect(results.map((r) => r.kind).sort()).toEqual(["ok", "refused"]);
     expect(fake.counts.total).toBe(total + 1);

@@ -13,6 +13,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "library:covers": "tsx scripts/import-covers.ts",
     "audit": "tsx scripts/audit.ts",
+    "release:check": "tsx scripts/release-check.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:dedupe-categories": "tsx scripts/dedupe-categories.ts"

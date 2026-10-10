@@ -42,6 +42,10 @@ fazer, por ordem.
 
 ## O que tens de fazer, por ordem
 
+Antes dos convites, seguir também `PREPARAR_TESTE_FECHADO.md`: configuração de
+acesso, verificação local e ensaio com dados fictícios. O estado atual está em
+R01–R06 do `TAREFAS.md`; testes automatizados não substituem estes ensaios.
+
 ### 1. Publicar esta versão do site
 
 As páginas de privacidade têm de estar no site publicado antes de as indicares à
@@ -111,8 +115,11 @@ Store: se já houver uma app com esse nome, a Google pode pedir outro.
   - **Informações financeiras → Outras informações financeiras** e **Histórico de
     compras** — recolhidos, opcionais (cada pessoa decide o que regista); fim:
     **Funcionalidade da app**.
-  - Nada de localização, contactos, fotos, identificadores do aparelho, estatísticas
-    de utilização ou relatórios de falhas: a app não recolhe nada disso.
+- Não são adicionados localização, contactos, fotos, identificadores do aparelho
+  ou estatísticas de utilização. A preparação de 09/10 inclui eventos genéricos
+  de falha do servidor nos logs do alojamento, sem conteúdo do pedido nem valores
+  financeiros. Rever a declaração de diagnósticos e os registos do fornecedor na
+  submissão final; não declarar ausência de relatórios de falhas sem essa revisão.
 
 ### 6. Conta de demonstração para os revisores
 

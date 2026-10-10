@@ -22,6 +22,7 @@ import { hashPassword, needsRehash, PASSWORD_MAX, verifyPassword } from "@/lib/a
 import type { DeleteOutcome, RecoveryOutcome, SignInOutcome, SignUpOutcome } from "@/lib/accounts/outcomes";
 import { currentUserId } from "./session";
 import { refreshRates } from "./fx";
+import { registrationAccess } from "@/lib/accounts/registration";
 
 /**
  * Sign-in accounts: making one, signing into one, and getting back into one.
@@ -58,7 +59,7 @@ const signInKey = z.string().regex(KEY_HEX);
 const SignInRequest = z
   .object({ email, signInKey, password: z.string().min(1).max(PASSWORD_MAX).optional() })
   .strict();
-const SignUpRequest = z.object({ email, signInKey }).strict();
+const SignUpRequest = z.object({ email, signInKey, inviteCode: z.string().max(256).optional() }).strict();
 const RecoverRequest = z.object({ email, recoveryCode: z.string().max(64), signInKey }).strict();
 const NewCodeRequest = z.object({ signInKey }).strict();
 const DeleteRequest = z.object({ signInKey, confirmEmail: z.string().max(254) }).strict();
@@ -262,6 +263,9 @@ export async function signUp(raw: unknown): Promise<SignUpOutcome> {
   const parsed = SignUpRequest.safeParse(raw);
   if (!parsed.success) return { kind: "refused", reason: "Write a valid email address." };
   const { email: address, signInKey: key } = parsed.data;
+
+  const access = registrationAccess(process.env, parsed.data.inviteCode);
+  if (access) return { kind: "refused", reason: access };
 
   // Checked before the slow hash: a closed site spends nothing on a refusal.
   const refused = registrationRefusal(await registrationCounts(), maxAccounts(process.env));

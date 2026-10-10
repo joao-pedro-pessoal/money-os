@@ -25,7 +25,7 @@ type Step = "sign-in" | "sign-up" | "recover" | "code";
  * A new account, a recovered one and the owner's first sign-in each end on the
  * recovery code, shown once: the only way back in without the password.
  */
-export default function LoginScreen({ signUps, destination = "/" }: { signUps: boolean; destination?: string }) {
+export default function LoginScreen({ signUps, inviteRequired = false, destination = "/" }: { signUps: boolean; inviteRequired?: boolean; destination?: string }) {
   const router = useRouter();
   const { m, language } = useLanguage();
   const w = m.auth;
@@ -35,6 +35,7 @@ export default function LoginScreen({ signUps, destination = "/" }: { signUps: b
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [shown, setShown] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -101,7 +102,7 @@ export default function LoginScreen({ signUps, destination = "/" }: { signUps: b
       if (!email.trim()) throw new Error(w.writeEmail);
       const weak = passwordProblem(password);
       if (weak) throw new Error(said(weak));
-      const outcome = await signUp({ email, signInKey: await signInKeyFor(email, password) });
+      const outcome = await signUp({ email, signInKey: await signInKeyFor(email, password), ...(inviteRequired ? { inviteCode } : {}) });
       if (outcome.kind === "refused") throw new Error(said(outcome.reason));
       showCode(outcome.recoveryCode);
     });
@@ -237,6 +238,14 @@ export default function LoginScreen({ signUps, destination = "/" }: { signUps: b
           <>
             {emailField}
             {passwordField(w.password, "new-password", w.newPasswordHint)}
+            {inviteRequired && (
+              <label className="block space-y-1.5">
+                <span className="text-sm">{w.inviteCode}</span>
+                <input className="input auth-input" type="password" name="inviteCode" autoComplete="off"
+                  maxLength={256} value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
+                <span className="block text-xs text-[var(--muted)]">{w.inviteHint}</span>
+              </label>
+            )}
             {problemNotice}
             {submit(w.createMyAccount, w.creating)}
             {/* In a new tab, so reading them does not lose what was typed here. */}

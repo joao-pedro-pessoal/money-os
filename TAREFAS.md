@@ -79,6 +79,12 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 | B28 | Pedidos simultâneos de câmbio colidem na primeira gravação | **Corrigido localmente (08/10/2026).** `src/actions/fx.ts:43` e `:79`: dois pedidos que não encontravam a moeda tentavam inseri-la; o segundo falhava por chave duplicada. Afetava duas atualizações iniciais e uma taxa manual guardada enquanto o automático criava a mesma moeda. Usar inserção/atualização atómica nos dois caminhos, com prioridade à escolha manual. Dois testes reproduziram os erros sem ligar à base real. |
 | B29 | Fechos sem ganho nem perda desaparecem da contagem Hyperliquid | **Corrigido localmente (08/10/2026).** `src/lib/connectors/hyperliquid/fills.ts:120` e `parse.ts:413` descartavam qualquer `closedPnl=0`, mesmo com `dir="Close Long"` ou `"Close Short"`. O histórico perdia o resultado medido e o resumo não contava o fecho. Partilhar a leitura do resultado, preservando zero em fechos explícitos e ausência de resultado nas aberturas. Testes dos dois caminhos reproduziram o erro. Linhas antigas só serão relidas quando voltarem numa sincronização; não foi executada sincronização nem alterado histórico real. |
 | B30 | Registos simultâneos ultrapassam os limites de contas | **Corrigido localmente (09/10/2026).** `src/actions/auth.ts:270`: a contagem era verificada antes do hash lento e não voltava a ser verificada ao criar a conta. Com 9 contas e limite 10, dois pedidos criavam a décima e a décima primeira; os limites de 5 por hora e 20 por dia tinham a mesma falha. Revalidar os três limites e inserir dentro da mesma transação, com bloqueio transacional partilhado entre processos. Três testes reproduziram a falha, sem criar contas reais. |
+| R01 | Preparar acesso ao teste por convidados | **Código preparado localmente (09/10/2026), não ativado em produção.** `REGISTRATION_MODE=open/invite/closed`, código validado no servidor antes da base/hash, formulário PT/EN; segredo nunca enviado na página. Ausência da variável conserva comportamento anterior. Convite partilhado não substitui confirmação de email, anti-robô ou limites por origem; estes continuam por implementar para abertura pública. Falta escolher/ativar o modo na configuração publicada. |
+| R02 | Verificar configuração de lançamento | **Código preparado localmente (09/10/2026).** `npm run release:check` verifica configuração para teste por convites sem mostrar segredos nem ligar à base. Não consulta Vercel nem comprova RLS/capacidade/Play Console. A configuração local do PC não deve ser alterada para imitar a publicada. Procedimento em `docs/PREPARAR_TESTE_FECHADO.md`. |
+| R03 | Monitorizar falhas antes de receber testadores | **Primeira parte preparada localmente (09/10/2026).** Eventos genéricos `moneyos.server_error` no hook do Next, com teste de exclusão de dados sensíveis e política PT/EN atualizada. Falta retenção prolongada, alertas, monitorização do browser e validação no alojamento. Não substitui nem limpa os logs próprios do Next/Vercel. |
+| R04 | Backup e ensaio de restauro do serviço | **Por fazer.** Definir armazenamento, retenção e acesso; ensaiar restauro numa base isolada, com prova de recuperação e tratamento das eliminações. Exportações individuais não substituem backup de todo o serviço. Não usar a base real para o ensaio. |
+| R05 | Ensaiar a versão final para o teste alargado | **Por fazer.** Instalação pela Play, registo/recuperação, duas contas isoladas, importação/exportação/eliminação, widgets/notificações/offline em telemóveis reais; conta de demonstração com dados fictícios. Publicação/configuração da Play Console ainda dependem do utilizador. |
+| R06 | Verificar capacidade e custos para abertura pública | **Por fazer.** Ensaio de carga em ambiente isolado, limites e custos de alojamento/base, plano de reversão, revisão independente de segurança e revisão legal. Não executar carga nem recolher dados pessoais reais neste ensaio. |
 
 Revisão de 07/10/2026, secção 3 do `CONTINUAR_NO_CODEX.md`: auditoria executada
 na conta do dono, só a ler. **A02 reaberto:** continua a existir um movimento
@@ -126,6 +132,16 @@ build aprovados, lint sem erros e com os mesmos 3 avisos antigos Bybit.
 Os três limites foram ultrapassados nos testes antes da correção; depois,
 apenas um dos dois pedidos simultâneos ocupa a última vaga. Base simulada,
 sem criar contas reais. B27–B30 guardados no branch local, sem push.
+
+**Preparação R01–R03 (09/10/2026):** 2880 testes aprovados (11 novos), TypeScript
+e build aprovados; lint sem erros, com os 3 avisos antigos Bybit. Testados convites
+válidos/inválidos, recusa direta pelo servidor, limites concorrentes com convite,
+ausência de segredos nas propriedades da página e nos eventos de erro, e
+verificação de configuração. `release:check` executado: recusa corretamente a
+configuração local do PC como configuração de teste publicado; não consultou
+Vercel nem alterou `.env`. Interface revista pela checklist React; não testada
+interativamente no navegador nesta etapa. Sem nova dependência, migração,
+fornecedor, envio de convites, alteração de dados reais ou publicação.
 
 ## 3. Funcionalidades por desenvolver
 
