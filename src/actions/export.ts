@@ -17,6 +17,8 @@ const TABLES: Record<BackupTable, typeof schema.accounts> = {
   subcategories: schema.subcategories,
   tags: schema.tags,
   accounts: schema.accounts,
+  expectedMoney: schema.expectedMoney,
+  liabilities: schema.liabilities,
   buckets: schema.buckets,
   bucketAllocations: schema.bucketAllocations,
   budgets: schema.budgets,
@@ -32,6 +34,7 @@ const TABLES: Record<BackupTable, typeof schema.accounts> = {
   imports: schema.imports,
   transactions: schema.transactions,
   transactionTags: schema.transactionTags,
+  subscriptionCharges: schema.subscriptionCharges,
   transfers: schema.transfers,
   interestPayments: schema.interestPayments,
   accountSnapshots: schema.accountSnapshots,
@@ -62,11 +65,13 @@ const TABLES: Record<BackupTable, typeof schema.accounts> = {
  * and would have silently lost the entire investments and connections side.
  */
 export async function exportAllData() {
-  const data: Record<string, unknown[]> = {};
-
-  for (const name of BACKUP_TABLES) {
-    data[name] = await db.select().from(TABLES[name]);
-  }
+  // A balance and its movements must come from the same snapshot, even if
+  // another request saves a transaction while these tables are being read.
+  const data = await db.transaction(async (tx) => {
+    const rows: Record<string, unknown[]> = {};
+    for (const name of BACKUP_TABLES) rows[name] = await tx.select().from(TABLES[name]);
+    return rows;
+  }, { isolationLevel: "repeatable read", accessMode: "read only" });
 
   return JSON.stringify(
     { version: BACKUP_VERSION, exportedAt: new Date().toISOString(), data },
@@ -142,6 +147,7 @@ export async function inspectBackup(json: string) {
  * the UI asks for an explicit typed confirmation before calling this.
  */
 export async function restoreBackup(formData: FormData) {
+  if (formData.get("confirmation") !== "RESTORE") throw new Error("Type RESTORE to confirm.");
   const json = String(formData.get("backup") ?? "");
 
   let parsed: unknown;
@@ -156,18 +162,17 @@ export async function restoreBackup(formData: FormData) {
 
   const data = (parsed as { data: Record<string, unknown[]> }).data;
 
-  // Reverse order: children before parents.
-  for (const name of [...BACKUP_TABLES].reverse()) {
-    await db.delete(TABLES[name]);
-  }
-
-  for (const name of BACKUP_TABLES) {
-    const rows = data[name];
-    if (!Array.isArray(rows) || rows.length === 0) continue;
-    // Dates arrive as ISO strings from JSON and must go back to Date objects.
-    const revived = rows.map((r) => reviveDates(r as Record<string, unknown>));
-    await db.insert(TABLES[name]).values(revived as never);
-  }
+  // Any invalid row, missing parent or database failure must roll back the
+  // deletions too. The original account remains intact until all inserts pass.
+  await db.transaction(async (tx) => {
+    for (const name of [...BACKUP_TABLES].reverse()) await tx.delete(TABLES[name]);
+    for (const name of BACKUP_TABLES) {
+      const rows = data[name];
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+      const revived = rows.map((r) => reviveDates(r as Record<string, unknown>));
+      await tx.insert(TABLES[name]).values(revived as never);
+    }
+  });
 
   revalidatePath("/", "layout");
   return { ok: true as const, counts: check.counts };

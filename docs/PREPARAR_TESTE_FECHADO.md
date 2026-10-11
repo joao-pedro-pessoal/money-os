@@ -67,3 +67,19 @@ não veem os dados uma da outra. Apagar apenas as contas temporárias no fim.
 O restauro deve ser ensaiado numa base isolada. A exportação de uma pessoa não
 substitui um backup de serviço completo. Não restaurar, apagar ou fazer testes de
 carga sobre a base de produção. O guião da Play Console está em `PLAY_STORE.md`.
+
+### Ensaio automático do backup individual
+
+```cmd
+npm.cmd test -- src/actions/__tests__/backup-postgres.test.ts
+```
+
+Usa PostgreSQL embebido (PGlite), em memória, com as migrações reais e duas
+contas fictícias. Não carrega `.env` nem usa o cliente da base de produção.
+Verifica exportação/restauro, rollback após uma linha inválida e isolamento por
+RLS, incluindo uma tentativa de restaurar uma linha com outro proprietário.
+A dependência é apenas de desenvolvimento e não entra no código da app.
+
+Este ensaio não comprova a recuperação do serviço Neon, a retenção de backups,
+o desempenho sob carga ou a reposição de utilizadores e configurações do serviço.
+Esses critérios continuam na tarefa R04.

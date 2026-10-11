@@ -20,12 +20,14 @@ import { join } from "node:path";
 
 const SRC = join(process.cwd(), "src");
 
-/** Files allowed to touch the table: its own action, its own page, its lib. */
+/** Its feature and lossless backup; neither backup path computes totals. */
 const OWNERS = [
   join("src", "actions", "expected.ts"),
   join("src", "lib", "accounting", "expected.ts"),
   join("src", "app", "(app)", "expected", "page.tsx"),
   join("src", "db", "schema.ts"),
+  join("src", "actions", "export.ts"),
+  join("src", "lib", "backup", "index.ts"),
 ];
 
 function sourceFiles(dir: string): string[] {
@@ -39,7 +41,7 @@ function sourceFiles(dir: string): string[] {
 }
 
 describe("expected money reaches no total", () => {
-  it("is read only by the feature that owns it", () => {
+  it("is read only by its feature and the personal backup", () => {
     const offenders: string[] = [];
 
     for (const file of sourceFiles(SRC)) {

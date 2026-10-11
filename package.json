@@ -23,7 +23,7 @@
     "@noble/hashes": "2.4.0",
     "@paralleldrive/cuid2": "^3.3.0",
     "drizzle-orm": "^0.45.2",
-    "next": "^16.3.5",
+    "next": "^16.3.8",
     "papaparse": "^5.5.4",
     "pdf-lib": "1.17.1",
     "pg": "^8.22.0",
@@ -34,6 +34,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",
@@ -43,7 +44,7 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.5",
+    "eslint-config-next": "^16.3.8",
     "tailwindcss": "^4",
     "tsx": "^4.23.11",
     "typescript": "^5",

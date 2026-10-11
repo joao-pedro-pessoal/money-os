@@ -17,6 +17,8 @@ export const BACKUP_TABLES = [
   "subcategories",
   "tags",
   "accounts",
+  "expectedMoney",
+  "liabilities",
   "buckets",
   "bucketAllocations",
   // After categories and accounts: both reference them.
@@ -36,6 +38,7 @@ export const BACKUP_TABLES = [
   "imports",
   "transactions",
   "transactionTags",
+  "subscriptionCharges",
   "transfers",
   "interestPayments",
   "accountSnapshots",

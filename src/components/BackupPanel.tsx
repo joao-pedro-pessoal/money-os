@@ -118,6 +118,7 @@ export default function BackupPanel({
                 <form action={restoreAction} className="flex gap-2 items-center pt-2 flex-wrap">
                   <input type="hidden" name="backup" value={fileText} />
                   <input
+                    name="confirmation"
                     value={confirmText}
                     onChange={(e) => setConfirmText(e.target.value)}
                     placeholder="Type RESTORE to confirm"

@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **9 de outubro de 2026**.
+Atualizado em **11 de outubro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -82,9 +82,22 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
 | R01 | Preparar acesso ao teste por convidados | **Código preparado localmente (09/10/2026), não ativado em produção.** `REGISTRATION_MODE=open/invite/closed`, código validado no servidor antes da base/hash, formulário PT/EN; segredo nunca enviado na página. Ausência da variável conserva comportamento anterior. Convite partilhado não substitui confirmação de email, anti-robô ou limites por origem; estes continuam por implementar para abertura pública. Falta escolher/ativar o modo na configuração publicada. |
 | R02 | Verificar configuração de lançamento | **Código preparado localmente (09/10/2026).** `npm run release:check` verifica configuração para teste por convites sem mostrar segredos nem ligar à base. Não consulta Vercel nem comprova RLS/capacidade/Play Console. A configuração local do PC não deve ser alterada para imitar a publicada. Procedimento em `docs/PREPARAR_TESTE_FECHADO.md`. |
 | R03 | Monitorizar falhas antes de receber testadores | **Primeira parte preparada localmente (09/10/2026).** Eventos genéricos `moneyos.server_error` no hook do Next, com teste de exclusão de dados sensíveis e política PT/EN atualizada. Falta retenção prolongada, alertas, monitorização do browser e validação no alojamento. Não substitui nem limpa os logs próprios do Next/Vercel. |
-| R04 | Backup e ensaio de restauro do serviço | **Por fazer.** Definir armazenamento, retenção e acesso; ensaiar restauro numa base isolada, com prova de recuperação e tratamento das eliminações. Exportações individuais não substituem backup de todo o serviço. Não usar a base real para o ensaio. |
+| R04 | Backup e ensaio de restauro do serviço | **Parcial (11/10/2026).** Backup individual corrigido em B31–B34; ensaio em PostgreSQL embebido (PGlite), com migrações reais, rollback e RLS entre duas contas fictícias aprovado, sem ligar à produção. Falta definir armazenamento, retenção e acesso do backup do serviço; ensaiar recuperação no alojamento e tratamento das eliminações. Exportações individuais não substituem backup de todo o serviço. Procedimento em `docs/PREPARAR_TESTE_FECHADO.md`. |
 | R05 | Ensaiar a versão final para o teste alargado | **Por fazer.** Instalação pela Play, registo/recuperação, duas contas isoladas, importação/exportação/eliminação, widgets/notificações/offline em telemóveis reais; conta de demonstração com dados fictícios. Publicação/configuração da Play Console ainda dependem do utilizador. |
 | R06 | Verificar capacidade e custos para abertura pública | **Por fazer.** Ensaio de carga em ambiente isolado, limites e custos de alojamento/base, plano de reversão, revisão independente de segurança e revisão legal. Não executar carga nem recolher dados pessoais reais neste ensaio. |
+| B31 | Restauro pode apagar os dados antes de falhar | **Corrigido localmente (11/10/2026).** `src/actions/export.ts:164`: as eliminações e inserções eram comandos independentes. Um saldo inválido no ficheiro fazia falhar a inserção depois de apagar os dados existentes. Executar todo o restauro numa transação; teste reproduziu a perda e verifica rollback. |
+| B32 | Backup completo omite dívidas, receitas previstas e decisões de subscrições | **Corrigido localmente (11/10/2026).** `src/lib/backup/index.ts:14`: `liabilities`, `expectedMoney` e `subscriptionCharges` estavam fora de `BACKUP_TABLES`. Incluí-las por ordem de dependências. Novo teste compara a lista com todas as tabelas com `user_id` e valida a ordem das chaves estrangeiras, para impedir novas omissões. |
+| B33 | Exportação mistura estados diferentes da conta | **Corrigido localmente (11/10/2026).** `src/actions/export.ts:69`: uma gravação entre a leitura dos saldos e dos movimentos podia produzir saldo antigo com movimento novo. Usar transação de leitura com snapshot repetível. Teste com gravação intercalada reproduziu a inconsistência. |
+| B34 | Confirmação do restauro só existia no botão | **Corrigido localmente (11/10/2026).** `src/actions/export.ts:150` e `src/components/BackupPanel.tsx:133`: a ação aceitava o ficheiro sem a confirmação RESTORE, que nem era enviada pelo formulário. Exigir a confirmação no servidor antes de qualquer eliminação e enviá-la no formulário. Teste da ação sem confirmação reproduziu a aceitação indevida. |
+
+| B35 | Dependências de produção com avisos de segurança | **Corrigido localmente (11/10/2026).** Next 16.3.5 sinalizado pelo npm audit, incluindo GHSA-vcvr-r3jv-pc5j e GHSA-cjq9-62q9-8jv4; não foi demonstrada exploração nesta app. Atualizados Next e eslint-config-next para 16.3.8, mais patches compatíveis de sharp, source-map-js e brace-expansion no lockfile. npm audit --omit=dev: zero vulnerabilidades conhecidas nesta data. |
+| R07 | Rever avisos das ferramentas de desenvolvimento | **Pendente (11/10/2026).** npm audit completo mantém 9 entradas (5 high, 4 moderate) nas cadeias de braces/micromatch/fast-glob/eslint-config-next e esbuild/drizzle-kit. O comando sugere downgrades incompatíveis; não aplicar audit fix --force. Produção sem avisos conhecidos após B35. Rever atualizações dos fornecedores e exposição das ferramentas antes da abertura pública. |
+
+**Validação B31–B35 (11/10/2026):** build Next 16.3.8 e TypeScript aprovados;
+lint sem erros (3 avisos antigos Bybit). Os 2889 testes passaram entre a execução
+completa e a repetição dirigida após atualizar a regra de cobertura: o backup
+pode guardar receitas previstas sem as incluir nos totais. Nove testes novos,
+incluindo três com PostgreSQL isolado. Sem migrações ou alterações aos dados reais.
 
 Revisão de 07/10/2026, secção 3 do `CONTINUAR_NO_CODEX.md`: auditoria executada
 na conta do dono, só a ler. **A02 reaberto:** continua a existir um movimento
