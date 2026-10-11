@@ -62,6 +62,20 @@ export const users = pgTable("users", {
  */
 export const OWNER_USER_ID = "owner";
 
+// Short-lived authentication handshakes, not financial rows. Before approval
+// there is no owner; actions require independent high-entropy capabilities.
+export const qrSignIns = pgTable("qr_sign_ins", {
+  id: text("id").primaryKey(),
+  requesterHash: text("requester_hash").notNull(),
+  approvalHash: text("approval_hash").notNull(),
+  codeHash: text("code_hash").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  approvedUserId: text("approved_user_id").references(() => users.id, { onDelete: "cascade" }),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  approverIssuedAt: timestamp("approver_issued_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}, (t) => [index("qr_sign_ins_expiry_idx").on(t.expiresAt)]);
+
 /**
  * Whose row this is. Filled by Postgres from the connection's `app.user_id`,
  * so an insert never names it and can never name someone else — and an insert

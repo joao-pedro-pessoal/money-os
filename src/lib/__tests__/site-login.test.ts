@@ -37,11 +37,13 @@ describe("the site's login", () => {
   });
 
   /**
-   * A session is handed out in three places: the sign-in actions after the
+   * A session is handed out in four places: the sign-in actions after the
    * password or the recovery code, the proxy renewing one it has just checked,
-   * and "Log out other devices" re-signing the device that pressed it. Every
+   * "Log out other devices" re-signing the device that pressed it, and QR
+   * consumption after explicit approval by an existing session (integration
+   * tests in qr-sign-in.test.ts cover capability binding, expiry and replay). Every
    * export of a "use server" module is an endpoint anyone can call, so a
-   * fourth — or the helper in auth.ts becoming an export — would give a
+   * fifth — or the helper in auth.ts becoming an export — would give a
    * session to whoever asked for one.
    */
   it("issues a session only after a password or an existing session", () => {
@@ -49,7 +51,7 @@ describe("the site's login", () => {
       .filter((file) => /\.set\(\s*SESSION_COOKIE_NAME/.test(readFileSync(file, "utf8")))
       .map((file) => relative(SRC, file).replace(/\\/g, "/"))
       .sort();
-    expect(issuers).toEqual(["actions/auth.ts", "actions/session.ts", "proxy.ts"]);
+    expect(issuers).toEqual(["actions/auth.ts", "actions/qrSignIn.ts", "actions/session.ts", "proxy.ts"]);
     const auth = readFileSync(join(SRC, "actions/auth.ts"), "utf8");
     expect(auth).not.toMatch(/export\s+(async\s+)?function\s+startSession/);
   });

@@ -463,6 +463,13 @@
       "when": 1790784313569,
       "tag": "0065_own_exchange_rates",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1791730129672,
+      "tag": "0066_flowery_vivisector",
+      "breakpoints": true
     }
   ]
 }

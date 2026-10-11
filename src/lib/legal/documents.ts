@@ -18,7 +18,7 @@ import type { LegalKind } from "./paths";
 export { LEGAL_KINDS, LEGAL_PATHS, type LegalKind } from "./paths";
 
 /** The day the text last changed in substance. */
-export const LEGAL_UPDATED = "2026-10-09";
+export const LEGAL_UPDATED = "2026-10-11";
 
 /** Who runs this copy of Money OS, and how to reach them. Either may be unset. */
 export interface Operator {
@@ -95,6 +95,7 @@ function en(op: Operator): Record<LegalKind, LegalDocument> {
             "**Wallet addresses** you add to follow a public blockchain account, such as a Hyperliquid address.",
             "**Broker API keys are not accepted on the published site.** Connections that need a key only work on a copy of Money OS that you run on your own computer.",
             "**In your browser or the app:** a sign-in cookie (it lasts until the account goes 30 days unused), a cookie with your language, and display preferences such as the theme and which panels are open, kept in the browser's own storage.",
+            "If you choose QR sign-in, a necessary cookie binds the request to your browser for five minutes. The server temporarily stores hashed request codes, the expiry, attempt count and, after approval, the approving account and session time. Successful use or cancellation deletes the request; expired requests are removed when another QR request is created. Scanning alone does not sign anyone in: approval from a signed-in device is required.",
             "**Android widgets:** the last financial figures read are kept on the phone, with their reading time, to display while offline. That copy is removed when a refresh finds the session is no longer accepted or no site is configured. Financial alert notifications are also removed when their refresh finds this; simply losing the connection does not erase them.",
             "**Technical records:** like every website, the hosting provider records requests — IP address, time, page asked for — and keeps them for a short time to run and protect the service.",
             "**Server failure events:** Money OS also writes the time, a generic error category, the HTTP method and the kind of operation to the hosting logs. These additional events exclude request contents, addresses, account identifiers, financial values, passwords and error messages. No additional reporting provider receives them.",
@@ -273,6 +274,7 @@ function pt(op: Operator): Record<LegalKind, LegalDocument> {
             "**Endereços de carteiras** que acrescentas para acompanhar uma conta pública numa blockchain, como um endereço Hyperliquid.",
             "**O site publicado não aceita chaves de API de corretoras.** As ligações que precisam de chave só funcionam numa cópia da Money OS a correr no teu próprio computador.",
             "**No teu navegador ou na app:** um cookie de sessão (dura até a conta passar 30 dias sem uso), um cookie com a tua língua, e preferências de apresentação, como o tema e os painéis abertos, guardadas no armazenamento do próprio navegador.",
+            "Se escolheres entrar com QR, um cookie necessário associa o pedido ao teu navegador durante cinco minutos. O servidor guarda temporariamente hashes dos códigos, a validade, o número de tentativas e, após aprovação, a conta e a hora da sessão que aprovou. A utilização com sucesso ou o cancelamento apaga o pedido; pedidos expirados são removidos quando outro QR é criado. Ler o QR não inicia uma sessão: é necessária aprovação num aparelho onde já entraste.",
             "**Widgets Android:** os últimos valores financeiros lidos ficam guardados no telemóvel, com a hora da leitura, para aparecerem sem ligação. Essa cópia é removida quando uma atualização deteta que a sessão já não é aceite ou que não há site configurado. As notificações de alertas financeiros também são retiradas quando a sua atualização deteta isto; perder apenas a ligação não as apaga.",
             "**Registos técnicos:** como em qualquer site, o fornecedor de alojamento regista os pedidos — endereço IP, hora, página pedida — e guarda-os pouco tempo, para manter e proteger o serviço.",
             "**Falhas do servidor:** a Money OS também escreve nos registos do alojamento a hora, uma categoria genérica de erro, o método HTTP e o tipo de operação. Estes eventos adicionais excluem conteúdo dos pedidos, endereços, identificadores de contas, valores financeiros, palavras-passe e mensagens de erro. Não são enviados a outro fornecedor de relatórios.",

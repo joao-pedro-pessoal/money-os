@@ -314,6 +314,9 @@ export default function LoginScreen({ signUps, inviteRequired = false, destinati
         </>
       )}
       {signUps && switchTo(w.newHere, w.createAnAccount, "sign-up")}
+      <a className="btn-secondary w-full text-center" href={`/login/qr?next=${encodeURIComponent(safeReturnPath(destination))}`}>
+        {language === "pt" ? "Entrar com QR" : "Sign in with QR"}
+      </a>
     </>
   );
 }
