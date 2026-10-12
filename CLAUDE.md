@@ -43,7 +43,10 @@ rather than because one of them is wrong.
 | A rebuilt position | `lib/portfolio/reconstruct.ts` |
 | Which dividends are whose | `lib/portfolio/dividendSource.ts` |
 | What closed trades made (every "Realized P&L") | `lib/trading/realised.ts` — `realisedTradeTotal` |
-| Which playlist a fill belongs to | `lib/trading/sharedClassification.ts` |
+| Which playlists a fill belongs to | `lib/trading/sharedClassification.ts` |
+| Which playlists a position is in (several, whole in each; portfolio totals count it once) | `lib/portfolio/playlists.ts` |
+| A ticker's name on screen | `lib/portfolio/symbolNames.ts` — `symbolLabel`; `components/SymbolName.tsx` |
+| How filters with several values combine (either within a field, every field together) | `lib/filters/multi.ts` — `matchesAny` |
 
 This list is the one to trust; keep it complete. It was out of date once and
 disagreed with the shorter list further down, which is the doc committing the
