@@ -484,6 +484,20 @@
       "when": 1791822197798,
       "tag": "0068_symbol_names_own_rows",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1791822644562,
+      "tag": "0069_regular_namorita",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1791822653858,
+      "tag": "0070_playlists_carry_over",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,7 @@ import {
   applyFilters,
   filterOptions,
   allocationOf,
-  groupValueOf,
+  groupValuesOf,
   portfolioSummary,
   UNTAGGED,
   NO_FILTERS,
@@ -18,7 +18,7 @@ const p = (o: Partial<PositionItem> & { id: string }): PositionItem => ({
   accountName: "Interactive Brokers",
   platform: "ibkr",
   assetType: "stock",
-  playlistName: null,
+  playlistNames: [], playlistIds: [],
   riskLevel: null,
   timeHorizon: null,
   value: 100,
@@ -32,31 +32,31 @@ const p = (o: Partial<PositionItem> & { id: string }): PositionItem => ({
 });
 
 const items = [
-  p({ id: "CCI", playlistName: "Div RSI", value: 8.97, pnl: -0.12 }),
-  p({ id: "FEMY", playlistName: "Insider Trading", value: 8.05, pnl: -1.04 }),
-  p({ id: "AVBC", playlistName: "Insider Trading", value: 4.96, pnl: -0.09 }),
+  p({ id: "CCI", playlistNames: ["Div RSI"], value: 8.97, pnl: -0.12 }),
+  p({ id: "FEMY", playlistNames: ["Insider Trading"], value: 8.05, pnl: -1.04 }),
+  p({ id: "AVBC", playlistNames: ["Insider Trading"], value: 4.96, pnl: -0.09 }),
   p({
     id: "xyz:GOLD",
     side: "short",
     accountName: "Hyperliquid",
     platform: "hyperliquid",
     assetType: null,
-    playlistName: "Div Commodities",
+    playlistNames: ["Div Commodities"],
     value: 228.27,
     pnl: -0.13,
   }),
 ];
 
-describe("groupValueOf", () => {
+describe("groupValuesOf", () => {
   it("names the untagged bucket instead of leaving it blank", () => {
-    expect(groupValueOf(items[3], "assetType")).toBe(UNTAGGED);
+    expect(groupValuesOf(items[3], "assetType")).toEqual([UNTAGGED]);
   });
 
   it("reads each grouping key", () => {
-    expect(groupValueOf(items[0], "playlist")).toBe("Div RSI");
-    expect(groupValueOf(items[0], "account")).toBe("Interactive Brokers");
-    expect(groupValueOf(items[3], "side")).toBe("short");
-    expect(groupValueOf(items[0], "none")).toBe("");
+    expect(groupValuesOf(items[0], "playlist")).toEqual(["Div RSI"]);
+    expect(groupValuesOf(items[0], "account")).toEqual(["Interactive Brokers"]);
+    expect(groupValuesOf(items[3], "side")).toEqual(["short"]);
+    expect(groupValuesOf(items[0], "none")).toEqual([""]);
   });
 });
 
@@ -177,8 +177,8 @@ describe("allocationOf", () => {
 
   it("does the same for a single commodity playlist", () => {
     const commodities = [
-      p({ id: "xyz:GOLD", assetType: "commodity", playlistName: "Div Commodities", value: 7.68 }),
-      p({ id: "xyz:SILVER", assetType: "commodity", playlistName: "Div Commodities", value: 12.9 }),
+      p({ id: "xyz:GOLD", assetType: "commodity", playlistNames: ["Div Commodities"], value: 7.68 }),
+      p({ id: "xyz:SILVER", assetType: "commodity", playlistNames: ["Div Commodities"], value: 12.9 }),
     ];
     const a = allocationOf(commodities, "assetType");
     expect(a).toHaveLength(2);
@@ -218,7 +218,7 @@ describe("portfolioSummary with an unstated cost", () => {
     accountName: "A",
     platform: "p",
     assetType: "crypto",
-    playlistName: null,
+    playlistNames: [], playlistIds: [],
     riskLevel: null,
     timeHorizon: null,
     notional: 100,

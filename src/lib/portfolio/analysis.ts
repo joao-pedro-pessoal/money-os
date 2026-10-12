@@ -12,8 +12,8 @@ import { STABLE_ASSET_TYPES } from "./tags";
 export interface AnalysisHolding extends HoldingLike {
   id: string;
   symbol: string;
-  playlistId?: string | null;
-  playlistName?: string | null;
+  playlistIds?: string[];
+  playlistNames?: string[];
   realizedPnl?: number | null;
   accountId?: string | null;
   accountName?: string | null;
@@ -175,10 +175,15 @@ export const GROUP_BY_OPTIONS = [
 
 export type GroupByKey = (typeof GROUP_BY_OPTIONS)[number]["value"];
 
-export function groupKeyOf(h: AnalysisHolding, key: GroupByKey): string | null | undefined {
+/** The groups a holding falls in: several by playlist, none when unset. */
+export function groupKeysOf(h: AnalysisHolding, key: GroupByKey): string[] {
+  if (key === "playlist") return [...new Set(h.playlistNames ?? [])];
+  const value = groupKeyOf(h, key);
+  return value === null || value === undefined || value === "" ? [] : [value];
+}
+
+function groupKeyOf(h: AnalysisHolding, key: Exclude<GroupByKey, "playlist">): string | null | undefined {
   switch (key) {
-    case "playlist":
-      return h.playlistName;
     case "account":
       return h.accountName;
     case "assetType":
@@ -267,10 +272,12 @@ export function performanceBy(
   const groups = new Map<string, AnalysisHolding[]>();
 
   for (const h of holdings) {
-    const k = groupKeyOf(h, key) ?? unsetLabel;
-    const list = groups.get(k) ?? [];
-    list.push(h);
-    groups.set(k, list);
+    const keys = groupKeysOf(h, key);
+    for (const k of keys.length === 0 ? [unsetLabel] : keys) {
+      const list = groups.get(k) ?? [];
+      list.push(h);
+      groups.set(k, list);
+    }
   }
 
   return Array.from(groups.entries())

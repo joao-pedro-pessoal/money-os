@@ -1,5 +1,7 @@
 "use server";
 
+import { playlistNamesOf } from "@/lib/portfolio/playlists";
+
 import { db } from "@/db/client";
 import { applyEntryOverride, entryOverrideFor, spotCostBasis } from "@/lib/portfolio/entryOverride";
 import { displaySymbol } from "@/lib/quotes/symbolSource";
@@ -148,6 +150,8 @@ export async function getPortfolioItems() {
 
   const accountName = new Map(accountRows.map((a) => [a.id, a.name]));
   const playlistName = new Map(playlistRows.map((p) => [p.id, p.name]));
+  /** Ids of playlists that still exist, in the stored order. */
+  const knownIds = (ids: readonly string[] | null | undefined) => (ids ?? []).filter((id) => playlistName.has(id));
   const connOf = new Map(connRows.map((c) => [c.id, c]));
   const metaFor = new Map(metaRows.map((m) => [`${m.connectionId}:${m.coin}`, m]));
 
@@ -209,8 +213,8 @@ export async function getPortfolioItems() {
       accountName: (h.accountId ? accountName.get(h.accountId) : null) ?? h.platform ?? "—",
       platform: h.platform ?? "manual",
       assetType: h.assetType,
-      playlistName: h.playlistId ? playlistName.get(h.playlistId) ?? null : null,
-      playlistId: h.playlistId,
+      playlistNames: playlistNamesOf(h.playlistIds, playlistName),
+      playlistIds: knownIds(h.playlistIds),
       riskLevel: h.riskLevel,
       timeHorizon: h.timeHorizon,
       expectedReturn: h.expectedReturn,
@@ -269,8 +273,8 @@ export async function getPortfolioItems() {
       accountName: accountName.get(p.accountId) ?? "—",
       platform: conn?.platform ?? "—",
       assetType: meta?.assetType ?? null,
-      playlistName: meta?.playlistId ? playlistName.get(meta.playlistId) ?? null : null,
-      playlistId: meta?.playlistId ?? null,
+      playlistNames: playlistNamesOf(meta?.playlistIds, playlistName),
+      playlistIds: knownIds(meta?.playlistIds),
       riskLevel: meta?.riskLevel ?? null,
       timeHorizon: meta?.timeHorizon ?? null,
       expectedReturn: meta?.expectedReturn ?? null,
@@ -383,11 +387,8 @@ export async function getPortfolioItems() {
        * one on the Positions page and then appear in no grouping by it —
        * HYPE, tagged "Sato", was worth 94.56 and counted in none of it.
        */
-      playlistName: (() => {
-        const id = metaFor.get(`${b.connectionId}:${b.coin}`)?.playlistId;
-        return id ? playlistName.get(id) ?? null : null;
-      })(),
-      playlistId: metaFor.get(`${b.connectionId}:${b.coin}`)?.playlistId ?? null,
+      playlistNames: playlistNamesOf(metaFor.get(`${b.connectionId}:${b.coin}`)?.playlistIds, playlistName),
+      playlistIds: knownIds(metaFor.get(`${b.connectionId}:${b.coin}`)?.playlistIds),
       riskLevel: metaFor.get(`${b.connectionId}:${b.coin}`)?.riskLevel ?? null,
       timeHorizon: metaFor.get(`${b.connectionId}:${b.coin}`)?.timeHorizon ?? null,
       expectedReturn: metaFor.get(`${b.connectionId}:${b.coin}`)?.expectedReturn ?? null,
@@ -517,7 +518,8 @@ export async function getPortfolioItems() {
           accountName: accountName.get(accountId) ?? "—",
           platform: account.institution,
           assetType: null,
-          playlistName: null,
+          playlistNames: [],
+          playlistIds: [],
           riskLevel: null,
           timeHorizon: null,
           value,

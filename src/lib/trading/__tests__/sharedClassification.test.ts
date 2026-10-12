@@ -7,10 +7,10 @@ type Classification = NonNullable<TradeHistoryRow['classification']>;
 
 const sato: Classification = {
   assetType: null, assetTypeAuto: false, riskLevel: 'high', expectedReturn: null, timeHorizon: null,
-  liquidity: null, apr: null, playlistId: 'p-sato', playlistName: 'Sato', notes: 'my short',
+  liquidity: null, apr: null, playlistIds: ['p-sato'], playlistNames: ['Sato'], notes: 'my short',
 };
-const other: Classification = { ...sato, playlistId: 'p-other', playlistName: 'Other', notes: null };
-const empty: Classification = { ...sato, riskLevel: null, playlistId: null, playlistName: null, notes: null };
+const other: Classification = { ...sato, playlistIds: ['p-other'], playlistNames: ['Other'], notes: null };
+const empty: Classification = { ...sato, riskLevel: null, playlistIds: [], playlistNames: [], notes: null };
 
 const fill = (id: string, date: string, description: string, quantity: number, realizedPnl: number | null,
   extra: Partial<TradeHistoryRow> = {}): TradeHistoryRow => ({
@@ -29,7 +29,7 @@ const zro = () => [
 ];
 
 const playlistRealised = (rows: TradeHistoryRow[], playlistId: string) =>
-  Math.round(rows.filter((r) => isRealisedTrade(r) && r.classification?.playlistId === playlistId)
+  Math.round(rows.filter((r) => isRealisedTrade(r) && (r.classification?.playlistIds ?? []).includes(playlistId))
     .reduce((s, r) => s + r.realizedPnl!, 0) * 100) / 100;
 
 describe('a trade split into several fills is classified whole', () => {
@@ -52,7 +52,7 @@ describe('a trade split into several fills is classified whole', () => {
   it('marks what was shared, and keeps the notes on the fill they were written on', () => {
     const rows = shareTradeClassification(zro());
     const c2 = rows.find((r) => r.id === 'c2')!;
-    expect(c2.classification).toMatchObject({ playlistId: 'p-sato', sharedFrom: 'c1', notes: null });
+    expect(c2.classification).toMatchObject({ playlistIds: ['p-sato'], sharedFrom: 'c1', notes: null });
     expect(rows.find((r) => r.id === 'c1')!.classification).toBe(sato);
   });
 
@@ -68,8 +68,8 @@ describe('a trade split into several fills is classified whole', () => {
   it("never overrides a fill's own classification, even one saved empty", () => {
     const rows = shareTradeClassification(zro().map((r) =>
       r.id === 'c2' ? { ...r, classification: other } : r.id === 'c3' ? { ...r, classification: empty } : r));
-    expect(rows.find((r) => r.id === 'c2')!.classification?.playlistId).toBe('p-other');
-    expect(rows.find((r) => r.id === 'c3')!.classification?.playlistId).toBeNull();
+    expect(rows.find((r) => r.id === 'c2')!.classification?.playlistIds).toEqual(['p-other']);
+    expect(rows.find((r) => r.id === 'c3')!.classification?.playlistIds).toEqual([]);
   });
 
   it('shares nothing when the rest of the trade disagrees', () => {

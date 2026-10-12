@@ -1,3 +1,5 @@
+import PlaylistPicker from "@/components/PlaylistPicker";
+import { playlistsText } from "@/lib/portfolio/playlists";
 import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import AssetSearch from "@/components/AssetSearch";
@@ -57,7 +59,7 @@ export default async function WatchlistPage() {
                       {w.name && <div className="text-xs text-[var(--muted)]"><span translate="no">{w.name}</span></div>}
                     </td>
                     <td>{tagLabel(w.assetType, "assetType") ?? "—"}</td>
-                    <td><span translate="no">{w.playlistName ?? "—"}</span></td>
+                    <td><span translate="no">{playlistsText(w.playlistNames)}</span></td>
                     <td className="text-right">
                       {w.currentPrice === null ? "—" : <Money value={w.currentPrice} currency={w.currency} />}
                     </td>
@@ -103,14 +105,7 @@ export default async function WatchlistPage() {
                 </option>
               ))}
             </select>
-            <select name="playlistId" className="input" defaultValue="">
-              <option value="">Playlist — none</option>
-              {playlistList.map((p) => (
-                <option translate="no" key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <PlaylistPicker playlists={playlistList} selected={[]} />
           </div>
           <div className="flex gap-2">
             <input name="currentPrice" type="number" step="0.0001" placeholder="Current price" className="input" />

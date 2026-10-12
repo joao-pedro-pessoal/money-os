@@ -6,8 +6,10 @@ import {
   holdings,
   watchlistItems,
   auditLog,
+  positionMeta,
+  tradeClassifications,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { sumInBase } from "@/lib/fx";
 import { getRates } from "./fx";
@@ -16,6 +18,8 @@ import { getPortfolioItems } from "./dashboard";
 import { hasPnl, portfolioSummary } from "@/lib/portfolio/positionView";
 import { isRealisedTrade } from "@/lib/trading/tradeMatches";
 import { getTradeAnalysis } from "./investmentActivity";
+import { chosenPlaylists } from "./playlistChoice";
+import { playlistNamesOf } from "@/lib/portfolio/playlists";
 
 /** Playlists with the totals of the positions assigned to each one. */
 export async function listPlaylistsWithTotals() {
@@ -24,12 +28,12 @@ export async function listPlaylistsWithTotals() {
     getTradeAnalysis(), getRates(), getBaseCurrency(),
   ]);
   return lists.map(p => {
-    const items = portfolio.items.filter(i => i.playlistId === p.id);
+    const items = portfolio.items.filter(i => i.playlistIds.includes(p.id));
     const summary = portfolioSummary(items);
-    const closed = trades.rows.filter(t => isRealisedTrade(t) && t.classification?.playlistId === p.id);
+    const closed = trades.rows.filter(t => isRealisedTrade(t) && (t.classification?.playlistIds ?? []).includes(p.id));
     // Manual sales are recorded on holdings, separately from imported executions.
     const manualRealized = sumInBase(manual
-      .filter(h => h.playlistId === p.id && h.realizedPnl !== null && Number(h.realizedPnl) !== 0)
+      .filter(h => h.playlistIds.includes(p.id) && h.realizedPnl !== null && Number(h.realizedPnl) !== 0)
       .map(h => ({ amount: Number(h.realizedPnl), currency: h.currency })), rates, base);
     // The positions themselves, largest first, so a playlist can be opened to
     // see what makes up its totals — the same items the totals are built from.
@@ -82,11 +86,22 @@ export async function updatePlaylist(formData: FormData) {
   revalidatePath("/investments");
 }
 
-/** Deleting a playlist never deletes positions — they just become ungrouped. */
+/**
+ * Deleting a playlist never deletes positions — they leave that playlist and
+ * stay in any others. Its id is taken out of every list in the same
+ * transaction: an array element has no foreign key to do it.
+ */
 export async function deletePlaylist(formData: FormData) {
   const id = String(formData.get("id"));
-  await db.insert(auditLog).values({ entityType: "playlist", entityId: id, action: "playlist_deleted" });
-  await db.delete(playlists).where(eq(playlists.id, id));
+  await db.transaction(async (tx) => {
+    await tx.insert(auditLog).values({ entityType: "playlist", entityId: id, action: "playlist_deleted" });
+    const without = sql`array_remove(playlist_ids, ${id})`;
+    await tx.update(holdings).set({ playlistIds: without }).where(sql`${id} = any(${holdings.playlistIds})`);
+    await tx.update(positionMeta).set({ playlistIds: without }).where(sql`${id} = any(${positionMeta.playlistIds})`);
+    await tx.update(tradeClassifications).set({ playlistIds: without }).where(sql`${id} = any(${tradeClassifications.playlistIds})`);
+    await tx.update(watchlistItems).set({ playlistIds: without }).where(sql`${id} = any(${watchlistItems.playlistIds})`);
+    await tx.delete(playlists).where(eq(playlists.id, id));
+  });
   revalidatePath("/investments/playlists");
   revalidatePath("/investments");
 }
@@ -104,7 +119,8 @@ export async function listWatchlist() {
       ...w,
       currentPrice: current,
       targetPrice: target,
-      playlistName: w.playlistId ? nameOf.get(w.playlistId) ?? null : null,
+      playlistIds: w.playlistIds.filter((id) => nameOf.has(id)),
+      playlistNames: playlistNamesOf(w.playlistIds, nameOf),
       // How far the price still has to move to reach the target.
       distancePercent:
         current && target && current !== 0 ? round2(((target - current) / current) * 100) : null,
@@ -121,13 +137,13 @@ export async function addWatchlistItem(formData: FormData) {
   const targetPrice = numeric(formData.get("targetPrice"));
   const currency = String(formData.get("currency") ?? "EUR");
   const notes = String(formData.get("notes") ?? "").trim() || null;
-  const playlistId = String(formData.get("playlistId") ?? "").trim() || null;
+  const playlistIds = await chosenPlaylists(formData);
 
   if (!symbol) throw new Error("Symbol is required");
 
   await db
     .insert(watchlistItems)
-    .values({ symbol, name, assetType, currentPrice, targetPrice, currency, notes, playlistId });
+    .values({ symbol, name, assetType, currentPrice, targetPrice, currency, notes, playlistIds: playlistIds ?? [] });
 
   revalidatePath("/investments/watchlist");
 }
@@ -140,13 +156,13 @@ export async function updateWatchlistItem(formData: FormData) {
   const currentPrice = numeric(formData.get("currentPrice"));
   const targetPrice = numeric(formData.get("targetPrice"));
   const notes = String(formData.get("notes") ?? "").trim() || null;
-  const playlistId = String(formData.get("playlistId") ?? "").trim() || null;
+  const playlistIds = await chosenPlaylists(formData);
 
   if (!symbol) throw new Error("Symbol is required");
 
   await db
     .update(watchlistItems)
-    .set({ symbol, name, assetType, currentPrice, targetPrice, notes, playlistId, updatedAt: new Date() })
+    .set({ symbol, name, assetType, currentPrice, targetPrice, notes, ...(playlistIds === undefined ? {} : { playlistIds }), updatedAt: new Date() })
     .where(eq(watchlistItems.id, id));
 
   revalidatePath("/investments/watchlist");

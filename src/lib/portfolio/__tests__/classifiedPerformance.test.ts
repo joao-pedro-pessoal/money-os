@@ -4,13 +4,13 @@ import type { PositionItem } from '../positionView';
 import type { TradeHistoryRow } from '../../trading/filter';
 
 const open: PositionItem = { id: 'p1', symbol: 'BTC', side: 'short', accountId: null, accountName: 'A', platform: 'test',
-  assetType: 'crypto', playlistName: 'Strategy', riskLevel: 'low', expectedReturn: 'moderate',
+  assetType: 'crypto', playlistNames: ['Strategy'], playlistIds: ['strategy'], riskLevel: 'low', expectedReturn: 'moderate',
   timeHorizon: 'short', liquidity: 'high', value: 120, notional: 120, leverage: null,
   pnl: 20, source: 'synced', insideBalance: true, apr: null };
 const trade: TradeHistoryRow = { id: 't1', symbol: 'BTC', accountName: 'B', currency: 'EUR',
   date: '2026-09-10', type: 'SELL', quantity: 1, amount: 105, fees: 0, realizedPnl: 5,
   description: 'Close Short', tags: [], classification: { assetType: 'crypto', assetTypeAuto: false,
-    playlistName: 'Strategy', playlistId: null, riskLevel: 'low', expectedReturn: 'moderate',
+    playlistNames: ['Strategy'], playlistIds: [], riskLevel: 'low', expectedReturn: 'moderate',
     timeHorizon: 'short', liquidity: 'high', apr: null, notes: null } };
 
 describe('classified performance', () => {

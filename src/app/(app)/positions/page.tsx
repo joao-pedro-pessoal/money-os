@@ -246,7 +246,7 @@ export default async function PositionsPage() {
                       assetType={g.parts[0].assetType}
                       assetTypeAuto={g.parts[0].assetTypeAuto}
                       apr={g.parts[0].apr}
-                      playlistId={g.parts[0].playlistId}
+                      playlistIds={g.parts[0].playlistIds}
                       notes={g.parts[0].notes}
                       playlists={playlistList}
                       entryPriceOverride={g.parts[0].entryPriceOverride}
@@ -279,7 +279,7 @@ export default async function PositionsPage() {
                           assetType={b.assetType}
                           assetTypeAuto={b.assetTypeAuto}
                           apr={b.apr}
-                          playlistId={b.playlistId}
+                          playlistIds={b.playlistIds}
                           notes={b.notes}
                           playlists={playlistList}
                           entryPriceOverride={b.entryPriceOverride}
@@ -338,7 +338,7 @@ export default async function PositionsPage() {
                             assetType={g.parts[0].assetType}
                             assetTypeAuto={g.parts[0].assetTypeAuto}
                             apr={g.parts[0].apr}
-                            playlistId={g.parts[0].playlistId}
+                            playlistIds={g.parts[0].playlistIds}
                             notes={g.parts[0].notes}
                             playlists={playlistList}
                             entryPriceOverride={g.parts[0].entryPriceOverride}
@@ -395,7 +395,7 @@ export default async function PositionsPage() {
                               assetType={b.assetType}
                               assetTypeAuto={b.assetTypeAuto}
                               apr={b.apr}
-                              playlistId={b.playlistId}
+                              playlistIds={b.playlistIds}
                               notes={b.notes}
                               playlists={playlistList}
                               entryPriceOverride={b.entryPriceOverride}
@@ -504,7 +504,7 @@ export default async function PositionsPage() {
                     liquidity={h.liquidity}
                     assetType={h.assetType}
                     apr={h.apr}
-                    playlistId={h.playlistId}
+                    playlistIds={h.playlistIds}
                     playlists={playlistList}
                   />
                   <details className="text-xs">
@@ -559,7 +559,7 @@ export default async function PositionsPage() {
                         liquidity={h.liquidity}
                         assetType={h.assetType}
                         apr={h.apr}
-                        playlistId={h.playlistId}
+                        playlistIds={h.playlistIds}
                         playlists={playlistList}
                       />
                     </td>
@@ -739,7 +739,7 @@ export default async function PositionsPage() {
                       assetType={p.assetType}
                       assetTypeAuto={p.assetTypeAuto}
                       apr={p.apr}
-                      playlistId={p.playlistId}
+                      playlistIds={p.playlistIds}
                       notes={p.notes}
                       playlists={playlistList}
                       entryPriceOverride={p.entryPriceOverride}
@@ -794,7 +794,7 @@ export default async function PositionsPage() {
                           assetType={p.assetType}
                           assetTypeAuto={p.assetTypeAuto}
                           apr={p.apr}
-                          playlistId={p.playlistId}
+                          playlistIds={p.playlistIds}
                           notes={p.notes}
                           playlists={playlistList}
                           entryPriceOverride={p.entryPriceOverride}

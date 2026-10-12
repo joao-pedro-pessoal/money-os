@@ -1,5 +1,6 @@
 "use client";
 
+import { playlistsText } from "@/lib/portfolio/playlists";
 import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
@@ -558,9 +559,9 @@ export default function PortfolioTable({
                               <td
                                 key={c.key}
                                 className="text-xs text-[var(--muted)] truncate"
-                                title={i.playlistName ?? undefined}
+                                title={i.playlistNames.length > 0 ? i.playlistNames.join(", ") : undefined}
                               >
-                                <span translate="no">{i.playlistName ?? "—"}</span>
+                                <span translate="no">{playlistsText(i.playlistNames)}</span>
                                 {badges}
                               </td>
                             );

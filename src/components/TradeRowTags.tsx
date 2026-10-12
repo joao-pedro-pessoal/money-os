@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useState, useTransition } from "react";
 import { setTradeClassification } from "@/actions/investmentActivity";
+import PlaylistPicker from "./PlaylistPicker";
 import { TRADE_CLASSIFICATION_FIELDS } from "@/lib/trading/classification";
 import { annualYieldLabel, tagLabel } from "@/lib/portfolio/tags";
 import type { TradeHistoryRow } from "@/lib/trading/filter";
@@ -14,7 +15,7 @@ export default function TradeRowTags({ id, classification: c, playlists }: {
   const rateLabel = annualYieldLabel(assetType);
   return <details className="min-w-48 whitespace-normal">
     <summary className="cursor-pointer text-[var(--accent)]">{c ? 'Edit tags' : 'Add tags'}</summary>
-    {c && <p className="text-xs"><span translate="no">{[tagLabel(c.riskLevel, 'risk'), tagLabel(c.timeHorizon, 'timeHorizon'), c.playlistName].filter(Boolean).join(' / ')}</span></p>}
+    {c && <p className="text-xs"><span translate="no">{[tagLabel(c.riskLevel, 'risk'), tagLabel(c.timeHorizon, 'timeHorizon'), ...c.playlistNames].filter(Boolean).join(' / ')}</span></p>}
     {c?.sharedFrom && <p className="text-xs text-[var(--muted)]">From another fill of the same trade.</p>}
     <form action={(data) => startTransition(async () => {
       setMessage("");
@@ -31,7 +32,7 @@ export default function TradeRowTags({ id, classification: c, playlists }: {
         </select>
       </label>)}
       {rateLabel && <label className="block text-xs">{rateLabel}<input name="apr" type="number" min="0" max="99999" step="0.001" defaultValue={c?.apr ?? ''} className="input" /></label>}
-      <label className="block text-xs">Playlist<select name="playlistId" aria-label="Playlist" defaultValue={c?.playlistId ?? ''} className="input text-xs"><option value="">None</option>{playlists.map(p => <option translate="no" key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <PlaylistPicker playlists={playlists} selected={c?.playlistIds ?? []} compact />
       <label className="block text-xs">Notes<textarea name="notes" aria-label="Trade notes" maxLength={10000} defaultValue={c?.notes ?? ''} className="input" /></label>
       <button type="submit" disabled={pending} className="btn text-xs">{pending ? 'Saving...' : 'Save'}</button>
       <span role="status" className="block text-xs">{message}</span>

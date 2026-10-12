@@ -21,5 +21,5 @@ export function parseTradeClassification(input: Record<string, string>) {
   if (notes.length > 10000) throw new Error('Notes must be at most 10000 characters.');
   return { assetType: values.assetType, riskLevel: values.riskLevel, expectedReturn: values.expectedReturn,
     timeHorizon: values.timeHorizon, liquidity: values.liquidity,
-    apr: apr ? Number(apr).toFixed(3) : null, notes: notes || null, playlistId: input.playlistId?.trim() || null };
+    apr: apr ? Number(apr).toFixed(3) : null, notes: notes || null };
 }

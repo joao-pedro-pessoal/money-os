@@ -151,9 +151,9 @@ describe("horizonRiskMismatches", () => {
 
 describe("performanceBy", () => {
   const holdings = [
-    h({ id: "1", symbol: "A", playlistName: "Reforma", quantity: 10, avgEntryPrice: 100, currentPrice: 150 }),
-    h({ id: "2", symbol: "B", playlistName: "Reforma", quantity: 10, avgEntryPrice: 100, currentPrice: 110 }),
-    h({ id: "3", symbol: "C", playlistName: "Especulação", quantity: 10, avgEntryPrice: 100, currentPrice: 50 }),
+    h({ id: "1", symbol: "A", playlistNames: ["Reforma"], quantity: 10, avgEntryPrice: 100, currentPrice: 150 }),
+    h({ id: "2", symbol: "B", playlistNames: ["Reforma"], quantity: 10, avgEntryPrice: 100, currentPrice: 110 }),
+    h({ id: "3", symbol: "C", playlistNames: ["Especulação"], quantity: 10, avgEntryPrice: 100, currentPrice: 50 }),
   ];
 
   it("aggregates value, cost and P&L per group", () => {
@@ -173,7 +173,7 @@ describe("performanceBy", () => {
   });
 
   it("labels ungrouped holdings instead of dropping them", () => {
-    const rows = performanceBy([h({ playlistName: null, currentPrice: 100 })], "playlist");
+    const rows = performanceBy([h({ playlistNames: [], playlistIds: [], currentPrice: 100 })], "playlist");
     expect(rows[0].key).toBe("Unset");
   });
 
@@ -184,7 +184,7 @@ describe("performanceBy", () => {
 
   it("sums realized P&L per group", () => {
     const rows = performanceBy(
-      [h({ playlistName: "P", realizedPnl: 120 }), h({ id: "2", playlistName: "P", realizedPnl: 30 })],
+      [h({ playlistNames: ["P"], realizedPnl: 120 }), h({ id: "2", playlistNames: ["P"], realizedPnl: 30 })],
       "playlist"
     );
     expect(rows[0].realized).toBe(150);

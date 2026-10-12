@@ -1,3 +1,4 @@
+import { playlistGroups } from "./playlists";
 import type { GroupByKey, GroupPerformance, GroupMember } from './analysis';
 import { hasPnl, portfolioSummary, type PositionItem } from './positionView';
 import type { TradeHistoryRow } from '../trading/filter';
@@ -22,18 +23,21 @@ export function classifiedPerformance(items: PositionItem[], trades: TradeHistor
     if (!groups.has(label)) groups.set(label, { open: [], closed: [] });
     return groups.get(label)!;
   };
-  for (const p of new Map((status === "closed" ? [] : items).map(p => [p.id, p])).values()) {
-    const name = key === 'playlist' ? p.playlistName : key === 'account' ? p.accountName
-      : key === 'direction' ? p.side : p[key];
-    group(name).open.push(p);
+  const opened = [...new Map((status === "closed" ? [] : items).map(p => [p.id, p])).values()];
+  for (const p of opened) {
+    const names = key === 'playlist' ? playlistGroups(p.playlistNames, '')
+      : [key === 'account' ? p.accountName : key === 'direction' ? p.side : p[key]];
+    for (const name of names) group(name).open.push(p);
   }
   for (const t of new Map((status === "open" ? [] : trades).map(t => [t.id, t])).values()) {
     if (!isRealisedTrade(t)) continue;
-    const name = key === 'playlist' ? t.classification?.playlistName : key === 'account' ? t.accountName
-      : key === 'direction' ? directionOf(t) : key === 'symbol' ? t.symbol : t.classification?.[key];
-    group(name).closed.push(t);
+    const names = key === 'playlist' ? playlistGroups(t.classification?.playlistNames ?? [], '')
+      : [key === 'account' ? t.accountName : key === 'direction' ? directionOf(t) : key === 'symbol' ? t.symbol : t.classification?.[key]];
+    for (const name of names) group(name).closed.push(t);
   }
-  const total = portfolioSummary([...groups.values()].flatMap(g => g.open)).held;
+  // Of the positions themselves, each once: by playlist a position can sit in
+  // several groups, and its share of the portfolio must not count it twice.
+  const total = portfolioSummary(opened).held;
   return [...groups].map(([name, { open, closed }]) => {
     const s = portfolioSummary(open);
     const members: GroupMember[] = open.map(p => {

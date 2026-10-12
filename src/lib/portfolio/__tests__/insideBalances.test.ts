@@ -16,7 +16,7 @@ const item = (over: Partial<PositionItem> & { id: string }): PositionItem => ({
   accountName: "Hyperliquid",
   platform: "hyperliquid",
   assetType: "crypto",
-  playlistName: null,
+  playlistNames: [], playlistIds: [],
   riskLevel: null,
   timeHorizon: null,
   value: 100,

@@ -9,7 +9,7 @@ const item = (over: Partial<PositionItem>): PositionItem => ({
   accountName: "A",
   platform: "trading212",
   assetType: "etf",
-  playlistName: null,
+  playlistNames: [], playlistIds: [],
   riskLevel: null,
   timeHorizon: null,
   value: 100,

@@ -8,6 +8,11 @@ import PanelFrame from "@/components/PanelFrame";
 
 export default async function PlaylistsPage() {
   const lists = await listPlaylistsWithTotals();
+  // A position can be in several playlists, whole in each: then the totals below
+  // add up to more than the portfolio, and the page should say why.
+  const seen = new Map<string, number>();
+  for (const p of lists) for (const position of p.positions) seen.set(position.id, (seen.get(position.id) ?? 0) + 1);
+  const shared = [...seen.values()].filter((n) => n > 1).length;
 
   return (
     <div className="space-y-8">
@@ -16,6 +21,7 @@ export default async function PlaylistsPage() {
           <h1 className="text-lg font-semibold">Playlists</h1>
           <p className="text-xs text-[var(--muted)] mt-1">
             Group your positions by purpose (Retirement, Speculation, …) and see which group is actually performing.
+            A position can be in several playlists; tick them on the position.
           </p>
         </div>
         <Link href="/investments" className="btn whitespace-nowrap">
@@ -24,6 +30,11 @@ export default async function PlaylistsPage() {
       </div>
 
       <div className="card p-4">
+        {shared > 0 && (
+          <p className="text-xs text-[var(--muted)] mb-3">
+            {shared === 1 ? "1 position is" : `${shared} positions are`} in more than one playlist and counted whole in each, so these totals add up to more than the portfolio.
+          </p>
+        )}
         {lists.some(p => p.tradesMayBeIncomplete) && (
           <p className="text-xs text-[var(--muted)] mb-3">
             Some trades have no exchange rate and are left out. Playlist results may be incomplete.

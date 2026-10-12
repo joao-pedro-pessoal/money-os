@@ -22,6 +22,7 @@ import {
   type InvestmentActivityInput,
 } from "@/lib/investment-activity";
 import { parseTradeClassification } from "@/lib/trading/classification";
+import { playlistIdsFrom, playlistNamesOf } from "@/lib/portfolio/playlists";
 import {
   cumulativePnl,
   bySymbol,
@@ -300,7 +301,8 @@ const loadTradeRows = cache(async () => {
     if (!meta) return null;
     return { ...meta, assetTypeAuto: false,
       apr: meta.apr === null ? null : Number(meta.apr),
-      playlistName: meta.playlistId ? playlistName.get(meta.playlistId) ?? null : null };
+      playlistIds: meta.playlistIds.filter((id) => playlistName.has(id)),
+      playlistNames: playlistNamesOf(meta.playlistIds, playlistName) };
   };
 
   let unconvertible = 0;
@@ -499,14 +501,15 @@ export async function setTradeClassification(formData: FormData) {
   if (!(await hasSession())) throw new Error("Sign in again.");
   const activityId = String(formData.get("activityId") ?? "");
   const input = Object.fromEntries([...formData.entries()].map(([key, value]) => [key, String(value)]));
-  const values = parseTradeClassification(input);
+  const classified = parseTradeClassification(input);
+  // Ticked boxes, one value each, so not the single-valued `input` above.
+  const chosen = playlistIdsFrom(formData.getAll("playlistIds"));
   await db.transaction(async tx => {
     const [row] = await tx.select({ id: investmentActivities.id }).from(investmentActivities).where(eq(investmentActivities.id, activityId)).for("update");
     if (!row) throw new Error("Trade no longer exists.");
-    if (values.playlistId) {
-      const [playlist] = await tx.select({ id: playlists.id }).from(playlists).where(eq(playlists.id, values.playlistId));
-      if (!playlist) throw new Error("Playlist no longer exists.");
-    }
+    const known = new Set((await tx.select({ id: playlists.id }).from(playlists)).map((p) => p.id));
+    if (chosen.some((id) => !known.has(id))) throw new Error("Playlist no longer exists.");
+    const values = { ...classified, playlistIds: chosen };
     await tx.insert(tradeClassifications).values({ activityId, ...values }).onConflictDoUpdate({ target: tradeClassifications.activityId, set: { ...values, updatedAt: new Date() } });
   });
   revalidatePath("/investments", "layout");

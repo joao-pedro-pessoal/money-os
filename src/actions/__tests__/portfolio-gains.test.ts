@@ -20,7 +20,7 @@ import { listPlaylistsWithTotals } from "../playlists";
 function position(extra: Partial<PositionItem> = {}): PositionItem {
   return {
     id: "manual", symbol: "TEST", side: "long", accountId: "account", accountName: "Test",
-    platform: "manual", assetType: "stock", playlistName: null, riskLevel: null, timeHorizon: null,
+    platform: "manual", assetType: "stock", playlistNames: [], playlistIds: [], riskLevel: null, timeHorizon: null,
     value: 120, notional: 120, leverage: null, pnl: 20, source: "manual", insideBalance: false, apr: null,
     ...extra,
   };
@@ -41,9 +41,9 @@ describe("manual playlist sales without an exchange rate", () => {
   it("keeps the convertible result and reports the sale it could not include", async () => {
     fake.rows.set(playlists, [{ id: "list", name: "Test" }]);
     fake.rows.set(holdings, [
-      { playlistId: "list", realizedPnl: "10", currency: "GBP" },
-      { playlistId: "list", realizedPnl: "5", currency: "XYZ" },
-      { playlistId: "list", realizedPnl: null, currency: "XYZ" },
+      { playlistIds: ["list"], realizedPnl: "10", currency: "GBP" },
+      { playlistIds: ["list"], realizedPnl: "5", currency: "XYZ" },
+      { playlistIds: ["list"], realizedPnl: null, currency: "XYZ" },
     ]);
     const [result] = await listPlaylistsWithTotals();
     expect(result).toMatchObject({ realized: 10, unconverted: 1 });

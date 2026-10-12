@@ -32,6 +32,8 @@ import { encryptSecret, decryptSecret, holdsMasterKey, maskSecret, secretLockedH
 import { freshnessOf } from "@/lib/connectors/freshness";
 import { marginView, describePressure } from "@/lib/connectors/margin";
 import { refreshRates } from "./fx";
+import { chosenPlaylists } from "./playlistChoice";
+import { playlistNamesOf } from "@/lib/portfolio/playlists";
 import type { Connector } from "@/lib/connectors/types";
 import { NEW_ACCOUNT, PLATFORM_LABELS, PLATFORM_SETUP, bybitBaseUrl, BYBIT_REGIONS } from "@/lib/connectors/constants";
 import { listAccountUsage } from "./accounts";
@@ -247,8 +249,8 @@ export async function listAllPositions() {
       assetType: m?.assetType ?? null,
       assetTypeAuto: m?.assetTypeAuto ?? false,
       apr: m?.apr === null || m?.apr === undefined ? null : Number(m.apr),
-      playlistId: m?.playlistId ?? null,
-      playlistName: m?.playlistId ? playlistName.get(m.playlistId) ?? null : null,
+      playlistIds: (m?.playlistIds ?? []).filter((id) => playlistName.has(id)),
+      playlistNames: playlistNamesOf(m?.playlistIds, playlistName),
       notes: m?.notes ?? null,
     };
   });
@@ -292,6 +294,7 @@ export async function setPositionTags(formData: FormData) {
         : entryFor === "balance" ? { entryPriceOverride: entry }
           : {};
 
+  const playlistIds = await chosenPlaylists(formData);
   const values = {
     ...entryField,
     riskLevel: value("riskLevel"),
@@ -322,7 +325,7 @@ export async function setPositionTags(formData: FormData) {
      * Leaving it unset now means "you decide", and the next sync fills it in.
      */
     assetTypeAuto: assetType === null,
-    playlistId: value("playlistId"),
+    ...(playlistIds === undefined ? {} : { playlistIds }),
     notes: value("notes"),
     updatedAt: new Date(),
   };
@@ -451,8 +454,8 @@ export async function listBalances() {
     assetType: m?.assetType ?? null,
     assetTypeAuto: m?.assetTypeAuto ?? false,
     apr: m?.apr === null || m?.apr === undefined ? null : Number(m.apr),
-    playlistId: m?.playlistId ?? null,
-    playlistName: m?.playlistId ? playlistName.get(m.playlistId) ?? null : null,
+    playlistIds: (m?.playlistIds ?? []).filter((id) => playlistName.has(id)),
+    playlistNames: playlistNamesOf(m?.playlistIds, playlistName),
     notes: m?.notes ?? null,
     };
   });

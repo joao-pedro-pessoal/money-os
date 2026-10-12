@@ -1,5 +1,7 @@
 "use client";
 
+import { playlistsText } from "@/lib/portfolio/playlists";
+import PlaylistPicker from "./PlaylistPicker";
 import { useState } from "react";
 import {
   RISK_LEVELS,
@@ -28,7 +30,7 @@ export default function PositionTagsForm({
   assetType,
   assetTypeAuto,
   apr,
-  playlistId,
+  playlistIds,
   notes,
   playlists,
   entryPriceOverride,
@@ -46,7 +48,8 @@ export default function PositionTagsForm({
   /** True while the type came from the platform rather than from you. */
   assetTypeAuto: boolean;
   apr: number | null;
-  playlistId: string | null;
+  /** Every playlist it is in. */
+  playlistIds: string[];
   notes: string | null;
   playlists: { id: string; name: string }[];
   /** What you said this cost per unit, or null to use the platform's. */
@@ -63,7 +66,7 @@ export default function PositionTagsForm({
   // Controlled so the rate field can be named after the type as you change it.
   const [type, setType] = useState(assetType ?? "");
   const yieldLabel = annualYieldLabel(type);
-  const hasTags = Boolean(riskLevel || expectedReturn || timeHorizon || liquidity || playlistId);
+  const hasTags = Boolean(riskLevel || expectedReturn || timeHorizon || liquidity || playlistIds.length > 0);
 
   if (!open) {
     return (
@@ -92,9 +95,9 @@ export default function PositionTagsForm({
             )}
           </div>
         )}
-        {playlistId && (
+        {playlistIds.length > 0 && (
           <div className="text-xs text-[var(--muted)] mt-1">
-            <span translate="no">{playlists.find((p) => p.id === playlistId)?.name}</span>
+            <span translate="no">{playlistsText(playlists.filter((p) => playlistIds.includes(p.id)).map((p) => p.name))}</span>
           </div>
         )}
         <button
@@ -179,16 +182,7 @@ export default function PositionTagsForm({
           </option>
         ))}
       </select>
-      {playlists.length > 0 && (
-        <select name="playlistId" className="input py-1 text-xs" defaultValue={playlistId ?? ""}>
-          <option value="">Playlist — none</option>
-          {playlists.map((p) => (
-            <option translate="no" key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      )}
+      <PlaylistPicker playlists={playlists} selected={playlistIds} compact />
       <input
         name="notes"
         defaultValue={notes ?? ""}

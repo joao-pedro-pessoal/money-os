@@ -363,7 +363,14 @@ export const watchlistItems = pgTable("watchlist_items", {
   targetPrice: numeric("target_price", { precision: 18, scale: 4 }),
   currency: text("currency").notNull().default("EUR"),
   notes: text("notes"),
-  playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+  /** Replaced by `playlistIds`; still read by the version published before it. Dropped once that is gone. */
+  legacyPlaylistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+  /**
+   * Every playlist this is in: one position can belong to several, and each
+   * playlist counts all of it. Ids only, so deleting a playlist removes it
+   * here (`deletePlaylist`) — an array element has no foreign key.
+   */
+  playlistIds: text("playlist_ids").array().notNull().default(sql`'{}'::text[]`),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -395,7 +402,14 @@ export const holdings = pgTable("holdings", {
   name: text("name"),
   // "long" (profit when price rises) or "short" (profit when price falls).
   direction: text("direction").notNull().default("long"),
-  playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+  /** Replaced by `playlistIds`; still read by the version published before it. Dropped once that is gone. */
+  legacyPlaylistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+  /**
+   * Every playlist this is in: one position can belong to several, and each
+   * playlist counts all of it. Ids only, so deleting a playlist removes it
+   * here (`deletePlaylist`) — an array element has no foreign key.
+   */
+  playlistIds: text("playlist_ids").array().notNull().default(sql`'{}'::text[]`),
   // Profit/loss already locked in by partial sales. Kept apart from unrealized
   // P&L so an estimate is never mixed with money actually taken off the table.
   realizedPnl: numeric("realized_pnl", { precision: 18, scale: 2 }).default("0"),
@@ -488,22 +502,7 @@ export const holdingsRelations = relations(holdings, ({ one, many }) => ({
     fields: [holdings.accountId],
     references: [accounts.id],
   }),
-  playlist: one(playlists, {
-    fields: [holdings.playlistId],
-    references: [playlists.id],
-  }),
-}));
-
-export const playlistsRelations = relations(playlists, ({ many }) => ({
-  holdings: many(holdings),
-  watchlistItems: many(watchlistItems),
-}));
-
-export const watchlistItemsRelations = relations(watchlistItems, ({ one }) => ({
-  playlist: one(playlists, {
-    fields: [watchlistItems.playlistId],
-    references: [playlists.id],
-  }),
+  // No playlist relation: a holding can be in several, listed in `playlistIds`.
 }));
 
 // ---------- Relations ----------
@@ -766,7 +765,14 @@ export const positionMeta = pgTable(
     // its own guess; the moment you choose one this goes false and syncing
     // leaves it alone forever.
     assetTypeAuto: boolean("asset_type_auto").notNull().default(false),
-    playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+    /** Replaced by `playlistIds`; still read by the version published before it. Dropped once that is gone. */
+    legacyPlaylistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+    /**
+     * Every playlist this is in: one position can belong to several, and each
+     * playlist counts all of it. Ids only, so deleting a playlist removes it
+     * here (`deletePlaylist`) — an array element has no foreign key.
+     */
+    playlistIds: text("playlist_ids").array().notNull().default(sql`'{}'::text[]`),
     notes: text("notes"),
     /**
      * What you say the spot balance of this coin actually cost, per unit.
@@ -1587,7 +1593,14 @@ export const tradeClassifications = pgTable("trade_classifications", {
   timeHorizon: text("time_horizon"),
   liquidity: text("liquidity"),
   apr: numeric("apr", { precision: 8, scale: 3 }),
-  playlistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+  /** Replaced by `playlistIds`; still read by the version published before it. Dropped once that is gone. */
+  legacyPlaylistId: text("playlist_id").references(() => playlists.id, { onDelete: "set null" }),
+  /**
+   * Every playlist this is in: one position can belong to several, and each
+   * playlist counts all of it. Ids only, so deleting a playlist removes it
+   * here (`deletePlaylist`) — an array element has no foreign key.
+   */
+  playlistIds: text("playlist_ids").array().notNull().default(sql`'{}'::text[]`),
   notes: text("notes"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

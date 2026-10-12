@@ -52,8 +52,9 @@ export interface TradeHistoryRow extends TradeRow {
     timeHorizon: string | null;
     liquidity: string | null;
     apr: number | null;
-    playlistId: string | null;
-    playlistName: string | null;
+    /** Every playlist the trade is in, by id and by name in the same order. */
+    playlistIds: string[];
+    playlistNames: string[];
     notes: string | null;
     /** The fill this classification was saved on, when it is not this one. */
     sharedFrom?: string;
@@ -201,7 +202,7 @@ export const TRADE_GROUPINGS = [
   { key: "expectedReturn", label: "Expected return" },
   { key: "timeHorizon", label: "Time horizon" },
   { key: "liquidity", label: "Liquidity" },
-  { key: "playlistName", label: "Playlist" },
+  { key: "playlists", label: "Playlist" },
 ] as const;
 
 export type TradeGrouping = (typeof TRADE_GROUPINGS)[number]["key"];
@@ -216,6 +217,8 @@ export type TradeGrouping = (typeof TRADE_GROUPINGS)[number]["key"];
  */
 export function groupValuesOf(row: TradeHistoryRow, grouping: TradeGrouping): string[] {
   if (grouping === "tags") return row.tags;
+  // A trade can be in several playlists, and is in each of their groups.
+  if (grouping === "playlists") return row.classification?.playlistNames ?? [];
   const value = row.classification?.[grouping] ?? null;
   return value === null ? [] : [value];
 }

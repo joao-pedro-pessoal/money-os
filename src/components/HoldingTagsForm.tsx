@@ -1,5 +1,6 @@
 "use client";
 
+import PlaylistPicker from "@/components/PlaylistPicker";
 import { useState } from "react";
 import {
   RISK_LEVELS,
@@ -32,7 +33,7 @@ export default function HoldingTagsForm({
   liquidity,
   assetType,
   apr,
-  playlistId,
+  playlistIds,
   playlists,
 }: {
   action: (formData: FormData) => Promise<void>;
@@ -43,7 +44,8 @@ export default function HoldingTagsForm({
   liquidity: string | null;
   assetType: string | null;
   apr: number | null;
-  playlistId: string | null;
+  /** Every playlist it is in. */
+  playlistIds: string[];
   playlists: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
@@ -122,21 +124,7 @@ export default function HoldingTagsForm({
           {select("timeHorizon", "Horizon", TIME_HORIZONS, timeHorizon)}
           {select("liquidity", "Liquidity", LIQUIDITY_LEVELS, liquidity)}
 
-          <label className="block text-[10px]">
-            <span className="text-[var(--muted)]">Playlist</span>
-            <select
-              name="playlistId"
-              defaultValue={playlistId ?? ""}
-              className="input input-narrow text-xs py-1 mt-0.5"
-            >
-              <option value="">—</option>
-              {playlists.map((p) => (
-                <option translate="no" key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <PlaylistPicker playlists={playlists} selected={playlistIds} compact />
 
           {yieldLabel && (
             <label className="block text-[10px]">

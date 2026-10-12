@@ -23,14 +23,14 @@ const CLASSIFIED = {
   coin: "HYPE",
   assetTypeAuto: false,
   apr: null,
-  playlistId: "p1",
+  playlistIds: ["p1"],
   notes: null,
   assetType: "crypto",
   riskLevel: "medium",
   expectedReturn: "moderate",
   timeHorizon: "medium",
   liquidity: "high",
-  playlistName: "Div Commodities",
+  playlistNames: ["Div Commodities"],
 };
 
 describe("what a trade can be grouped by", () => {
@@ -41,7 +41,7 @@ describe("what a trade can be grouped by", () => {
     expect(groupValuesOf(r, "expectedReturn")).toEqual(["moderate"]);
     expect(groupValuesOf(r, "timeHorizon")).toEqual(["medium"]);
     expect(groupValuesOf(r, "liquidity")).toEqual(["high"]);
-    expect(groupValuesOf(r, "playlistName")).toEqual(["Div Commodities"]);
+    expect(groupValuesOf(r, "playlists")).toEqual(["Div Commodities"]);
   });
 
   /**

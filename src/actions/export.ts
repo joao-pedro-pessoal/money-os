@@ -170,7 +170,7 @@ export async function restoreBackup(formData: FormData) {
     for (const name of BACKUP_TABLES) {
       const rows = data[name];
       if (!Array.isArray(rows) || rows.length === 0) continue;
-      const revived = rows.map((r) => reviveDates(r as Record<string, unknown>));
+      const revived = rows.map((r) => withPlaylistList(reviveDates(r as Record<string, unknown>)));
       await tx.insert(TABLES[name]).values(revived as never);
     }
   });
@@ -180,6 +180,17 @@ export async function restoreBackup(formData: FormData) {
 }
 
 const DATE_FIELDS = /(At|Date|timestamp|date)$/i;
+
+/**
+ * A backup from before one position could be in several playlists carries the
+ * one it was in as `playlistId`. Restored as the first of the list, so the
+ * position comes back in its playlist instead of in none.
+ */
+function withPlaylistList(row: Record<string, unknown>): Record<string, unknown> {
+  if (row.playlistIds !== undefined || !("playlistId" in row)) return row;
+  const { playlistId, ...rest } = row;
+  return { ...rest, legacyPlaylistId: playlistId, playlistIds: typeof playlistId === "string" && playlistId ? [playlistId] : [] };
+}
 
 function reviveDates(row: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};

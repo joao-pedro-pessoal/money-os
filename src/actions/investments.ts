@@ -56,6 +56,8 @@ import { getBaseCurrency } from "./settings";
 import { getPortfolioItems } from "./dashboard";
 import { getTradeAnalysis } from "./investmentActivity";
 import { getSymbolNames } from "./symbolNames";
+import { chosenPlaylists } from "./playlistChoice";
+import { playlistNamesOf } from "@/lib/portfolio/playlists";
 import { classifiedPerformance, type PerformanceStatus } from "@/lib/portfolio/classifiedPerformance";
 import { portfolioSummary } from "@/lib/portfolio/positionView";
 import {
@@ -134,7 +136,7 @@ export async function listHoldingsWithPnL() {
     apr: h.apr === null ? null : Number(h.apr),
     rewardsEarned: h.rewardsEarned === null ? 0 : Number(h.rewardsEarned),
     realizedPnl: h.realizedPnl === null ? 0 : Number(h.realizedPnl),
-    playlistName: h.playlistId ? playlistName.get(h.playlistId) ?? null : null,
+    playlistNames: playlistNamesOf(h.playlistIds, playlistName),
     // Falls back to the old free-text platform for rows created before
     // holdings were linked to accounts.
     accountName: (h.accountId ? accountName.get(h.accountId) : null) ?? h.platform ?? null,
@@ -170,7 +172,7 @@ export async function createHolding(formData: FormData) {
   const currency = String(formData.get("currency") ?? "EUR");
   const assetType = tagValue(formData, "assetType");
   const direction = tagValue(formData, "direction") ?? "long";
-  const playlistId = tagValue(formData, "playlistId");
+  const playlistIds = await chosenPlaylists(formData);
   const apr = numericValue(formData, "apr");
   const rewardsEarned = numericValue(formData, "rewardsEarned") ?? "0";
   const riskLevel = tagValue(formData, "riskLevel");
@@ -203,7 +205,7 @@ export async function createHolding(formData: FormData) {
       currency,
       assetType: d.assetType,
       direction,
-      playlistId,
+      ...(playlistIds === undefined ? {} : { playlistIds }),
       apr,
       rewardsEarned,
       riskLevel: d.riskLevel,
@@ -246,6 +248,7 @@ export async function createHolding(formData: FormData) {
 export async function setHoldingTags(formData: FormData) {
   const id = String(formData.get("id"));
   if (!id) throw new Error("Which position?");
+  const playlistIds = await chosenPlaylists(formData);
 
   await db
     .update(holdings)
@@ -255,7 +258,7 @@ export async function setHoldingTags(formData: FormData) {
       timeHorizon: tagValue(formData, "timeHorizon"),
       liquidity: tagValue(formData, "liquidity"),
       assetType: tagValue(formData, "assetType"),
-      playlistId: tagValue(formData, "playlistId"),
+      ...(playlistIds === undefined ? {} : { playlistIds }),
       // The form hides the rate field for types with no income model, so an
       // absent field clears the stored rate. That is deliberate: retagging a
       // staking position as plain crypto should not leave a rate behind that
@@ -283,7 +286,7 @@ export async function updateHolding(formData: FormData) {
   const currency = String(formData.get("currency") ?? "EUR");
   const assetType = tagValue(formData, "assetType");
   const direction = tagValue(formData, "direction") ?? "long";
-  const playlistId = tagValue(formData, "playlistId");
+  const playlistIds = await chosenPlaylists(formData);
   const apr = numericValue(formData, "apr");
   const riskLevel = tagValue(formData, "riskLevel");
   const expectedReturn = tagValue(formData, "expectedReturn");
@@ -313,7 +316,7 @@ export async function updateHolding(formData: FormData) {
       currency,
       assetType: d.assetType,
       direction,
-      playlistId,
+      ...(playlistIds === undefined ? {} : { playlistIds }),
       apr,
       /**
        * Only when the form sent it.
@@ -685,8 +688,8 @@ export async function getPortfolioAnalysis(includeStable = true) {
       // The sign already lives in `value` and `pnl`; re-applying the side here
       // would negate a P&L that is already correct.
       direction: "long",
-      playlistId: null,
-      playlistName: i.playlistName,
+      playlistIds: i.playlistIds,
+      playlistNames: i.playlistNames,
       realizedPnl: 0,
     }));
 

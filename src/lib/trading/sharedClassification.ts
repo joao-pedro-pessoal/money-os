@@ -88,7 +88,7 @@ function orderKey(row: TradeHistoryRow): string {
 
 /** Everything but the notes, which belong to the fill they were written on. */
 function signature(c: Classification): string {
-  return JSON.stringify([c.assetType, c.riskLevel, c.expectedReturn, c.timeHorizon, c.liquidity, c.apr, c.playlistId]);
+  return JSON.stringify([c.assetType, c.riskLevel, c.expectedReturn, c.timeHorizon, c.liquidity, c.apr, [...c.playlistIds].sort()]);
 }
 
 function agree(ids: string[], own: Map<string, Classification>) {

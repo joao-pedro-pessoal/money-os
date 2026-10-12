@@ -8,7 +8,7 @@ const p = (o: Partial<PositionItem> & { id: string }): PositionItem => ({
   accountName: "acc",
   platform: "x",
   assetType: "stock",
-  playlistName: null,
+  playlistNames: [], playlistIds: [],
   riskLevel: null,
   timeHorizon: null,
   value: 100,

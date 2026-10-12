@@ -1,3 +1,4 @@
+import { playlistGroups } from "./playlists";
 /**
  * Grouping and filtering for the synced positions table.
  *
@@ -37,8 +38,9 @@ export interface PositionItem {
   accountName: string;
   platform: string;
   assetType: string | null;
-  playlistName: string | null;
-  playlistId?: string | null;
+  /** Every playlist it is in, by name and by id in the same order; empty for none. */
+  playlistNames: string[];
+  playlistIds: string[];
   riskLevel: string | null;
   timeHorizon: string | null;
   expectedReturn?: string | null;
@@ -292,23 +294,28 @@ export const GROUP_OPTIONS: { value: GroupKey; label: string }[] = [
 /** The untagged bucket. Named rather than hidden, so nothing goes missing. */
 export const UNTAGGED = "—";
 
-export function groupValueOf(item: PositionItem, key: GroupKey): string {
+/**
+ * The groups an item falls in. One, except by playlist: a position in two
+ * playlists is in both groups, whole, so the groups can add up to more than
+ * the total.
+ */
+export function groupValuesOf(item: PositionItem, key: GroupKey): string[] {
   switch (key) {
     case "assetType":
-      return item.assetType ?? UNTAGGED;
+      return [item.assetType ?? UNTAGGED];
     case "playlist":
-      return item.playlistName ?? UNTAGGED;
+      return playlistGroups(item.playlistNames, UNTAGGED);
     case "riskLevel":
-      return item.riskLevel ?? UNTAGGED;
+      return [item.riskLevel ?? UNTAGGED];
     case "account":
-      return item.accountName;
+      return [item.accountName];
     case "platform":
-      return item.platform;
+      return [item.platform];
     case "side":
-      return item.side ?? UNTAGGED;
+      return [item.side ?? UNTAGGED];
     case "none":
     default:
-      return "";
+      return [""];
   }
 }
 
@@ -334,10 +341,10 @@ export function applyFilters(items: PositionItem[], f: Filters): PositionItem[] 
     // An empty filter means "all". Selecting the untagged bucket is a real
     // choice — "show me what I haven't classified" — so it matches on null.
     if (f.assetType && (i.assetType ?? UNTAGGED) !== f.assetType) return false;
-    if (f.playlist && (i.playlistName ?? UNTAGGED) !== f.playlist) return false;
+    if (f.playlist && !playlistGroups(i.playlistNames, UNTAGGED).includes(f.playlist)) return false;
     if (f.riskLevel && (i.riskLevel ?? UNTAGGED) !== f.riskLevel) return false;
     if (f.account && i.accountName !== f.account) return false;
-    if (q && !`${i.symbol} ${i.accountName} ${i.playlistName ?? ""}`.toLowerCase().includes(q)) {
+    if (q && !`${i.symbol} ${i.accountName} ${i.playlistNames.join(" ")}`.toLowerCase().includes(q)) {
       return false;
     }
     return true;
@@ -377,9 +384,10 @@ export function groupItems(items: PositionItem[], key: GroupKey): Group[] {
 
   const buckets = new Map<string, PositionItem[]>();
   for (const item of items) {
-    const k = groupValueOf(item, key);
-    if (!buckets.has(k)) buckets.set(k, []);
-    buckets.get(k)!.push(item);
+    for (const k of groupValuesOf(item, key)) {
+      if (!buckets.has(k)) buckets.set(k, []);
+      buckets.get(k)!.push(item);
+    }
   }
 
   return [...buckets.entries()]
@@ -410,7 +418,7 @@ export function filterOptions(items: PositionItem[]) {
 
   return {
     assetTypes: uniq(items.map((i) => i.assetType)),
-    playlists: uniq(items.map((i) => i.playlistName)),
+    playlists: uniq(items.flatMap((i) => (i.playlistNames.length === 0 ? [null] : i.playlistNames))),
     riskLevels: uniq(items.map((i) => i.riskLevel)),
     accounts: uniq(items.map((i) => i.accountName)),
   };

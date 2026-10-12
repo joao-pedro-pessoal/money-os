@@ -1,5 +1,6 @@
 "use client";
 
+import PlaylistPicker from "@/components/PlaylistPicker";
 import { useState } from "react";
 import {
   ASSET_TYPES,
@@ -32,7 +33,7 @@ export default function HoldingFormFields({
   defaultExpectedReturn = "",
   defaultLiquidity = "",
   playlistOptions = [],
-  defaultPlaylistId = "",
+  defaultPlaylistIds = [],
   showPriceFields = true,
 }: {
   defaultAssetType?: string;
@@ -43,7 +44,8 @@ export default function HoldingFormFields({
   defaultExpectedReturn?: string;
   defaultLiquidity?: string;
   playlistOptions?: { id: string; name: string }[];
-  defaultPlaylistId?: string;
+  /** The playlists it is in already, when editing. */
+  defaultPlaylistIds?: string[];
   showPriceFields?: boolean;
 }) {
   const [assetType, setAssetType] = useState(defaultAssetType);
@@ -123,16 +125,7 @@ export default function HoldingFormFields({
             </p>
           )}
 
-          {playlistOptions.length > 0 && (
-            <select name="playlistId" className="input" defaultValue={defaultPlaylistId}>
-              <option value="">Playlist — none</option>
-              {playlistOptions.map((p) => (
-                <option translate="no" key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          )}
+          {playlistOptions.length > 0 && <PlaylistPicker playlists={playlistOptions} selected={defaultPlaylistIds} />}
 
           <div className="pt-1 text-xs text-[var(--muted)]">Asset allocation tags (optional)</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

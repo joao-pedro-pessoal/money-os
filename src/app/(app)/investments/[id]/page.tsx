@@ -1,3 +1,4 @@
+import PlaylistPicker from "@/components/PlaylistPicker";
 import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
@@ -293,14 +294,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
               </option>
             ))}
           </select>
-          <select name="playlistId" className="input" defaultValue={holding.playlistId ?? ""}>
-            <option value="">Playlist — none</option>
-            {playlistList.map((p) => (
-              <option translate="no" key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <PlaylistPicker playlists={playlistList} selected={holding.playlistIds} />
           <HoldingFormFields
             defaultAssetType={holding.assetType ?? ""}
             defaultDirection={holding.direction ?? "long"}
