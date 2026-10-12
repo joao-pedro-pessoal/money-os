@@ -13,6 +13,7 @@
  * It began as the monthly report, and the month functions below remain as the
  * month case of the general ones rather than a second copy of them.
  */
+import { spreadsheetSafe } from "../csv/formula";
 import {
   byCategory,
   fixedVsVariable,
@@ -354,9 +355,12 @@ export function periodNoun(kind: ReportKind): string {
   return kind === "custom" ? "period" : kind;
 }
 
-/** Commas, quotes and line breaks inside a field would split it; quote those. */
+/**
+ * Commas, quotes and line breaks inside a field would split it; quote those.
+ * Text a spreadsheet would run as a formula is made text (`spreadsheetSafe`).
+ */
 export function csvField(value: string | number | null): string {
-  const text = value === null ? "" : String(value);
+  const text = value === null ? "" : typeof value === "string" ? spreadsheetSafe(value) : String(value);
   return /[",\n\r;]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

@@ -6,6 +6,7 @@
  */
 
 import { validateSavingsRecords } from '../money/savings';
+import { spreadsheetSafe } from '../csv/formula';
 
 export const BACKUP_VERSION = 1;
 
@@ -142,10 +143,13 @@ export function validateBackup(raw: unknown): ValidationResult {
   return { ok: errors.length === 0, errors, warnings, counts };
 }
 
-/** Escapes a value for CSV: quotes it and doubles any inner quotes. */
+/**
+ * Escapes a value for CSV: quotes it and doubles any inner quotes. Text a
+ * spreadsheet would run as a formula is made text first (`spreadsheetSafe`).
+ */
 export function csvCell(value: unknown): string {
   if (value === null || value === undefined) return "";
-  const s = String(value);
+  const s = typeof value === "string" ? spreadsheetSafe(value) : String(value);
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
