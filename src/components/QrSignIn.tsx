@@ -8,7 +8,7 @@ import { safeReturnPath } from "@/lib/accounts/returnPath";
 import { useLanguage } from "./LanguageContext";
 
 export default function QrSignIn({ approve = false, destination = "/" }: { approve?: boolean; destination?: string }) {
-  return approve ? <Approve /> : <Request destination={destination} />;
+  return approve ? <ApprovalPage /> : <Request destination={destination} />;
 }
 
 function Request({ destination }: { destination: string }) {
@@ -56,15 +56,15 @@ function Request({ destination }: { destination: string }) {
 
   return <div className="space-y-4">
     <h1 className="text-2xl">{pt ? "Entrar com QR" : "Sign in with QR"}</h1>
-    <p>{pt ? "No telemóvel onde já entrou, use a câmara para ler este QR. Abra a ligação, escreva o número abaixo e aprove." : "Use the camera on your signed-in phone to scan this QR. Open the link, enter the number below and approve."}</p>
+    <p>{pt ? "No telemóvel onde já entraste, usa a câmara para ler este QR. Abre a ligação, escreve o número abaixo e aprova." : "Use the camera on your signed-in phone to scan this QR. Open the link, enter the number below and approve."}</p>
     <p className="text-sm text-[var(--muted)]">{pt ? "Os dois aparelhos têm de abrir o mesmo site. A sessão do browser pode ser diferente da sessão da app Android." : "Both devices must open the same site. Your browser may have a different session from the Android app."}</p>
     {status === "waiting" && request && <>
       <canvas ref={canvas} role="img" aria-label={pt ? "QR para aprovar a entrada" : "QR to approve sign-in"} className="mx-auto max-w-full" />
       <p className="text-center text-3xl font-mono tracking-widest" aria-label={pt ? "Número de confirmação" : "Confirmation number"}>{request.code}</p>
       <p role="status" className="text-center">{pt ? `À espera de aprovação — ${seconds}s` : `Waiting for approval — ${seconds}s`}</p>
     </>}
-    {status === "expired" && <p role="status">{pt ? "O pedido expirou ou deixou de ser válido. Crie outro QR." : "The request expired or is no longer valid. Create another QR."}</p>}
-    {status === "error" && <p role="alert">{pt ? "Não foi possível continuar. Tente novamente." : "Could not continue. Please try again."}</p>}
+    {status === "expired" && <p role="status">{pt ? "O pedido expirou ou deixou de ser válido. Cria outro QR." : "The request expired or is no longer valid. Create another QR."}</p>}
+    {status === "error" && <p role="alert">{pt ? "Não foi possível continuar. Tenta outra vez." : "Could not continue. Please try again."}</p>}
     {status !== "waiting" && <button className="btn w-full" disabled={busy} onClick={() => void start()}>{pt ? "Mostrar novo QR" : "Show new QR"}</button>}
     <button className="btn-secondary w-full" disabled={busy} onClick={async () => {
       setBusy(true);
@@ -81,11 +81,17 @@ const subscribeHash = (changed: () => void) => {
 const readHash = () => window.location.hash;
 const serverHash = () => "";
 
-function Approve() {
+function ApprovalPage() {
+  const fragment = useSyncExternalStore(subscribeHash, readHash, serverHash);
+  // Scanning another QR may be a same-document fragment navigation. Give it
+  // fresh consent, account verification and input instead of the last result.
+  return <Approve key={fragment} fragment={fragment} />;
+}
+
+function Approve({ fragment }: { fragment: string }) {
   const { language } = useLanguage();
   const pt = language === "pt";
   const [account, setAccount] = useState<string | null>(null);
-  const fragment = useSyncExternalStore(subscribeHash, readHash, serverHash);
   const match = /^#([a-f0-9]{64})\.([a-f0-9]{64})$/.exec(fragment);
   const token = match ? { id: match[1], approval: match[2] } : null;
   const [code, setCode] = useState("");
@@ -101,10 +107,10 @@ function Approve() {
   }, []);
   return <div className="space-y-4">
     <h1 className="text-2xl">{pt ? "Aprovar outro aparelho" : "Approve another device"}</h1>
-    {!token && <p role="alert">{pt ? "Abra esta página lendo o QR no outro aparelho." : "Open this page by scanning the QR on the other device."}</p>}
-    <p>{pt ? "Só aprove um aparelho seu, à sua frente. Nunca aprove um QR enviado por outra pessoa: dá acesso à sua conta e aos seus dados." : "Only approve your own device in front of you. Never approve a QR someone sent you: it grants access to your account and data."}</p>
+    {!token && <p role="alert">{pt ? "Abre esta página lendo o QR no outro aparelho." : "Open this page by scanning the QR on the other device."}</p>}
+    <p>{pt ? "Só aproves um aparelho teu, à tua frente. Nunca aproves um QR enviado por outra pessoa: dá acesso à tua conta e aos teus dados." : "Only approve your own device in front of you. Never approve a QR someone sent you: it grants access to your account and data."}</p>
     {account && <p className="break-all">{pt ? "Conta: " : "Account: "}{account}</p>}
-    {status === "sign-in" && <p><a className="btn" href="/login" target="_blank" rel="noopener">{pt ? "Entrar neste browser primeiro" : "Sign in to this browser first"}</a>{pt ? " Depois, volte a ler o QR." : " Then scan the QR again."}</p>}
+    {status === "sign-in" && <p><a className="btn" href="/login" target="_blank" rel="noopener">{pt ? "Entrar neste browser primeiro" : "Sign in to this browser first"}</a>{pt ? " Depois, volta a ler o QR." : " Then scan the QR again."}</p>}
     {(status === "ready" || status === "invalid") && token && <form className="space-y-3" onSubmit={async (e) => {
       e.preventDefault(); if (busy) return; setBusy(true);
       try { setStatus(await approveQrSignIn(token.id, token.approval, code)); }
@@ -116,7 +122,7 @@ function Approve() {
       </label>
       <button className="btn w-full" disabled={busy}>{pt ? "Aprovar entrada" : "Approve sign-in"}</button>
     </form>}
-    <p role="status">{status === "approved" ? (pt ? "Aprovado. O outro aparelho vai entrar." : "Approved. The other device will sign in.") : status === "invalid" ? (pt ? "Número incorreto, pedido inválido ou expirado. Após 5 tentativas, crie outro QR." : "Wrong number, invalid or expired request. After 5 attempts, create another QR.") : status === "loading" ? (pt ? "A verificar…" : "Checking…") : status === "error" ? (pt ? "Falha de ligação. Volte a abrir o QR." : "Connection failed. Open the QR again.") : ""}</p>
+    <p role="status">{status === "approved" ? (pt ? "Aprovado. O outro aparelho vai entrar." : "Approved. The other device will sign in.") : status === "invalid" ? (pt ? "Número incorreto, pedido inválido ou expirado. Depois de 5 tentativas, cria outro QR." : "Wrong number, invalid or expired request. After 5 attempts, create another QR.") : status === "loading" ? (pt ? "A verificar…" : "Checking…") : status === "error" ? (pt ? "Falha de ligação. Volta a abrir o QR." : "Connection failed. Open the QR again.") : ""}</p>
     <Link className="btn-secondary" href="/">{pt ? "Voltar sem aprovar" : "Return without approving"}</Link>
   </div>;
 }

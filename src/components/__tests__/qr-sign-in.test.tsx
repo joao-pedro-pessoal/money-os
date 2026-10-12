@@ -14,7 +14,7 @@ describe("QR entry and approval screens", () => {
     const request = renderToStaticMarkup(<LanguageProvider language={language}><QrSignIn /></LanguageProvider>);
     expect(request).toContain(language === "pt" ? "Mostrar novo QR" : "Show new QR");
     const approval = renderToStaticMarkup(<LanguageProvider language={language}><QrSignIn approve /></LanguageProvider>);
-    expect(approval).toContain(language === "pt" ? "Nunca aprove um QR enviado por outra pessoa" : "Never approve a QR someone sent you");
+    expect(approval).toContain(language === "pt" ? "Nunca aproves um QR enviado por outra pessoa" : "Never approve a QR someone sent you");
     // Rendering/visiting alone offers no approval without a scanned capability.
     expect(approval).not.toContain("<form");
   });
