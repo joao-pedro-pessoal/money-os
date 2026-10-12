@@ -170,7 +170,7 @@ export async function restoreBackup(formData: FormData) {
     for (const name of BACKUP_TABLES) {
       const rows = data[name];
       if (!Array.isArray(rows) || rows.length === 0) continue;
-      const revived = rows.map((r) => withPlaylistList(reviveDates(r as Record<string, unknown>)));
+      const revived = rows.map((r) => withoutOwner(withPlaylistList(reviveDates(r as Record<string, unknown>))));
       await tx.insert(TABLES[name]).values(revived as never);
     }
   });
@@ -180,6 +180,19 @@ export async function restoreBackup(formData: FormData) {
 }
 
 const DATE_FIELDS = /(At|Date|timestamp|date)$/i;
+
+/**
+ * The rows belong to whoever restores them, whatever account the file was made
+ * in. The owner written in the file is dropped and the column's default — the
+ * signed-in person — fills it: keeping it made a backup unrestorable after the
+ * account was deleted and made again (a new id), and row security refused the
+ * whole file. A forged owner in the file is ignored the same way, never obeyed.
+ */
+function withoutOwner(row: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...row };
+  delete out.userId;
+  return out;
+}
 
 /**
  * A backup from before one position could be in several playlists carries the

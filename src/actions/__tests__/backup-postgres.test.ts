@@ -62,13 +62,30 @@ describe("restore rehearsal on isolated PostgreSQL with the real migrations and 
     expect(JSON.parse(await exportAllData()).data).toEqual(JSON.parse(original).data);
   });
 
-  it("rejects a forged owner through RLS and preserves both accounts", async () => {
+  it("ignores an owner written into the file: the rows stay with whoever restores", async () => {
     const original = await exportAllData();
     const forged = JSON.parse(original); forged.data.accounts[0].userId = "tester-b";
-    await expect(restore(JSON.stringify(forged))).rejects.toThrow();
+    await restore(JSON.stringify(forged));
     expect(JSON.parse(await exportAllData()).data).toEqual(JSON.parse(original).data);
     await as("tester-b");
     expect((await isolated.db.select().from(schema.accounts)).map((row) => row.id)).toEqual(["account-tester-b"]);
     await as("tester-a");
+  });
+
+  it("restores into an account deleted and made again, which has a new id", async () => {
+    const original = await exportAllData();
+    await engine.exec(`RESET ROLE; DELETE FROM users WHERE id = 'tester-a'; INSERT INTO users (id) VALUES ('tester-c'); SET ROLE moneyos_restore_test;`);
+    await as("tester-c");
+    expect(JSON.parse(await exportAllData()).data.accounts).toEqual([]);
+    await restore(original);
+    const owners = (rows: { userId?: string }[]) => [...new Set(rows.map((r) => r.userId))];
+    const restored = JSON.parse(await exportAllData()).data;
+    expect(owners(restored.accounts)).toEqual(["tester-c"]);
+    expect(owners(restored.transactions)).toEqual(["tester-c"]);
+    const strip = (data: Record<string, Record<string, unknown>[]>) =>
+      Object.fromEntries(Object.entries(data).map(([k, rows]) => [k, rows.map((r) => { const copy = { ...r }; delete copy.userId; return copy; })]));
+    expect(strip(restored)).toEqual(strip(JSON.parse(original).data));
+    await as("tester-b");
+    expect((await isolated.db.select().from(schema.accounts)).map((row) => row.id)).toEqual(["account-tester-b"]);
   });
 });
