@@ -1,3 +1,4 @@
+import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listAllPositions,
@@ -465,7 +466,7 @@ export default async function PositionsPage() {
                     <AssetLogo image={logoOf(h.id)} name={h.symbol} size={20} />
                     <div className="min-w-0">
                     <Link href={`/investments/asset/${encodeURIComponent(h.symbol)}?type=${encodeURIComponent(h.assetType ?? "")}&name=${encodeURIComponent(h.name ?? "")}`} className="font-semibold hover:underline break-words">
-                      <span translate="no">{h.symbol}</span>
+                      <SymbolName symbol={h.symbol} />
                     </Link>
                     {h.name && h.name !== h.symbol && (
                       <div className="text-[11px] text-[var(--muted)] break-words"><span translate="no">{h.name}</span></div>
@@ -539,7 +540,7 @@ export default async function PositionsPage() {
                         <AssetLogo image={logoOf(h.id)} name={h.symbol} />
                         <span className="min-w-0">
                           <Link href={`/investments/asset/${encodeURIComponent(h.symbol)}?type=${encodeURIComponent(h.assetType ?? "")}&name=${encodeURIComponent(h.name ?? "")}`} className="hover:underline">
-                            <span translate="no">{h.symbol}</span>
+                            <SymbolName symbol={h.symbol} />
                           </Link>
                           {/* The ISIN, when a statement supplied one. */}
                           {h.name && h.name !== h.symbol && (

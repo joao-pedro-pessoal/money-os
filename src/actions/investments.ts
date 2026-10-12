@@ -55,6 +55,7 @@ import { getBaseCurrency } from "./settings";
 // what the portfolio contains.
 import { getPortfolioItems } from "./dashboard";
 import { getTradeAnalysis } from "./investmentActivity";
+import { getSymbolNames } from "./symbolNames";
 import { classifiedPerformance, type PerformanceStatus } from "@/lib/portfolio/classifiedPerformance";
 import { portfolioSummary } from "@/lib/portfolio/positionView";
 import {
@@ -429,10 +430,11 @@ export async function getPortfolioValueOverTime(onlyWhatAddsOnTop = false) {
  * on record for a past day, so no gain or loss is stated for one.
  */
 export async function getPortfolioAt(date: string) {
-  const [{ allHoldings, manual, synced, conns }, accountRows, metaRows] = await Promise.all([
+  const [{ allHoldings, manual, synced, conns }, accountRows, metaRows, names] = await Promise.all([
     seriesInputs(false),
     db.select().from(accounts),
     db.select().from(positionMeta),
+    getSymbolNames(),
   ]);
   const accountName = new Map(accountRows.map((a) => [a.id, a.name]));
   const holdingById = new Map(allHoldings.map((h) => [h.id, h]));
@@ -455,7 +457,7 @@ export async function getPortfolioAt(date: string) {
       if (!h) return [];
       return [
         {
-          name: displaySymbol(h.quoteSymbol) ?? h.symbol,
+          name: names[h.symbol] ?? displaySymbol(h.quoteSymbol) ?? h.symbol,
           account: (h.accountId ? accountName.get(h.accountId) : null) ?? h.platform ?? "—",
           assetType: h.assetType,
           value,
@@ -466,9 +468,10 @@ export async function getPortfolioAt(date: string) {
     const position = key.slice(2);
     const connectionId = position.split(":")[0];
     const connection = connectionById.get(connectionId);
+    const coin = position.slice(connectionId.length + 1);
     return [
       {
-        name: position.slice(connectionId.length + 1),
+        name: names[coin] ?? coin,
         account: (connection ? accountName.get(connection.accountId) : null) ?? connection?.platform ?? "—",
         assetType: metaFor.get(position)?.assetType ?? null,
         value,

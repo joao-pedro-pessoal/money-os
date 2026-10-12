@@ -18,6 +18,7 @@ import { getPortfolioAt, getPortfolioReturns } from "./investments";
 import { getTradeAnalysis } from "./investmentActivity";
 import { getIncomePayments } from "./dividends";
 import { getPortfolioItems } from "./dashboard";
+import { getSymbolNames } from "./symbolNames";
 import { getBenchmarkChoice } from "./benchmark";
 import { getBaseCurrency } from "./settings";
 import { localDay } from "@/lib/calendar/localDay";
@@ -181,7 +182,7 @@ async function loadInvestments(
   const { from, to } = reportWindow(kind, key);
 
   const reachesToday = to >= today;
-  const [returns, trades, income, items, heldAtEnd, benchmark] = await Promise.all([
+  const [returns, trades, income, items, heldAtEnd, benchmark, names] = await Promise.all([
     getPortfolioReturns(),
     getTradeAnalysis(),
     getIncomePayments(),
@@ -190,6 +191,7 @@ async function loadInvestments(
     // …and the last day's, rebuilt from snapshots, for one that ended earlier.
     reachesToday ? null : getPortfolioAt(to),
     getBenchmarkChoice(),
+    getSymbolNames(),
   ]);
   const closes = await db.select().from(benchmarkPrices).where(eq(benchmarkPrices.symbol, benchmark.symbol));
   const summary = items === null ? null : portfolioSummary(items.items);
@@ -218,7 +220,7 @@ async function loadInvestments(
               unrealised: summary.pnl,
               costUnknown: summary.costUnknown,
               items: items.items.map((i) => ({
-                name: i.listing ?? i.symbol,
+                name: names[i.symbol] ?? i.listing ?? i.symbol,
                 account: i.accountName,
                 assetType: i.assetType,
                 value: i.value,

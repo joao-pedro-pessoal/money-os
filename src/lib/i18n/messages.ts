@@ -145,6 +145,17 @@ const en = {
       "Open your browser's menu (**⋮** or **⋯**) and choose **Install app** or **Add to Home screen**. On a computer, Chrome and Edge also show an install icon at the end of the address bar.",
   },
 
+  symbolNames: {
+    title: "Ticker names",
+    text: "Give a ticker a name of your own — \"Physical gold\" for IGLAl_EQ. It shows everywhere the ticker does, in tables, charts, widgets and reports, with the ticker small beside it. Clear a name to remove it.",
+    held: "Held now",
+    traded: "Traded",
+    watched: "On the watchlist",
+    placeholder: "Your name for it",
+    save: "Save",
+    empty: "Nothing to name yet: add a position, a trade or a watchlist item first.",
+  },
+
   legal: {
     privacy: "Privacy",
     terms: "Terms",
@@ -399,6 +410,7 @@ const pt: Messages = {
     "Currency & rates": "Moeda e câmbios",
     "Your data": "Os teus dados",
     "On your phone": "No telemóvel",
+    "Ticker names": "Nomes dos tickers",
   },
 
   server: {
@@ -507,6 +519,17 @@ const pt: Messages = {
       "No Safari, toca em **Partilhar** (o quadrado com uma seta), depois em **Adicionar ao ecrã principal** e em **Adicionar**. O Money OS passa a abrir pelo seu próprio ícone.",
     menuSteps:
       "Abre o menu do navegador (**⋮** ou **⋯**) e escolhe **Instalar app** ou **Adicionar ao ecrã principal**. No computador, o Chrome e o Edge também mostram um ícone de instalar no fim da barra de endereço.",
+  },
+
+  symbolNames: {
+    title: "Nomes dos tickers",
+    text: "Dá a um ticker um nome teu — \"Ouro físico\" para IGLAl_EQ. Aparece em todo o lado onde o ticker aparece, em tabelas, gráficos, widgets e relatórios, com o ticker pequeno ao lado. Apaga o nome para o retirar.",
+    held: "Que tens agora",
+    traded: "Negociados",
+    watched: "Na watchlist",
+    placeholder: "O teu nome para ele",
+    save: "Guardar",
+    empty: "Ainda não há nada para nomear: acrescenta primeiro uma posição, um trade ou um item da watchlist.",
   },
 
   legal: {

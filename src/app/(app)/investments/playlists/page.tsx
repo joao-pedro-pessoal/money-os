@@ -1,10 +1,10 @@
+import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listPlaylistsWithTotals, createPlaylist, deletePlaylist } from "@/actions/playlists";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Link from "next/link";
 import PanelFrame from "@/components/PanelFrame";
-import { shortName } from "@/lib/portfolio/shortName";
 
 export default async function PlaylistsPage() {
   const lists = await listPlaylistsWithTotals();
@@ -136,7 +136,7 @@ export default async function PlaylistsPage() {
                           <tr key={i.id}>
                             <td className="font-medium" title={i.symbol}>
                               <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-words hover:underline">
-                                <span translate="no">{shortName(i.symbol)}</span>
+                                <SymbolName symbol={i.symbol} short />
                               </Link>
                               {i.side === "short" && <span className="text-[10px] text-[var(--muted)] ml-1">short</span>}
                               {i.leverage !== null && i.leverage > 1 && <span className="text-[10px] text-[var(--muted)] ml-1">{i.leverage}×</span>}

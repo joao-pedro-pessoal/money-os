@@ -1,3 +1,4 @@
+import SymbolName from "@/components/SymbolName";
 import Link from "next/link";
 import ExternalResearchLinks from "@/components/ExternalResearchLinks";
 import { tagLabel } from "@/lib/portfolio/tags";
@@ -15,7 +16,7 @@ export default async function AssetInfoPage({ params, searchParams }: { params: 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-xs text-[var(--muted)]">Asset information</div>
-          <h1 className="text-xl font-semibold">{symbol}</h1>
+          <h1 className="text-xl font-semibold"><SymbolName symbol={symbol} /></h1>
           <p className="text-xs text-[var(--muted)] mt-1">{tagLabel(assetType, "assetType") ?? "Asset type not set"}</p>
         </div>
         <Link href="/investments" className="btn">Back to holdings</Link>

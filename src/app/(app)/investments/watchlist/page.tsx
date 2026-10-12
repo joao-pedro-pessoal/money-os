@@ -1,3 +1,4 @@
+import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import AssetSearch from "@/components/AssetSearch";
 import { listWatchlist, addWatchlistItem, deleteWatchlistItem, listPlaylists } from "@/actions/playlists";
@@ -47,7 +48,7 @@ export default async function WatchlistPage() {
                 {items.map((w) => (
                   <tr key={w.id}>
                     <td>
-                      <Link href={`/investments/asset/${encodeURIComponent(w.symbol)}?type=${encodeURIComponent(w.assetType ?? "")}&name=${encodeURIComponent(w.name ?? "")}`} className="font-medium hover:underline"><span translate="no">{w.symbol}</span></Link>
+                      <Link href={`/investments/asset/${encodeURIComponent(w.symbol)}?type=${encodeURIComponent(w.assetType ?? "")}&name=${encodeURIComponent(w.name ?? "")}`} className="font-medium hover:underline"><SymbolName symbol={w.symbol} /></Link>
                       {w.reached && (
                         <span className="badge ml-2 text-[var(--green)] border border-[var(--green)]">
                           at target

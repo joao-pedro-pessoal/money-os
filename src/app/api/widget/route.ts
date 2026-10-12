@@ -7,7 +7,8 @@ import { listAllPositions, listConnections } from "@/actions/connections";
 import { getRates } from "@/actions/fx";
 import { leftOut, openTotals, resultInBase } from "@/lib/trading/openTotals";
 import { groupItems, hasPnl, portfolioSummary } from "@/lib/portfolio/positionView";
-import { shortName } from "@/lib/portfolio/shortName";
+import { symbolLabel } from "@/lib/portfolio/symbolNames";
+import { getSymbolNames } from "@/actions/symbolNames";
 import { tagLabel } from "@/lib/portfolio/tags";
 import { downsample, movers, topPositions, topSlices } from "@/lib/widgets/summary";
 
@@ -38,13 +39,14 @@ export async function GET() {
       listConnections(),
       getRates(),
     ]);
+  const names = await getSymbolNames();
   const base = nw.baseCurrency;
   // The same totals as the Open positions page, from the same function.
   const trading = openTotals(open, connections, rates, base);
 
   const invested = portfolioSummary(portfolio.items);
   const measuredItems = portfolio.items.map((i) => ({
-    name: shortName(i.symbol),
+    name: symbolLabel(i.symbol, names),
     value: i.value,
     pnl: i.pnl,
     measured: hasPnl(i) && !i.costUnknown && !i.atCost,

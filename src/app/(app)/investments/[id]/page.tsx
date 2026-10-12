@@ -1,3 +1,4 @@
+import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   getHolding,
@@ -57,7 +58,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             {holding.assetType && <span> · {tagLabel(holding.assetType, "assetType")}</span>}
           </div>
           <h1 className="text-lg font-semibold">
-            <span translate="no">{holding.symbol}</span>
+            <SymbolName symbol={holding.symbol} />
             {holding.direction === "short" && (
               <span className="badge ml-2 align-middle text-[var(--red)] border border-[var(--red)]">SHORT</span>
             )}

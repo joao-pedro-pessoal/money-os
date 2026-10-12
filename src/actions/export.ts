@@ -43,6 +43,7 @@ const TABLES: Record<BackupTable, typeof schema.accounts> = {
   holdingSnapshots: schema.holdingSnapshots,
   holdingAllocations: schema.holdingAllocations,
   watchlistItems: schema.watchlistItems,
+  symbolNames: schema.symbolNames,
   accountConnections: schema.accountConnections,
   positions: schema.positions,
   positionSnapshots: schema.positionSnapshots,

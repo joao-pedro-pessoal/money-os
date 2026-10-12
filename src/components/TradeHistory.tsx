@@ -1,5 +1,6 @@
 "use client";
 
+import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -350,7 +351,7 @@ export default function TradeHistory({
             <p className="text-xs text-[var(--muted)]">Showing {Math.min(visibleCount, completedTrades.length)} of {completedTrades.length} trades</p>
             {completedTrades.slice(0, visibleCount).map(r => <article key={r.id} className="trade-phone-card">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0"><div className="font-semibold break-words">{r.symbol ? <Link href={`/investments/asset/${encodeURIComponent(r.symbol)}`}><span translate="no">{r.symbol}</span></Link> : "Unknown asset"}</div><div className="text-xs text-[var(--muted)] break-words"><span translate="no">{r.accountName}</span></div></div>
+                <div className="min-w-0"><div className="font-semibold break-words">{r.symbol ? <Link href={`/investments/asset/${encodeURIComponent(r.symbol)}`}><SymbolName symbol={r.symbol} /></Link> : "Unknown asset"}</div><div className="text-xs text-[var(--muted)] break-words"><span translate="no">{r.accountName}</span></div></div>
                 <div className="shrink-0 text-right"><div className={`font-semibold ${toneOf(r.realizedPnl!)}`}><Money value={r.realizedPnl!} currency={currency} /></div><div className="text-[10px] text-[var(--muted)]">Realized P&amp;L</div></div>
               </div>
               <div className="text-xs text-[var(--muted)] mt-2">{r.date.slice(0, 10)} · {r.type}</div>
@@ -391,7 +392,7 @@ export default function TradeHistory({
                     </td>
                     <td><span translate="no">{r.accountName}</span></td>
                     <td>{r.type}</td>
-                    <td>{r.symbol ? <Link href={`/investments/asset/${encodeURIComponent(r.symbol)}`} className="hover:underline"><span translate="no">{r.symbol}</span></Link> : "—"}</td>
+                    <td>{r.symbol ? <Link href={`/investments/asset/${encodeURIComponent(r.symbol)}`} className="hover:underline"><SymbolName symbol={r.symbol} /></Link> : "—"}</td>
                     <td className="max-w-64 truncate"><span translate="no">{r.description ?? "—"}</span></td>
                     <td><TradeRowTags id={r.id} classification={r.classification} playlists={playlists} /></td>
                     <td className="text-right">{r.quantity ?? "—"}</td>

@@ -1,5 +1,6 @@
 "use client";
 
+import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -18,7 +19,6 @@ import AssetLogo from "@/components/AssetLogo";
 import { holdingLogoSymbol } from "@/lib/logos";
 import { fmt } from "@/lib/format";
 import { tagLabel, type TagAxis } from "@/lib/portfolio/tags";
-import { shortName } from "@/lib/portfolio/shortName";
 import {
   groupItems,
   applyFilters,
@@ -518,7 +518,7 @@ export default function PortfolioTable({
                                 <span className="flex items-start gap-2">
                                   <AssetLogo image={logoOf(i, logos)} name={i.symbol} />
                                   <span className="min-w-0">
-                                    <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-words hover:underline"><span translate="no">{shortName(i.symbol)}</span></Link>
+                                    <Link href={`/investments/asset/${encodeURIComponent(i.symbol)}?type=${encodeURIComponent(i.assetType ?? "")}`} className="break-words hover:underline"><SymbolName symbol={i.symbol} short /></Link>
                                     {/* The listing, where the name is not already
                                         one: a fund stored by its legal name is not
                                         something you can type into a broker. */}

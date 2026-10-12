@@ -470,6 +470,20 @@
       "when": 1791730129672,
       "tag": "0066_flowery_vivisector",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1791822187169,
+      "tag": "0067_wise_skrulls",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1791822197798,
+      "tag": "0068_symbol_names_own_rows",
+      "breakpoints": true
     }
   ]
 }

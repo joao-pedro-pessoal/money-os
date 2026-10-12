@@ -1,5 +1,6 @@
 "use client";
 
+import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import PanelFrame from "./PanelFrame";
 
@@ -226,7 +227,7 @@ export default function TradeAnalysis({
                               group above rather than as a group of its own. */}
                           <td className="pl-8">
                             <span className="text-[var(--muted)]">{trade.date.slice(0, 10)}</span>{" "}
-                            <span translate="no">{trade.symbol ?? "—"}</span>
+                            <SymbolName symbol={trade.symbol} />
                           </td>
                           {/* Under "Closed" and "Win rate", which count trades
                               — a single trade has nothing to say there. */}
@@ -341,7 +342,7 @@ export default function TradeAnalysis({
                   <tbody>
                     {topSymbols.map((s) => (
                       <tr key={s.symbol}>
-                        <td className="font-medium"><span translate="no">{s.symbol}</span></td>
+                        <td className="font-medium"><SymbolName symbol={s.symbol} /></td>
                         <td className="text-right">{s.closedTrades}</td>
                         <td className="text-right">
                           {s.winRate === null ? "—" : `${s.winRate.toFixed(0)}%`}

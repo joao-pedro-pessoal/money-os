@@ -368,6 +368,26 @@ export const watchlistItems = pgTable("watchlist_items", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ---------- Symbol names ----------
+/**
+ * Your own name for a ticker, shown wherever the ticker is: "Physical gold"
+ * for IGLAl_EQ. One per symbol and person, matched on the symbol exactly as it
+ * is stored, because that is what every position, trade and watchlist row
+ * carries. A label for the eye only: nothing looks an instrument up by it, and
+ * the symbol itself never changes.
+ */
+export const symbolNames = pgTable(
+  "symbol_names",
+  {
+    userId: ownedBy(),
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    symbol: text("symbol").notNull(),
+    name: text("name").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique("symbol_names_user_symbol").on(t.userId, t.symbol)]
+);
+
 export const holdings = pgTable("holdings", {
   userId: ownedBy(),
   id: text("id").primaryKey().$defaultFn(() => createId()),

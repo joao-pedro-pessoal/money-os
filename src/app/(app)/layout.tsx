@@ -8,6 +8,8 @@ import { getQuickEntryOptions } from "@/actions/transactions";
 import QuickEntry from "@/components/QuickEntry";
 import MobileNav from "@/components/MobileNav";
 import MobileModeSwitch from "@/components/MobileMode";
+import { SymbolNamesProvider } from "@/components/SymbolName";
+import { getSymbolNames } from "@/actions/symbolNames";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +20,13 @@ export const dynamic = "force-dynamic";
  * happened to go looking.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [{ alerts }, quickEntry] = await Promise.all([getAlerts(), getQuickEntryOptions()]);
+  const [{ alerts }, quickEntry, symbolNames] = await Promise.all([getAlerts(), getQuickEntryOptions(), getSymbolNames()]);
 
   return (
     <ThemeProvider>
       <PrivacyProvider>
+        {/* Your names for tickers, for every <SymbolName> on every page below. */}
+        <SymbolNamesProvider names={symbolNames}>
         <NavProvider>
           <div className="app-frame flex">
             <Nav />
@@ -39,6 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         </NavProvider>
+        </SymbolNamesProvider>
       </PrivacyProvider>
     </ThemeProvider>
   );

@@ -1,3 +1,4 @@
+import SymbolName from "@/components/SymbolName";
 import Link from "next/link";
 import { Money } from "./PrivacyContext";
 import Percent from "./Percent";
@@ -215,7 +216,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
               <tbody>
                 {report.trades.bySymbol.map((s) => (
                   <tr key={s.symbol}>
-                    <td><span translate="no">{s.symbol}</span></td>
+                    <td><SymbolName symbol={s.symbol} short /></td>
                     <td className="text-right">{s.closedTrades}</td>
                     <td className="text-right"><Signed value={s.realized} currency={currency} /></td>
                     <td className="text-right"><Money value={s.fees} currency={currency} /></td>

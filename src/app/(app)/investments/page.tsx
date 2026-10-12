@@ -127,6 +127,9 @@ export default async function InvestmentsPage() {
           <a href="#portfolio-value-over-time" className="btn">
             Portfolio value over time
           </a>
+          <Link href="/settings/names" className="btn">
+            Name your tickers
+          </Link>
         </nav>
       </div>
 

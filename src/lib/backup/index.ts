@@ -49,6 +49,8 @@ export const BACKUP_TABLES = [
   // restore inserts in this order.
   "holdingAllocations",
   "watchlistItems",
+  // No foreign key but its owner: your names for tickers.
+  "symbolNames",
   "accountConnections",
   "positions",
   "positionSnapshots",
