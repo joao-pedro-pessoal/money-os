@@ -7,7 +7,7 @@
  */
 
 import { marketValue, costBasis, unrealizedPnL, type HoldingLike } from "./index";
-import { STABLE_ASSET_TYPES } from "./tags";
+import { STABLE_ASSET_TYPES, tagLabel, type TagAxis } from "./tags";
 
 export interface AnalysisHolding extends HoldingLike {
   id: string;
@@ -175,6 +175,34 @@ export const GROUP_BY_OPTIONS = [
 
 export type GroupByKey = (typeof GROUP_BY_OPTIONS)[number]["value"];
 
+/**
+ * Which vocabulary a grouping's values come from.
+ *
+ * Without it `long` on a horizon chart resolved to "Long (gains when it
+ * rises)" and `low` on a risk chart to "Low liquidity" — five values mean
+ * different things on different axes, and a label that does not know the
+ * axis picks whichever list was flattened in last.
+ */
+export function groupAxisOf(key: GroupByKey): TagAxis | undefined {
+  switch (key) {
+    case "riskLevel":
+      return "risk";
+    case "timeHorizon":
+    case "liquidity":
+    case "expectedReturn":
+    case "assetType":
+      return key;
+    default:
+      return undefined;
+  }
+}
+
+/** A group's name on screen: your own names as they are, tag values in words. */
+export function groupValueLabel(key: GroupByKey, value: string): string {
+  if (key === "playlist" || key === "account" || key === "symbol") return value;
+  return tagLabel(value, groupAxisOf(key)) ?? value;
+}
+
 /** The groups a holding falls in: several by playlist, none when unset. */
 export function groupKeysOf(h: AnalysisHolding, key: GroupByKey): string[] {
   if (key === "playlist") return [...new Set(h.playlistNames ?? [])];
@@ -223,6 +251,11 @@ export interface GroupPerformance {
    * the very rows the total was summed from.
    */
   members: GroupMember[];
+  /**
+   * The group split again by a second dimension ("then by"), when one is
+   * chosen. Their `percent` is a share of this group, not of the portfolio.
+   */
+  children?: GroupPerformance[];
 }
 
 /**

@@ -15,6 +15,7 @@
  * Pure — no DB, no React.
  */
 
+import { choiceText, cleanChoices, matchesAny } from "../filters/multi";
 import { directionOf, isCurrencyConversion, type TradeRow, type Direction } from "./stats";
 
 /** A row with the fields the table shows but the statistics do not need. */
@@ -61,26 +62,36 @@ export interface TradeHistoryRow extends TradeRow {
   } | null;
 }
 
+/**
+ * Every field takes several values (`lib/filters/multi.ts`): within a field
+ * they are alternatives, across fields they all apply. Empty filters nothing.
+ */
 export interface TradeFilters {
-  /** Instrument, or null for every instrument. */
-  symbol: string | null;
-  /** Event type — BUY, SELL, DIVIDEND, FEE … — or null for all. */
-  type: string | null;
-  accountName: string | null;
-  direction: Direction | null;
-  /** One of your own labels, or null for every row whether labelled or not. */
-  tag: string | null;
+  /** Instruments. */
+  symbols: string[];
+  /** Event types — BUY, SELL, DIVIDEND, FEE … */
+  types: string[];
+  accounts: string[];
+  directions: Direction[];
+  /** Your own labels; NONE for rows with none. */
+  tags: string[];
+  /** Playlists by name; NONE for trades in none. */
+  playlists: string[];
+  /** Asset types as classified; NONE for unclassified. */
+  assetTypes: string[];
   /** ISO day, inclusive. Null for open-ended. */
   from: string | null;
   to: string | null;
 }
 
 export const NO_TRADE_FILTERS: TradeFilters = {
-  symbol: null,
-  type: null,
-  accountName: null,
-  direction: null,
-  tag: null,
+  symbols: [],
+  types: [],
+  accounts: [],
+  directions: [],
+  tags: [],
+  playlists: [],
+  assetTypes: [],
   from: null,
   to: null,
 };
@@ -98,11 +109,13 @@ export function applyTradeFilters<T extends TradeHistoryRow>(
   filters: TradeFilters
 ): T[] {
   return rows.filter((row) => {
-    if (filters.symbol !== null && row.symbol !== filters.symbol) return false;
-    if (filters.type !== null && row.type.toUpperCase() !== filters.type.toUpperCase()) return false;
-    if (filters.accountName !== null && row.accountName !== filters.accountName) return false;
-    if (filters.direction !== null && directionOf(row) !== filters.direction) return false;
-    if (filters.tag !== null && !row.tags.includes(filters.tag)) return false;
+    if (!matchesAny(row.symbol, filters.symbols)) return false;
+    if (!matchesAny(row.type.toUpperCase(), filters.types.map((t) => t.toUpperCase()))) return false;
+    if (!matchesAny(row.accountName, filters.accounts)) return false;
+    if (!matchesAny(directionOf(row), filters.directions)) return false;
+    if (!matchesAny(row.tags, filters.tags)) return false;
+    if (!matchesAny(row.classification?.playlistNames ?? [], filters.playlists)) return false;
+    if (!matchesAny(row.classification?.assetType ?? null, filters.assetTypes)) return false;
 
     const day = row.date.slice(0, 10);
     if (filters.from !== null && day < filters.from) return false;
@@ -119,6 +132,9 @@ export interface TradeFilterOptions {
   directions: Direction[];
   /** Labels actually in use, so choosing one always leaves something on screen. */
   tags: string[];
+  /** Playlists and asset types the trades are classified in. */
+  playlists: string[];
+  assetTypes: string[];
   /** The span the data actually covers, for bounding the date inputs. */
   earliest: string | null;
   latest: string | null;
@@ -140,6 +156,8 @@ export function tradeFilterOptions(
   const accounts = new Set<string>();
   const directions = new Set<Direction>();
   const tags = new Set<string>();
+  const playlists = new Set<string>();
+  const assetTypes = new Set<string>();
   let earliest: string | null = null;
   let latest: string | null = null;
 
@@ -148,6 +166,8 @@ export function tradeFilterOptions(
     if (row.type !== "") types.add(row.type.toUpperCase());
     if (row.accountName !== "") accounts.add(row.accountName);
     for (const tag of row.tags) tags.add(tag);
+    for (const name of row.classification?.playlistNames ?? []) playlists.add(name);
+    if (row.classification?.assetType) assetTypes.add(row.classification.assetType);
     directions.add(directionOf(row));
 
     const day = row.date.slice(0, 10);
@@ -160,6 +180,8 @@ export function tradeFilterOptions(
     types: [...types].sort(),
     accounts: [...accounts].sort(),
     tags: [...tags].sort((a, b) => a.localeCompare(b)),
+    playlists: [...playlists].sort((a, b) => a.localeCompare(b)),
+    assetTypes: [...assetTypes].sort(),
     // Long, short, then unknown — the order they mean something in, not
     // alphabetical, which would lead with "long" and bury "short" after it.
     directions: (["long", "short", "unknown"] as const).filter((d) => directions.has(d)),
@@ -170,7 +192,7 @@ export function tradeFilterOptions(
 
 /** True when anything is actually being narrowed, for showing a "clear" control. */
 export function hasActiveTradeFilters(filters: TradeFilters): boolean {
-  return Object.values(filters).some((v) => v !== null);
+  return Object.values(filters).some((v) => (Array.isArray(v) ? v.length > 0 : v !== null));
 }
 
 /**
@@ -180,18 +202,51 @@ export function hasActiveTradeFilters(filters: TradeFilters): boolean {
  * whole account's — the same reason `getTradeAnalysis` reports how many rows it
  * could not convert instead of quietly leaving them out.
  */
-export function describeTradeFilters(filters: TradeFilters): string | null {
+export function describeTradeFilters(
+  filters: TradeFilters,
+  symbolText: (s: string) => string = (s) => s,
+  assetTypeText: (t: string) => string = (t) => t
+): string | null {
   const parts: string[] = [];
-  if (filters.symbol !== null) parts.push(filters.symbol);
-  if (filters.type !== null) parts.push(filters.type.toLowerCase());
-  if (filters.direction !== null) parts.push(filters.direction);
-  if (filters.tag !== null) parts.push(`tagged "${filters.tag}"`);
-  if (filters.accountName !== null) parts.push(`on ${filters.accountName}`);
+  if (filters.symbols.length) parts.push(choiceText(filters.symbols, symbolText));
+  if (filters.types.length) parts.push(choiceText(filters.types, (t) => t.toLowerCase()));
+  if (filters.directions.length) parts.push(choiceText(filters.directions));
+  if (filters.tags.length) parts.push(`tagged ${choiceText(filters.tags, (t) => `"${t}"`)}`);
+  if (filters.playlists.length) parts.push(`in ${choiceText(filters.playlists)}`);
+  if (filters.assetTypes.length) parts.push(choiceText(filters.assetTypes, assetTypeText));
+  if (filters.accounts.length) parts.push(`on ${choiceText(filters.accounts)}`);
   if (filters.from !== null && filters.to !== null) parts.push(`${filters.from} to ${filters.to}`);
   else if (filters.from !== null) parts.push(`from ${filters.from}`);
   else if (filters.to !== null) parts.push(`up to ${filters.to}`);
 
   return parts.length === 0 ? null : parts.join(" · ");
+}
+
+/**
+ * A saved set of trade filters, read back: only values the history still has,
+ * so a filter saved on an instrument since sold, or a tag since removed, opens
+ * on what is left rather than on an empty table.
+ */
+export function parseTradeFilters(raw: string, options: TradeFilterOptions): TradeFilters {
+  let value: Record<string, unknown>;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    value = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return NO_TRADE_FILTERS;
+  }
+  const day = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  return {
+    symbols: cleanChoices(value.symbols, options.symbols),
+    types: cleanChoices(value.types, options.types),
+    accounts: cleanChoices(value.accounts, options.accounts),
+    directions: cleanChoices(value.directions, options.directions) as Direction[],
+    tags: cleanChoices(value.tags, options.tags),
+    playlists: cleanChoices(value.playlists, options.playlists),
+    assetTypes: cleanChoices(value.assetTypes, options.assetTypes),
+    from: day(value.from),
+    to: day(value.to),
+  };
 }
 
 /** Classification axes read from each trade. Free-form legacy labels remain optional. */

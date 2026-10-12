@@ -130,3 +130,25 @@ describe("cleanName", () => {
     expect(cleanName("Baixo risco")).toBe("Baixo risco");
   });
 });
+
+describe("second grouping and filters", () => {
+  it("round-trips a second grouping and several values per filter, in a stable order", () => {
+    const config = { groupBy: "playlist", then: "riskLevel", filters: { assetType: ["etf", "crypto"], playlist: ["Core"] } };
+    const raw = serialiseView(config);
+    expect(raw).toBe("groupBy=playlist&then=riskLevel&f_assetType=crypto&f_assetType=etf&f_playlist=Core");
+    expect(parseView(raw, allowed)).toEqual({ groupBy: "playlist", then: "riskLevel",
+      filters: { playlist: ["Core"], assetType: ["crypto", "etf"] } });
+    expect(sameView(config, { ...config, filters: { playlist: ["Core"], assetType: ["crypto", "etf"] } })).toBe(true);
+  });
+
+  it("drops a second grouping that is unknown or the first one again, and filters on unknown dimensions", () => {
+    expect(parseView("groupBy=playlist&then=playlist", allowed)).toEqual({ groupBy: "playlist" });
+    expect(parseView("then=nonsense&f_nonsense=x", allowed)).toEqual({});
+  });
+
+  it("names a view by its second grouping and filters", () => {
+    const name = suggestName({ groupBy: "playlist", then: "riskLevel", filters: { assetType: ["crypto", "etf"] } }, {
+      groupBy: { playlist: "Playlist", riskLevel: "Risk", assetType: "Asset type" }, sort: {} });
+    expect(name).toBe("By playlist, then by risk, asset type: crypto or etf");
+  });
+});

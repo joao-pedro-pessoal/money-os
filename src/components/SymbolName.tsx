@@ -11,6 +11,11 @@ export function SymbolNamesProvider({ names, children }: { names: SymbolNames; c
   return <NamesContext.Provider value={names}>{children}</NamesContext.Provider>;
 }
 
+/** Your names for tickers, for code that needs text rather than an element. */
+export function useSymbolNames(): SymbolNames {
+  return useContext(NamesContext);
+}
+
 /**
  * A ticker on screen: the name you gave it, with the ticker itself small
  * beside it, or the ticker alone when it has no name.

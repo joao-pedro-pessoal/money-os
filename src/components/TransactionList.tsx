@@ -12,12 +12,15 @@ import {
   transactionTotals,
   directionOf,
   NO_TRANSACTION_FILTERS,
+  parseTransactionFilters,
   type TransactionFilters,
   type TransactionRow,
 } from "@/lib/money/transactionFilter";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import MobileFold from "@/components/MobileFold";
+import MultiSelect from "@/components/MultiSelect";
+import SavedFilters from "@/components/SavedFilters";
 
 /**
  * The transaction list, over whatever slice is chosen.
@@ -59,6 +62,11 @@ export default function TransactionList({
 
   /** "" is the empty option and means no filter, not a value of "". */
   const pick = (value: string) => (value === "" ? null : value);
+  /** A size typed in: blank or not a number is no bound. */
+  const amountOf = (value: string) => {
+    const n = Number(value.replace(",", "."));
+    return value.trim() === "" || !Number.isFinite(n) || n < 0 ? null : n;
+  };
 
   return (
     <div className="space-y-4">
@@ -119,40 +127,38 @@ export default function TransactionList({
             ))}
           </div>
         </div>
-        <MobileFold title={`Account, category & dates${(filters.accountName || filters.categoryName || filters.from || filters.to) ? " · Filters applied" : ""}`} persistKey="transaction-filters">
+        <MobileFold title={`Account, category, amount & dates${(filters.accounts.length || filters.categories.length || filters.types.length || filters.minAmount !== null || filters.maxAmount !== null || filters.from || filters.to) ? " · Filters applied" : ""}`} persistKey="transaction-filters">
         <div className="cash-flow-filter-fields grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
           <select aria-label="Money direction" className="cash-flow-desktop-only input input-narrow text-xs py-1" value={filters.direction ?? ""} onChange={(e) => set("direction", pick(e.target.value) as "in" | "out" | null)}>
             <option value="">In and out</option><option value="in">Money in</option><option value="out">Money out</option>
           </select>
-          <label className="text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Account</span>
-          <select
-            aria-label="Filter by account"
-            className="input input-narrow text-xs py-1"
-            value={filters.accountName ?? ""}
-            onChange={(e) => set("accountName", pick(e.target.value))}
-          >
-            <option value="">Every account</option>
-            {options.accounts.map((a) => (
-              <option translate="no" key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
+          {/* Several accounts, categories or types at once; every field applies. */}
+          <MultiSelect label="Account" options={options.accounts} selected={filters.accounts} onChange={(v) => set("accounts", v)} />
+          <MultiSelect label="Category" options={options.categories} selected={filters.categories} onChange={(v) => set("categories", v)} noneLabel="No category" />
+          <MultiSelect label="Type" options={options.types} selected={filters.types} onChange={(v) => set("types", v)} />
+          <label className="text-xs text-[var(--muted)]"><span className="block text-[10px] mb-1">Amount from</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            aria-label="Smallest amount"
+            className="input input-narrow text-xs py-1 w-full"
+            value={filters.minAmount ?? ""}
+            onChange={(e) => set("minAmount", amountOf(e.target.value))}
+          />
           </label>
-          <label className="text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">Category</span>
-          <select
-            aria-label="Filter by category"
-            className="input input-narrow text-xs py-1"
-            value={filters.categoryName ?? ""}
-            onChange={(e) => set("categoryName", pick(e.target.value))}
-          >
-            <option value="">Every category</option>
-            {options.categories.map((c) => (
-              <option translate="no" key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          <label className="text-xs text-[var(--muted)]"><span className="block text-[10px] mb-1">Amount to</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            aria-label="Largest amount"
+            className="input input-narrow text-xs py-1 w-full"
+            value={filters.maxAmount ?? ""}
+            onChange={(e) => set("maxAmount", amountOf(e.target.value))}
+          />
           </label>
           <label className="text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">From date</span>
           <input
@@ -173,6 +179,14 @@ export default function TransactionList({
           />
           </label>
           <input aria-label="Search transactions" className="cash-flow-desktop-only input input-narrow text-xs py-1" placeholder="Search" value={filters.search} onChange={(e) => set("search", e.target.value)} />
+        </div>
+        <div className="mb-3">
+          <SavedFilters
+            scope="transactions"
+            current={JSON.stringify(filters)}
+            active={active}
+            onApply={(config) => setFilters(parseTransactionFilters(config, options))}
+          />
         </div>
         </MobileFold>
 

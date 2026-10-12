@@ -23,14 +23,12 @@ export default function SavedViews({
   suggestedName,
   saveAction,
   deleteAction,
-  currentConfig,
 }: {
   views: SavedViewChip[];
   currentQuery: string;
   suggestedName: string;
   saveAction: (formData: FormData) => void;
   deleteAction: (formData: FormData) => void;
-  currentConfig: { groupBy: string; sort: string; dir: string; synced: string; status?: string };
 }) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(suggestedName);
@@ -72,11 +70,8 @@ export default function SavedViews({
         </span>
       ) : saving ? (
         <form action={saveAction} className="flex items-center gap-1">
-          <input type="hidden" name="groupBy" value={currentConfig.groupBy} />
-          <input type="hidden" name="sort" value={currentConfig.sort} />
-          <input type="hidden" name="dir" value={currentConfig.dir} />
-          <input type="hidden" name="synced" value={currentConfig.synced} />
-          <input type="hidden" name="status" value={currentConfig.status ?? "both"} />
+          {/* The whole view, filters included, exactly as the chips compare it. */}
+          <input type="hidden" name="query" value={currentQuery} />
           <input
             name="name"
             value={name}

@@ -5,8 +5,10 @@ import {
   hasActiveTradeFilters,
   describeTradeFilters,
   NO_TRADE_FILTERS,
+  parseTradeFilters,
   type TradeHistoryRow,
 } from "../filter";
+import { NONE } from "../../filters/multi";
 import { bySymbol, cumulativePnl, byDirection, isTrade } from "../stats";
 
 const row = (over: Partial<TradeHistoryRow> = {}): TradeHistoryRow => ({
@@ -45,18 +47,18 @@ describe("narrowing the history", () => {
   });
 
   it("filters by instrument", () => {
-    const rows = applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbol: "BTC" });
+    const rows = applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbols: ["BTC"] });
     expect(rows.map((r) => r.symbol)).toEqual(["BTC", "BTC"]);
   });
 
   it("filters by event type, whatever case it was given in", () => {
-    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, type: "dividend" })).toHaveLength(1);
-    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, type: "SELL" })).toHaveLength(3);
+    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, types: ["dividend"] })).toHaveLength(1);
+    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, types: ["SELL"] })).toHaveLength(3);
   });
 
   it("filters by account", () => {
     expect(
-      applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, accountName: "Kraken" })
+      applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, accounts: ["Kraken"] })
     ).toHaveLength(1);
   });
 
@@ -66,9 +68,9 @@ describe("narrowing the history", () => {
    * up a row nobody could classify.
    */
   it("filters by direction without assuming the unclassified are long", () => {
-    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, direction: "long" })).toHaveLength(2);
-    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, direction: "short" })).toHaveLength(1);
-    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, direction: "unknown" })).toHaveLength(1);
+    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, directions: ["long"] })).toHaveLength(2);
+    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, directions: ["short"] })).toHaveLength(1);
+    expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, directions: ["unknown"] })).toHaveLength(1);
   });
 
   it("filters by a date range, both ends inclusive", () => {
@@ -100,8 +102,8 @@ describe("narrowing the history", () => {
   it("combines filters, narrowing rather than widening", () => {
     const rows = applyTradeFilters(HISTORY, {
       ...NO_TRADE_FILTERS,
-      symbol: "BTC",
-      direction: "long",
+      symbols: ["BTC"],
+      directions: ["long"],
       from: "2026-02-01",
     });
     expect(rows).toHaveLength(1);
@@ -119,7 +121,7 @@ describe("narrowing the history", () => {
 describe("the figures describe what is left, not the whole account", () => {
   it("recomputes realised P&L over the filtered set", () => {
     const all = bySymbol(applyTradeFilters(HISTORY, NO_TRADE_FILTERS));
-    const btcOnly = bySymbol(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbol: "BTC" }));
+    const btcOnly = bySymbol(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbols: ["BTC"] }));
 
     expect(all.map((s) => s.symbol).sort()).toEqual(["BTC", "ETH"]);
     expect(btcOnly.map((s) => s.symbol)).toEqual(["BTC"]);
@@ -128,7 +130,7 @@ describe("the figures describe what is left, not the whole account", () => {
   });
 
   it("recomputes the win rate, which is the figure most likely to mislead", () => {
-    const long = byDirection(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, direction: "long" }));
+    const long = byDirection(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, directions: ["long"] }));
     expect(long).toHaveLength(1);
     expect(long[0].direction).toBe("long");
     // One win out of two closed longs.
@@ -143,7 +145,7 @@ describe("the figures describe what is left, not the whole account", () => {
   });
 
   it("leaves nothing on screen when the filter matches nothing", () => {
-    const rows = applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbol: "NOTHELD" });
+    const rows = applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbols: ["NOTHELD"] });
     expect(rows).toEqual([]);
     expect(bySymbol(rows)).toEqual([]);
     expect(cumulativePnl(rows)).toEqual([]);
@@ -165,14 +167,14 @@ describe("what there is to filter by", () => {
 
   it("never offers an option that would empty the table", () => {
     for (const symbol of options.symbols) {
-      expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbol }).length).toBeGreaterThan(0);
+      expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbols: [symbol] }).length).toBeGreaterThan(0);
     }
     for (const type of options.types) {
-      expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, type }).length).toBeGreaterThan(0);
+      expect(applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, types: [type] }).length).toBeGreaterThan(0);
     }
     for (const direction of options.directions) {
       expect(
-        applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, direction }).length
+        applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, directions: [direction] }).length
       ).toBeGreaterThan(0);
     }
   });
@@ -208,9 +210,9 @@ describe("saying what the filters are doing", () => {
     expect(
       describeTradeFilters({
         ...NO_TRADE_FILTERS,
-        symbol: "BTC",
-        direction: "long",
-        accountName: "Kraken",
+        symbols: ["BTC"],
+        directions: ["long"],
+        accounts: ["Kraken"],
       })
     ).toBe("BTC · long · on Kraken");
   });
@@ -226,7 +228,7 @@ describe("saying what the filters are doing", () => {
   });
 
   it("knows a single filter counts as active", () => {
-    expect(hasActiveTradeFilters({ ...NO_TRADE_FILTERS, symbol: "BTC" })).toBe(true);
+    expect(hasActiveTradeFilters({ ...NO_TRADE_FILTERS, symbols: ["BTC"] })).toBe(true);
   });
 });
 
@@ -244,8 +246,8 @@ describe("empty in two different ways", () => {
     // has fifty-two, and they share none.
     const noRows = applyTradeFilters(HISTORY, {
       ...NO_TRADE_FILTERS,
-      symbol: "SOL",
-      direction: "long",
+      symbols: ["SOL"],
+      directions: ["long"],
     });
     expect(noRows).toHaveLength(0);
 
@@ -263,7 +265,7 @@ describe("empty in two different ways", () => {
         row({ symbol: "EUN3", type: "DIVIDEND", realizedPnl: null, description: null }),
         row({ symbol: "EUN3", type: "DIVIDEND", realizedPnl: null, description: null }),
       ],
-      { ...NO_TRADE_FILTERS, symbol: "EUN3" }
+      { ...NO_TRADE_FILTERS, symbols: ["EUN3"] }
     );
     expect(noTrades).toHaveLength(2);
     expect(noTrades.filter(isTrade)).toHaveLength(0);
@@ -289,13 +291,13 @@ describe("empty in two different ways", () => {
    * empty page.
    */
   it("allows a combination to be empty even when each part is not", () => {
-    const bySymbolAlone = applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbol: "SOL" });
-    const byDirectionAlone = applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, direction: "long" });
+    const bySymbolAlone = applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbols: ["SOL"] });
+    const byDirectionAlone = applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, directions: ["long"] });
 
     expect(bySymbolAlone.length).toBeGreaterThan(0);
     expect(byDirectionAlone.length).toBeGreaterThan(0);
     expect(
-      applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbol: "SOL", direction: "long" })
+      applyTradeFilters(HISTORY, { ...NO_TRADE_FILTERS, symbols: ["SOL"], directions: ["long"] })
     ).toHaveLength(0);
   });
 });
@@ -316,9 +318,9 @@ describe("your own labels", () => {
 
   it("keeps only the rows carrying a label", () => {
     expect(
-      applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "leveraged" }).map((r) => r.symbol)
+      applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tags: ["leveraged"] }).map((r) => r.symbol)
     ).toEqual(["BTC", "ETH"]);
-    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "mistake" })).toHaveLength(1);
+    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tags: ["mistake"] })).toHaveLength(1);
   });
 
   /**
@@ -332,9 +334,9 @@ describe("your own labels", () => {
    * before it ever reaches here.
    */
   it("does not treat the absence of a label as a label", () => {
-    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "none" })).toHaveLength(0);
-    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "" })).toHaveLength(0);
-    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: null })).toHaveLength(3);
+    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tags: ["none"] })).toHaveLength(0);
+    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tags: [""] })).toHaveLength(0);
+    expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tags: [] })).toHaveLength(3);
   });
 
   it("offers only labels actually in use", () => {
@@ -344,23 +346,72 @@ describe("your own labels", () => {
 
   it("never offers a label that would empty the table", () => {
     for (const tag of tradeFilterOptions(TAGGED).tags) {
-      expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag }).length).toBeGreaterThan(0);
+      expect(applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tags: [tag] }).length).toBeGreaterThan(0);
     }
   });
 
   it("narrows alongside the other filters rather than replacing them", () => {
     expect(
-      applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "leveraged", symbol: "BTC" })
+      applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tags: ["leveraged"], symbols: ["BTC"] })
     ).toHaveLength(1);
   });
 
   it("says it is filtering by a label", () => {
-    expect(describeTradeFilters({ ...NO_TRADE_FILTERS, tag: "mistake" })).toBe('tagged "mistake"');
+    expect(describeTradeFilters({ ...NO_TRADE_FILTERS, tags: ["mistake"] })).toBe('tagged "mistake"');
   });
 
   /** Every figure follows the label, like every other filter on this page. */
   it("recomputes the figures over the labelled rows", () => {
-    const leveraged = applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tag: "leveraged" });
+    const leveraged = applyTradeFilters(TAGGED, { ...NO_TRADE_FILTERS, tags: ["leveraged"] });
     expect(bySymbol(leveraged).map((s) => s.symbol).sort()).toEqual(["BTC", "ETH"]);
+  });
+});
+
+describe("filters of filters on trades", () => {
+  const classified = (playlistNames: string[], assetType: string | null) => ({
+    assetType, assetTypeAuto: false, riskLevel: null, expectedReturn: null, timeHorizon: null, liquidity: null,
+    apr: null, playlistIds: playlistNames.map((n) => n.toLowerCase()), playlistNames, notes: null,
+  });
+  const rows = [
+    row({ id: "1", symbol: "BTC", accountName: "Hyperliquid", classification: classified(["Sato", "Crypto"], "crypto") }),
+    row({ id: "2", symbol: "ETH", accountName: "MEXC", classification: classified(["Crypto"], "crypto") }),
+    row({ id: "3", symbol: "VWCE", accountName: "Trade Republic", classification: classified([], "etf") }),
+    row({ id: "4", symbol: "ZRO", accountName: "Hyperliquid", classification: null }),
+  ];
+  const ids = (f: Partial<typeof NO_TRADE_FILTERS>) => applyTradeFilters(rows, { ...NO_TRADE_FILTERS, ...f }).map((r) => r.id);
+
+  it("take several values in a field as alternatives", () => {
+    expect(ids({ symbols: ["BTC", "VWCE"] })).toEqual(["1", "3"]);
+    expect(ids({ accounts: ["MEXC", "Trade Republic"] })).toEqual(["2", "3"]);
+  });
+
+  it("combine fields, so a filter narrows what another let through", () => {
+    expect(ids({ playlists: ["Crypto"], accounts: ["Hyperliquid"] })).toEqual(["1"]);
+    expect(ids({ assetTypes: ["crypto", "etf"], accounts: ["Hyperliquid"] })).toEqual(["1"]);
+  });
+
+  it("find a trade in any of its playlists, and those in none", () => {
+    expect(ids({ playlists: ["Sato"] })).toEqual(["1"]);
+    expect(ids({ playlists: [NONE] })).toEqual(["3", "4"]);
+    expect(ids({ assetTypes: [NONE] })).toEqual(["4"]);
+  });
+
+  it("offer the playlists and asset types the trades are in", () => {
+    const options = tradeFilterOptions(rows);
+    expect(options.playlists).toEqual(["Crypto", "Sato"]);
+    expect(options.assetTypes).toEqual(["crypto", "etf"]);
+  });
+
+  it("say what they are doing, field by field", () => {
+    const text = describeTradeFilters({ ...NO_TRADE_FILTERS, symbols: ["BTC", "ETH"], playlists: ["Crypto"], accounts: ["MEXC"] }, (s) => (s === "BTC" ? "Bitcoin" : s));
+    expect(text).toBe("Bitcoin or ETH · in Crypto · on MEXC");
+    expect(hasActiveTradeFilters({ ...NO_TRADE_FILTERS, playlists: ["Crypto"] })).toBe(true);
+  });
+
+  it("come back from a saved set with only what the history still has", () => {
+    const saved = JSON.stringify({ symbols: ["BTC", "SOLD"], playlists: ["Crypto"], directions: ["long", "sideways"], from: "2026-01-01" });
+    expect(parseTradeFilters(saved, tradeFilterOptions(rows))).toEqual({
+      ...NO_TRADE_FILTERS, symbols: ["BTC"], playlists: ["Crypto"], directions: ["long"], from: "2026-01-01",
+    });
   });
 });

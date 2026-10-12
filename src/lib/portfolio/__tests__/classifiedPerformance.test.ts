@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { classifiedPerformance } from '../classifiedPerformance';
+import { classifiedPerformance, cleanPerformanceFilters, filterPerformanceInputs, performanceFilterOptions } from '../classifiedPerformance';
+import { NONE } from '../../filters/multi';
 import type { PositionItem } from '../positionView';
 import type { TradeHistoryRow } from '../../trading/filter';
 
@@ -45,5 +46,56 @@ describe('classified performance', () => {
     const [group] = classifiedPerformance([{ ...open, costUnknown: true }], [], 'timeHorizon');
     expect(group).toMatchObject({ pnl: 0, cost: 0 });
     expect(group.members[0].pnlKnown).toBe(false);
+  });
+
+  describe('filters of filters', () => {
+    const etf: PositionItem = { ...open, id: 'p2', symbol: 'VWCE', side: 'long', accountName: 'B', assetType: 'etf',
+      playlistNames: ['Core', 'Strategy'], playlistIds: ['core', 'strategy'], riskLevel: 'medium', value: 300, notional: 300, pnl: 30 };
+    const bare: PositionItem = { ...open, id: 'p3', symbol: 'X', playlistNames: [], playlistIds: [], riskLevel: null, value: 50, notional: 50, pnl: 0 };
+
+    it('takes several values in one field as alternatives and every field together', () => {
+      const either = filterPerformanceInputs([open, etf, bare], [trade], { assetType: ['crypto', 'etf'] });
+      expect(either.items.map(p => p.id)).toEqual(['p1', 'p2', 'p3']);
+      const both = filterPerformanceInputs([open, etf, bare], [trade], { assetType: ['crypto', 'etf'], account: ['B'] });
+      expect(both.items.map(p => p.id)).toEqual(['p2']);
+      expect(both.trades.map(t => t.id)).toEqual(['t1']);
+    });
+
+    it('picks what has nothing set with NONE, and a position in any chosen playlist', () => {
+      expect(filterPerformanceInputs([open, etf, bare], [], { playlist: [NONE] }).items.map(p => p.id)).toEqual(['p3']);
+      expect(filterPerformanceInputs([open, etf, bare], [], { playlist: ['Core'] }).items.map(p => p.id)).toEqual(['p2']);
+      expect(filterPerformanceInputs([open, etf, bare], [], { riskLevel: ['low', NONE] }).items.map(p => p.id)).toEqual(['p1', 'p3']);
+    });
+
+    it('offers every value in view, not only what the filters leave, and says when some are unset', () => {
+      const options = performanceFilterOptions([open, etf, bare], [trade]);
+      expect(options.playlist).toEqual({ values: ['Core', 'Strategy'], unset: true });
+      expect(options.account).toEqual({ values: ['A', 'B'], unset: false });
+      expect(performanceFilterOptions([open, etf, bare], [trade], 'closed').account).toEqual({ values: ['B'], unset: false });
+    });
+
+    it('drops filter values that no longer exist and anything that is not a dimension', () => {
+      const options = performanceFilterOptions([open, etf], []);
+      expect(cleanPerformanceFilters({ playlist: ['Core', 'Gone', NONE], nonsense: ['x'], account: 'A' }, options))
+        .toEqual({ playlist: ['Core', NONE], account: ['A'] });
+      expect(cleanPerformanceFilters(null as never, options)).toEqual({});
+    });
+
+    it('splits each group again, the children summing from the same positions and trades', () => {
+      const groups = classifiedPerformance([open, etf], [trade], 'account', 'both', 'riskLevel');
+      const a = groups.find(g => g.key === 'A')!;
+      expect(a.children!.map(c => [c.key, c.value, c.percent])).toEqual([['low', 120, 100]]);
+      const b = groups.find(g => g.key === 'B')!;
+      expect(b.children!.map(c => c.key).sort()).toEqual(['low', 'medium']);
+      expect(b.children!.find(c => c.key === 'low')).toMatchObject({ value: 0, realized: 5, closedCount: 1 });
+      expect(b.children!.find(c => c.key === 'medium')).toMatchObject({ value: 300, pnl: 30, percent: 100 });
+    });
+
+    it('counts a position whole in each playlist below a group, and does not split a group by itself', () => {
+      const [group] = classifiedPerformance([etf], [], 'account', 'both', 'playlist');
+      expect(group.children!.map(c => [c.key, c.value])).toEqual([['Core', 300], ['Strategy', 300]]);
+      expect(classifiedPerformance([etf], [], 'account', 'both', 'account')[0].children).toBeUndefined();
+      expect(classifiedPerformance([etf], [], 'account')[0].children).toBeUndefined();
+    });
   });
 });

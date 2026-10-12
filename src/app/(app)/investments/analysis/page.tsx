@@ -5,7 +5,7 @@ import {
   getGroupedPerformance,
   getPortfolioReturns,
 } from "@/actions/investments";
-import { PERFORMANCE_STATUS_OPTIONS } from "@/lib/portfolio/classifiedPerformance";
+import { PERFORMANCE_STATUS_OPTIONS, type PerformanceFilters, type PerformanceStatus } from "@/lib/portfolio/classifiedPerformance";
 import PortfolioReturns from "@/components/PortfolioReturns";
 import { Money } from "@/components/PrivacyContext";
 import DonutChart from "@/components/DonutChart";
@@ -13,12 +13,16 @@ import { tagLabel, type TagAxis, riskColor } from "@/lib/portfolio/tags";
 import {
   GROUP_BY_OPTIONS,
   SORT_COLUMNS,
+  groupValueLabel,
   type Breakdown,
   type GroupByKey,
+  type GroupMember,
+  type GroupPerformance,
   type SortKey,
 } from "@/lib/portfolio/analysis";
 import { listAnalysisViews, saveAnalysisView, deleteSavedView } from "@/actions/savedViews";
-import { suggestName } from "@/lib/portfolio/savedViews";
+import { filterParam, serialiseView, suggestName } from "@/lib/portfolio/savedViews";
+import PerformanceFilterBar from "@/components/PerformanceFilterBar";
 import SavedViews from "@/components/SavedViews";
 import FilterLink from "@/components/FilterLink";
 import FilterSelect from "@/components/FilterSelect";
@@ -40,19 +44,26 @@ import InvestmentCosts from "@/components/InvestmentCosts";
 export default async function PortfolioAnalysisPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    groupBy?: string;
-    sort?: string;
-    dir?: string;
-    synced?: string;
-    open?: string;
-    status?: string;
-    companies?: string;
-  }>;
+  /** Filters repeat a parameter, one per value (`f_playlist=Core&f_playlist=Growth`). */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const sp = await searchParams;
+  const params = await searchParams;
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const sp = {
+    groupBy: one(params.groupBy),
+    then: one(params.then),
+    sort: one(params.sort),
+    dir: one(params.dir),
+    synced: one(params.synced),
+    open: one(params.open),
+    sub: one(params.sub),
+    status: one(params.status),
+    companies: one(params.companies),
+  };
   const status = PERFORMANCE_STATUS_OPTIONS.find(o => o.value === sp.status)?.value ?? "both";
   const groupBy = (GROUP_BY_OPTIONS.find((o) => o.value === sp.groupBy)?.value ?? "playlist") as GroupByKey;
+  /** A second grouping inside the first ("playlist, then risk"); never the first again. */
+  const thenBy = (GROUP_BY_OPTIONS.find((o) => o.value === sp.then && o.value !== groupBy)?.value ?? null) as GroupByKey | null;
   const sort = (SORT_COLUMNS.find((c) => c.key === sp.sort)?.key ?? "value") as SortKey;
   const dir: "asc" | "desc" = sp.dir === "asc" ? "asc" : "desc";
   // Cash/stablecoins count by default; "off" hides that asset category.
@@ -66,6 +77,8 @@ export default async function PortfolioAnalysisPage({
    * link you can come back to.
    */
   const openGroup = sp.open ?? null;
+  /** Within the opened group, which of its second-level groups is opened. */
+  const openSub = thenBy ? sp.sub ?? null : null;
 
   const statement = await getStatementBreakdown();
   const a = await getPortfolioAnalysis(includeSynced);
@@ -99,48 +112,64 @@ export default async function PortfolioAnalysisPage({
     ...exposure.matches.map((m) => m.lookup),
   ]);
   const fees = await getFeesByYear();
-  const grouped = await getGroupedPerformance(groupBy, sort, dir, includeSynced, status);
+  const {
+    groups: grouped,
+    options: filterOptions,
+    filters,
+  } = await getGroupedPerformance(
+    groupBy,
+    sort,
+    dir,
+    includeSynced,
+    status,
+    thenBy,
+    Object.fromEntries(GROUP_BY_OPTIONS.map((o) => [o.value, params[filterParam(o.value)]]))
+  );
+  const filtered = Object.values(filters).some((v) => v && v.length > 0);
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
   const best = [...grouped].filter((g) => g.cost > 0).sort((x, y) => y.pnlPercent - x.pnlPercent)[0];
-  const translateKeys = groupBy !== "playlist" && groupBy !== "account" && groupBy !== "symbol";
+  const label = (k: string) => groupValueLabel(groupBy, k);
+  const subLabel = (k: string) => (thenBy ? groupValueLabel(thenBy, k) : k);
   /**
-   * Which vocabulary this grouping is drawn from.
-   *
-   * Without it `long` on a horizon chart resolved to "Long (gains when it
-   * rises)" and `low` on a risk chart to "Low liquidity" — five values mean
-   * different things on different axes, and a label that does not know the
-   * axis picks whichever list was flattened in last.
+   * The view's address with some of it changed. Filters are carried as they
+   * are unless replaced, and repeat their parameter once per value.
    */
-  const groupAxis: TagAxis | undefined =
-    groupBy === "riskLevel"
-      ? "risk"
-      : groupBy === "timeHorizon"
-        ? "timeHorizon"
-        : groupBy === "liquidity"
-          ? "liquidity"
-          : groupBy === "expectedReturn"
-            ? "expectedReturn"
-            : groupBy === "assetType"
-              ? "assetType"
-              : undefined;
-  const label = (k: string) => (translateKeys ? tagLabel(k, groupAxis) ?? k : k);
-  const qs = (over: Record<string, string>) =>
-    "?" +
-    new URLSearchParams({
+  const query = (over: Record<string, string>, withFilters: PerformanceFilters = filters) => {
+    const q = new URLSearchParams({
       groupBy,
       sort,
       dir,
       synced: includeSynced ? "on" : "off",
       status,
+      ...(thenBy === null ? {} : { then: thenBy }),
       ...(openGroup === null ? {} : { open: openGroup }),
+      ...(openSub === null ? {} : { sub: openSub }),
       ...over,
-    }).toString();
+    });
+    for (const o of GROUP_BY_OPTIONS) for (const v of withFilters[o.value] ?? []) q.append(filterParam(o.value), v);
+    return q.toString();
+  };
+  const qs = (over: Record<string, string>) => "?" + query(over);
+  const filterBase = (() => {
+    const q = new URLSearchParams(query({}, {}));
+    q.delete("open");
+    q.delete("sub");
+    return q.toString();
+  })();
   const pnlColor = a.totals.totalPnL >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
 
-  const currentConfig = { groupBy, sort, dir, synced: includeSynced ? "on" : "off", status };
+  const currentConfig = {
+    groupBy,
+    sort,
+    dir,
+    synced: includeSynced ? "on" : "off",
+    status,
+    ...(thenBy === null ? {} : { then: thenBy }),
+    ...(filtered ? { filters } : {}),
+  };
   const savedViewList = await listAnalysisViews();
   // Same builder as the chips use, so "already saved" compares like with like.
-  const currentQuery = new URLSearchParams(currentConfig).toString();
+  const currentQuery = serialiseView(currentConfig);
   const suggested = suggestName(currentConfig, {
     groupBy: Object.fromEntries(GROUP_BY_OPTIONS.map((o) => [o.value, o.label])),
     sort: Object.fromEntries(SORT_COLUMNS.map((c) => [c.key, c.label])),
@@ -157,7 +186,7 @@ export default async function PortfolioAnalysisPage({
    * So the empty state stays for the part that is genuinely empty, and the rest
    * of the page renders regardless.
    */
-  if (a.holdings.length === 0 && grouped.length === 0 && status === "both") {
+  if (a.holdings.length === 0 && grouped.length === 0 && status === "both" && !filtered) {
     return (
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -370,15 +399,19 @@ export default async function PortfolioAnalysisPage({
             views={savedViewList}
             currentQuery={currentQuery}
             suggestedName={suggested}
-            currentConfig={currentConfig}
             saveAction={saveAnalysisView}
             deleteAction={deleteSavedView}
           />
         </div>
 
+        <PerformanceFilterBar base={filterBase} filters={filters} options={filterOptions} />
+
         <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
           <div>
-            <div className="text-sm font-medium">Performance by {groupLabel.toLowerCase()}</div>
+            <div className="text-sm font-medium">
+              Performance by {groupLabel.toLowerCase()}
+              {thenBy && `, then by ${GROUP_BY_OPTIONS.find((o) => o.value === thenBy)!.label.toLowerCase()}`}
+            </div>
             {best && (
               <div className="text-xs text-[var(--muted)] mt-1">
                 Best: <span className="text-[var(--green)]">{label(best.key)}</span> at{" "}
@@ -399,13 +432,33 @@ export default async function PortfolioAnalysisPage({
               options={GROUP_BY_OPTIONS.map((o) => ({
                 value: o.value,
                 label: `Group by: ${o.label}`,
-                href: qs({ groupBy: o.value }),
+                // Grouping by what was the second level leaves no second level.
+                href: qs({ groupBy: o.value, ...(o.value === thenBy ? { then: "" } : {}) }),
               }))}
+            />
+            {/* Groups inside groups: each playlist split by risk, each account by
+                asset type. Opening a group shows its own groups. */}
+            <FilterSelect
+              label="Then by"
+              value={thenBy ?? ""}
+              options={[
+                { value: "", label: "Then by: nothing", href: qs({ then: "", sub: "" }) },
+                ...GROUP_BY_OPTIONS.filter((o) => o.value !== groupBy).map((o) => ({
+                  value: o.value,
+                  label: `Then by: ${o.label}`,
+                  href: qs({ then: o.value, sub: "" }),
+                })),
+              ]}
             />
           </div>
         </div>
 
         <p className="text-xs text-[var(--muted)] mt-2">This filter applies to this performance breakdown and its details.</p>
+        {(groupBy === "playlist" || thenBy === "playlist") && (
+          <p className="text-xs text-[var(--muted)] mt-1">
+            A position in several playlists counts in full in each, so the playlists can add up to more than the whole.
+          </p>
+        )}
         {status !== "closed" && <DonutChart data={grouped.filter((g) => g.value > 0).map((g) => ({ name: label(g.key), value: g.value }))} currency={currency} />}
 
         <div className="overflow-x-auto mt-4">
@@ -434,95 +487,54 @@ export default async function PortfolioAnalysisPage({
                     {/* Opening a group is a link, so the view survives a
                         refresh and can be sent to someone. */}
                     <FilterLink
-                      href={qs({ open: openGroup === g.key ? "" : g.key })}
+                      href={qs({ open: openGroup === g.key ? "" : g.key, sub: "" })}
                       className="hover:underline"
                       style={groupBy === "riskLevel" ? { color: riskColor(g.key) } : undefined}
                     >
                       {openGroup === g.key ? "▾ " : "▸ "}
                       {label(g.key)}
                     </FilterLink>
-                    {status !== "closed" && <div className="text-xs text-[var(--muted)]">{g.percent.toFixed(1)}% of portfolio</div>}
+                    {status !== "closed" && (
+                      <div className="text-xs text-[var(--muted)]">
+                        {g.percent.toFixed(1)}% of {filtered ? "what the filters show" : "portfolio"}
+                      </div>
+                    )}
                   </td>
-                  <td className="text-right">{g.openCount ?? g.count} open / {g.closedCount ?? 0} closed</td>
-                  <td className="text-right">
-                    {status === "closed" ? "N/A" : <Money value={g.value} currency={currency} />}
-                  </td>
-                  <td className="text-right">
-                    {status === "closed" ? "N/A" : <Money value={g.cost} currency={currency} />}
-                  </td>
-                  <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    {status === "closed" ? "N/A" : <Money value={g.pnl} currency={currency} />}
-                  </td>
-                  <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    {status === "closed" ? "N/A" : `${g.pnlPercent.toFixed(1)}%`}
-                  </td>
-                  <td className={`text-right ${g.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
-                    {status === "open" ? "N/A" : <Money value={g.realized} currency={currency} />}
-                  </td>
+                  <GroupCells g={g} status={status} currency={currency} />
                 </tr>
 
                 {/* What the group is made of. These are the very rows the
                     totals above were summed from, so the detail cannot
-                    disagree with the line it sits under. */}
+                    disagree with the line it sits under. With a second
+                    grouping, it is made of groups first, each opening on its
+                    own members. */}
                 {openGroup === g.key && (
                   <>
-                    {/*
-                      Rows of the same table, not a table of their own.
-
-                      A nested <ResponsiveTable> sizes its columns from its own content,
-                      so the detail's Value could never line up under the Value
-                      it belongs to — "Weight in group" sat across two of the
-                      headings above it, and reading a member against its group
-                      meant measuring by eye. Sharing the table makes the
-                      alignment structural rather than something to maintain.
-                    */}
-                    <tr style={{ background: "var(--surface-2)" }}>
-                      <th className="text-[10px] uppercase tracking-wide pl-8">Position</th>
-                      {/*
-                        Wraps rather than widening the column. The heading is
-                        longer than any figure beneath it, and on one line it
-                        stretched the "Positions" column of every row in the
-                        table to fit a label only the open group shows.
-                      */}
-                      <th className="text-[10px] uppercase tracking-wide text-right whitespace-normal">
-                        Weight in group
-                      </th>
-                      <th className="text-[10px] uppercase tracking-wide text-right">Value</th>
-                      <th className="text-[10px] uppercase tracking-wide text-right">Cost</th>
-                      <th className="text-[10px] uppercase tracking-wide text-right">Unrealized</th>
-                      <th className="text-[10px] uppercase tracking-wide text-right">Unrealized %</th>
-                      <th className="text-[10px] uppercase tracking-wide text-right">Realized</th>
-                    </tr>
-
-                    {g.members.map((m) => (
-                      <tr key={m.id ?? m.symbol} style={{ background: "var(--surface-2)" }}>
-                        {/* Indented, so a member is visibly subordinate to the
-                            group above it now that both are in one table. */}
-                        <td className="max-w-64 truncate pl-8"><SymbolName symbol={m.symbol} short /><div className="text-xs text-[var(--muted)]"><span translate="no">{m.accountName}</span> · {m.status}{m.date ? ` · ${m.date}` : ""}</div></td>
-                        <td className="text-right">{m.shareOfGroup.toFixed(1)}%</td>
-                        <td className="text-right">
-                          {m.status === "closed" ? "N/A" : <Money value={m.value} currency={currency} />}
-                        </td>
-                        <td className="text-right">
-                          {m.status === "closed" || m.pnlKnown === false ? "N/A" : <Money value={m.cost} currency={currency} />}
-                        </td>
-                        <td
-                          className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
-                        >
-                          {m.pnlKnown === false ? "N/A" : <Money value={m.pnl} currency={currency} />}
-                        </td>
-                        <td
-                          className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
-                        >
-                          {m.pnlKnown === false ? "N/A" : `${m.pnlPercent.toFixed(1)}%`}
-                        </td>
-                        <td
-                          className={`text-right ${m.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}
-                        >
-                          {m.status === "open" ? "N/A" : <Money value={m.realized} currency={currency} />}
-                        </td>
-                      </tr>
-                    ))}
+                    {g.children
+                      ? g.children.map((c) => (
+                          <Fragment key={c.key}>
+                            <tr style={{ background: "var(--surface-2)" }}>
+                              <td className="pl-8">
+                                <FilterLink
+                                  href={qs({ sub: openSub === c.key ? "" : c.key })}
+                                  className="hover:underline"
+                                  style={thenBy === "riskLevel" ? { color: riskColor(c.key) } : undefined}
+                                >
+                                  {openSub === c.key ? "▾ " : "▸ "}
+                                  {subLabel(c.key)}
+                                </FilterLink>
+                                {status !== "closed" && (
+                                  <div className="text-xs text-[var(--muted)]">
+                                    {c.percent.toFixed(1)}% of {label(g.key)}
+                                  </div>
+                                )}
+                              </td>
+                              <GroupCells g={c} status={status} currency={currency} />
+                            </tr>
+                            {openSub === c.key && <MemberRows members={c.members} currency={currency} indent="pl-14" />}
+                          </Fragment>
+                        ))
+                      : <MemberRows members={g.members} currency={currency} indent="pl-8" />}
 
                     <tr style={{ background: "var(--surface-2)" }}>
                       <td colSpan={7}>
@@ -821,5 +833,87 @@ function MoversTable({
         ))}
       </tbody>
     </ResponsiveTable></div>
+  );
+}
+
+/** A group's figures, the same for a group and for a group inside it. */
+function GroupCells({ g, status, currency }: { g: GroupPerformance; status: PerformanceStatus; currency: string }) {
+  return (
+    <>
+      <td className="text-right">{g.openCount ?? g.count} open / {g.closedCount ?? 0} closed</td>
+      <td className="text-right">
+        {status === "closed" ? "N/A" : <Money value={g.value} currency={currency} />}
+      </td>
+      <td className="text-right">
+        {status === "closed" ? "N/A" : <Money value={g.cost} currency={currency} />}
+      </td>
+      <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+        {status === "closed" ? "N/A" : <Money value={g.pnl} currency={currency} />}
+      </td>
+      <td className={`text-right ${g.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+        {status === "closed" ? "N/A" : `${g.pnlPercent.toFixed(1)}%`}
+      </td>
+      <td className={`text-right ${g.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+        {status === "open" ? "N/A" : <Money value={g.realized} currency={currency} />}
+      </td>
+    </>
+  );
+}
+
+/**
+ * The positions and trades a group is made of.
+ *
+ * Rows of the same table, not a table of their own. A nested <ResponsiveTable>
+ * sizes its columns from its own content, so the detail's Value could never
+ * line up under the Value it belongs to — "Weight in group" sat across two of
+ * the headings above it, and reading a member against its group meant
+ * measuring by eye. Sharing the table makes the alignment structural rather
+ * than something to maintain.
+ */
+function MemberRows({ members, currency, indent }: { members: GroupMember[]; currency: string; indent: string }) {
+  return (
+    <>
+      <tr style={{ background: "var(--surface-2)" }}>
+        <th className={`text-[10px] uppercase tracking-wide ${indent}`}>Position</th>
+        {/*
+          Wraps rather than widening the column. The heading is longer than any
+          figure beneath it, and on one line it stretched the "Positions"
+          column of every row in the table to fit a label only the open group
+          shows.
+        */}
+        <th className="text-[10px] uppercase tracking-wide text-right whitespace-normal">
+          Weight in group
+        </th>
+        <th className="text-[10px] uppercase tracking-wide text-right">Value</th>
+        <th className="text-[10px] uppercase tracking-wide text-right">Cost</th>
+        <th className="text-[10px] uppercase tracking-wide text-right">Unrealized</th>
+        <th className="text-[10px] uppercase tracking-wide text-right">Unrealized %</th>
+        <th className="text-[10px] uppercase tracking-wide text-right">Realized</th>
+      </tr>
+
+      {members.map((m) => (
+        <tr key={m.id ?? m.symbol} style={{ background: "var(--surface-2)" }}>
+          {/* Indented, so a member is visibly subordinate to the group above
+              it now that both are in one table. */}
+          <td className={`max-w-64 truncate ${indent}`}><SymbolName symbol={m.symbol} short /><div className="text-xs text-[var(--muted)]"><span translate="no">{m.accountName}</span> · {m.status}{m.date ? ` · ${m.date}` : ""}</div></td>
+          <td className="text-right">{m.shareOfGroup.toFixed(1)}%</td>
+          <td className="text-right">
+            {m.status === "closed" ? "N/A" : <Money value={m.value} currency={currency} />}
+          </td>
+          <td className="text-right">
+            {m.status === "closed" || m.pnlKnown === false ? "N/A" : <Money value={m.cost} currency={currency} />}
+          </td>
+          <td className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+            {m.pnlKnown === false ? "N/A" : <Money value={m.pnl} currency={currency} />}
+          </td>
+          <td className={`text-right ${m.pnl >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+            {m.pnlKnown === false ? "N/A" : `${m.pnlPercent.toFixed(1)}%`}
+          </td>
+          <td className={`text-right ${m.realized >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+            {m.status === "open" ? "N/A" : <Money value={m.realized} currency={currency} />}
+          </td>
+        </tr>
+      ))}
+    </>
   );
 }

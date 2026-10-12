@@ -58,7 +58,15 @@ import { getTradeAnalysis } from "./investmentActivity";
 import { getSymbolNames } from "./symbolNames";
 import { chosenPlaylists } from "./playlistChoice";
 import { playlistNamesOf } from "@/lib/portfolio/playlists";
-import { classifiedPerformance, type PerformanceStatus } from "@/lib/portfolio/classifiedPerformance";
+import {
+  classifiedPerformance,
+  cleanPerformanceFilters,
+  filterPerformanceInputs,
+  performanceFilterOptions,
+  type FilterChoices,
+  type PerformanceFilters,
+  type PerformanceStatus,
+} from "@/lib/portfolio/classifiedPerformance";
 import { portfolioSummary } from "@/lib/portfolio/positionView";
 import {
   breakdownBy,
@@ -70,6 +78,7 @@ import {
   sortPerformance,
   type AnalysisHolding,
   type GroupByKey,
+  type GroupPerformance,
   type SortKey,
 } from "@/lib/portfolio/analysis";
 
@@ -747,19 +756,30 @@ export async function getPortfolioAnalysis(includeStable = true) {
 /**
  * Performance grouped by any dimension, sorted by any column — this is what
  * answers "which playlist / category is doing best?".
+ *
+ * `thenBy` splits each group again (playlist, then risk); `filters` narrows
+ * everything first, on any dimension, several values each. Returned with the
+ * choices each filter offers and the filters as applied, since a value from an
+ * old link or saved view that no longer exists is dropped.
  */
 export async function getGroupedPerformance(
   groupBy: GroupByKey,
   sortKey: SortKey,
   direction: "asc" | "desc",
   includeStable = true,
-  status: PerformanceStatus = "both"
-) {
+  status: PerformanceStatus = "both",
+  thenBy: GroupByKey | null = null,
+  filters: Partial<Record<string, unknown>> = {}
+): Promise<{ groups: GroupPerformance[]; options: Record<GroupByKey, FilterChoices>; filters: PerformanceFilters }> {
   const [{ items }, trades] = await Promise.all([getPortfolioItems(), getTradeAnalysis()]);
-  return sortPerformance(classifiedPerformance(
-    items.filter(i => includeStable || !isStableAsset(i.symbol, i.assetType)),
-    trades.rows.filter(t => includeStable || !isStableAsset(t.symbol ?? '', t.classification?.assetType ?? null)),
-    groupBy, status), sortKey, direction);
+  const shownItems = items.filter(i => includeStable || !isStableAsset(i.symbol, i.assetType));
+  const shownTrades = trades.rows.filter(t => includeStable || !isStableAsset(t.symbol ?? '', t.classification?.assetType ?? null));
+  const options = performanceFilterOptions(shownItems, shownTrades, status);
+  const applied = cleanPerformanceFilters(filters, options);
+  const narrowed = filterPerformanceInputs(shownItems, shownTrades, applied);
+  const groups = sortPerformance(classifiedPerformance(narrowed.items, narrowed.trades, groupBy, status, thenBy), sortKey, direction)
+    .map(g => (g.children ? { ...g, children: sortPerformance(g.children, sortKey, direction) } : g));
+  return { groups, options, filters: applied };
 }
 
 /**

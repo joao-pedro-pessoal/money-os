@@ -1,6 +1,9 @@
 "use client";
 
-import SymbolName from "@/components/SymbolName";
+import SymbolName, { useSymbolNames } from "@/components/SymbolName";
+import MultiSelect from "./MultiSelect";
+import SavedFilters from "./SavedFilters";
+import { tagLabel } from "@/lib/portfolio/tags";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -14,6 +17,7 @@ import {
   hasActiveTradeFilters,
   describeTradeFilters,
   NO_TRADE_FILTERS,
+  parseTradeFilters,
   type TradeFilters,
   type TradeFilterOptions,
   type TradeHistoryRow,
@@ -146,8 +150,11 @@ export default function TradeHistory({
     };
   }, [filtered, grouping]);
 
+  const names = useSymbolNames();
+  const symbolText = (s: string) => (names[s] ? `${names[s]} (${s})` : s);
+  const assetTypeText = (t: string) => tagLabel(t, "assetType") ?? t;
   const active = hasActiveTradeFilters(filters);
-  const describing = describeTradeFilters(filters);
+  const describing = describeTradeFilters(filters, symbolText, assetTypeText);
   const hidden = closedOnly.length - filtered.length;
   // The activity table is a result ledger. Rows without a realised result
   // (open buys, deposits and other movements) belong in the portfolio/activity
@@ -159,7 +166,7 @@ export default function TradeHistory({
     setFilters((f) => ({ ...f, [key]: value }));
   };
 
-  /** "" is the empty <select> option and means no filter, not a value of "". */
+  /** An empty date input means no bound, not a day called "". */
   const pick = (value: string) => (value === "" ? null : value);
 
   return (
@@ -190,36 +197,14 @@ export default function TradeHistory({
         </div>
 
         <div className="trade-filter-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
-          <Select
-            label="Instrument"
-            value={filters.symbol ?? ""}
-            onChange={(v) => set("symbol", pick(v))}
-            options={options.symbols}
-          />
-          <Select
-            label="Type"
-            value={filters.type ?? ""}
-            onChange={(v) => set("type", pick(v))}
-            options={options.types}
-          />
-          <Select
-            label="Account"
-            value={filters.accountName ?? ""}
-            onChange={(v) => set("accountName", pick(v))}
-            options={options.accounts}
-          />
-          <Select
-            label="Tag"
-            value={filters.tag ?? ""}
-            onChange={(v) => set("tag", pick(v))}
-            options={options.tags}
-          />
-          <Select
-            label="Direction"
-            value={filters.direction ?? ""}
-            onChange={(v) => set("direction", pick(v) as Direction | null)}
-            options={options.directions}
-          />
+          {/* Several values per field; fields combine. Nothing ticked is everything. */}
+          <MultiSelect label="Instrument" options={options.symbols} selected={filters.symbols} onChange={(v) => set("symbols", v)} render={symbolText} />
+          <MultiSelect label="Type" options={options.types} selected={filters.types} onChange={(v) => set("types", v)} />
+          <MultiSelect label="Account" options={options.accounts} selected={filters.accounts} onChange={(v) => set("accounts", v)} />
+          <MultiSelect label="Playlist" options={options.playlists} selected={filters.playlists} onChange={(v) => set("playlists", v)} noneLabel="No playlist" />
+          <MultiSelect label="Asset type" options={options.assetTypes} selected={filters.assetTypes} onChange={(v) => set("assetTypes", v)} render={assetTypeText} noneLabel="Unclassified" />
+          <MultiSelect label="Tag" options={options.tags} selected={filters.tags} onChange={(v) => set("tags", v)} noneLabel="No tag" />
+          <MultiSelect label="Direction" options={options.directions} selected={filters.directions} onChange={(v) => set("directions", v as Direction[])} />
           <label className="block">
             <span className="text-[10px] text-[var(--muted)] block mb-1">From</span>
             <input
@@ -246,6 +231,15 @@ export default function TradeHistory({
 
         {/* A figure computed over a subset has to say which subset, or it
             reads as the whole account's. */}
+        <div className="mt-3">
+          <SavedFilters
+            scope="trade-history"
+            current={JSON.stringify(filters)}
+            active={active}
+            onApply={(config) => { setFilters(parseTradeFilters(config, options)); setVisibleCount(15); }}
+          />
+        </div>
+
         {describing !== null && (
           <p className="text-xs mt-3" style={{ color: "var(--accent)" }}>
             Every figure below is {describing} — {filtered.length} of {rows.length} events.
@@ -317,8 +311,8 @@ export default function TradeHistory({
       <div className="trade-history-charts space-y-4">
       <TradePnlCalendar rows={filtered} currency={currency} />
 
-      <TradeEvolutionChart pnl={stats.pnl} currency={currency} accounts={accountHistory} accountName={filters.accountName}
-        from={filters.from} to={filters.to} onAccount={name => set("accountName", name)} />
+      <TradeEvolutionChart pnl={stats.pnl} currency={currency} accounts={accountHistory} accountName={filters.accounts.length === 1 ? filters.accounts[0] : null}
+        from={filters.from} to={filters.to} onAccount={name => set("accounts", name ? [name] : [])} />
 
       <TradeAnalysis
         pnl={stats.pnl}
@@ -444,34 +438,3 @@ function toneOf(amount: number): string {
       : "text-[var(--accent)]";
 }
 
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: readonly string[];
-}) {
-  return (
-    <label className="block">
-      <span className="text-[10px] text-[var(--muted)] block mb-1">{label}</span>
-      <select
-        className="input input-narrow text-xs w-full"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        // Nothing to choose between when the data has one value or none.
-        disabled={options.length < 2}
-      >
-        <option value="">All</option>
-        {options.map((o) => (
-          <option translate={label === "Account" || label === "Instrument" ? "no" : undefined} key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  parseTransactionFilters,
   applyTransactionFilters,
   transactionFilterOptions,
   hasActiveTransactionFilters,
@@ -8,6 +9,7 @@ import {
   NO_TRANSACTION_FILTERS,
   type TransactionRow,
 } from "../transactionFilter";
+import { NONE } from "../../filters/multi";
 
 const tx = (over: Partial<TransactionRow> & { id: string }): TransactionRow => ({
   date: "2026-09-03T00:00:00.000Z",
@@ -68,13 +70,13 @@ describe("narrowing the list", () => {
   it("filters by account", () => {
     const ibkr = applyTransactionFilters(ROWS, {
       ...NO_TRANSACTION_FILTERS,
-      accountName: "Interactive Brokers",
+      accounts: ["Interactive Brokers"],
     });
     expect(ibkr.map((r) => r.id)).toEqual(["4"]);
   });
 
   it("filters by category", () => {
-    const food = applyTransactionFilters(ROWS, { ...NO_TRANSACTION_FILTERS, categoryName: "Food" });
+    const food = applyTransactionFilters(ROWS, { ...NO_TRANSACTION_FILTERS, categories: ["Food"] });
     expect(food.map((r) => r.id)).toEqual(["2"]);
   });
 
@@ -83,7 +85,7 @@ describe("narrowing the list", () => {
     const out = applyTransactionFilters(rows, { ...NO_TRANSACTION_FILTERS, direction: "out" });
     const contributions = applyTransactionFilters(rows, {
       ...NO_TRANSACTION_FILTERS,
-      type: "investment_contribution",
+      types: ["investment_contribution"],
     });
     expect(out.map((r) => r.id)).toEqual(["2", "5", "6"]);
     expect(contributions.map((r) => r.id)).toEqual(["6"]);
@@ -121,7 +123,7 @@ describe("narrowing the list", () => {
     const both = applyTransactionFilters(ROWS, {
       ...NO_TRANSACTION_FILTERS,
       direction: "in",
-      accountName: "Rvoult",
+      accounts: ["Rvoult"],
     });
     expect(both.map((r) => r.id)).toEqual(["1", "3"]);
   });
@@ -190,5 +192,37 @@ describe("what the visible slice adds up to", () => {
 
   it("has nothing to say about nothing", () => {
     expect(transactionTotals([])).toEqual({ inflow: 0, outflow: 0, net: 0, count: 0 });
+  });
+});
+
+describe("filters of filters on movements", () => {
+  it("take several accounts or categories at once, as alternatives", () => {
+    const either = applyTransactionFilters(ROWS, { ...NO_TRANSACTION_FILTERS, categories: ["Food", "Health"] });
+    expect(either.map((r) => r.id)).toEqual(["2", "5"]);
+  });
+
+  it("combine across fields, and a size range applies whichever way the money went", () => {
+    const rows = applyTransactionFilters(ROWS, { ...NO_TRANSACTION_FILTERS, minAmount: 200, maxAmount: 250 });
+    expect(rows.map((r) => r.id)).toEqual(["1", "3"]);
+    const outOnly = applyTransactionFilters(ROWS, { ...NO_TRANSACTION_FILTERS, minAmount: 200, direction: "out" });
+    expect(outOnly.map((r) => r.id)).toEqual(["2"]);
+  });
+
+  it("find movements with no category when that is chosen", () => {
+    const rows = [...ROWS, tx({ id: "7", amount: -3, categoryName: null })];
+    const none = applyTransactionFilters(rows, { ...NO_TRANSACTION_FILTERS, categories: [NONE] });
+    expect(none.map((r) => r.id)).toEqual(["7"]);
+  });
+
+  it("come back from a saved set with only what still exists", () => {
+    const options = transactionFilterOptions(ROWS);
+    const saved = JSON.stringify({ categories: ["Food", "Gone"], minAmount: 10, maxAmount: -1, from: "2026-09-01", to: "not a day", direction: "sideways" });
+    expect(parseTransactionFilters(saved, options)).toEqual({
+      ...NO_TRANSACTION_FILTERS,
+      categories: ["Food"],
+      minAmount: 10,
+      from: "2026-09-01",
+    });
+    expect(parseTransactionFilters("not json", options)).toEqual(NO_TRANSACTION_FILTERS);
   });
 });

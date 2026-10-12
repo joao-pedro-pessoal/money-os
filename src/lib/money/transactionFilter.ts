@@ -13,6 +13,8 @@
  * Pure — no DB, no React.
  */
 
+import { cleanChoices, matchesAny } from "../filters/multi";
+
 export interface TransactionRow {
   id: string;
   /** ISO timestamp. */
@@ -44,26 +46,36 @@ export function directionOf(row: TransactionRow): Direction {
   return row.amount < 0 ? "out" : "in";
 }
 
+/**
+ * Accounts, categories and types take several values (`lib/filters/multi.ts`):
+ * alternatives within a field, every field applying. Empty filters nothing.
+ */
 export interface TransactionFilters {
-  accountName: string | null;
-  categoryName: string | null;
+  accounts: string[];
+  /** Category names; NONE for movements with no category. */
+  categories: string[];
   /** In, out, or both. */
   direction: Direction | null;
-  /** The recorded type, which is narrower than direction. */
-  type: string | null;
+  /** The recorded types, which are narrower than direction. */
+  types: string[];
   /** Matched against description and merchant, case-insensitively. */
   search: string;
+  /** The size of the movement, whichever way it went: at least / at most. */
+  minAmount: number | null;
+  maxAmount: number | null;
   /** ISO day, inclusive. */
   from: string | null;
   to: string | null;
 }
 
 export const NO_TRANSACTION_FILTERS: TransactionFilters = {
-  accountName: null,
-  categoryName: null,
+  accounts: [],
+  categories: [],
   direction: null,
-  type: null,
+  types: [],
   search: "",
+  minAmount: null,
+  maxAmount: null,
   from: null,
   to: null,
 };
@@ -83,10 +95,13 @@ export function applyTransactionFilters<T extends TransactionRow>(
   const needle = filters.search.trim().toLowerCase();
 
   return rows.filter((row) => {
-    if (filters.accountName !== null && row.accountName !== filters.accountName) return false;
-    if (filters.categoryName !== null && row.categoryName !== filters.categoryName) return false;
+    if (!matchesAny(row.accountName, filters.accounts)) return false;
+    if (!matchesAny(row.categoryName, filters.categories)) return false;
     if (filters.direction !== null && directionOf(row) !== filters.direction) return false;
-    if (filters.type !== null && row.type !== filters.type) return false;
+    if (!matchesAny(row.type, filters.types)) return false;
+    const size = Math.abs(row.amount);
+    if (filters.minAmount !== null && size < filters.minAmount) return false;
+    if (filters.maxAmount !== null && size > filters.maxAmount) return false;
 
     const day = row.date.slice(0, 10);
     if (filters.from !== null && day < filters.from) return false;
@@ -133,14 +148,43 @@ export function transactionFilterOptions(
 
 export function hasActiveTransactionFilters(filters: TransactionFilters): boolean {
   return (
-    filters.accountName !== null ||
-    filters.categoryName !== null ||
+    filters.accounts.length > 0 ||
+    filters.categories.length > 0 ||
     filters.direction !== null ||
-    filters.type !== null ||
+    filters.types.length > 0 ||
     filters.search.trim() !== "" ||
+    filters.minAmount !== null ||
+    filters.maxAmount !== null ||
     filters.from !== null ||
     filters.to !== null
   );
+}
+
+/**
+ * Saved movement filters, read back: only accounts, categories and types that
+ * still occur, so a saved set opens on what is left rather than on nothing.
+ */
+export function parseTransactionFilters(raw: string, options: TransactionFilterOptions): TransactionFilters {
+  let value: Record<string, unknown>;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    value = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return NO_TRANSACTION_FILTERS;
+  }
+  const day = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  const amount = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null);
+  return {
+    accounts: cleanChoices(value.accounts, options.accounts),
+    categories: cleanChoices(value.categories, options.categories),
+    direction: value.direction === "in" || value.direction === "out" ? value.direction : null,
+    types: cleanChoices(value.types, options.types),
+    search: typeof value.search === "string" ? value.search.slice(0, 200) : "",
+    minAmount: amount(value.minAmount),
+    maxAmount: amount(value.maxAmount),
+    from: day(value.from),
+    to: day(value.to),
+  };
 }
 
 export interface TransactionTotals {
