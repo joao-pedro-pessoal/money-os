@@ -18,7 +18,7 @@ que está feito, o que é proposta e o que depende dele.
 
 | Pasta | O que é | Pode mexer? |
 | --- | --- | --- |
-| `C:\Users\joao2\Projects\money-os-f17` | **Pasta de trabalho.** Branch `f19-play-store`, igual ao `main` publicado (`04c6e78`). | **Sim. Trabalhar só aqui.** |
+| `C:\Users\joao2\Projects\money-os-f17` | **Pasta de trabalho.** Branch `f19-play-store`, **à frente** do `main` publicado (`10e3051`) com commits por publicar (QR, nomes dos tickers, várias playlists, filtros, B36–B38). As migrações 0066–0070 ainda não estão na base publicada: ver a nota no início da secção 3 do `TAREFAS.md` antes de qualquer publicação (15/10/2026). | **Sim. Trabalhar só aqui.** |
 | `C:\Users\joao2\Projects\money-os` | Pasta principal, branch `main` local **parado em `adb5a72`** (antes da publicação de 07/10). Tem **cerca de 52 ficheiros alterados por publicar de outra sessão** (modo privacidade: componente `Private`, `src/lib/privacy.ts`). É também a pasta de onde corre o site de casa. | **Não.** Não fazer commit, não apagar, não mudar de branch nem fazer `git pull` (as duas pastas partilham o repositório; mexer lá mexe no trabalho da outra sessão), não correr `next dev` lá. |
 
 **Não fazer push nem juntar ao `main` sem o utilizador pedir, de cada vez** — o

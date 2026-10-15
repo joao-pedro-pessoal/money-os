@@ -6,8 +6,32 @@ já existe (`android-shell/`), agora numa versão **loja** que abre o site publi
 nela menos as corretoras com chave (Trading 212, MEXC…), que continuam a
 sincronizar só a partir do PC (fase 2, F20).
 
-Este documento tem duas partes: o que já está feito no código, e o que só tu podes
-fazer, por ordem.
+Este documento tem três partes: o plano e o calendário, o que já está feito no
+código, e o que só tu podes fazer, por ordem.
+
+## Plano e calendário (atualizado a 15/10/2026)
+
+Cerca de **4 a 6 semanas** no total. O que mais demora não é código: é a
+verificação da conta de programador (dias), os **14 dias** do teste fechado e as
+revisões da Google (até uma semana cada).
+
+| Fase | Quem | O quê | Quando |
+| --- | --- | --- | --- |
+| 0. Publicar o site | Tu, depois eu | Aplicar as migrações à base publicada (passo 1); eu publico o código e confirmo o site; tu pões as variáveis na Vercel | Esta semana |
+| 1. Conta de programador | Tu | Criar e verificar a conta (passo 2) | **Já, em paralelo** — a verificação demora dias |
+| 2. Preparar o envio | Tu e eu | Chave e ficheiro `.aab` (passo 3); conta de demonstração (passo 6) — eu preparo os dados inventados e tiro as capturas de ecrã | Depois da fase 0 |
+| 3. Play Console | Tu | Criar a app, formulários e ficha da loja (passos 4, 5 e 7) | Depois das fases 1 e 2 |
+| 4. Teste fechado | Tu convidas; eu corrijo | 15–20 convidados, pelo menos 12 inscritos durante 14 dias seguidos (passo 8); eu corrijo o que reportarem e faço o que falta antes da produção (fim deste documento) | ~3 semanas, com a revisão |
+| 5. Produção | Tu | Pedir acesso à produção; lançar primeiro para uma parte (por exemplo 20%) e depois para todos | ~1 semana de revisão |
+
+**Riscos a vigiar:**
+
+- A Google recusa apps que são "só um site dentro de uma app". A nossa tem
+  widgets, notificações, atalhos e registo rápido: a ficha da loja e as capturas
+  devem mostrá-los.
+- O nome **Money OS** pode já existir na Play Store: procurar antes da fase 3.
+- Os textos de privacidade e termos devem ser revistos por um jurista antes da
+  produção (não do teste fechado).
 
 ## O que já está feito
 
@@ -36,6 +60,11 @@ fazer, por ordem.
 - **`CRIAR_APP_PLAY_STORE.cmd`** cria o ficheiro que se envia à Google (`.aab`),
   assinado com a tua chave de envio. Testado do princípio ao fim com uma chave
   descartável (já apagada).
+- **A versão Android exigida pela Google em 2026** (`targetSdk 36`, Android 16)
+  já está no `android-shell/app/build.gradle`.
+- **Proteções do site** (B36–B38 no `TAREFAS.md`, por publicar): restauro de
+  backup numa conta criada de novo, CSV que já não corre fórmulas no Excel, e
+  cabeçalhos de segurança (nenhum outro site mostra a app dentro de uma moldura).
 - **`vercel.json`** põe as funções do site em Frankfurt (`fra1`), ao lado da base de
   dados (Neon, também em Frankfurt). Os dados ficam na UE e cada página fica mais
   rápida, porque deixa de atravessar o Atlântico em cada consulta.
@@ -49,14 +78,32 @@ R01–R06 do `TAREFAS.md`; testes automatizados não substituem estes ensaios.
 ### 1. Publicar esta versão do site
 
 As páginas de privacidade têm de estar no site publicado antes de as indicares à
-Google. Isso é juntar o branch ao `main` (pede-me, eu faço). Depois, na Vercel
-(**Settings → Environment Variables**, ambiente **Production**), acrescenta:
+Google.
+
+**Primeiro a base de dados, depois o código** — ao contrário, o site publicado
+procura tabelas e colunas que ainda não existem. Abre o `cmd` (Windows + R,
+`cmd`, Enter) e corre, uma linha de cada vez:
+
+```cmd
+cd /d C:\Users\joao2\Projects\money-os-f17
+npm run db:migrate
+```
+
+Aparece um aviso grande sobre "SSL modes", que é normal; no fim tem de aparecer
+`Migrations applied.`. Diz-me logo a seguir: eu junto o branch ao `main`, que
+publica o site, e confirmo que ficou bem. (Estas atualizações só acrescentam
+coisas, por isso o site antigo continua a funcionar entre os dois passos.)
+
+Depois, na Vercel (**Settings → Environment Variables**, ambiente
+**Production**), acrescenta:
 
 | Variável | Valor | Para quê |
 | --- | --- | --- |
 | `OPERATOR_NAME` | o teu nome | aparece na política de privacidade como responsável |
 | `CONTACT_EMAIL` | um email teu para estes assuntos | aparece **publicamente** nas três páginas |
 | `MAX_ACCOUNTS` | `40` | por defeito são 10 contas: não chega para 12 testadores e os revisores da Google |
+| `REGISTRATION_MODE` | `invite` | só cria conta quem tiver o código de convite |
+| `REGISTRATION_INVITE_CODE` | um código aleatório com 32 ou mais caracteres, criado num gestor de palavras-passe | o código que envias **em privado** aos testadores; nunca em capturas, links ou no repositório. Detalhes em `PREPARAR_TESTE_FECHADO.md` |
 
 Depois **Deployments → ⋯ → Redeploy**. Confirma em
 `https://money-os-brown.vercel.app/privacy` que aparecem o teu nome e o email.
@@ -69,7 +116,11 @@ Money OS e usa esse também como contacto de programador na Google.
 1. Abre <https://play.google.com/console> com o Gmail que vai ser o dono da app.
 2. Escolhe conta **pessoal**. Paga os **25 USD** (uma vez só).
 3. A Google pede a verificação de identidade (documento) e que confirmes um
-   telemóvel Android com a app Play Console. Pode demorar alguns dias.
+   telemóvel Android com a app Play Console. Pode demorar alguns dias — por isso
+   este passo pode e deve começar já, em paralelo com o passo 1.
+4. Uma conta pessoal criada agora tem de passar pelo teste fechado (passo 8)
+   antes de poder publicar para toda a gente. Uma conta pessoal criada antes de
+   13 de novembro de 2023 está isenta.
 
 ### 3. Criar o ficheiro da app
 
@@ -124,12 +175,17 @@ Store: se já houver uma app com esse nome, a Google pode pedir outro.
 ### 6. Conta de demonstração para os revisores
 
 Os revisores da Google não conseguem criar dinheiro a sério para ver a app. Cria tu
-uma conta normal no site publicado (por exemplo com um Gmail novo só para isto),
-regista alguns movimentos e contas **inventados**, e dá à Google esse email e essa
-palavra-passe na secção "Acesso à app". Nunca uses a tua conta verdadeira.
+uma conta normal no site publicado (por exemplo com um Gmail novo só para isto) —
+com `REGISTRATION_MODE=invite` usa o código de convite — e dá à Google esse email e
+essa palavra-passe na secção "Acesso à app". Nunca uses a tua conta verdadeira.
+
+Os dados **inventados** (contas, movimentos, algumas posições) preparo-os eu num
+ficheiro para importares nessa conta.
 
 As capturas de ecrã da ficha da loja também têm de vir desta conta: as tuas contas
-verdadeiras ficariam públicas.
+verdadeiras ficariam públicas. Posso tirá-las eu no tamanho de telemóvel: tu entras
+na conta de demonstração no meu browser (eu não escrevo palavras-passe) e eu
+fotografo os ecrãs, incluindo os widgets e o registo rápido.
 
 ### 7. Ficha da loja (textos prontos)
 
@@ -189,6 +245,8 @@ No ads and no tracking. Open source (AGPL-3.0).
 
 1. Em <https://groups.google.com> cria um grupo, por exemplo `money-os-testadores`,
    e convida as pessoas (precisam de um Gmail e de um telemóvel Android).
+   Convida **15 a 20**: a Google exige pelo menos 12 inscritos durante os 14 dias
+   seguidos, e há sempre quem saia a meio.
 2. Na Play Console: **Testes → Teste fechado → Criar faixa** → países: Portugal (e
    onde mais vivam os testadores) → **Testadores**: o email do grupo.
 3. **Criar nova versão** → carrega o `.aab` do passo 3 → notas: "Primeira versão de
@@ -207,6 +265,7 @@ Olá! Estou a testar a minha app de finanças pessoais, a Money OS, e preciso de
 1) Entra neste grupo: <link do grupo>
 2) Abre este link no telemóvel e aceita: <link de participação>
 3) Instala a Money OS pela Play Store, cria uma conta e usa-a de vez em quando.
+4) Ao criar a conta, usa este código de convite (não o partilhes): <código>
 Não saias do teste antes dos 14 dias. Diz-me o que achaste!
 ```
 
@@ -229,8 +288,9 @@ Para o teste fechado chega o que está acima. Antes do pedido de produção:
   para alguém não esgotar as vagas de propósito.
 - **Registo de erros** (hoje só os registos curtos da Vercel) e **cópias de segurança**
   além do histórico da Neon.
-- **Português no resto das páginas** (F18) e nos textos da própria app Android
-  (notificações, widgets), que hoje misturam inglês e português.
+- **Traduções** das páginas e dos textos da própria app Android (notificações,
+  widgets): em curso (F18); falta a revisão de linguagem antes de as dar como
+  completas.
 - A página **No telemóvel** ainda diz que os widgets são de uma app instalada por
   ficheiro; muda quando a app estiver na loja.
 - **Revisão por um jurista** dos textos de privacidade e termos

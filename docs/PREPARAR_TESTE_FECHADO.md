@@ -76,8 +76,10 @@ npm.cmd test -- src/actions/__tests__/backup-postgres.test.ts
 
 Usa PostgreSQL embebido (PGlite), em memória, com as migrações reais e duas
 contas fictícias. Não carrega `.env` nem usa o cliente da base de produção.
-Verifica exportação/restauro, rollback após uma linha inválida e isolamento por
-RLS, incluindo uma tentativa de restaurar uma linha com outro proprietário.
+Verifica exportação/restauro, rollback após uma linha inválida, isolamento por
+RLS e o restauro numa conta apagada e criada de novo (B36). O proprietário escrito
+no ficheiro é ignorado: as linhas ficam sempre com quem restaura, também quando o
+ficheiro diz que são de outra conta.
 A dependência é apenas de desenvolvimento e não entra no código da app.
 
 Este ensaio não comprova a recuperação do serviço Neon, a retenção de backups,

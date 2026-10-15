@@ -224,7 +224,13 @@ Módulo separado da contabilidade, de propósito.
 - Ligação a uma conta existente — a conta é uma *etiqueta de localização*, o
   saldo dela é cash parado e as posições são contadas por cima, sem sobreposição.
 - **Playlists**: grupos de posições que tens. A página mostra os totais de cada uma
-  e, por baixo, as posições que a compõem (valor, P&L não realizado e peso).
+  e, por baixo, as posições que a compõem (valor, P&L não realizado e peso). Uma
+  posição, uma trade ou um instrumento da watchlist pode estar em **várias
+  playlists** e conta o valor inteiro em cada uma — por isso as playlists podem
+  somar mais do que a carteira, que conta cada posição uma vez.
+- **Nomes dos tickers** (Definições → Ticker names): um nome teu por ticker
+  ("Ouro físico" em vez de `IGLAl_EQ`), mostrado em todo o lado com o ticker
+  pequeno ao lado — tabelas, análise, relatórios, widget e exportações.
 - **Watchlist**: coisas que não tens, com preço-alvo e notas.
 
 ## O que deves (passivos)
@@ -512,6 +518,13 @@ Está no URL (`?open=...`) e não em estado de componente: a página é de servi
 já constrói query strings para agrupar e ordenar, e assim a vista aberta é um
 link a que se volta.
 
+**Grupos dentro de grupos.** "Then by" divide cada grupo outra vez — cada playlist
+por risco, cada conta por tipo de ativo. Abrir um grupo mostra os seus subgrupos
+(com a percentagem **do grupo**, não da carteira) e abrir um subgrupo mostra as
+posições. Por cima, **filtros** em qualquer dimensão pela qual se agrupa, vários
+valores em cada. Tudo fica no URL (`then`, `sub`, `f_<dimensão>`) e nas vistas
+guardadas; as vistas antigas continuam a abrir.
+
 ### A coluna "Realized" só conseguia mostrar zero
 
 Descoberto ao construir isto. O `realizedPnl` de uma posição só é escrito por uma
@@ -617,7 +630,13 @@ fechadas e 10 nomeadas como sem par.
 
 ## Filtrar o histórico de trades
 
-Instrumento, tipo, conta, direção e intervalo de datas, na página do histórico.
+Instrumento, tipo, conta, playlist, tipo de ativo, tag, direção e intervalo de
+datas, na página do histórico. **Cada filtro aceita vários valores** — Crypto *ou*
+ETF — e os campos juntam-se (Crypto ou ETF, *e* na conta X). "Nenhum" também é uma
+escolha (sem playlist, sem tag, sem classificação). Uma combinação pode ser
+**guardada com um nome** e reaberta com um toque. A mesma regra vale nos
+Movimentos (conta, categoria, tipo e um intervalo de valores) e está num só sítio,
+`lib/filters/multi.ts`.
 
 **O ponto não é esconder linhas da tabela — é que todas as figuras se
 recalculam sobre o que resta.** Filtras para BTC e a curva de P&L, a taxa de
