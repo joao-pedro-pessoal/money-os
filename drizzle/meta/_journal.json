@@ -498,6 +498,13 @@
       "when": 1791822653858,
       "tag": "0070_playlists_carry_over",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1792341634895,
+      "tag": "0071_request_limits",
+      "breakpoints": true
     }
   ]
 }

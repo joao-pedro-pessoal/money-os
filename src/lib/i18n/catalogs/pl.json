@@ -328,5 +328,6 @@
   "quickEntry.amount": "Kwota ({currency})",
   "quickEntry.amountPlain": "Kwota",
   "settings.sameAsBase": "Taki sam jak podstawowy ({currency})",
-  "settings.lastDone": " Ostatnio zrobione {when}."
+  "settings.lastDone": " Ostatnio zrobione {when}.",
+  "server.Too many attempts from this connection. Try again later.": "Zbyt wiele prób z tego połączenia. Spróbuj ponownie później."
 }

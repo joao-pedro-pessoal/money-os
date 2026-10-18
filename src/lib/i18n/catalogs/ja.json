@@ -328,5 +328,6 @@
   "quickEntry.amount": "金額 ({currency})",
   "quickEntry.amountPlain": "金額",
   "settings.sameAsBase": "ベースと同じ ({currency})",
-  "settings.lastDone": " 最後にやったのは{when}。"
+  "settings.lastDone": " 最後にやったのは{when}。",
+  "server.Too many attempts from this connection. Try again later.": "この接続からの試行が多すぎます。しばらくしてからもう一度お試しください。"
 }

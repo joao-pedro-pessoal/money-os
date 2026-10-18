@@ -328,5 +328,6 @@
   "quickEntry.amount": "Сумма ({currency})",
   "quickEntry.amountPlain": "Сумма",
   "settings.sameAsBase": "То же, что и базовый ({currency})",
-  "settings.lastDone": " Последнее выполнено {when}."
+  "settings.lastDone": " Последнее выполнено {when}.",
+  "server.Too many attempts from this connection. Try again later.": "Слишком много попыток с этого подключения. Попробуйте позже."
 }

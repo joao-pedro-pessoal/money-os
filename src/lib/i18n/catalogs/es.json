@@ -328,5 +328,6 @@
   "quickEntry.amount": "Importe ({currency})",
   "quickEntry.amountPlain": "Cantidad",
   "settings.sameAsBase": "Igual que la base ({currency})",
-  "settings.lastDone": " Último hecho {when}."
+  "settings.lastDone": " Último hecho {when}.",
+  "server.Too many attempts from this connection. Try again later.": "Demasiados intentos desde esta conexión. Inténtalo más tarde."
 }

@@ -328,5 +328,6 @@
   "quickEntry.amount": "राशि ({currency})",
   "quickEntry.amountPlain": "रकम",
   "settings.sameAsBase": "आधार के समान ({currency})",
-  "settings.lastDone": " अंतिम बार {when} किया गया।"
+  "settings.lastDone": " अंतिम बार {when} किया गया।",
+  "server.Too many attempts from this connection. Try again later.": "इस कनेक्शन से बहुत अधिक प्रयास हुए। बाद में फिर से कोशिश करें।"
 }

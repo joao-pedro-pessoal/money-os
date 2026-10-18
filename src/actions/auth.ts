@@ -1,11 +1,11 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { asUser, db } from "@/db/client";
-import { categories, exchangeRates, OWNER_USER_ID, users } from "@/db/schema";
+import { categories, exchangeRates, OWNER_USER_ID, requestLimits, users } from "@/db/schema";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/db/defaultCategories";
 import { newSessionValue, ownerPassword, sessionCookieOptions, SESSION_COOKIE_NAME } from "@/lib/auth";
 import {
@@ -23,6 +23,15 @@ import type { DeleteOutcome, RecoveryOutcome, SignInOutcome, SignUpOutcome } fro
 import { currentUserId } from "./session";
 import { refreshRates } from "./fx";
 import { registrationAccess } from "@/lib/accounts/registration";
+import {
+  ATTEMPT_LIMITS,
+  ATTEMPT_RETENTION_HOURS,
+  clientAddress,
+  originOf,
+  overLimit,
+  TOO_MANY_ATTEMPTS,
+  type AttemptAction,
+} from "@/lib/accounts/attempts";
 
 /**
  * Sign-in accounts: making one, signing into one, and getting back into one.
@@ -59,7 +68,10 @@ const signInKey = z.string().regex(KEY_HEX);
 const SignInRequest = z
   .object({ email, signInKey, password: z.string().min(1).max(PASSWORD_MAX).optional() })
   .strict();
-const SignUpRequest = z.object({ email, signInKey, inviteCode: z.string().max(256).optional() }).strict();
+// `website` is a field people never see and never fill in (LoginScreen); a form robot does.
+const SignUpRequest = z
+  .object({ email, signInKey, inviteCode: z.string().max(256).optional(), website: z.string().max(200).optional() })
+  .strict();
 const RecoverRequest = z.object({ email, recoveryCode: z.string().max(64), signInKey }).strict();
 const NewCodeRequest = z.object({ signInKey }).strict();
 const DeleteRequest = z.object({ signInKey, confirmEmail: z.string().max(254) }).strict();
@@ -79,6 +91,40 @@ async function countFailure(userId: string, now: Date): Promise<Date | null> {
   const next = afterFailedLogin(counted.failedLogins - 1, now);
   if (next.lockedUntil !== null) await db.update(users).set(next).where(eq(users.id, userId));
   return next.lockedUntil;
+}
+
+/**
+ * Counts this attempt against the connection it came from (lib/accounts/attempts.ts),
+ * or says the connection has made too many. Runs before any slow hash.
+ *
+ * With no address to go by — the home copy, which has no host in front of it —
+ * nothing is limited here; the per-account and site-wide limits still are.
+ */
+async function admitted(action: AttemptAction): Promise<boolean> {
+  let address: string | null;
+  try {
+    address = clientAddress(await headers());
+  } catch {
+    return true;
+  }
+  if (!address) return true;
+  const origin = originOf(address, process.env.APP_SECRET || "money-os-attempts");
+  const windows = ATTEMPT_LIMITS[action];
+  const [row] = await db
+    .select(
+      Object.fromEntries(
+        windows.map((w, i) => [
+          `w${i}`,
+          sql<number>`count(*) filter (where ${requestLimits.at} > now() - make_interval(mins => ${w.minutes}))::int`,
+        ])
+      )
+    )
+    .from(requestLimits)
+    .where(and(eq(requestLimits.action, action), eq(requestLimits.origin, origin)));
+  if (overLimit(action, windows.map((_, i) => Number(row?.[`w${i}`] ?? 0)))) return false;
+  await db.insert(requestLimits).values({ action, origin });
+  await db.delete(requestLimits).where(sql`${requestLimits.at} < now() - make_interval(hours => ${ATTEMPT_RETENTION_HOURS})`);
+  return true;
 }
 
 function lockedAnswer(until: Date): { kind: "locked"; until: string } {
@@ -150,6 +196,7 @@ export async function signIn(raw: unknown): Promise<SignInOutcome> {
   if (!parsed.success) return { kind: "wrong" };
   const { email: address, signInKey: key, password } = parsed.data;
   const now = new Date();
+  if (!(await admitted("sign-in"))) return { kind: "refused", reason: TOO_MANY_ATTEMPTS };
 
   const [owner] = await db.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, OWNER_USER_ID));
   const [user] = await db.select().from(users).where(eq(users.email, address));
@@ -264,8 +311,12 @@ export async function signUp(raw: unknown): Promise<SignUpOutcome> {
   if (!parsed.success) return { kind: "refused", reason: "Write a valid email address." };
   const { email: address, signInKey: key } = parsed.data;
 
+  // A robot filled in the field no person sees: answered like a busy server, not told why.
+  if (parsed.data.website) return { kind: "refused", reason: BUSY };
+
   const access = registrationAccess(process.env, parsed.data.inviteCode);
   if (access) return { kind: "refused", reason: access };
+  if (!(await admitted("sign-up"))) return { kind: "refused", reason: TOO_MANY_ATTEMPTS };
 
   // Checked before the slow hash: a closed site spends nothing on a refusal.
   const refused = registrationRefusal(await registrationCounts(), maxAccounts(process.env));
@@ -317,6 +368,7 @@ export async function recoverAccount(raw: unknown): Promise<RecoveryOutcome> {
   if (!parsed.success) return { kind: "wrong" };
   const { email: address, recoveryCode, signInKey: key } = parsed.data;
   const now = new Date();
+  if (!(await admitted("recover"))) return { kind: "refused", reason: TOO_MANY_ATTEMPTS };
 
   let presented: string;
   try {

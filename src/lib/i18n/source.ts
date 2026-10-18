@@ -473,6 +473,8 @@ export const pt: Messages = {
       "A conta do dono guarda tudo o que existia antes das contas, e não se apaga aqui.",
     "Type your account's email exactly, to confirm.": "Escreve o email da tua conta exatamente igual, para confirmar.",
     "New accounts are closed on this site.": "Este site não está a aceitar contas novas.",
+    "Too many attempts from this connection. Try again later.":
+      "Demasiadas tentativas a partir desta ligação. Tenta outra vez mais tarde.",
     "A valid invitation code is required to create an account.": "Precisas de um código de convite válido para criar conta.",
     "This site is not taking new accounts at the moment.": "Este site não está a aceitar contas novas de momento.",
     "Too many new accounts recently. Try again later.": "Foram criadas demasiadas contas há pouco. Tenta mais tarde.",

@@ -328,5 +328,6 @@
   "quickEntry.amount": "Montant ({currency})",
   "quickEntry.amountPlain": "Montant",
   "settings.sameAsBase": "Identique à la base ({currency})",
-  "settings.lastDone": " Dernière réalisation {when}."
+  "settings.lastDone": " Dernière réalisation {when}.",
+  "server.Too many attempts from this connection. Try again later.": "Trop de tentatives depuis cette connexion. Réessayez plus tard."
 }

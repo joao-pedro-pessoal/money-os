@@ -328,5 +328,6 @@
   "quickEntry.amount": "Bedrag ({currency})",
   "quickEntry.amountPlain": "Bedrag",
   "settings.sameAsBase": "Hetzelfde als basis ({currency})",
-  "settings.lastDone": " Laatst gedaan {when}."
+  "settings.lastDone": " Laatst gedaan {when}.",
+  "server.Too many attempts from this connection. Try again later.": "Te veel pogingen vanaf deze verbinding. Probeer het later opnieuw."
 }

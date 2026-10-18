@@ -328,5 +328,6 @@
   "quickEntry.amount": "পরিমাণ ({currency})",
   "quickEntry.amountPlain": "পরিমাণ",
   "settings.sameAsBase": "বেস হিসাবে একই ({currency})",
-  "settings.lastDone": " শেষ {when} করা হয়েছে।"
+  "settings.lastDone": " শেষ {when} করা হয়েছে।",
+  "server.Too many attempts from this connection. Try again later.": "এই সংযোগ থেকে অনেক বেশি চেষ্টা হয়েছে। পরে আবার চেষ্টা করুন।"
 }

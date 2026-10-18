@@ -21,6 +21,7 @@ import * as schema from "../../db/schema";
 const SHARED = new Map([
   ["qr_sign_ins", "anonymous authentication handshakes; actions require separate random requester and approval capabilities, expire and consume once"],
   ["users", "the accounts themselves: sign-in has to find one before anyone is signed in"],
+  ["request_limits", "attempts counted per connection before anyone is signed in; a keyed hash of the address, no account data, deleted after a day"],
   ["asset_profiles", "public market data fetched by symbol"],
   ["fund_holdings", "a fund's published holdings"],
   ["company_moves", "public price history of a company"],

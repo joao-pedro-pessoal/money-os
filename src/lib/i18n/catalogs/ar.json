@@ -328,5 +328,6 @@
   "quickEntry.amount": "المبلغ ({currency})",
   "quickEntry.amountPlain": "المبلغ",
   "settings.sameAsBase": "نفس القاعدة ({currency})",
-  "settings.lastDone": " آخر ما تم إنجازه هو {when}."
+  "settings.lastDone": " آخر ما تم إنجازه هو {when}.",
+  "server.Too many attempts from this connection. Try again later.": "محاولات كثيرة جدًا من هذا الاتصال. حاول مرة أخرى لاحقًا."
 }

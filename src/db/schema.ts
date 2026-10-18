@@ -76,6 +76,16 @@ export const qrSignIns = pgTable("qr_sign_ins", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 }, (t) => [index("qr_sign_ins_expiry_idx").on(t.expiresAt)]);
 
+// Attempts to sign in, sign up or recover, counted per connection before anyone
+// is signed in (lib/accounts/attempts.ts). `origin` is a keyed one-way hash of
+// the connection's address, never the address; rows go after a day.
+export const requestLimits = pgTable("request_limits", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  action: text("action").notNull(),
+  origin: text("origin").notNull(),
+  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index("request_limits_lookup_idx").on(t.action, t.origin, t.at), index("request_limits_at_idx").on(t.at)]);
+
 /**
  * Whose row this is. Filled by Postgres from the connection's `app.user_id`,
  * so an insert never names it and can never name someone else — and an insert

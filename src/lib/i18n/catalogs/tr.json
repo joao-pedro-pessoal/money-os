@@ -328,5 +328,6 @@
   "quickEntry.amount": "Tutar ({currency})",
   "quickEntry.amountPlain": "Tutar",
   "settings.sameAsBase": "Temel ile aynı ({currency})",
-  "settings.lastDone": " Son yapılan {when}."
+  "settings.lastDone": " Son yapılan {when}.",
+  "server.Too many attempts from this connection. Try again later.": "Bu bağlantıdan çok fazla deneme yapıldı. Daha sonra tekrar deneyin."
 }

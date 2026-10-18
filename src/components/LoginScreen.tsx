@@ -38,6 +38,8 @@ export default function LoginScreen({ signUps, inviteRequired = false, destinati
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  // Left empty by people, who never see it; filled in by form robots (actions/auth.ts).
+  const [website, setWebsite] = useState("");
   const [shown, setShown] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -104,7 +106,12 @@ export default function LoginScreen({ signUps, inviteRequired = false, destinati
       if (!email.trim()) throw new Error(w.writeEmail);
       const weak = passwordProblem(password);
       if (weak) throw new Error(said(weak));
-      const outcome = await signUp({ email, signInKey: await signInKeyFor(email, password), ...(inviteRequired ? { inviteCode } : {}) });
+      const outcome = await signUp({
+        email,
+        signInKey: await signInKeyFor(email, password),
+        ...(inviteRequired ? { inviteCode } : {}),
+        ...(website ? { website } : {}),
+      });
       if (outcome.kind === "refused") throw new Error(said(outcome.reason));
       showCode(outcome.recoveryCode);
     });
@@ -240,6 +247,10 @@ export default function LoginScreen({ signUps, inviteRequired = false, destinati
           <>
             {emailField}
             {passwordField(w.password, "new-password", w.newPasswordHint)}
+            {/* Off screen and out of the tab order: only a robot fills it in. */}
+            <input type="text" name="website" value={website} onChange={(e) => setWebsite(e.target.value)}
+              tabIndex={-1} autoComplete="off" aria-hidden="true"
+              style={{ position: "absolute", left: "-10000px", width: 1, height: 1, opacity: 0 }} />
             {inviteRequired && (
               <label className="block space-y-1.5">
                 <span className="text-sm">{w.inviteCode}</span>

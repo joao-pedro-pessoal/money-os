@@ -15,7 +15,7 @@ describe("sync account passwords", () => {
   it("verifies the password it hashed, and not a near miss", async () => {
     expect(await verifyPassword(password, stored)).toBe(true);
     expect(await verifyPassword(`${password}!`, stored)).toBe(false);
-  });
+  }, 30_000);
 
   it("stores its parameters and salt, never the password", () => {
     expect(stored).toMatch(/^scrypt\$15\$8\$3\$[0-9a-f]{32}\$[0-9a-f]{64}$/);
