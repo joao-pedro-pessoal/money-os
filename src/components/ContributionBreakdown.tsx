@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import { getContributionBreakdown } from "@/actions/brokerImport";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
@@ -19,19 +20,15 @@ function NotMeasured() {
 }
 
 export default async function ContributionBreakdown() {
+  const uiText = await textForRequest();
   const b = await getContributionBreakdown();
 
   if (b === null) {
     return (
       <div className="card p-4">
-        <div className="text-sm font-medium">Money added versus money made</div>
-        <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
-          Import a broker statement and this splits the two apart. Without one there is no honest
-          way to tell a deposit from a gain — a balance that rose because you paid money in looks
-          exactly like a balance that rose because you did well.{" "}
-          <Link href="/import" className="text-[var(--accent)]">
-            Import a statement
-          </Link>
+        <div className="text-sm font-medium">{uiText("Money added versus money made")}</div>
+        <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{uiText("Import a broker statement and this splits the two apart. Without one there is no honest way to tell a deposit from a gain — a balance that rose because you paid money in looks exactly like a balance that rose because you did well.")}{" "}
+          <Link href="/import" className="text-[var(--accent)]">{uiText("Import a statement")}</Link>
         </p>
       </div>
     );
@@ -52,32 +49,31 @@ export default async function ContributionBreakdown() {
 
   return (
     <div className="card p-4">
-      <div className="text-sm font-medium">Money added versus money made</div>
-      <p className="text-xs text-[var(--muted)] mt-1 mb-4">
-        From {b.events} statement entries across {b.accountNames.join(", ")}.
+      <div className="text-sm font-medium">{uiText("Money added versus money made")}</div>
+      <p className="text-xs text-[var(--muted)] mt-1 mb-4">{uiText("From ")}{b.events}{uiText(" statement entries across ")}{b.accountNames.join(", ")}.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
         <div>
-          <div className="text-[var(--muted)]">Paid in</div>
+          <div className="text-[var(--muted)]">{uiText("Paid in")}</div>
           <div className="text-sm mt-0.5" style={{ color: "var(--green)" }}>
             {inBase ? <Money value={inBase.deposits} currency={currency} /> : <NotMeasured />}
           </div>
         </div>
         <div>
-          <div className="text-[var(--muted)]">Taken out</div>
+          <div className="text-[var(--muted)]">{uiText("Taken out")}</div>
           <div className="text-sm mt-0.5" style={{ color: "var(--red)" }}>
             {inBase ? <Money value={inBase.withdrawals} currency={currency} /> : <NotMeasured />}
           </div>
         </div>
         <div>
-          <div className="text-[var(--muted)]">Net committed</div>
+          <div className="text-[var(--muted)]">{uiText("Net committed")}</div>
           <div className="text-sm mt-0.5">
             {inBase ? <Money value={inBase.net} currency={currency} /> : <NotMeasured />}
           </div>
         </div>
         <div>
-          <div className="text-[var(--muted)]">Worth now</div>
+          <div className="text-[var(--muted)]">{uiText("Worth now")}</div>
           <div className="text-sm mt-0.5">
             <Money value={b.currentValue} currency={currency} />
           </div>
@@ -85,10 +81,8 @@ export default async function ContributionBreakdown() {
       </div>
 
       {b.unconverted.length > 0 && (
-        <p className="text-xs mt-2" style={{ color: "var(--amber)" }}>
-          &ldquo;Worth now&rdquo; leaves out{" "}
-          {Array.from(new Set(b.unconverted.map((u) => u.currency))).join(", ")}: no exchange rate
-          yet, so those balances are missing rather than counted as {currency}.
+        <p className="text-xs mt-2" style={{ color: "var(--amber)" }}>{uiText("&ldquo;Worth now&rdquo; leaves out")}{" "}
+          {Array.from(new Set(b.unconverted.map((u) => u.currency))).join(", ")}{uiText(": no exchange rate yet, so those balances are missing rather than counted as ")}{currency}.
         </p>
       )}
 
@@ -99,20 +93,14 @@ export default async function ContributionBreakdown() {
           className="mt-4 rounded-lg border p-3 text-xs leading-relaxed"
           style={{ borderColor: "var(--amber)", color: "var(--amber)" }}
         >
-          <strong>This statement mixes currencies.</strong> The deposits and withdrawals arrived
-          in {b.flows.currencies.join(", ")}, and money in different currencies cannot be added
-          into one figure. Import one statement per currency, and each will report its own
-          contributions.
-        </div>
+          <strong>{uiText("This statement mixes currencies.")}</strong>{uiText(" The deposits and withdrawals arrived in ")}{b.flows.currencies.join(", ")}{uiText(", and money in different currencies cannot be added into one figure. Import one statement per currency, and each will report its own contributions.")}</div>
       ) : b.unavailable === "no_rate" ? (
         <div
           className="mt-4 rounded-lg border p-3 text-xs leading-relaxed"
           style={{ borderColor: "var(--amber)", color: "var(--amber)" }}
         >
-          <strong>No exchange rate for {b.flows.currency}.</strong> The statement is in{" "}
-          {b.flows.currency} and this page reports in {currency}. Add a rate in Settings and the
-          split appears — until then it is missing rather than guessed.
-        </div>
+          <strong>{uiText("No exchange rate for ")}{b.flows.currency}.</strong>{uiText(" The statement is in")}{" "}
+          {b.flows.currency}{uiText(" and this page reports in ")}{currency}{uiText(". Add a rate in Settings and the split appears — until then it is missing rather than guessed.")}</div>
       ) : b.growth === null ? (
         /* The honest answer when the file doesn't reach back far enough. The
            alternative — assuming the account started empty — would report a
@@ -121,17 +109,12 @@ export default async function ContributionBreakdown() {
           className="mt-4 rounded-lg border p-3 text-xs leading-relaxed"
           style={{ borderColor: "var(--amber)", color: "var(--amber)" }}
         >
-          <strong>This statement doesn&apos;t reach the beginning.</strong> Running the cash
-          through it goes below zero, which a broker doesn&apos;t allow — so the account already
-          held at least{" "}
-          <Money value={b.opening.impliedOpening} currency={currency} /> before the first entry.
-          Until a statement covering the whole account is imported, the app can&apos;t say what was
-          gain and what was simply already there, so it doesn&apos;t guess.
-        </div>
+          <strong>{uiText("This statement doesn't reach the beginning.")}</strong>{uiText(" Running the cash through it goes below zero, which a broker doesn't allow — so the account already held at least")}{" "}
+          <Money value={b.opening.impliedOpening} currency={currency} />{uiText(" before the first entry. Until a statement covering the whole account is imported, the app can't say what was gain and what was simply already there, so it doesn't guess.")}</div>
       ) : (
         <div className="mt-4 pt-3 border-t border-[var(--border)]">
           <div className="flex items-baseline justify-between gap-3 text-xs">
-            <span className="text-[var(--muted)]">Actually earned</span>
+            <span className="text-[var(--muted)]">{uiText("Actually earned")}</span>
             <span
               className="text-sm"
               style={{ color: b.growth.gain >= 0 ? "var(--green)" : "var(--red)" }}
@@ -139,8 +122,7 @@ export default async function ContributionBreakdown() {
               <Money value={b.growth.gain} currency={currency} />
               {b.growth.returnPercent !== null && (
                 <span className="text-[var(--muted)] text-xs ml-2">
-                  {b.growth.returnPercent}% on what you committed
-                </span>
+                  {b.growth.returnPercent}{uiText("% on what you committed")}</span>
               )}
             </span>
           </div>

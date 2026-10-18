@@ -1,4 +1,5 @@
 "use client";
+import { useText } from "@/components/useText";
 
 export default function ConfirmSubmitButton({
   label,
@@ -9,6 +10,7 @@ export default function ConfirmSubmitButton({
   confirmMessage: string;
   variant?: "danger" | "default";
 }) {
+  const uiText = useText();
   return (
     <button
       type="submit"
@@ -17,7 +19,7 @@ export default function ConfirmSubmitButton({
       }}
       className={variant === "danger" ? "min-h-11 md:min-h-0 px-2 text-xs text-[var(--red)] hover:underline" : "min-h-11 md:min-h-0 px-2 text-xs text-[var(--accent)] hover:underline"}
     >
-      {label}
+      {uiText(label ?? "")}
     </button>
   );
 }

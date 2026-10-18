@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Money } from "@/components/PrivacyContext";
@@ -53,6 +54,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
+  const uiText = useText();
   const [f, setF] = useState<AccountFilters>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -64,21 +66,21 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
 
   /** Sorting moved into the filter panel now that there are no headers. */
   const SORTS: { key: SortKey; label: string }[] = [
-    { key: "value", label: "Value" },
-    { key: "free", label: "Free" },
-    { key: "name", label: "Name" },
+    { key: "value", label: uiText("Value") },
+    { key: "free", label: uiText("Free") },
+    { key: "name", label: uiText("Name") },
   ];
 
   return (
     <div className="card p-4">
       <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="text-sm font-medium">Accounts</div>
+        <div className="text-sm font-medium">{uiText("Accounts")}</div>
         <button
           type="button"
           onClick={() => setShowFilters(!showFilters)}
           className="text-xs text-[var(--accent)] hover:underline"
         >
-          {showFilters ? "Hide filters" : "Filters"}
+          {showFilters ? uiText("Hide filters") : uiText("Filters")}
         </button>
       </div>
 
@@ -87,7 +89,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
           <input
             value={f.query}
             onChange={(e) => set({ query: e.target.value })}
-            placeholder="Search name or institution"
+            placeholder={uiText("Search name or institution")}
             className="input text-xs"
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -96,7 +98,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
               onChange={(e) => set({ type: e.target.value })}
               className="input text-xs"
             >
-              <option value="">All types</option>
+              <option value="">{uiText("All types")}</option>
               {options.types.map((t) => (
                 <option key={t} value={t}>
                   {TYPE_LABELS[t] ?? t}
@@ -108,7 +110,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
               onChange={(e) => set({ currency: e.target.value })}
               className="input text-xs"
             >
-              <option value="">All currencies</option>
+              <option value="">{uiText("All currencies")}</option>
               {options.currencies.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -123,7 +125,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                 checked={f.hideEmpty}
                 onChange={(e) => set({ hideEmpty: e.target.checked })}
               />
-              <span className="text-[var(--muted)]">Hide empty</span>
+              <span className="text-[var(--muted)]">{uiText("Hide empty")}</span>
             </label>
             <label className="flex items-center gap-1.5">
               <input
@@ -131,10 +133,10 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                 checked={f.connectedOnly}
                 onChange={(e) => set({ connectedOnly: e.target.checked })}
               />
-              <span className="text-[var(--muted)]">Synced only</span>
+              <span className="text-[var(--muted)]">{uiText("Synced only")}</span>
             </label>
             <div className="flex items-center gap-1.5 ml-auto">
-              <span className="text-[var(--muted)]">Sort</span>
+              <span className="text-[var(--muted)]">{uiText("Sort")}</span>
               {SORTS.map((o) => (
                 <button
                   key={o.key}
@@ -151,7 +153,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                     color: f.sort === o.key ? "var(--accent)" : "var(--muted)",
                   }}
                 >
-                  {o.label}
+                  {uiText(o.label ?? "")}
                   {f.sort === o.key && (f.dir === "asc" ? " ▲" : " ▼")}
                 </button>
               ))}
@@ -159,9 +161,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                 type="button"
                 onClick={() => setF(DEFAULT_FILTERS)}
                 className="text-[var(--accent)] hover:underline"
-              >
-                Reset
-              </button>
+              >{uiText("Reset")}</button>
             </div>
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                     <span translate="no">{a.institution}</span>
                     {" · "}
                     {TYPE_LABELS[a.accountType] ?? a.accountType}
-                    {a.connected && <span style={{ color: "var(--green)" }}> · synced</span>}
+                    {a.connected && <span style={{ color: "var(--green)" }}>{uiText(" · synced")}</span>}
                   </div>
                 </div>
 
@@ -232,14 +232,13 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                     />
                   </div>
                   <div className="text-[10px] text-[var(--muted)] mt-1">
-                    <span translate="no">{fmt(a.floating, a.baseCurrency)}</span> can move with the market
-                  </div>
+                    <span translate="no">{fmt(a.floating, a.baseCurrency)}</span>{uiText(" can move with the market")}</div>
                 </div>
               )}
 
               <div className="mt-3 pt-2.5 border-t border-[var(--border)] flex items-baseline justify-between gap-3">
                 <div>
-                  <div className="text-[10px] text-[var(--muted)]">Free</div>
+                  <div className="text-[10px] text-[var(--muted)]">{uiText("Free")}</div>
                   <div className="text-sm">
                     <Money value={a.freeInBase ?? a.free} currency={a.baseCurrency} />
                   </div>
@@ -247,7 +246,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
 
                 {a.inTrade !== undefined && a.inTrade > 0 && (
                   <div className="text-right">
-                    <div className="text-[10px] text-[var(--muted)]">Committed to trades</div>
+                    <div className="text-[10px] text-[var(--muted)]">{uiText("Committed to trades")}</div>
                     <div className="text-sm"><span translate="no">{fmt(a.inTrade, a.baseCurrency)}</span></div>
                   </div>
                 )}
@@ -271,8 +270,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
 
       {hidden > 0 && (
         <div className="text-[10px] text-[var(--muted)] mt-2">
-          {hidden} account{hidden === 1 ? "" : "s"} hidden by the filters
-        </div>
+          {uiText(hidden === 1 ? "{count} account" : "{count} accounts", { count: hidden })}{uiText(" hidden by the filters")}</div>
       )}
     </div>
   );

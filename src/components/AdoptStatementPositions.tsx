@@ -1,3 +1,6 @@
+"use client";
+
+import { useText } from "@/components/useText";
 /**
  * Turning a statement's positions into ones you can edit.
  *
@@ -18,17 +21,14 @@ export default function AdoptStatementPositions({
   /** Wrapped by the page: a form action may not return a value. */
   action: (formData: FormData) => Promise<void>;
 }) {
+  const uiText = useText();
   const usable = accounts.filter((a) => a.instruments > 0);
   if (usable.length === 0) return null;
 
   return (
     <div className="card p-4">
-      <div className="text-sm font-medium mb-1">Make these positions editable</div>
-      <p className="text-xs text-[var(--muted)] leading-snug mb-3">
-        Your statement knows the quantities and what you paid, but a replayed file has nothing you
-        can change. This creates a real position for each instrument, opened at its cost, so you can
-        tag it, put it in a playlist and keep its price up to date like any other.
-      </p>
+      <div className="text-sm font-medium mb-1">{uiText("Make these positions editable")}</div>
+      <p className="text-xs text-[var(--muted)] leading-snug mb-3">{uiText("Your statement knows the quantities and what you paid, but a replayed file has nothing you can change. This creates a real position for each instrument, opened at its cost, so you can tag it, put it in a playlist and keep its price up to date like any other.")}</p>
 
       <div className="space-y-2">
         {usable.map((a) => (
@@ -38,21 +38,15 @@ export default function AdoptStatementPositions({
               <span translate="no">{a.accountName}</span>
               <span className="text-[var(--muted)]">
                 {" "}
-                · {a.instruments} instrument{a.instruments === 1 ? "" : "s"}
+                · {uiText(a.instruments === 1 ? "{count} instrument" : "{count} instruments", { count: a.instruments })}
               </span>
             </span>
-            <button type="submit" className="btn text-xs whitespace-nowrap">
-              Create positions
-            </button>
+            <button type="submit" className="btn text-xs whitespace-nowrap">{uiText("Create positions")}</button>
           </form>
         ))}
       </div>
 
-      <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">
-        Nothing is added to your net worth: the account&apos;s balance already contains these, and it
-        says so. They open at cost, showing no profit until you set a current price — a made-up
-        opening price would show a gain nobody measured.
-      </p>
+      <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">{uiText("Nothing is added to your net worth: the account's balance already contains these, and it says so. They open at cost, showing no profit until you set a current price — a made-up opening price would show a gain nobody measured.")}</p>
     </div>
   );
 }

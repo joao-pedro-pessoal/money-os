@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { BALANCE_MEANINGS, type BalanceMeaning } from "@/lib/accounting/balanceScope";
 
@@ -26,13 +27,14 @@ export default function BalanceMeaningField({
   defaultInvested?: number | null;
   currency?: string;
 }) {
+  const uiText = useText();
   const [meaning, setMeaning] = useState<BalanceMeaning>(defaultMeaning);
   const help = BALANCE_MEANINGS.find((m) => m.value === meaning)?.help ?? "";
 
   return (
     <div className="space-y-2">
       <label className="block">
-        <span className="text-xs text-[var(--muted)]">What does that balance mean?</span>
+        <span className="text-xs text-[var(--muted)]">{uiText("What does that balance mean?")}</span>
         <select
           name="balanceMeaning"
           className="input mt-1"
@@ -41,7 +43,7 @@ export default function BalanceMeaningField({
         >
           {BALANCE_MEANINGS.map((m) => (
             <option key={m.value} value={m.value}>
-              {m.label}
+              {uiText(m.label)}
             </option>
           ))}
         </select>
@@ -51,8 +53,7 @@ export default function BalanceMeaningField({
 
       {meaning === "bank_and_broker" && (
         <label className="block">
-          <span className="text-xs text-[var(--muted)]">
-            Of that total, how much is invested? ({currency})
+          <span className="text-xs text-[var(--muted)]">{uiText("Of that total, how much is invested? (")}{currency})
           </span>
           <input
             name="investedValue"
@@ -60,13 +61,10 @@ export default function BalanceMeaningField({
             step="0.01"
             min="0"
             defaultValue={defaultInvested ?? ""}
-            placeholder="e.g. the value of your ETFs"
+            placeholder={uiText("e.g. the value of your ETFs")}
             className="input mt-1"
           />
-          <span className="text-[10px] text-[var(--muted)] leading-snug block mt-1">
-            The rest is treated as spendable cash. Both halves stay in one account, so the total
-            never changes — only which side of the guaranteed/at-risk line each part sits on.
-          </span>
+          <span className="text-[10px] text-[var(--muted)] leading-snug block mt-1">{uiText("The rest is treated as spendable cash. Both halves stay in one account, so the total never changes — only which side of the guaranteed/at-risk line each part sits on.")}</span>
         </label>
       )}
     </div>

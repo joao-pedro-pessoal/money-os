@@ -29,6 +29,7 @@ export const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: { "/api/report/pdf": ["./assets/fonts/**/*"] },
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },

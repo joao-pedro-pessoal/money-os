@@ -1,5 +1,6 @@
 "use client";
 
+import { directionOf } from "@/lib/i18n/languages";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isNavigationActive } from "@/lib/navigation";
@@ -28,7 +29,7 @@ export default function MobileNav() {
   const moreActive = !shortcuts.some(({ href }) => (!simple || href !== "/investments") && isNavigationActive(pathname, href));
 
   return (
-    <nav translate="no" lang={language} className="mobile-bottom-nav" aria-label={t.quickNavigation}>
+    <nav translate="no" lang={language} dir={directionOf(language)} className="mobile-bottom-nav" aria-label={t.quickNavigation}>
       {shortcuts.map(({ href, word, path }) => (
         <Link key={href} href={href} aria-current={isNavigationActive(pathname, href) ? "page" : undefined}>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={path} /></svg>

@@ -1,3 +1,6 @@
+"use client";
+
+import { useText } from "@/components/useText";
 import Link from "next/link";
 import type { LibraryResource } from "@/actions/library";
 import BookCover from "@/components/library/BookCover";
@@ -32,6 +35,7 @@ function verbFor(type: LibraryResource["type"]): string {
 }
 
 export default function HeroResource({ resource }: { resource: LibraryResource }) {
+  const uiText = useText();
   const r = resource;
   const cover = r.meta.coverUrl ?? r.imageUrl;
   const started = r.progress.done > 0 || r.status === "IN_PROGRESS";
@@ -40,7 +44,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
     <section
       className="rounded-xl border p-5 md:p-6"
       style={{ borderColor: EDITORIAL_LINE, background: EDITORIAL_SOFT }}
-      aria-label="Featured resource"
+      aria-label={uiText("Featured resource")}
     >
       <div className="flex flex-col md:flex-row gap-5">
         <div
@@ -119,7 +123,7 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
                   style={{ width: `${r.progress.percent}%`, background: EDITORIAL }}
                 />
               </div>
-              <div className="text-[10px] text-[var(--muted)] mt-1">{r.progress.label}</div>
+              <div className="text-[10px] text-[var(--muted)] mt-1">{uiText(r.progress.label ?? "")}</div>
             </div>
           )}
 
@@ -128,15 +132,14 @@ export default function HeroResource({ resource }: { resource: LibraryResource }
               href={`/library/${r.slug}`}
               className="rounded-lg px-4 py-2 text-sm font-medium"
               style={{ background: EDITORIAL, color: EDITORIAL_CONTRAST }}
-            >
-              Explore {r.title}
+            >{uiText("Explore ")}{r.title}
             </Link>
             <Link
               href={`/library/${r.slug}#progress`}
               className="rounded-lg px-4 py-2 text-sm border"
               style={{ borderColor: EDITORIAL_LINE, color: EDITORIAL }}
             >
-              {started ? "Continue" : "Start"} {verbFor(r.type)}
+              {started ? uiText("Continue") : uiText("Start")} {verbFor(r.type)}
             </Link>
           </div>
         </div>

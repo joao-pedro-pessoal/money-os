@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 
 /**
@@ -40,6 +41,7 @@ export default function ConnectionForm({
   /** Display name per platform, so adding one doesn't mean editing this file. */
   labels: Record<string, string>;
 }) {
+  const uiText = useText();
   // Kept above the early declarations so hooks always run in the same order.
   const [platform, setPlatform] = useState("hyperliquid");
   const [hovered, setHovered] = useState<string | null>(null);
@@ -83,8 +85,7 @@ export default function ConnectionForm({
           selected one so the panel never goes blank. */}
       <div className="card p-3 text-xs space-y-2" style={{ background: "var(--surface-2)" }}>
         <div className="font-medium text-[var(--foreground)]">
-          {labels[shown] ?? shown} — what you need to do
-        </div>
+          {labels[shown] ?? shown}{uiText(" — what you need to do")}</div>
         <ol className="space-y-1 list-decimal list-inside text-[var(--muted)]">
           {shownConfig.steps.map((s, i) => (
             <li key={i}>{s}</li>
@@ -102,7 +103,7 @@ export default function ConnectionForm({
           <select name="region" className="input" defaultValue={bybitRegions[0]?.value}>
             {bybitRegions.map((r) => (
               <option key={r.value} value={r.value}>
-                {r.label}
+                {uiText(r.label ?? "")}
               </option>
             ))}
           </select>
@@ -112,9 +113,9 @@ export default function ConnectionForm({
       )}
 
       <select name="accountId" className="input" required defaultValue={newAccountValue}>
-        <option value={newAccountValue}>➕ Create a new account for this platform</option>
+        <option value={newAccountValue}>{uiText("➕ Create a new account for this platform")}</option>
         {accounts.length > 0 && (
-          <optgroup label="Or feed an existing account">
+          <optgroup label={uiText("Or feed an existing account")}>
             {accounts.map((a) => (
               <option translate="no" key={a.id} value={a.id}>
                 {a.institution} — {a.name}
@@ -131,7 +132,7 @@ export default function ConnectionForm({
         name="externalId"
         placeholder={
           platform === "ibkr"
-            ? "Account id — leave empty to detect it automatically"
+            ? uiText("Account id — leave empty to detect it automatically")
             : `${config.identifierLabel} (${config.identifierHint})`
         }
         className="input font-mono"
@@ -143,7 +144,7 @@ export default function ConnectionForm({
         <input
           name="apiSecret"
           type="password"
-          placeholder="API secret"
+          placeholder={uiText("API secret")}
           className="input font-mono"
           required
           autoComplete="new-password"
@@ -156,33 +157,26 @@ export default function ConnectionForm({
         <input
           name="apiPassphrase"
           type="password"
-          placeholder="API passphrase"
+          placeholder={uiText("API passphrase")}
           className="input font-mono"
           required
           autoComplete="new-password"
         />
       )}
 
-      <input name="label" placeholder="Label (optional)" className="input" />
+      <input name="label" placeholder={uiText("Label (optional)")} className="input" />
 
       {blocked && (
         <div
           className="card p-3 text-xs space-y-2"
           style={{ borderLeft: "2px solid var(--amber)" }}
         >
-          <div className="text-[var(--foreground)]">
-            This platform stores an API secret, which needs an encryption key. On a copy running on a hosting
-            service, add it on your own computer instead: the key is kept off the service on purpose. On your own
-            computer, add this line to your <span className="font-mono">.env</span>:
+          <div className="text-[var(--foreground)]">{uiText("This platform stores an API secret, which needs an encryption key. On a copy running on a hosting service, add it on your own computer instead: the key is kept off the service on purpose. On your own computer, add this line to your ")}<span className="font-mono">{uiText(".env")}</span>:
           </div>
           <pre className="font-mono text-[10px] bg-[var(--surface-2)] p-2 rounded overflow-x-auto">
 ENCRYPTION_KEY=&quot;{"paste-a-long-random-string-here-at-least-16-chars"}&quot;
           </pre>
-          <div className="text-[var(--muted)]">
-            Then <span className="text-[var(--foreground)]">restart the app</span> — the file is only read at
-            startup, so a change while it&apos;s running has no effect. Keep the key safe: whoever has it can
-            decrypt your stored secrets, and losing it loses them.
-          </div>
+          <div className="text-[var(--muted)]">{uiText("Then ")}<span className="text-[var(--foreground)]">{uiText("restart the app")}</span>{uiText(" — the file is only read at startup, so a change while it's running has no effect. Keep the key safe: whoever has it can decrypt your stored secrets, and losing it loses them.")}</div>
         </div>
       )}
 
@@ -191,15 +185,10 @@ ENCRYPTION_KEY=&quot;{"paste-a-long-random-string-here-at-least-16-chars"}&quot;
         className="btn w-full"
         disabled={blocked}
         style={blocked ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
-      >
-        Add connection
-      </button>
+      >{uiText("Add connection")}</button>
 
-      <p className="text-xs text-[var(--muted)]">{config.help}</p>
-      <p className="text-xs text-[var(--muted)]">
-        Syncing overwrites the account balance with the platform&apos;s equity, so a newly created account
-        starts at 0 until the first sync.
-      </p>
+      <p className="text-xs text-[var(--muted)]">{uiText(config.help ?? "")}</p>
+      <p className="text-xs text-[var(--muted)]">{uiText("Syncing overwrites the account balance with the platform's equity, so a newly created account starts at 0 until the first sync.")}</p>
     </form>
   );
 }

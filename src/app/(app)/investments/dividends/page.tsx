@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { getDividendOverview } from "@/actions/dividends";
 import { Money } from "@/components/PrivacyContext";
@@ -33,77 +34,69 @@ const rhythmLabel = (r: { cadence: string | null; medianGapDays: number | null }
   r.cadence ? r.cadence : r.medianGapDays ? `every ~${r.medianGapDays}d` : null;
 
 export default async function DividendsPage() {
+  const uiText = await textForRequest();
   const o = await getDividendOverview();
 
   return (
     <div className="dividends-page space-y-6">
       <div>
-        <h1 className="text-lg font-semibold">Dividends & income</h1>
-        <p className="dividends-intro text-xs text-[var(--muted)] mt-1 max-w-2xl">
-          Money that arrived without you selling anything. Everything below the estimates is what
-          was actually paid, read from the platform&apos;s own history.
-        </p>
+        <h1 className="text-lg font-semibold">{uiText("Dividends & income")}</h1>
+        <p className="dividends-intro text-xs text-[var(--muted)] mt-1 max-w-2xl">{uiText("Money that arrived without you selling anything. Everything below the estimates is what was actually paid, read from the platform's own history.")}</p>
       </div>
 
       {!o.hasAny ? (
-        <div className="card p-8 text-center text-sm text-[var(--muted)]">
-          No distributions on record yet. They arrive with the next sync of a platform that reports
-          them — Trading 212 does. If you hold only accumulating ETFs, there may genuinely be none:
-          those reinvest internally instead of paying you.
-        </div>
+        <div className="card p-8 text-center text-sm text-[var(--muted)]">{uiText("No distributions on record yet. They arrive with the next sync of a platform that reports them — Trading 212 does. If you hold only accumulating ETFs, there may genuinely be none: those reinvest internally instead of paying you.")}</div>
       ) : (
         <>
           {/* On a phone the four cards become one: the total first, what it is
               made of beneath it. Same figures as the cards. */}
           <div className="dividends-phone-only card dividends-hero">
-            <div className="text-xs text-[var(--muted)]">Received, all time</div>
+            <div className="text-xs text-[var(--muted)]">{uiText("Received, all time")}</div>
             <div className="text-3xl font-semibold mt-1 text-[var(--green)]">
               <Money value={o.totalAll} currency={o.currency} />
             </div>
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="dividends-mini">
-                <div className="text-[11px] text-[var(--muted)]">From instruments</div>
+                <div className="text-[11px] text-[var(--muted)]">{uiText("From instruments")}</div>
                 <div className="font-semibold mt-0.5">
                   <Money value={o.totalDistributions} currency={o.currency} />
                 </div>
               </div>
               <div className="dividends-mini">
-                <div className="text-[11px] text-[var(--muted)]">Interest on cash</div>
+                <div className="text-[11px] text-[var(--muted)]">{uiText("Interest on cash")}</div>
                 <div className="font-semibold mt-0.5">
                   <Money value={o.totalInterest} currency={o.currency} />
                 </div>
               </div>
             </div>
             <div className="text-xs text-[var(--muted)] mt-3">
-              {o.byTicker.length} paying {o.byTicker.length === 1 ? "instrument" : "instruments"}
+              {o.byTicker.length}{uiText(" paying ")}{o.byTicker.length === 1 ? uiText("instrument") : uiText("instruments")}
             </div>
           </div>
 
           <div className="dividends-desktop-only grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="card p-3">
-              <div className="text-xs text-[var(--muted)]">Received, all time</div>
+              <div className="text-xs text-[var(--muted)]">{uiText("Received, all time")}</div>
               <div className="text-lg font-semibold mt-1">
                 <Money value={o.totalAll} currency={o.currency} />
               </div>
             </div>
             <div className="card p-3">
-              <div className="text-xs text-[var(--muted)]">From instruments</div>
+              <div className="text-xs text-[var(--muted)]">{uiText("From instruments")}</div>
               <div className="text-lg font-semibold mt-1">
                 <Money value={o.totalDistributions} currency={o.currency} />
               </div>
-              <div className="text-[10px] text-[var(--muted)] mt-1">Dividends and distributions</div>
+              <div className="text-[10px] text-[var(--muted)] mt-1">{uiText("Dividends and distributions")}</div>
             </div>
             <div className="card p-3">
-              <div className="text-xs text-[var(--muted)]">Interest on cash</div>
+              <div className="text-xs text-[var(--muted)]">{uiText("Interest on cash")}</div>
               <div className="text-lg font-semibold mt-1">
                 <Money value={o.totalInterest} currency={o.currency} />
               </div>
-              <div className="text-[10px] text-[var(--muted)] mt-1">
-                Kept separate — it says nothing about what a holding yields
-              </div>
+              <div className="text-[10px] text-[var(--muted)] mt-1">{uiText("Kept separate — it says nothing about what a holding yields")}</div>
             </div>
             <div className="card p-3">
-              <div className="text-xs text-[var(--muted)]">Paying instruments</div>
+              <div className="text-xs text-[var(--muted)]">{uiText("Paying instruments")}</div>
               <div className="text-lg font-semibold mt-1">{o.byTicker.length}</div>
             </div>
           </div>
@@ -117,24 +110,22 @@ export default async function DividendsPage() {
               because on this account the same three payments exist twice. */}
           {o.sources.length > 0 && (
             <details className="dividends-sources card p-4">
-              <summary className="text-xs cursor-pointer text-[var(--muted)]">
-                Where these figures come from
-                {o.crossCheckOnly > 0 && ` · ${o.crossCheckOnly} record${o.crossCheckOnly === 1 ? "" : "s"} held back as a duplicate`}
+              <summary className="text-xs cursor-pointer text-[var(--muted)]">{uiText("Where these figures come from")}{o.crossCheckOnly > 0 && ` · ${o.crossCheckOnly} record${o.crossCheckOnly === 1 ? "" : "s"} held back as a duplicate`}
               </summary>
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table text-xs mt-3">
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table text-xs mt-3">
                 <thead>
                   <tr>
-                    <th>Account</th>
-                    <th>Kind</th>
-                    <th>Counted from</th>
-                    <th>Also recorded in</th>
+                    <th>{uiText("Account")}</th>
+                    <th>{uiText("Kind")}</th>
+                    <th>{uiText("Counted from")}</th>
+                    <th>{uiText("Also recorded in")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {o.sources.map((s) => (
                     <tr key={`${s.accountId}-${s.kind}`}>
                       <td><span translate="no">{s.accountName}</span></td>
-                      <td>{s.kind === "interest" ? "interest" : "distributions"}</td>
+                      <td>{s.kind === "interest" ? uiText("interest") : uiText("distributions")}</td>
                       <td>{s.source}</td>
                       <td className="text-[var(--muted)]">
                         {s.others.length === 0 ? "—" : s.others.join(", ")}
@@ -143,26 +134,17 @@ export default async function DividendsPage() {
                   ))}
                 </tbody>
               </ResponsiveTable></div>
-              <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed">
-                A payment held in two places is counted once, from the source above. The other
-                copy is kept rather than deleted, so a disagreement between a broker&apos;s own
-                figures and an imported file stays visible instead of being resolved silently.
-              </p>
+              <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed">{uiText("A payment held in two places is counted once, from the source above. The other copy is kept rather than deleted, so a disagreement between a broker's own figures and an imported file stays visible instead of being resolved silently.")}</p>
             </details>
           )}
 
           {/* Announced and estimated dates side by side, each labelled as which it is. */}
           {o.upcoming.length > 0 && (
             <div className="dividends-expected card p-4">
-              <div className="text-sm font-medium">Expected next</div>
+              <div className="text-sm font-medium">{uiText("Expected next")}</div>
               <p className="dividends-long-note text-xs text-[var(--muted)] mt-1 mb-3 max-w-2xl">
-                <strong className="text-[var(--foreground)]">Announced</strong> dates are the ones the
-                company has published (payment day, or the ex-dividend day until the payment day is
-                out): own the shares before the ex-date to be paid.{" "}
-                <strong className="text-[var(--foreground)]">Estimated</strong> ones are the rhythm of
-                your own payments carried forward — a pattern, not an announcement. Funds rarely
-                publish dates, so theirs are estimates.
-              </p>
+                <strong className="text-[var(--foreground)]">{uiText("Announced")}</strong>{uiText(" dates are the ones the company has published (payment day, or the ex-dividend day until the payment day is out): own the shares before the ex-date to be paid.")}{" "}
+                <strong className="text-[var(--foreground)]">{uiText("Estimated")}</strong>{uiText(" ones are the rhythm of your own payments carried forward — a pattern, not an announcement. Funds rarely publish dates, so theirs are estimates.")}</p>
               <div className="space-y-2">
                 {o.upcoming.map((t) => (
                   <div key={t.ticker} className="dividends-expected-row flex items-center justify-between gap-3 text-xs">
@@ -177,18 +159,15 @@ export default async function DividendsPage() {
                       {t.kind === "announced" ? (
                         <>
                           <div style={{ color: "var(--green)" }}>
-                            {t.payDateAnnounced ? `Paid ${dateLabel(t.date)}` : `Ex-date ${dateLabel(t.date)}`}
+                            {t.payDateAnnounced ? uiText("Paid {0}", { "0": dateLabel(t.date) }) : uiText("Ex-date {0}", { "0": dateLabel(t.date) })}
                           </div>
-                          <div className="text-[10px] text-[var(--muted)]">
-                            announced
-                            {t.payDateAnnounced && t.exDividendDate ? ` · ex-date ${dateLabel(new Date(`${t.exDividendDate}T00:00:00Z`))}` : ""}
+                          <div className="text-[10px] text-[var(--muted)]">{uiText("announced")}{t.payDateAnnounced && t.exDividendDate ? uiText(" · ex-date {0}", { "0": dateLabel(new Date(`${t.exDividendDate}T00:00:00Z`)) }) : ""}
                           </div>
                         </>
                       ) : (
                         <>
-                          <div style={{ color: "var(--amber)" }}>~ {monthLabel(t.date)}</div>
-                          <div className="text-[10px] text-[var(--muted)]">
-                            estimated, {CONFIDENCE_NOTE[t.confidence ?? "none"]}
+                          <div style={{ color: "var(--amber)" }}>~ {uiText(monthLabel(t.date) ?? "")}</div>
+                          <div className="text-[10px] text-[var(--muted)]">{uiText("estimated, ")}{CONFIDENCE_NOTE[t.confidence ?? "none"]}
                           </div>
                         </>
                       )}
@@ -197,26 +176,21 @@ export default async function DividendsPage() {
                 ))}
               </div>
               <div className="mt-3">
-                <ProfileLookup label="Check announced dates" />
+                <ProfileLookup label={uiText("Check announced dates")} />
               </div>
             </div>
           )}
 
           {o.forecast.total > 0 && (
             <div className="card p-4">
-              <div className="text-sm font-medium">The next twelve months, if nothing changes</div>
+              <div className="text-sm font-medium">{uiText("The next twelve months, if nothing changes")}</div>
               <div className="text-xl font-semibold mt-2">
                 <Money value={o.forecast.total} currency={o.currency} />
               </div>
-              <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
-                What the positions you still hold paid over the last twelve months. Not a promise: a
-                company can raise, cut or stop its dividend, and buying or selling changes it.
-                {o.forecast.leftOut > 0 && (
+              <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{uiText("What the positions you still hold paid over the last twelve months. Not a promise: a company can raise, cut or stop its dividend, and buying or selling changes it.")}{o.forecast.leftOut > 0 && (
                   <>
                     {" "}
-                    <Money value={o.forecast.leftOut} currency={o.currency} /> paid by positions you no
-                    longer hold is left out.
-                  </>
+                    <Money value={o.forecast.leftOut} currency={o.currency} />{uiText(" paid by positions you no longer hold is left out.")}</>
                 )}
               </p>
               <ul className="mt-3 space-y-1 text-xs">
@@ -231,11 +205,8 @@ export default async function DividendsPage() {
           )}
 
           <div className="card p-4">
-            <div className="text-sm font-medium">Instruments that pay you</div>
-            <p className="dividends-long-note text-xs text-[var(--muted)] mt-1 mb-3">
-              Only positions that have actually paid a distribution. Accumulating ETFs reinvest
-              internally and never appear here, which is not the same as paying nothing.
-            </p>
+            <div className="text-sm font-medium">{uiText("Instruments that pay you")}</div>
+            <p className="dividends-long-note text-xs text-[var(--muted)] mt-1 mb-3">{uiText("Only positions that have actually paid a distribution. Accumulating ETFs reinvest internally and never appear here, which is not the same as paying nothing.")}</p>
             <ul className="dividends-phone-only dividends-list mt-3">
               {o.byTicker.map((t) => {
                 const rhythm = rhythmLabel(t.rhythm);
@@ -253,15 +224,14 @@ export default async function DividendsPage() {
                             <Money value={t.total} currency={t.currency} />
                           </div>
                           <div className="text-[10px] text-[var(--muted)]">
-                            {t.payments} {t.payments === 1 ? "payment" : "payments"}
+                            {t.payments} {t.payments === 1 ? uiText("payment") : uiText("payments")}
                           </div>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {rhythm && <span className="dividends-chip">{rhythm}</span>}
-                        {t.trailingYield !== null && <span className="dividends-chip">{t.trailingYield}% last 12m</span>}
-                        <span className="dividends-chip">
-                          Last {dateLabel(t.lastPaidOn)} · <Money value={t.lastAmount} currency={t.currency} />
+                        {t.trailingYield !== null && <span className="dividends-chip">{t.trailingYield}{uiText("% last 12m")}</span>}
+                        <span className="dividends-chip">{uiText("Last ")}{uiText(dateLabel(t.lastPaidOn) ?? "")} · <Money value={t.lastAmount} currency={t.currency} />
                         </span>
                       </div>
                     </div>
@@ -270,15 +240,15 @@ export default async function DividendsPage() {
               })}
             </ul>
             <div className="dividends-desktop-only overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
                 <thead>
                   <tr>
-                    <th>Instrument</th>
-                    <th>Payments</th>
-                    <th>Received</th>
-                    <th>Last paid</th>
-                    <th>Rhythm</th>
-                    <th>Yield, 12m</th>
+                    <th>{uiText("Instrument")}</th>
+                    <th>{uiText("Payments")}</th>
+                    <th>{uiText("Received")}</th>
+                    <th>{uiText("Last paid")}</th>
+                    <th>{uiText("Rhythm")}</th>
+                    <th>{uiText("Yield, 12m")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -293,7 +263,7 @@ export default async function DividendsPage() {
                         <Money value={t.total} currency={t.currency} />
                       </td>
                       <td className="whitespace-nowrap">
-                        {dateLabel(t.lastPaidOn)}
+                        {uiText(dateLabel(t.lastPaidOn) ?? "")}
                         <div className="text-[10px] text-[var(--muted)]">
                           <Money value={t.lastAmount} currency={t.currency} />
                         </div>
@@ -302,7 +272,7 @@ export default async function DividendsPage() {
                         {t.rhythm.cadence
                           ? t.rhythm.cadence
                           : t.rhythm.medianGapDays
-                            ? `every ~${t.rhythm.medianGapDays}d`
+                            ? uiText("every ~{0}d", { "0": t.rhythm.medianGapDays })
                             : "—"}
                       </td>
                       <td>
@@ -318,16 +288,12 @@ export default async function DividendsPage() {
                 </tbody>
               </ResponsiveTable></div>
             </div>
-            <p className="text-[10px] text-[var(--muted)] mt-2">
-              Yield is what was actually paid over the last twelve months against today&apos;s
-              value — it is history, not a forecast. Blank when there is no open position to
-              measure against.
-            </p>
+            <p className="text-[10px] text-[var(--muted)] mt-2">{uiText("Yield is what was actually paid over the last twelve months against today's value — it is history, not a forecast. Blank when there is no open position to measure against.")}</p>
           </div>
 
           {o.byYear.length > 0 && (
             <div className="card p-4">
-              <div className="text-sm font-medium mb-3">By year</div>
+              <div className="text-sm font-medium mb-3">{uiText("By year")}</div>
               <div className="dividends-years space-y-1">
                 {o.byYear.map((y) => {
                   const max = Math.max(...o.byYear.map((x) => x.total));
@@ -344,7 +310,7 @@ export default async function DividendsPage() {
                         <Money value={y.total} currency={o.currency} />
                       </span>
                       <span className="dividends-year-count w-20 text-right text-[var(--muted)]">
-                        {y.payments} {y.payments === 1 ? "payment" : "payments"}
+                        {y.payments} {y.payments === 1 ? uiText("payment") : uiText("payments")}
                       </span>
                     </div>
                   );
@@ -360,8 +326,8 @@ export default async function DividendsPage() {
             title="Every dividend"
             summary={
               o.interestPayments > 0
-                ? `${o.recent.length} shown · ${o.interestPayments} interest credits not listed`
-                : `${o.recent.length} most recent`
+                ? uiText("{0} shown · {1} interest credits not listed", { "0": o.recent.length, "1": o.interestPayments })
+                : uiText("{0} most recent", { "0": o.recent.length })
             }
           >
             <div className="dividends-phone-only mt-3">
@@ -376,7 +342,7 @@ export default async function DividendsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm break-words">{p.instrumentName ?? p.ticker}</div>
                         <div className="text-[11px] text-[var(--muted)] break-words">
-                          {dateLabel(p.paidOn)} · <span translate="no">{p.accountName}</span>
+                          {uiText(dateLabel(p.paidOn) ?? "")} · <span translate="no">{p.accountName}</span>
                           {p.grossPerShare !== null && ` · ${p.grossPerShare} per share`}
                         </div>
                       </div>
@@ -389,21 +355,21 @@ export default async function DividendsPage() {
               })}
             </div>
             <div className="dividends-desktop-only overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
                 <thead>
                   <tr>
-                    <th>Paid on</th>
-                    <th>Instrument</th>
-                    <th>Kind</th>
-                    <th>Per share</th>
-                    <th>Amount</th>
-                    <th>Account</th>
+                    <th>{uiText("Paid on")}</th>
+                    <th>{uiText("Instrument")}</th>
+                    <th>{uiText("Kind")}</th>
+                    <th>{uiText("Per share")}</th>
+                    <th>{uiText("Amount")}</th>
+                    <th>{uiText("Account")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {o.recent.map((p, i) => (
                     <tr key={`${p.ticker}-${p.paidOn.toISOString()}-${i}`}>
-                      <td className="whitespace-nowrap">{dateLabel(p.paidOn)}</td>
+                      <td className="whitespace-nowrap">{uiText(dateLabel(p.paidOn) ?? "")}</td>
                       <td>
                         <div>{p.instrumentName ?? p.ticker}</div>
                         <div className="text-[10px] text-[var(--muted)]">{p.ticker}</div>
@@ -421,22 +387,13 @@ export default async function DividendsPage() {
                 </tbody>
               </ResponsiveTable></div>
             </div>
-            <p className="text-[10px] text-[var(--muted)] mt-2">
-              &quot;Per share&quot; is gross, in the instrument&apos;s own currency. The amount is
-              what actually landed in your account&apos;s currency, after withholding — so the two
-              will not multiply out, and shouldn&apos;t.
-            </p>
+            <p className="text-[10px] text-[var(--muted)] mt-2">{uiText("\"Per share\" is gross, in the instrument's own currency. The amount is what actually landed in your account's currency, after withholding — so the two will not multiply out, and shouldn't.")}</p>
           </Section>
         </>
       )}
 
-      <p className="dividends-footer text-[10px] text-[var(--muted)]">
-        Read from Trading 212&apos;s payment history.{" "}
-        <Link href="/connections" className="text-[var(--accent)]">
-          Other platforms
-        </Link>{" "}
-        report no distributions, so nothing from them appears here.
-      </p>
+      <p className="dividends-footer text-[10px] text-[var(--muted)]">{uiText("Read from Trading 212's payment history.")}{" "}
+        <Link href="/connections" className="text-[var(--accent)]">{uiText("Other platforms")}</Link>{" "}{uiText("report no distributions, so nothing from them appears here.")}</p>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { refreshFundFiles } from "@/actions/exposure";
@@ -11,6 +12,7 @@ import { refreshFundFiles } from "@/actions/exposure";
  * megabyte a fund, and one failing should not take the other's work with it.
  */
 export default function FundFileLookup({ due = 0 }: { due?: number }) {
+  const uiText = useText();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -28,10 +30,10 @@ export default function FundFileLookup({ due = 0 }: { due?: number }) {
       for (const f of r.failed) parts.push(`${f.fund}: ${f.reason}.`);
       if (r.remaining > 0) parts.push(`${r.remaining} still to read — press again.`);
       if (r.problem) parts.push(r.problem);
-      setMessage(parts.join(" ") || "Every fund is up to date.");
+      setMessage(parts.join(" ") || uiText("Every fund is up to date."));
       router.refresh();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "The read failed.");
+      setMessage(e instanceof Error ? e.message : uiText("The read failed."));
     } finally {
       setBusy(false);
     }
@@ -40,11 +42,11 @@ export default function FundFileLookup({ due = 0 }: { due?: number }) {
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <button type="button" className="btn" onClick={run} disabled={busy}>
-        {busy ? "Reading the funds…" : due > 0 ? `Read what the funds hold (${due})` : "Refresh what the funds hold"}
+        {busy ? uiText("Reading the funds…") : due > 0 ? uiText("Read what the funds hold ({0})", { "0": due }) : uiText("Refresh what the funds hold")}
       </button>
       {message && (
         <span role="status" className="text-xs text-[var(--muted)]">
-          {message}
+          {uiText(message ?? "")}
         </span>
       )}
     </div>

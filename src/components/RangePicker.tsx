@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -23,6 +24,7 @@ export default function RangePicker({
   /** The report's address without the two days. */
   path: string;
 }) {
+  const uiText = useText();
   const router = useRouter();
   const [start, setStart] = useState(from);
   const [end, setEnd] = useState(to);
@@ -37,17 +39,11 @@ export default function RangePicker({
         router.push(`${path}&from=${start}&to=${end}`, { scroll: false });
       }}
     >
-      <label className="text-xs text-[var(--muted)] flex flex-col gap-1">
-        From
-        <input type="date" value={start} max={end || max} onChange={(e) => setStart(e.target.value)} className="input" required />
+      <label className="text-xs text-[var(--muted)] flex flex-col gap-1">{uiText("From")}<input type="date" value={start} max={end || max} onChange={(e) => setStart(e.target.value)} className="input" required />
       </label>
-      <label className="text-xs text-[var(--muted)] flex flex-col gap-1">
-        To
-        <input type="date" value={end} min={start} max={max} onChange={(e) => setEnd(e.target.value)} className="input" required />
+      <label className="text-xs text-[var(--muted)] flex flex-col gap-1">{uiText("To")}<input type="date" value={end} min={start} max={max} onChange={(e) => setEnd(e.target.value)} className="input" required />
       </label>
-      <button type="submit" className="btn" disabled={invalid}>
-        Show
-      </button>
+      <button type="submit" className="btn" disabled={invalid}>{uiText("Show")}</button>
     </form>
   );
 }

@@ -14,19 +14,21 @@
  * 2. `renderReportPdf` lays those blocks out on A4 pages and draws them, with
  *    the chart geometry from `charts.ts` that the page's own charts use.
  *
- * The fonts are the PDF standard ones, which every reader has, so the file
- * stays small and needs nothing installed. They cover Western European text;
- * a character outside it (an emoji in a category name, say) is dropped or
- * shown as "?" rather than breaking the file — see `pdfSafe`.
+ * The server supplies embedded Noto fonts for the selected language. Callers
+ * without font bytes use the standard PDF fonts and the `pdfSafe` fallback.
  *
  * Pure: no DB, no clock — the day it was made is passed in.
  */
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
+import "regenerator-runtime/runtime";
+import fontkit from "@pdf-lib/fontkit";
+import { sourceText, type TextTranslator } from "@/lib/i18n/text";
 import { fmt } from "@/lib/format";
-import { barShares, columnChart, compactAmount, labelEvery, lineChart, shortDate, type DatedValue } from "./charts";
+import { barShares, columnChart, compactAmount, labelEvery, lineChart, shortDate as rawShortDate, type DatedValue } from "./charts";
 import type { InvestmentReport } from "./investments";
 import type { PeriodReport } from "./monthly";
 import { monthTick, spansYears } from "./periods";
+import { translatedDate } from "./translatedDate";
 
 export type Tone = "good" | "bad" | null;
 
@@ -59,6 +61,9 @@ export type Block =
     };
 
 export interface ReportPdfInput {
+  translate?: TextTranslator;
+  /** Font bytes supplied by the server; this module performs no I/O. */
+  fonts?: { regular: Uint8Array; bold: Uint8Array; fallback?: Uint8Array };
   /** "Monthly report". */
   title: string;
   /** "September 2026". */
@@ -87,12 +92,14 @@ function versus(now: number, before: number | null, label: string): string | und
 
 /** What the document says, in order. */
 export function reportBlocks(input: ReportPdfInput): Block[] {
+  const uiText = input.translate ?? sourceText;
+  const shortDate = (date: string) => translatedDate(rawShortDate(date), uiText);
   const money = (n: number) => fmt(n, input.currency);
   const signedMoney = (n: number) => `${n > 0 ? "+" : ""}${money(n)}`;
   const blocks: Block[] = [
     {
       type: "title",
-      text: `${input.title} · ${input.label}`,
+      text: `${input.title} · ${translatedDate(input.label, uiText)}`,
       subtitle: `${shortDate(input.from)} to ${shortDate(input.to)} · amounts in ${input.currency} · made on ${shortDate(input.generatedOn)}`,
     },
   ];
@@ -193,7 +200,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
             money(c.spent),
             percent(c.share),
             c.previous > 0 ? money(c.previous) : "—",
-            c.changePercent === null ? "new" : signedPercent(c.changePercent),
+            c.changePercent === null ? uiText("new") : signedPercent(c.changePercent),
           ]),
         });
         if (m.totals.uncategorised > 0) {
@@ -210,7 +217,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
             { title: "Limit", align: "right", width: 0.2 },
             { title: "Used", align: "right", width: 0.2 },
           ],
-          rows: m.budgets.map((b) => [b.name, money(b.spent), money(b.limit), `${b.percent}%${b.status === "over" ? " over" : ""}`]),
+          rows: m.budgets.map((b) => [b.name, money(b.spent), money(b.limit), `${b.percent}%${b.status === "over" ? ` ${uiText("over")}` : ""}`]),
         });
       }
       if (m.topExpenses.length > 0) {
@@ -377,7 +384,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
           type: "bars",
           title: `${c.today ? "What is held today" : `What was held on ${shortDate(c.asOf)}`}, by type · ${money(c.held)}`,
           items: barShares(c.byType.map((t) => ({ name: t.name, value: t.value })), 10).map((b) => ({
-            name: b.name,
+            name: uiText(b.name),
             value: b.share,
             label: `${money(b.value)} · ${percent(c.byType.find((t) => t.name === b.name)?.percent ?? 0)}`,
           })),
@@ -418,7 +425,19 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
     }
   }
 
-  return blocks;
+  const t = input.translate;
+  if (!t) return blocks;
+  return blocks.map((block): Block => {
+    switch (block.type) {
+      case "title": return { ...block, subtitle: t(block.subtitle) };
+      case "heading": case "text": return { ...block, text: t(block.text) };
+      case "stats": return { ...block, items: block.items.map(item => ({ ...item, label: t(item.label), note: item.note ? t(item.note) : undefined })) };
+      case "table": return { ...block, title: block.title ? t(block.title) : undefined, columns: block.columns.map(column => ({ ...column, title: t(column.title) })) };
+      case "line": return { ...block, title: t(block.title), series: block.series.map(series => ({ ...series, name: t(series.name) })) };
+      case "columns": return { ...block, title: t(block.title), groups: block.groups.map(group => ({ ...group, label: translatedDate(group.label, t) })), legend: block.legend.map(item => ({ ...item, name: t(item.name) })) };
+      case "bars": return { ...block, title: t(block.title) };
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -486,7 +505,10 @@ class Layout {
     private readonly doc: PDFDocument,
     private readonly regular: PDFFont,
     private readonly bold: PDFFont,
-    private readonly running: string
+    private readonly running: string,
+    private readonly unicode = false,
+    private readonly translate: TextTranslator = sourceText,
+    private readonly fallback?: PDFFont
   ) {
     this.newPage();
   }
@@ -504,28 +526,32 @@ class Layout {
 
   /** Draws one line of text with its top at `top`, cut to `width` with an ellipsis. */
   private write(text: string, x: number, top: number, size: number, font: PDFFont, color: RGB, width: number, align: "left" | "right" = "left") {
-    let safe = pdfSafe(text);
-    if (font.widthOfTextAtSize(safe, size) > width) {
-      while (safe.length > 1 && font.widthOfTextAtSize(`${safe}...`, size) > width) safe = safe.slice(0, -1);
+    let safe = this.safe(text);
+    if (this.measure(safe, size, font) > width) {
+      while (safe.length > 1 && this.measure(`${safe}...`, size, font) > width) safe = Array.from(safe).slice(0, -1).join('');
       safe = `${safe.trimEnd()}...`;
     }
-    const drawnWidth = font.widthOfTextAtSize(safe, size);
-    this.page.drawText(safe, {
-      x: align === "right" ? x + width - drawnWidth : x,
+    const drawnWidth = this.measure(safe, size, font);
+    let cursor = align === "right" ? x + width - drawnWidth : x;
+    for (const run of this.runs(safe, font)) {
+    this.page.drawText(run.text, {
+      x: cursor,
       y: PAGE_HEIGHT - top - size,
       size,
-      font,
+      font: run.font,
       color,
     });
+    cursor += run.font.widthOfTextAtSize(run.text, size);
+    }
   }
 
   private wrap(text: string, size: number, font: PDFFont, width: number): string[] {
-    const words = pdfSafe(text).split(" ");
+    const words = this.safe(text).split(/(?<=[\u3000-\u9fff])| /u);
     const lines: string[] = [];
     let line = "";
     for (const word of words) {
       const next = line === "" ? word : `${line} ${word}`;
-      if (line !== "" && font.widthOfTextAtSize(next, size) > width) {
+      if (line !== "" && this.measure(next, size, font) > width) {
         lines.push(line);
         line = word;
       } else {
@@ -642,7 +668,7 @@ class Layout {
     }
     chart.xLabels.forEach((label, i) => {
       // The first date starts at its point, the last ends at it, one between is centred on it.
-      const text = shortDate(label.date);
+      const text = translatedDate(rawShortDate(label.date), this.translate);
       const width = this.regular.widthOfTextAtSize(text, 7);
       const x = i === 0 ? label.x : i === chart.xLabels.length - 1 ? label.x - width : label.x - width / 2;
       this.write(text, MARGIN.left + x, top + height - 12, 7, this.regular, COLOURS.muted, width + 1);
@@ -671,7 +697,7 @@ class Layout {
     for (const item of items) {
       this.page.drawRectangle({ x, y: PAGE_HEIGHT - this.y - 7, width: 8, height: 3, color: item.color });
       this.write(item.name, x + 12, this.y, 7.5, this.regular, COLOURS.muted, 200);
-      x += 24 + this.regular.widthOfTextAtSize(pdfSafe(item.name), 7.5);
+      x += 24 + this.measure(this.safe(item.name), 7.5, this.regular);
     }
     this.y += 12;
   }
@@ -725,7 +751,7 @@ class Layout {
     // As many month names as fit without running into each other.
     const every = labelEvery(
       chart.groups.length > 1 ? chart.groups[1].x - chart.groups[0].x : WIDTH,
-      Math.max(0, ...chart.groups.map((g) => this.regular.widthOfTextAtSize(pdfSafe(g.label), 7)))
+      Math.max(0, ...chart.groups.map((g) => this.measure(this.safe(g.label), 7, this.regular)))
     );
     for (const [i, group] of chart.groups.entries()) {
       group.columns.forEach((column, k) => {
@@ -746,27 +772,50 @@ class Layout {
   finish(footer: string) {
     const pages = this.doc.getPages();
     pages.forEach((page, i) => {
-      const text = pdfSafe(`${footer} · page ${i + 1} of ${pages.length}`);
-      page.drawText(text, {
-        x: MARGIN.left,
-        y: MARGIN.bottom - 28,
-        size: 7,
-        font: this.regular,
-        color: COLOURS.muted,
-      });
+      const text = this.safe(`${footer} · ${this.translate('Page {0} of {1}', { 0: i + 1, 1: pages.length })}`);
+      this.page = page;
+      this.write(text, MARGIN.left, PAGE_HEIGHT - MARGIN.bottom + 21, 7, this.regular, COLOURS.muted, WIDTH);
     });
+  }
+
+  private safe(text: string): string {
+    return this.unicode ? text.normalize('NFC').replace(/[\n\t]/g, ' ') : pdfSafe(text);
+  }
+
+  private readonly coverage = new Map<PDFFont, Set<number>>();
+  private runs(text: string, preferred: PDFFont) {
+    if (!this.fallback) return [{ text, font: preferred }];
+    let coverage = this.coverage.get(preferred);
+    if (!coverage) { coverage = new Set(preferred.getCharacterSet()); this.coverage.set(preferred, coverage); }
+    const runs: { text: string; font: PDFFont }[] = [];
+    for (const character of text) {
+      const font = coverage.has(character.codePointAt(0)!) ? preferred : this.fallback;
+      const previous = runs[runs.length - 1];
+      if (previous?.font === font) previous.text += character;
+      else runs.push({ text: character, font });
+    }
+    return runs;
+  }
+  private measure(text: string, size: number, font: PDFFont): number {
+    return this.runs(text, font).reduce((width, run) => width + run.font.widthOfTextAtSize(run.text, size), 0);
   }
 }
 
 /** The report as a PDF file. */
 export async function renderReportPdf(input: ReportPdfInput): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  doc.setTitle(pdfSafe(`Money OS · ${input.title} · ${input.label}`));
+  doc.setTitle(`Money OS · ${input.title} · ${input.label}`);
   doc.setProducer("Money OS");
   doc.setCreator("Money OS");
-  const regular = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const layout = new Layout(doc, regular, bold, `Money OS · ${input.title} · ${input.label}`);
+  if (input.fonts) doc.registerFontkit(fontkit);
+  // CFF/OpenType subsetting in fontkit produces invisible CJK glyphs in PDF
+  // readers. Embed those fonts whole; TrueType fonts still use small subsets.
+  const subset = !input.fonts || String.fromCharCode(...input.fonts.regular.subarray(0, 4)) !== "OTTO";
+  const regular = await doc.embedFont(input.fonts?.regular ?? StandardFonts.Helvetica, { subset });
+  const bold = input.fonts?.bold === input.fonts?.regular && input.fonts
+    ? regular : await doc.embedFont(input.fonts?.bold ?? StandardFonts.HelveticaBold, { subset });
+  const fallback = input.fonts?.fallback ? await doc.embedFont(input.fonts.fallback, { subset: true }) : undefined;
+  const layout = new Layout(doc, regular, bold, `Money OS · ${input.title} · ${input.label}`, !!input.fonts, input.translate, fallback);
 
   for (const block of reportBlocks(input)) {
     switch (block.type) {
@@ -796,6 +845,6 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Uint8Array
         break;
     }
   }
-  layout.finish(`Money OS · made on ${shortDate(input.generatedOn)}`);
+  layout.finish(`Money OS · ${(input.translate ?? sourceText)('Made on {0}', { 0: translatedDate(rawShortDate(input.generatedOn), input.translate) })}`);
   return doc.save();
 }

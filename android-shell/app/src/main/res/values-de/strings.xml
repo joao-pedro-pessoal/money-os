@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">Erfassen Sie eine Ausgabe oder ein Einkommen</string>
+    <string name="widget_expense" formatted="false">− Aufwand</string>
+    <string name="widget_income" formatted="false">+ Einkommen</string>
+    <string name="shortcut_expense" formatted="false">Kosten</string>
+    <string name="shortcut_expense_long" formatted="false">Ausgaben erfassen</string>
+    <string name="shortcut_income" formatted="false">Einkommen</string>
+    <string name="shortcut_income_long" formatted="false">Rekordeinkommen</string>
+    <string name="widget_dashboard_description" formatted="false">Nettovermögen, diesen Monat und die Linie im Laufe der Zeit</string>
+    <string name="widget_net_worth_description" formatted="false">Nettovermögen im Laufe der Zeit und wie weit es sich verändert hat</string>
+    <string name="widget_where_money_description" formatted="false">Wo das Geld ist, als Donut mit Prozentsätzen</string>
+    <string name="widget_cash_flow_description" formatted="false">Diesen Monat: Geld rein, Geld raus und was übrig bleibt</string>
+    <string name="widget_investments_description" formatted="false">Portfoliowert, nicht realisierter Gewinn und Verlust und jede Position mit Gewinn und Verlust in Euro und Prozent</string>
+    <string name="widget_allocation_description" formatted="false">Das Portfolio nach Anlagetyp, als Donut mit Prozentsätzen</string>
+    <string name="widget_movers_description" formatted="false">Die besten und schlechtesten Positionen nach Kostenrendite</string>
+    <string name="widget_dividends_description" formatted="false">Erhaltene Dividenden in diesem Jahr und die nächste erwartete Zahlung</string>
+    <string name="widget_open_trades_description" formatted="false">Offene gehebelte Positionen: nicht realisierte Gewinne und Verluste, Marge und jeder Trade</string>
+    <string name="ui_registo_r_pido" formatted="false">Registrieren Sie sich schnell</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">Nettovermögen</string>
+    <string name="ui_where_the_money_is" formatted="false">Wo das Geld ist</string>
+    <string name="ui_cash_flow" formatted="false">Umsätze</string>
+    <string name="ui_investments" formatted="false">Investitionen</string>
+    <string name="ui_allocation" formatted="false">Zuordnung</string>
+    <string name="ui_winners_losers" formatted="false">Gewinner und Verlierer</string>
+    <string name="ui_dividends" formatted="false">Dividenden</string>
+    <string name="ui_open_trades" formatted="false">Offene Trades</string>
+    <string name="ui_record_expense" formatted="false">Ausgaben erfassen</string>
+    <string name="ui_refresh" formatted="false">Aktualisieren</string>
+    <string name="ui_chart" formatted="false">Diagramm</string>
+</resources>

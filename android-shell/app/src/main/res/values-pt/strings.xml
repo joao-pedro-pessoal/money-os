@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">Regista uma despesa ou uma receita</string>
+    <string name="widget_expense" formatted="false">− Despesa</string>
+    <string name="widget_income" formatted="false">+ Receita</string>
+    <string name="shortcut_expense" formatted="false">Despesa</string>
+    <string name="shortcut_expense_long" formatted="false">Registar despesa</string>
+    <string name="shortcut_income" formatted="false">Receita</string>
+    <string name="shortcut_income_long" formatted="false">Registar receita</string>
+    <string name="widget_dashboard_description" formatted="false">Património líquido, este mês e a evolução ao longo do tempo</string>
+    <string name="widget_net_worth_description" formatted="false">Património líquido ao longo do tempo e quanto já cresceu</string>
+    <string name="widget_where_money_description" formatted="false">Onde está o dinheiro, num anel com percentagens</string>
+    <string name="widget_cash_flow_description" formatted="false">Este mês: dinheiro que entrou, que saiu e o que sobra</string>
+    <string name="widget_investments_description" formatted="false">Valor da carteira, ganho não realizado e cada posição com o ganho em euros e em percentagem</string>
+    <string name="widget_allocation_description" formatted="false">A carteira por tipo de ativo, num anel com percentagens</string>
+    <string name="widget_movers_description" formatted="false">As posições com melhor e pior rentabilidade face ao custo</string>
+    <string name="widget_dividends_description" formatted="false">Dividendos recebidos este ano e o próximo pagamento previsto</string>
+    <string name="widget_open_trades_description" formatted="false">Posições alavancadas abertas: ganho não realizado, margem e cada negociação</string>
+    <string name="ui_registo_r_pido" formatted="false">Registo rápido</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">Património líquido</string>
+    <string name="ui_where_the_money_is" formatted="false">Onde está o dinheiro</string>
+    <string name="ui_cash_flow" formatted="false">Fluxo de caixa</string>
+    <string name="ui_investments" formatted="false">Investimentos</string>
+    <string name="ui_allocation" formatted="false">Alocação</string>
+    <string name="ui_winners_losers" formatted="false">Melhores e piores</string>
+    <string name="ui_dividends" formatted="false">Dividendos</string>
+    <string name="ui_open_trades" formatted="false">Negociações abertas</string>
+    <string name="ui_record_expense" formatted="false">Registar despesa</string>
+    <string name="ui_refresh" formatted="false">Atualizar</string>
+    <string name="ui_chart" formatted="false">Gráfico</string>
+</resources>

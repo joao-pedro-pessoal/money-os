@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { ARRIVALS, WEEKDAYS, anchorInputFor, type Arrival } from "@/lib/accounting/expected";
 
@@ -20,6 +21,7 @@ import { ARRIVALS, WEEKDAYS, anchorInputFor, type Arrival } from "@/lib/accounti
  * else on this form is a plain server-rendered input.
  */
 export default function ArrivalFields({ defaultArrival }: { defaultArrival: Arrival }) {
+  const uiText = useText();
   const [arrival, setArrival] = useState<Arrival>(defaultArrival);
   const kind = anchorInputFor(arrival);
 
@@ -33,39 +35,36 @@ export default function ArrivalFields({ defaultArrival }: { defaultArrival: Arri
       >
         {ARRIVALS.map((a) => (
           <option key={a.value} value={a.value}>
-            {a.label}
+            {uiText(a.label ?? "")}
           </option>
         ))}
       </select>
 
       {kind === "dayOfMonth" && (
         <label className="text-xs block">
-          <span className="text-[var(--muted)]">Day of the month</span>
+          <span className="text-[var(--muted)]">{uiText("Day of the month")}</span>
           <input
             name="dayOfMonth"
             type="number"
             min={1}
             max={31}
-            placeholder="e.g. 25"
+            placeholder={uiText("e.g. 25")}
             className="input mt-1"
           />
           {/* The 31st stays the 31st. A month without one is skipped, and
               February lands on the 28th without the day being forgotten. */}
-          <span className="text-[10px] text-[var(--muted)]">
-            A 29th, 30th or 31st lands on the last day of a month too short for it, and goes
-            back to the day you chose in the months that have it.
-          </span>
+          <span className="text-[10px] text-[var(--muted)]">{uiText("A 29th, 30th or 31st lands on the last day of a month too short for it, and goes back to the day you chose in the months that have it.")}</span>
         </label>
       )}
 
       {kind === "weekday" && (
         <label className="text-xs block">
-          <span className="text-[var(--muted)]">Day of the week</span>
+          <span className="text-[var(--muted)]">{uiText("Day of the week")}</span>
           <select name="weekday" className="input mt-1" defaultValue="">
-            <option value="">Pick a day</option>
+            <option value="">{uiText("Pick a day")}</option>
             {WEEKDAYS.map((d) => (
               <option key={d.value} value={d.value}>
-                {d.label}
+                {uiText(d.label ?? "")}
               </option>
             ))}
           </select>
@@ -74,9 +73,7 @@ export default function ArrivalFields({ defaultArrival }: { defaultArrival: Arri
 
       {kind === "date" && (
         <label className="text-xs block">
-          <span className="text-[var(--muted)]">
-            When — leave empty if there is no agreed day
-          </span>
+          <span className="text-[var(--muted)]">{uiText("When — leave empty if there is no agreed day")}</span>
           <input name="expectedAt" type="date" className="input mt-1" />
         </label>
       )}

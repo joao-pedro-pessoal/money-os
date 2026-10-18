@@ -12,6 +12,7 @@
 import { investmentCsvLines, type InvestmentReport } from "./investments";
 import { csvHeader, csvText, moneyCsvLines, type PeriodReport } from "./monthly";
 import type { ReportKind } from "./periods";
+import { sourceText, type TextTranslator } from "@/lib/i18n/text";
 
 /** Which money a report is about: the everyday kind, the invested kind, or both. */
 export type ReportScope = "both" | "money" | "investments";
@@ -48,10 +49,10 @@ export interface ReportContents {
 }
 
 /** The whole report as CSV: a header, then each part asked for, one section after another. */
-export function reportCsv(report: ReportContents): string {
-  const lines = csvHeader(report.kind, report.label, report, report.currency);
-  if (report.money !== null) lines.push([], ...moneyCsvLines(report.money));
-  if (report.investments !== null) lines.push([], ...investmentCsvLines(report.investments));
+export function reportCsv(report: ReportContents, translate: TextTranslator = sourceText): string {
+  const lines = csvHeader(report.kind, translate(report.label), report, report.currency, translate);
+  if (report.money !== null) lines.push([], ...moneyCsvLines(report.money, translate));
+  if (report.investments !== null) lines.push([], ...investmentCsvLines(report.investments, translate));
   return csvText(lines);
 }
 

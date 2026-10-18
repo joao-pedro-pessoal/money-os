@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import PanelFrame from "./PanelFrame";
@@ -113,14 +114,13 @@ export default function TradeAnalysis({
   approximate: boolean;
   unconvertible: number;
 }) {
+  const uiText = useText();
   /** Which group is opened. Local state: nothing else on the page reads it. */
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   if (tradeCount === 0) {
     return (
-      <div className="card p-8 text-center text-sm text-[var(--muted)]">
-        No trades in the history yet. Sync a connected platform, or import a statement below.
-      </div>
+      <div className="card p-8 text-center text-sm text-[var(--muted)]">{uiText("No trades in the history yet. Sync a connected platform, or import a statement below.")}</div>
     );
   }
 
@@ -141,7 +141,7 @@ export default function TradeAnalysis({
 
       {/* ---- Result by what kind of trade it was ---- */}
       <Panel
-        title="Result by kind of trade" persistKey="trade-kind" essential
+        title={uiText("Result by kind of trade")} persistKey="trade-kind" essential
         subtitle="Not what you traded, but what kind of thing it was — the classification you gave the instrument, kept after you sold out of it."
       >
         <div className="flex gap-2 flex-wrap mb-3">
@@ -156,7 +156,7 @@ export default function TradeAnalysis({
                 color: grouping === g.key ? "var(--accent)" : "var(--muted)",
               }}
             >
-              {g.label}
+              {uiText(g.label ?? "")}
             </button>
           ))}
         </div>
@@ -172,16 +172,16 @@ export default function TradeAnalysis({
         ) : (
           <>
             <div className="overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
                 <thead>
                   <tr>
-                    <th>{TRADE_GROUPINGS.find((g) => g.key === grouping)?.label ?? "Group"}</th>
-                    <th className="text-right">Closed</th>
-                    <th className="text-right">Win rate</th>
-                    <th className="text-right">Realized</th>
-                    <th className="text-right">Net after fees</th>
-                    <th className="text-right">Best</th>
-                    <th className="text-right">Worst</th>
+                    <th>{TRADE_GROUPINGS.find((g) => g.key === grouping)?.label ?? uiText("Group")}</th>
+                    <th className="text-right">{uiText("Closed")}</th>
+                    <th className="text-right">{uiText("Win rate")}</th>
+                    <th className="text-right">{uiText("Realized")}</th>
+                    <th className="text-right">{uiText("Net after fees")}</th>
+                    <th className="text-right">{uiText("Best")}</th>
+                    <th className="text-right">{uiText("Worst")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -249,8 +249,8 @@ export default function TradeAnalysis({
                               realised. */}
                           <td className="text-right text-[var(--muted)]" colSpan={2}>
                             {trade.fees === null || trade.fees === 0
-                              ? "no fee recorded"
-                              : `${money(trade.fees)} in fees`}
+                              ? uiText("no fee recorded")
+                              : uiText("{0} in fees", { "0": money(trade.fees) })}
                           </td>
                         </tr>
                       ))}
@@ -266,18 +266,12 @@ export default function TradeAnalysis({
               stated: they are a breakdown of the classified trades, not of all
               of them, and the difference is 35 trades on this account.
             */}
-            <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed whitespace-normal max-w-prose">
-              These cover{" "}
+            <p className="text-[10px] text-[var(--muted)] mt-2 leading-relaxed whitespace-normal max-w-prose">{uiText("These cover")}{" "}
               <span className="text-[var(--foreground)]">
-                {coverage.tagged} of {coverage.tagged + coverage.untagged} closed trades
-              </span>
-              , worth {money(coverage.realized)}
+                {coverage.tagged}{uiText(" of ")}{coverage.tagged + coverage.untagged}{uiText(" closed trades")}</span>{uiText(", worth ")}{money(coverage.realized)}
               {coverage.untagged > 0 && (
                 <>
-                  {" "}
-                  — the other {coverage.untagged} are not classified this way, so they are in no
-                  row above
-                </>
+                  {" "}{uiText("— the other ")}{coverage.untagged}{uiText(" are not classified this way, so they are in no row above")}</>
               )}
               .
             </p>
@@ -288,7 +282,7 @@ export default function TradeAnalysis({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* ---- 2. What do I trade well? ---- */}
         <Panel
-          title="Result by instrument" persistKey="trade-instrument"
+          title={uiText("Result by instrument")} persistKey="trade-instrument"
           subtitle="After fees, which is what decides whether to keep trading it."
         >
           {topSymbols.length === 0 ? (
@@ -319,7 +313,7 @@ export default function TradeAnalysis({
                       }}
                       formatter={(v) => money(Number(v ?? 0))}
                     />
-                    <Bar dataKey="net" name="Net after fees">
+                    <Bar dataKey="net" name={uiText("Net after fees")}>
                       {topSymbols.map((s) => (
                         <Cell key={s.symbol} fill={s.net >= 0 ? GREEN : RED} />
                       ))}
@@ -328,15 +322,15 @@ export default function TradeAnalysis({
                 </ResponsiveContainer>
               </div>
               <div className="overflow-x-auto mt-3">
-                <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table text-xs whitespace-nowrap">
+                <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table text-xs whitespace-nowrap">
                   <thead>
                     <tr>
-                      <th>Symbol</th>
-                      <th className="text-right">Closed</th>
-                      <th className="text-right">Win rate</th>
-                      <th className="text-right">Result</th>
-                      <th className="text-right">Fees</th>
-                      <th className="text-right">Net</th>
+                      <th>{uiText("Symbol")}</th>
+                      <th className="text-right">{uiText("Closed")}</th>
+                      <th className="text-right">{uiText("Win rate")}</th>
+                      <th className="text-right">{uiText("Result")}</th>
+                      <th className="text-right">{uiText("Fees")}</th>
+                      <th className="text-right">{uiText("Net")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -370,7 +364,7 @@ export default function TradeAnalysis({
 
         {/* ---- 4. How long do I hold? ---- */}
         <Panel
-          title="How long you hold" persistKey="trade-holding"
+          title={uiText("How long you hold")} persistKey="trade-holding"
           subtitle="Winners against losers. Holding losers longer is the pattern a P&L total cannot show you."
         >
           {holding.count === 0 ? (
@@ -379,13 +373,13 @@ export default function TradeAnalysis({
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <div className="text-[10px] text-[var(--muted)]">Winners, typically</div>
+                  <div className="text-[10px] text-[var(--muted)]">{uiText("Winners, typically")}</div>
                   <div className="text-xl font-semibold" style={{ color: GREEN }}>
                     {duration(holding.winnersMedianHours)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-[var(--muted)]">Losers, typically</div>
+                  <div className="text-[10px] text-[var(--muted)]">{uiText("Losers, typically")}</div>
                   <div className="text-xl font-semibold" style={{ color: RED }}>
                     {duration(holding.losersMedianHours)}
                   </div>
@@ -394,30 +388,23 @@ export default function TradeAnalysis({
               {holding.winnersMedianHours !== null &&
                 holding.losersMedianHours !== null &&
                 holding.losersMedianHours > holding.winnersMedianHours * 1.5 && (
-                  <p className="text-[10px] mt-3" style={{ color: AMBER }}>
-                    You hold losing trades noticeably longer than winning ones. That is the
-                    textbook shape of cutting winners early and hoping losers come back.
-                  </p>
+                  <p className="text-[10px] mt-3" style={{ color: AMBER }}>{uiText("You hold losing trades noticeably longer than winning ones. That is the textbook shape of cutting winners early and hoping losers come back.")}</p>
                 )}
-              <div className="text-[10px] text-[var(--muted)] mt-3">
-                Median across {holding.count} matched round trip
-                {holding.count === 1 ? "" : "s"}, oldest lot first. A median rather than an
-                average, so one long-held position cannot carry it.
-              </div>
+              <div className="text-[10px] text-[var(--muted)] mt-3">{uiText("Median across ")}{uiText(holding.count === 1 ? "{count} matched round trip" : "{count} matched round trips", { count: holding.count })}{uiText(", oldest lot first. A median rather than an average, so one long-held position cannot carry it.")}</div>
             </>
           )}
 
           {directions.length > 0 && (
             <div className="mt-4 pt-3 border-t border-[var(--border)]">
-              <div className="text-[10px] text-[var(--muted)] mb-2">By direction</div>
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table text-xs w-full">
+              <div className="text-[10px] text-[var(--muted)] mb-2">{uiText("By direction")}</div>
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table text-xs w-full">
                 <tbody>
                   {directions.map((d) => (
                     <tr key={d.direction}>
                       <td className="capitalize">{d.direction}</td>
-                      <td className="text-right text-[var(--muted)]">{d.closedTrades} closed</td>
+                      <td className="text-right text-[var(--muted)]">{d.closedTrades}{uiText(" closed")}</td>
                       <td className="text-right text-[var(--muted)]">
-                        {d.winRate === null ? "—" : `${d.winRate.toFixed(0)}% won`}
+                        {d.winRate === null ? "—" : uiText("{0}% won", { "0": d.winRate.toFixed(0) })}
                       </td>
                       <td className="text-right" style={{ color: d.net >= 0 ? GREEN : RED }}>
                         {money(d.net)}
@@ -433,20 +420,20 @@ export default function TradeAnalysis({
 
       {/* ---- 3. How often, and when? ---- */}
       <Panel
-        title="How often you trade" persistKey="trade-cadence"
+        title={uiText("How often you trade")} persistKey="trade-cadence"
         subtitle="Trades per month, and the hour of day they land. Hours are UTC — the app has no reliable answer for where you were."
       >
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
           <div>
-            <div className="text-[10px] text-[var(--muted)]">Trades</div>
+            <div className="text-[10px] text-[var(--muted)]">{uiText("Trades")}</div>
             <div className="text-lg font-semibold">{tradeCount}</div>
           </div>
           <div>
-            <div className="text-[10px] text-[var(--muted)]">Of those, closing</div>
+            <div className="text-[10px] text-[var(--muted)]">{uiText("Of those, closing")}</div>
             <div className="text-lg font-semibold">{closedCount}</div>
           </div>
           <div>
-            <div className="text-[10px] text-[var(--muted)]">Typical size</div>
+            <div className="text-[10px] text-[var(--muted)]">{uiText("Typical size")}</div>
             <div className="text-lg font-semibold">
               {averageSize === null ? "—" : money(averageSize)}
             </div>
@@ -467,7 +454,7 @@ export default function TradeAnalysis({
                     fontSize: 11,
                   }}
                 />
-                <Bar dataKey="trades" name="Trades" fill="var(--accent)" />
+                <Bar dataKey="trades" name={uiText("Trades")} fill="var(--accent)" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -485,7 +472,7 @@ export default function TradeAnalysis({
                   }}
                   labelFormatter={(h) => `${h}:00 UTC`}
                 />
-                <Bar dataKey="trades" name="Trades" fill="var(--accent)" />
+                <Bar dataKey="trades" name={uiText("Trades")} fill="var(--accent)" />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -17,7 +17,7 @@
  */
 
 const OFFLINE_URL = "/offline.html";
-const CACHE = "money-os-offline-v1";
+const CACHE = "money-os-offline-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -49,6 +50,7 @@ export default function CompositionCard({
   defaultShape?: ChartShape;
   note?: React.ReactNode;
 }) {
+  const uiText = useText();
   const [shape, setShape] = useState<ChartShape>(defaultShape);
 
   const total = data.reduce((s, d) => s + d.value, 0);
@@ -62,8 +64,7 @@ export default function CompositionCard({
           <div className="text-sm font-medium">{title}</div>
           {total > 0 && (
             <div className="text-[10px] text-[var(--muted)] mt-0.5">
-              <Money value={total} currency={currency} /> in total
-            </div>
+              <Money value={total} currency={currency} />{uiText(" in total")}</div>
           )}
         </div>
         <div className="flex gap-1 text-[10px] shrink-0">
@@ -78,14 +79,14 @@ export default function CompositionCard({
                 color: shape === s.value ? "var(--accent)" : "var(--muted)",
               }}
             >
-              {s.label}
+              {uiText(s.label ?? "")}
             </button>
           ))}
         </div>
       </div>
 
       {sorted.length === 0 ? (
-        <div className="text-sm text-[var(--muted)] py-8 text-center">No data yet</div>
+        <div className="text-sm text-[var(--muted)] py-8 text-center">{uiText("No data yet")}</div>
       ) : shape === "donut" ? (
         <DonutChart data={sorted} currency={currency} />
       ) : shape === "bars" ? (
@@ -117,7 +118,7 @@ export default function CompositionCard({
           ))}
         </div>
       ) : (
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full text-xs">
+        <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="w-full text-xs">
           <tbody>
             {sorted.map((d, i) => (
               <tr key={d.name} className="border-b border-[var(--border)] last:border-0">
@@ -169,11 +170,10 @@ export function BudgetBars({
   }[];
   currency?: string;
 }) {
+  const uiText = useText();
   if (items.length === 0) {
     return (
-      <div className="text-sm text-[var(--muted)] py-8 text-center">
-        No budgets set yet.
-      </div>
+      <div className="text-sm text-[var(--muted)] py-8 text-center">{uiText("No budgets set yet.")}</div>
     );
   }
 
@@ -191,7 +191,7 @@ export function BudgetBars({
             <div className="flex items-baseline justify-between gap-2 text-xs mb-1">
               <span className="truncate"><span translate="no">{b.name}</span></span>
               <span className="text-[var(--muted)] shrink-0 tabular-nums">
-                <Money value={b.spent} currency={currency} /> of{" "}
+                <Money value={b.spent} currency={currency} />{uiText(" of")}{" "}
                 <Money value={b.limit} currency={currency} />
               </span>
             </div>
@@ -205,10 +205,10 @@ export function BudgetBars({
 
             <div className="text-[10px] mt-0.5" style={{ color: over ? "var(--red)" : "var(--muted)" }}>
               {over
-                ? `${fmt(b.spent - b.limit, currency)} over`
+                ? uiText("{0} over", { "0": fmt(b.spent - b.limit, currency) })
                 : b.pacingOver
-                  ? `${fmt(b.remaining, currency)} left, but spending faster than the month`
-                  : `${fmt(b.remaining, currency)} left`}
+                  ? uiText("{0} left, but spending faster than the month", { "0": fmt(b.remaining, currency) })
+                  : uiText("{0} left", { "0": fmt(b.remaining, currency) })}
             </div>
           </div>
         );

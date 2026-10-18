@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listSubscriptions,
@@ -18,6 +19,7 @@ import DueSubscriptionCharges from "@/components/DueSubscriptionCharges";
 import { getDueSubscriptionCharges } from "@/actions/subscriptionCharges";
 
 export default async function SubscriptionsPage() {
+  const uiText = await textForRequest();
   const [subs, totals, accounts, categories, due] = await Promise.all([
     listSubscriptions(),
     getSubscriptionTotals(),
@@ -33,50 +35,41 @@ export default async function SubscriptionsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold">Subscriptions</h1>
-        <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
-          What leaves every month whether you do anything or not. These are commitments, not
-          transactions — the charges themselves arrive with your statement and are counted there, so
-          nothing on this page is added to your balances or your spending totals.
-        </p>
+        <h1 className="text-lg font-semibold">{uiText("Subscriptions")}</h1>
+        <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{uiText("What leaves every month whether you do anything or not. These are commitments, not transactions — the charges themselves arrive with your statement and are counted there, so nothing on this page is added to your balances or your spending totals.")}</p>
       </div>
 
       <DueSubscriptionCharges charges={due.charges} accounts={due.accounts} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)]">Committed each month</div>
+          <div className="text-xs text-[var(--muted)]">{uiText("Committed each month")}</div>
           <div className="text-2xl font-semibold mt-1">
             <Money value={totals.monthly} currency={totals.baseCurrency} />
           </div>
           <div className="text-xs text-[var(--muted)] mt-1">
-            {totals.activeCount} active
-            {totals.inactiveCount > 0 && ` · ${totals.inactiveCount} cancelled`}
+            {totals.activeCount}{uiText(" active")}{totals.inactiveCount > 0 && ` · ${totals.inactiveCount} cancelled`}
           </div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)]">Over a year</div>
+          <div className="text-xs text-[var(--muted)]">{uiText("Over a year")}</div>
           <div className="text-2xl font-semibold mt-1">
             <Money value={totals.yearly} currency={totals.baseCurrency} />
           </div>
-          <div className="text-xs text-[var(--muted)] mt-1">at today&apos;s prices</div>
+          <div className="text-xs text-[var(--muted)] mt-1">{uiText("at today's prices")}</div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)]">Most expensive</div>
+          <div className="text-xs text-[var(--muted)]">{uiText("Most expensive")}</div>
           <div className="text-2xl font-semibold mt-1"><span translate="no">{active[0]?.name ?? "—"}</span></div>
           {active[0] && (
             <div className="text-xs text-[var(--muted)] mt-1">
-              <span translate="no">{fmt(active[0].yearly, active[0].currency)}</span> a year
-            </div>
+              <span translate="no">{fmt(active[0].yearly, active[0].currency)}</span>{uiText(" a year")}</div>
           )}
         </div>
       </div>
 
       {totals.unconverted.length > 0 && (
-        <div className="card p-3 text-xs" style={{ borderColor: "var(--amber)" }}>
-          Left out of the totals: {totals.unconverted.join(", ")} — no exchange rate yet. Refresh rates
-          in Settings and these will be included.
-        </div>
+        <div className="card p-3 text-xs" style={{ borderColor: "var(--amber)" }}>{uiText("Left out of the totals: ")}{totals.unconverted.join(", ")}{uiText(" — no exchange rate yet. Refresh rates in Settings and these will be included.")}</div>
       )}
 
       <Section
@@ -86,20 +79,18 @@ export default async function SubscriptionsPage() {
         summary={`${active.length} ${active.length === 1 ? "subscription" : "subscriptions"}`}
       >
         {active.length === 0 ? (
-          <div className="text-sm text-[var(--muted)] py-6 text-center">
-            Nothing here yet. Add the ones you already pay — streaming, storage, software, gym.
-          </div>
+          <div className="text-sm text-[var(--muted)] py-6 text-center">{uiText("Nothing here yet. Add the ones you already pay — streaming, storage, software, gym.")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th className="text-right">Each charge</th>
-                  <th>Every</th>
-                  <th className="text-right">Per year</th>
-                  <th>Next charge</th>
-                  <th>Account</th>
+                  <th>{uiText("Name")}</th>
+                  <th className="text-right">{uiText("Each charge")}</th>
+                  <th>{uiText("Every")}</th>
+                  <th className="text-right">{uiText("Per year")}</th>
+                  <th>{uiText("Next charge")}</th>
+                  <th>{uiText("Account")}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -131,7 +122,7 @@ export default async function SubscriptionsPage() {
                                 s.daysAway <= 3 ? "text-[var(--amber)] ml-1" : "text-[var(--muted)] ml-1"
                               }
                             >
-                              ({s.daysAway === 0 ? "today" : `in ${s.daysAway}d`})
+                              ({s.daysAway === 0 ? uiText("today") : uiText("in {0}d", { "0": s.daysAway })})
                             </span>
                           )}
                         </>
@@ -143,9 +134,7 @@ export default async function SubscriptionsPage() {
                     <td className="text-right">
                       <form action={toggleSubscription}>
                         <input type="hidden" name="id" value={s.id} />
-                        <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
-                          Cancelled it
-                        </button>
+                        <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Cancelled it")}</button>
                       </form>
                     </td>
                   </tr>
@@ -157,32 +146,26 @@ export default async function SubscriptionsPage() {
       </Section>
 
       {cancelled.length > 0 && (
-        <Section title="Cancelled" summary={`${cancelled.length} stopped`}>
-          <p className="text-xs text-[var(--muted)] mb-3">
-            Kept on purpose: this is the record of what you stopped paying, and it&apos;s worth
-            re-checking your statement in a month to confirm the charges really stopped.
-          </p>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+        <Section title="Cancelled" summary={uiText("{0} stopped", { "0": cancelled.length })}>
+          <p className="text-xs text-[var(--muted)] mb-3">{uiText("Kept on purpose: this is the record of what you stopped paying, and it's worth re-checking your statement in a month to confirm the charges really stopped.")}</p>
+          <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
             <tbody>
               {cancelled.map((s) => (
                 <tr key={s.id} style={{ opacity: 0.6 }}>
                   <td><span translate="no">{s.name}</span></td>
                   <td className="text-right">
-                    <Money value={s.yearly} currency={s.currency} /> / year saved
-                  </td>
+                    <Money value={s.yearly} currency={s.currency} />{uiText(" / year saved")}</td>
                   <td className="text-right">
                     <form action={toggleSubscription}>
                       <input type="hidden" name="id" value={s.id} />
-                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
-                        Resume
-                      </button>
+                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Resume")}</button>
                     </form>
                   </td>
                   <td className="text-right">
                     <form action={deleteSubscription}>
                       <input type="hidden" name="id" value={s.id} />
                       <ConfirmSubmitButton
-                        label="Delete"
+                        label={uiText("Delete")}
                         confirmMessage={`Delete "${s.name}" entirely? The record that you used to pay it goes too.`}
                       />
                     </form>
@@ -196,7 +179,7 @@ export default async function SubscriptionsPage() {
 
       <Section title="Add a subscription" defaultOpen className="max-w-2xl">
         <form action={createSubscription} className="space-y-3">
-          <input name="name" placeholder="Name (e.g. Netflix)" className="input" required />
+          <input name="name" placeholder={uiText("Name (e.g. Netflix)")} className="input" required />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <input
@@ -204,7 +187,7 @@ export default async function SubscriptionsPage() {
               type="number"
               step="0.01"
               min="0.01"
-              placeholder="Amount per charge"
+              placeholder={uiText("Amount per charge")}
               className="input"
               required
             />
@@ -218,7 +201,7 @@ export default async function SubscriptionsPage() {
             <select name="cadence" className="input" defaultValue="monthly">
               {CADENCES.map((c) => (
                 <option key={c.value} value={c.value}>
-                  {c.label}
+                  {uiText(c.label ?? "")}
                 </option>
               ))}
             </select>
@@ -226,7 +209,7 @@ export default async function SubscriptionsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <select name="accountId" className="input" defaultValue="">
-              <option value="">Account — optional</option>
+              <option value="">{uiText("Account — optional")}</option>
               {accounts.map((a) => (
                 <option translate="no" key={a.id} value={a.id}>
                   {a.name}
@@ -234,7 +217,7 @@ export default async function SubscriptionsPage() {
               ))}
             </select>
             <select name="categoryId" className="input" defaultValue="">
-              <option value="">Category — optional</option>
+              <option value="">{uiText("Category — optional")}</option>
               {expenseCategories.map((c) => (
                 <option translate="no" key={c.id} value={c.id}>
                   {c.name}
@@ -244,15 +227,10 @@ export default async function SubscriptionsPage() {
             <input name="nextChargeAt" type="date" className="input" />
           </div>
 
-          <input name="notes" placeholder="Notes — optional" className="input" />
+          <input name="notes" placeholder={uiText("Notes — optional")} className="input" />
 
-          <button type="submit" className="btn w-full">
-            Add
-          </button>
-          <p className="text-xs text-[var(--muted)]">
-            The date is the next time you expect to be charged. It rolls forward on its own, so you set
-            it once — leave it blank if you don&apos;t know and the cost still counts.
-          </p>
+          <button type="submit" className="btn w-full">{uiText("Add")}</button>
+          <p className="text-xs text-[var(--muted)]">{uiText("The date is the next time you expect to be charged. It rolls forward on its own, so you set it once — leave it blank if you don't know and the cost still counts.")}</p>
         </form>
       </Section>
     </div>

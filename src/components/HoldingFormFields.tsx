@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import PlaylistPicker from "@/components/PlaylistPicker";
 import { useState } from "react";
 import {
@@ -48,6 +49,7 @@ export default function HoldingFormFields({
   defaultPlaylistIds?: string[];
   showPriceFields?: boolean;
 }) {
+  const uiText = useText();
   const [assetType, setAssetType] = useState(defaultAssetType);
   const isStable = assetType === "stablecoin" || assetType === "cash";
   const yieldLabel = annualYieldLabel(assetType);
@@ -62,10 +64,10 @@ export default function HoldingFormFields({
           value={assetType}
           onChange={(e) => setAssetType(e.target.value)}
         >
-          <option value="">Asset type — unset</option>
+          <option value="">{uiText("Asset type — unset")}</option>
           {ASSET_TYPES.map((t) => (
             <option key={t.value} value={t.value}>
-              {t.label}
+              {uiText(t.label)}
             </option>
           ))}
         </select>
@@ -73,7 +75,7 @@ export default function HoldingFormFields({
           <select name="direction" className="input" defaultValue={defaultDirection}>
             {DIRECTIONS.map((d) => (
               <option key={d.value} value={d.value}>
-                {d.label}
+                {uiText(d.label ?? "")}
               </option>
             ))}
           </select>
@@ -89,9 +91,7 @@ export default function HoldingFormFields({
           <input type="hidden" name="riskLevel" value="low" />
           <input type="hidden" name="liquidity" value="high" />
           <input type="hidden" name="expectedReturn" value="conservative" />
-          <p className="text-xs text-[var(--muted)]">
-            Stablecoin: priced 1:1, so no entry price, risk or playlist is needed — just the amount you hold.
-          </p>
+          <p className="text-xs text-[var(--muted)]">{uiText("Stablecoin: priced 1:1, so no entry price, risk or playlist is needed — just the amount you hold.")}</p>
         </>
       )}
 
@@ -103,7 +103,7 @@ export default function HoldingFormFields({
                 name="avgEntryPrice"
                 type="number"
                 step="0.0001"
-                placeholder={handValued ? "What you paid" : "Avg entry price"}
+                placeholder={handValued ? uiText("What you paid") : uiText("Avg entry price")}
                 className="input"
                 required
               />
@@ -111,53 +111,48 @@ export default function HoldingFormFields({
                 name="currentPrice"
                 type="number"
                 step="0.0001"
-                placeholder={handValued ? "What it is worth now" : "Current price"}
+                placeholder={handValued ? uiText("What it is worth now") : uiText("Current price")}
                 className="input"
               />
             </div>
           )}
           {showPriceFields && handValued && (
-            <p className="text-xs text-[var(--muted)]">
-              No market prices this, so its value is what you enter, dated today. For one flat,
-              painting, watch or car, use quantity 1 and whole amounts; for startup shares, the
-              number of shares and the price per share of the last round. The app will ask you to
-              look at the value again when it gets old.
-            </p>
+            <p className="text-xs text-[var(--muted)]">{uiText("No market prices this, so its value is what you enter, dated today. For one flat, painting, watch or car, use quantity 1 and whole amounts; for startup shares, the number of shares and the price per share of the last round. The app will ask you to look at the value again when it gets old.")}</p>
           )}
 
           {playlistOptions.length > 0 && <PlaylistPicker playlists={playlistOptions} selected={defaultPlaylistIds} />}
 
-          <div className="pt-1 text-xs text-[var(--muted)]">Asset allocation tags (optional)</div>
+          <div className="pt-1 text-xs text-[var(--muted)]">{uiText("Asset allocation tags (optional)")}</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <select name="riskLevel" className="input" defaultValue={defaultRisk}>
-              <option value="">Risk — unset</option>
+              <option value="">{uiText("Risk — unset")}</option>
               {RISK_LEVELS.map((r) => (
                 <option key={r.value} value={r.value}>
-                  {r.label}
+                  {uiText(r.label ?? "")}
                 </option>
               ))}
             </select>
             <select name="timeHorizon" className="input" defaultValue={defaultTimeHorizon}>
-              <option value="">Time horizon — unset</option>
+              <option value="">{uiText("Time horizon — unset")}</option>
               {TIME_HORIZONS.map((t) => (
                 <option key={t.value} value={t.value}>
-                  {t.label}
+                  {uiText(t.label)}
                 </option>
               ))}
             </select>
             <select name="expectedReturn" className="input" defaultValue={defaultExpectedReturn}>
-              <option value="">Expected return — unset</option>
+              <option value="">{uiText("Expected return — unset")}</option>
               {EXPECTED_RETURNS.map((r) => (
                 <option key={r.value} value={r.value}>
-                  {r.label}
+                  {uiText(r.label ?? "")}
                 </option>
               ))}
             </select>
             <select name="liquidity" className="input" defaultValue={defaultLiquidity}>
-              <option value="">Liquidity — unset</option>
+              <option value="">{uiText("Liquidity — unset")}</option>
               {LIQUIDITY_LEVELS.map((l) => (
                 <option key={l.value} value={l.value}>
-                  {l.label}
+                  {uiText(l.label ?? "")}
                 </option>
               ))}
             </select>
@@ -167,13 +162,13 @@ export default function HoldingFormFields({
 
       {yieldLabel && (
         <label className="block text-xs">
-          <span className="text-[var(--muted)]">{yieldLabel} %</span>
+          <span className="text-[var(--muted)]">{uiText(yieldLabel ?? "")} %</span>
           <input
             name="apr"
             type="number"
             step="0.0001"
             defaultValue={defaultApr}
-            placeholder="e.g. 4.5 for 4.5% a year"
+            placeholder={uiText("e.g. 4.5 for 4.5% a year")}
             className="input mt-1"
           />
         </label>

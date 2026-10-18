@@ -1,3 +1,6 @@
+"use client";
+
+import { useText } from "@/components/useText";
 /**
  * The playlists a position, a trade or a watched instrument is in: one box per
  * playlist, any number ticked. Sends `playlistIdsSent` too, so the action can
@@ -17,12 +20,13 @@ export default function PlaylistPicker({
   label?: string;
   compact?: boolean;
 }) {
+  const uiText = useText();
   return (
     <fieldset className={compact ? "space-y-1" : "space-y-1.5"}>
       <input type="hidden" name="playlistIdsSent" value="1" />
-      <legend className={compact ? "text-xs" : "text-xs text-[var(--muted)]"}>{label}</legend>
+      <legend className={compact ? "text-xs" : "text-xs text-[var(--muted)]"}>{uiText(label ?? "")}</legend>
       {playlists.length === 0 ? (
-        <p className="text-xs text-[var(--muted)]">No playlists yet — create one in Investments → Playlists.</p>
+        <p className="text-xs text-[var(--muted)]">{uiText("No playlists yet — create one in Investments → Playlists.")}</p>
       ) : (
         <div className="flex flex-wrap gap-x-4 gap-y-1">
           {playlists.map((p) => (

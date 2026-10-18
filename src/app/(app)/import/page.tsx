@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listCategories } from "@/actions/transactions";
 import { listAccountsWithState } from "@/actions/accounts";
@@ -50,6 +51,7 @@ async function importStatementAction(formData: FormData) {
 }
 
 export default async function ImportPage() {
+  const uiText = await textForRequest();
   const [categories, accounts, baseCurrency, importHistory, imported] = await Promise.all([
     listCategories(),
     listAccountsWithState(),
@@ -61,13 +63,8 @@ export default async function ImportPage() {
   return (
     <div className="space-y-2 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-lg font-semibold">Import a statement</h1>
-        <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
-          Every bank writes a different file, and reading them directly needs an Open Banking licence.
-          So instead of chasing formats, the app states one format and hands you an instruction that
-          converts anything into it — your bank&apos;s CSV, text copied out of a PDF, even a table off
-          the screen.
-        </p>
+        <h1 className="text-lg font-semibold">{uiText("Import a statement")}</h1>
+        <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{uiText("Every bank writes a different file, and reading them directly needs an Open Banking licence. So instead of chasing formats, the app states one format and hands you an instruction that converts anything into it — your bank's CSV, text copied out of a PDF, even a table off the screen.")}</p>
       </div>
 
       {/* A broker export is a different animal: it has trades, dividends,
@@ -75,14 +72,9 @@ export default async function ImportPage() {
           flatten into anonymous income. It gets its own path. */}
       <Section
         title="Investment account? Import the broker statement instead"
-        summary="trades, dividends, interest and deposits"
+        summary={uiText("trades, dividends, interest and deposits")}
       >
-        <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">
-          The steps below are for a bank statement, where every row is money in or out. A broker
-          export also says what you bought, what was paid to you, and how much you deposited — and
-          that last one is what makes it possible to tell a gain from a top-up. Nothing here is
-          flattened into &quot;income&quot;.
-        </p>
+        <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">{uiText("The steps below are for a bank statement, where every row is money in or out. A broker export also says what you bought, what was paid to you, and how much you deposited — and that last one is what makes it possible to tell a gain from a top-up. Nothing here is flattened into \"income\".")}</p>
         <BrokerStatementForm
           action={importStatementAction}
           accounts={accounts.map((a) => ({
@@ -99,8 +91,8 @@ export default async function ImportPage() {
             transactions and no instruments at all. */}
         {imported.length > 0 ? (
           <div className="mt-4 pt-4 border-t border-[var(--border)]">
-            <div className="text-xs font-medium mb-2">Statements already imported</div>
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full text-xs">
+            <div className="text-xs font-medium mb-2">{uiText("Statements already imported")}</div>
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="w-full text-xs">
               <tbody>
                 {imported.map((s) => (
                   <tr key={s.accountId} className="border-t border-[var(--border)] first:border-0">
@@ -108,34 +100,28 @@ export default async function ImportPage() {
                     <td className="py-1.5 text-[var(--muted)]">
                       {s.from} → {s.to}
                     </td>
-                    <td className="py-1.5 text-right tabular-nums">{s.rows} rows</td>
+                    <td className="py-1.5 text-right tabular-nums">{s.rows}{uiText(" rows")}</td>
                     <td className="py-1.5 text-right tabular-nums">
                       {s.instruments === 0 ? (
-                        <span style={{ color: "var(--amber)" }}>no instruments</span>
+                        <span style={{ color: "var(--amber)" }}>{uiText("no instruments")}</span>
                       ) : (
-                        `${s.instruments} instrument${s.instruments === 1 ? "" : "s"}`
+                        uiText("{0} instrument{1}", { "0": s.instruments, "1": s.instruments === 1 ? "" : "s" })
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </ResponsiveTable></div>
-            <p className="text-[10px] text-[var(--muted)] mt-2 leading-snug">
-              An account missing from this list has no broker statement, whatever else was imported
-              for it. A statement with no instruments has no positions to rebuild — usually a cash
-              or card export rather than the transaction one.
-            </p>
+            <p className="text-[10px] text-[var(--muted)] mt-2 leading-snug">{uiText("An account missing from this list has no broker statement, whatever else was imported for it. A statement with no instruments has no positions to rebuild — usually a cash or card export rather than the transaction one.")}</p>
           </div>
         ) : (
-          <p className="text-[10px] text-[var(--muted)] mt-3">
-            No broker statement has been imported yet.
-          </p>
+          <p className="text-[10px] text-[var(--muted)] mt-3">{uiText("No broker statement has been imported yet.")}</p>
         )}
       </Section>
 
       <Step
         n={1}
-        title="Copy the instruction"
+        title={uiText("Copy the instruction")}
         subtitle="It already knows your categories and your currency, so you don't have to explain anything."
       >
         <StatementPrompt
@@ -147,25 +133,20 @@ export default async function ImportPage() {
 
       <Step
         n={2}
-        title="Paste it into any AI, along with your statement"
+        title={uiText("Paste it into any AI, along with your statement")}
         subtitle="Then save the answer as a .csv file. If it came wrapped in ``` fences, delete those two lines."
       >
         <div className="card p-4 text-xs text-[var(--muted)] space-y-2">
-          <p>
-            Nothing is sent anywhere by this app — you do the copying. But it is still your bank data
-            going to a third party, so decide that deliberately.{" "}
-            <span className="text-[var(--amber)]">Removing account numbers first costs nothing.</span>
+          <p>{uiText("Nothing is sent anywhere by this app — you do the copying. But it is still your bank data going to a third party, so decide that deliberately.")}{" "}
+            <span className="text-[var(--amber)]">{uiText("Removing account numbers first costs nothing.")}</span>
           </p>
-          <p>
-            If you&apos;d rather not, skip this step entirely: upload your bank&apos;s own CSV below and
-            map the columns by hand.
-          </p>
+          <p>{uiText("If you'd rather not, skip this step entirely: upload your bank's own CSV below and map the columns by hand.")}</p>
         </div>
       </Step>
 
       <Step
         n={3}
-        title="Upload it"
+        title={uiText("Upload it")}
         subtitle="You'll see every row and what will happen to it before anything is written."
       >
         <div className="card p-4">
@@ -175,19 +156,16 @@ export default async function ImportPage() {
 
       {importHistory.length > 0 && (
         <div className="card p-4 ml-11">
-          <div className="text-sm font-medium mb-1">Past imports</div>
-          <p className="text-xs text-[var(--muted)] mb-3">
-            Undo removes every transaction that came from that file. This is why the import is recorded
-            at all — a bad mapping shouldn&apos;t mean deleting rows by hand.
-          </p>
+          <div className="text-sm font-medium mb-1">{uiText("Past imports")}</div>
+          <p className="text-xs text-[var(--muted)] mb-3">{uiText("Undo removes every transaction that came from that file. This is why the import is recorded at all — a bad mapping shouldn't mean deleting rows by hand.")}</p>
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
               <thead>
                 <tr>
-                  <th>When</th>
-                  <th>File</th>
-                  <th>Account</th>
-                  <th className="text-right">Rows</th>
+                  <th>{uiText("When")}</th>
+                  <th>{uiText("File")}</th>
+                  <th>{uiText("Account")}</th>
+                  <th className="text-right">{uiText("Rows")}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -202,7 +180,7 @@ export default async function ImportPage() {
                       <form action={undoImport}>
                         <input type="hidden" name="importId" value={i.id} />
                         <ConfirmSubmitButton
-                          label="Undo"
+                          label={uiText("Undo")}
                           confirmMessage={`Remove the ${i.rowsImported} transactions imported from "${i.fileName}"?`}
                         />
                       </form>

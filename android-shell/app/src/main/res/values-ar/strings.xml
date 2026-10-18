@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">سجل النفقات أو الدخل</string>
+    <string name="widget_expense" formatted="false">- النفقات</string>
+    <string name="widget_income" formatted="false">+ الدخل</string>
+    <string name="shortcut_expense" formatted="false">حساب</string>
+    <string name="shortcut_expense_long" formatted="false">سجل النفقات</string>
+    <string name="shortcut_income" formatted="false">الدخل</string>
+    <string name="shortcut_income_long" formatted="false">سجل الدخل</string>
+    <string name="widget_dashboard_description" formatted="false">صافي القيمة، هذا الشهر والخط مع مرور الوقت</string>
+    <string name="widget_net_worth_description" formatted="false">صافي القيمة مع مرور الوقت، وإلى أي مدى انتقلت</string>
+    <string name="widget_where_money_description" formatted="false">أين المال، مثل الكعك مع النسب المئوية</string>
+    <string name="widget_cash_flow_description" formatted="false">هذا الشهر: دخول المال، خروج المال، وما بقي</string>
+    <string name="widget_investments_description" formatted="false">قيمة المحفظة والربح والخسارة غير المحققة وكل مركز مع الربح والخسارة باليورو والنسبة المئوية</string>
+    <string name="widget_allocation_description" formatted="false">المحفظة حسب نوع الأصول، على شكل كعكة مع النسب المئوية</string>
+    <string name="widget_movers_description" formatted="false">أفضل وأسوأ المواقف من حيث العائد على التكلفة</string>
+    <string name="widget_dividends_description" formatted="false">تم استلام الأرباح هذا العام والدفعة المتوقعة التالية</string>
+    <string name="widget_open_trades_description" formatted="false">المراكز المفتوحة ذات الرافعة المالية: الربح والخسارة غير المحققة والهامش وكل صفقة</string>
+    <string name="ui_registo_r_pido" formatted="false">التسجيل سريع</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">صافي القيمة</string>
+    <string name="ui_where_the_money_is" formatted="false">أين المال؟</string>
+    <string name="ui_cash_flow" formatted="false">المعاملات</string>
+    <string name="ui_investments" formatted="false">الاستثمارات</string>
+    <string name="ui_allocation" formatted="false">التخصيص</string>
+    <string name="ui_winners_losers" formatted="false">الفائزون والخاسرون</string>
+    <string name="ui_dividends" formatted="false">توزيعات الأرباح</string>
+    <string name="ui_open_trades" formatted="false">الصفقات المفتوحة</string>
+    <string name="ui_record_expense" formatted="false">سجل النفقات</string>
+    <string name="ui_refresh" formatted="false">تحديث</string>
+    <string name="ui_chart" formatted="false">الرسم البياني</string>
+</resources>

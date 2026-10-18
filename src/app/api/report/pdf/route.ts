@@ -2,6 +2,9 @@ import type { NextRequest } from "next/server";
 import { loadReport } from "@/actions/reports";
 import { REPORT_TITLE, reportFileName } from "@/lib/reports/document";
 import { renderReportPdf } from "@/lib/reports/pdf";
+import { textForRequest } from "@/actions/pageLanguage";
+import { currentLanguage } from "@/actions/language";
+import { reportFonts } from "@/actions/reportFonts";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +17,14 @@ export const dynamic = "force-dynamic";
  * with the signed-in person's rows, so nobody can download anyone else's.
  */
 export async function GET(request: NextRequest) {
+  const translate = await textForRequest();
+  const fonts = await reportFonts(await currentLanguage());
   const report = await loadReport(Object.fromEntries(request.nextUrl.searchParams));
   const bytes = await renderReportPdf({
-    title: REPORT_TITLE[report.kind],
-    label: report.label,
+    title: translate(REPORT_TITLE[report.kind]),
+    label: translate(report.label),
+    translate,
+    fonts,
     from: report.from,
     to: report.to,
     currency: report.currency,

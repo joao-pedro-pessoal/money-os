@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import FilterLink from "./FilterLink";
 
@@ -30,6 +31,7 @@ export default function SavedViews({
   saveAction: (formData: FormData) => void;
   deleteAction: (formData: FormData) => void;
 }) {
+  const uiText = useText();
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(suggestedName);
 
@@ -54,8 +56,8 @@ export default function SavedViews({
               <button
                 type="submit"
                 className="opacity-50 hover:opacity-100 leading-none"
-                aria-label={`Remove ${v.name}`}
-                title={`Remove ${v.name}`}
+                aria-label={uiText("Remove {0}", { "0": v.name })}
+                title={uiText("Remove {0}", { "0": v.name })}
               >
                 ×
               </button>
@@ -65,8 +67,7 @@ export default function SavedViews({
       })}
 
       {alreadySaved ? (
-        <span className="text-xs text-[var(--muted)]">
-          This view is saved as &quot;<span translate="no">{alreadySaved.name}</span>&quot;
+        <span className="text-xs text-[var(--muted)]">{uiText("This view is saved as \"")}<span translate="no">{alreadySaved.name}</span>&quot;
         </span>
       ) : saving ? (
         <form action={saveAction} className="flex items-center gap-1">
@@ -80,25 +81,19 @@ export default function SavedViews({
             autoFocus
             required
           />
-          <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
-            Save
-          </button>
+          <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Save")}</button>
           <button
             type="button"
             onClick={() => setSaving(false)}
             className="text-xs text-[var(--muted)] hover:underline"
-          >
-            Cancel
-          </button>
+          >{uiText("Cancel")}</button>
         </form>
       ) : (
         <button
           type="button"
           onClick={() => setSaving(true)}
           className="text-xs text-[var(--accent)] hover:underline"
-        >
-          + Save this view
-        </button>
+        >{uiText("+ Save this view")}</button>
       )}
     </div>
   );

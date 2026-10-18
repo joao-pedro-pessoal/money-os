@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 
 /**
@@ -21,6 +22,7 @@ export default function ReportActions({
   pdfHref: string;
   pdfFilename: string;
 }) {
+  const uiText = useText();
   const [making, setMaking] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -57,16 +59,12 @@ export default function ReportActions({
 
   return (
     <div className="report-actions flex gap-2 flex-wrap items-center">
-      <button type="button" className="btn" onClick={downloadCsv}>
-        Download CSV
-      </button>
+      <button type="button" className="btn" onClick={downloadCsv}>{uiText("Download CSV")}</button>
       <button type="button" className="btn" onClick={downloadPdf} disabled={making} aria-busy={making}>
-        {making ? "Making the PDF…" : "Download PDF"}
+        {making ? uiText("Making the PDF…") : uiText("Download PDF")}
       </button>
       {failed && (
-        <span className="text-xs text-[var(--red)]" role="alert">
-          The PDF could not be made. Reload the page and try again.
-        </span>
+        <span className="text-xs text-[var(--red)]" role="alert">{uiText("The PDF could not be made. Reload the page and try again.")}</span>
       )}
     </div>
   );

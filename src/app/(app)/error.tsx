@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useEffect } from "react";
 
 /**
@@ -33,6 +34,7 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const uiText = useText();
   useEffect(() => {
     // Still worth having in the terminal — this replaces the page, not the log.
     console.error(error);
@@ -43,37 +45,28 @@ export default function AppError({
   return (
     <div className="card p-6 max-w-lg mx-auto mt-12 space-y-4">
       <div className="text-sm font-medium">
-        {offline ? "Can't reach the database right now" : "Something went wrong on this page"}
+        {offline ? uiText("Can't reach the database right now") : uiText("Something went wrong on this page")}
       </div>
 
       {offline ? (
         <div className="text-xs text-[var(--muted)] space-y-2">
-          <p>
-            The app is fine and nothing has been lost — it just couldn&apos;t look anything up.
-            This is almost always the connection rather than the data: a laptop that has just
-            woken, a Wi-Fi network changing, or a VPN connecting.
-          </p>
-          <p>Check you are online and try again. If it keeps failing, the database host may be down.</p>
+          <p>{uiText("The app is fine and nothing has been lost — it just couldn't look anything up. This is almost always the connection rather than the data: a laptop that has just woken, a Wi-Fi network changing, or a VPN connecting.")}</p>
+          <p>{uiText("Check you are online and try again. If it keeps failing, the database host may be down.")}</p>
         </div>
       ) : (
         <div className="text-xs text-[var(--muted)] space-y-2">
-          <p>
-            This page hit an error it didn&apos;t expect. Your data is untouched — nothing here
-            writes anything.
-          </p>
+          <p>{uiText("This page hit an error it didn't expect. Your data is untouched — nothing here writes anything.")}</p>
           {/* The message, not the stack. Enough to report, not a wall of SQL. */}
           {error.message && (
             <p className="font-mono text-[10px] break-words text-[var(--foreground)]">
-              {error.message.slice(0, 300)}
+              {uiText(error.message.slice(0, 300) ?? "")}
             </p>
           )}
-          {error.digest && <p className="text-[10px]">Reference: {error.digest}</p>}
+          {error.digest && <p className="text-[10px]">{uiText("Reference: ")}{error.digest}</p>}
         </div>
       )}
 
-      <button type="button" onClick={reset} className="btn">
-        Try again
-      </button>
+      <button type="button" onClick={reset} className="btn">{uiText("Try again")}</button>
     </div>
   );
 }

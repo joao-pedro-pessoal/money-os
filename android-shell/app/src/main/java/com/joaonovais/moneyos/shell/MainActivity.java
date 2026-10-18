@@ -219,7 +219,7 @@ public class MainActivity extends Activity {
                 } catch (ActivityNotFoundException e) {
                     pendingFiles = null;
                     callback.onReceiveValue(null);
-                    toast("Não há nenhuma app para escolher ficheiros.");
+                    toast(LocalText.text(MainActivity.this, "No app is available to choose files."));
                 }
                 return true;
             }
@@ -253,7 +253,7 @@ public class MainActivity extends Activity {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, url));
         } catch (ActivityNotFoundException e) {
-            toast("Não há nenhuma app para abrir esta ligação.");
+            toast(LocalText.text(MainActivity.this, "No app is available to open this link."));
         }
     }
 
@@ -309,9 +309,9 @@ public class MainActivity extends Activity {
                 values.clear();
                 values.put(MediaStore.Downloads.IS_PENDING, 0);
                 getContentResolver().update(item, values, null, null);
-                runOnUiThread(() -> toast("Guardado em Transferências: " + fileName));
+                runOnUiThread(() -> toast(LocalText.text(MainActivity.this, "Saved to Downloads: ") + fileName));
             } catch (IOException | RuntimeException e) {
-                runOnUiThread(() -> toast("Não foi possível guardar " + fileName + "."));
+                runOnUiThread(() -> toast(LocalText.text(MainActivity.this, "Could not save ") + fileName + "."));
             }
         }
     }
@@ -353,8 +353,7 @@ public class MainActivity extends Activity {
         if (pendingQuick == null || web == null || !pageReady || !address.equals(pageOrigin)) return;
         String kind = QuickEntry.INCOME.equals(pendingQuick) ? QuickEntry.INCOME : QuickEntry.EXPENSE;
         pendingQuick = null;
-        web.evaluateJavascript("window.__moneyOsQuickEntry='" + kind + "';"
-                + "window.dispatchEvent(new CustomEvent('money-os:quick-entry',{detail:'" + kind + "'}));", null);
+        web.evaluateJavascript("window.__moneyOsQuickEntry='" + kind + "';window.dispatchEvent(new CustomEvent('money-os:quick-entry',{detail:'" + kind + "'}));", null);
     }
 
     private void setQuickNotification(boolean enabled) {
@@ -414,7 +413,7 @@ public class MainActivity extends Activity {
 
     /** Refused now or earlier: only the system settings can allow it. */
     private void sendToNotificationSettings() {
-        toast("As notificações da Money OS estão desligadas. Ativa-as nas definições do Android.");
+        toast(LocalText.text(MainActivity.this, "Money OS notifications are disabled. Enable them in Android settings."));
         try {
             startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                     .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
@@ -490,10 +489,8 @@ public class MainActivity extends Activity {
     private void showAddressForm(String problem, String typed) {
         LinearLayout box = column();
         box.addView(text("Money OS", 28, ACCENT, true));
-        box.addView(text("Escreve o endereço do Money OS no teu computador. Aparece na janela "
-                + "onde o site está a correr, por exemplo http://192.168.1.20:3000.", 16, INK, false));
-        box.addView(text("O telemóvel tem de estar no mesmo Wi-Fi que o computador, e o site tem "
-                + "de estar a correr.", 14, MUTED, false));
+        box.addView(text(LocalText.text(MainActivity.this, "Enter the Money OS address shown on your computer, for example http://192.168.1.20:3000."), 16, INK, false));
+        box.addView(text(LocalText.text(MainActivity.this, "Your phone and computer must use the same Wi-Fi, and the site must be running."), 14, MUTED, false));
 
         EditText input = new EditText(this);
         input.setSingleLine(true);
@@ -508,12 +505,12 @@ public class MainActivity extends Activity {
 
         if (problem != null) box.addView(text(problem, 14, WARNING, false));
 
-        Button connect = button("Ligar");
+        Button connect = button(LocalText.text(MainActivity.this, "Connect"));
         connect.setOnClickListener(v -> {
             String entered = input.getText().toString();
             String origin = originOf(entered);
             if (origin == null) {
-                showAddressForm("Esse endereço não é válido. Escreve algo como http://192.168.1.20:3000.", entered);
+                showAddressForm(LocalText.text(MainActivity.this, "This address is invalid. Enter an address such as http://192.168.1.20:3000."), entered);
                 return;
             }
             prefs().edit().putString(KEY_ADDRESS, origin).apply();
@@ -527,23 +524,21 @@ public class MainActivity extends Activity {
     private void showUnreachable(String detail) {
         if (web != null) web.setVisibility(View.INVISIBLE);
         LinearLayout box = column();
-        box.addView(text("Sem ligação ao Money OS", 24, INK, true));
-        box.addView(text("Não consegui abrir " + address + ".", 16, INK, false));
+        box.addView(text(LocalText.text(MainActivity.this, "No connection to Money OS"), 24, INK, true));
+        box.addView(text(LocalText.text(MainActivity.this, "Could not open ") + address + ".", 16, INK, false));
         if (Site.fixedAddress()) {
-            box.addView(text("Confirma que o telemóvel tem internet, por Wi-Fi ou dados móveis, e tenta "
-                    + "outra vez.", 14, MUTED, false));
+            box.addView(text(LocalText.text(MainActivity.this, "Check your Wi-Fi or mobile data connection and try again."), 14, MUTED, false));
         } else {
-            box.addView(text("Confirma que o computador está ligado, que o site está a correr e que o "
-                    + "telemóvel está no mesmo Wi-Fi. Se o endereço do computador mudou, escreve o novo.",
+            box.addView(text(LocalText.text(MainActivity.this, "Check that your computer and the site are running and your phone uses the same Wi-Fi. Update the address if it has changed."),
                     14, MUTED, false));
         }
         box.addView(text(detail, 12, MUTED, false));
-        Button retry = button("Tentar outra vez");
+        Button retry = button(LocalText.text(MainActivity.this, "Try again"));
         retry.setOnClickListener(v -> openSite(address, null));
         box.addView(retry);
         // The store build's address is the published site's: there is nothing to change it to.
         if (!Site.fixedAddress()) {
-            Button change = button("Mudar endereço");
+            Button change = button(LocalText.text(MainActivity.this, "Change address"));
             change.setOnClickListener(v -> showAddressForm(null, address));
             box.addView(change);
         }

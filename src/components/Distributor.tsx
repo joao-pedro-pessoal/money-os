@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -33,6 +34,7 @@ export default function Distributor({
   defaultShares: Share[];
   applyAction: (formData: FormData) => void;
 }) {
+  const uiText = useText();
   const [amount, setAmount] = useState("");
   const [strategy, setStrategy] = useState<Strategy>("priority");
   const [shares, setShares] = useState<Share[]>(defaultShares);
@@ -76,11 +78,11 @@ export default function Distributor({
               color: strategy === s.value ? "var(--accent)" : "var(--muted)",
             }}
           >
-            {s.label}
+            {uiText(s.label ?? "")}
           </button>
         ))}
       </div>
-      <p className="text-xs text-[var(--muted)]">{active.help} Nothing moves until you apply it.</p>
+      <p className="text-xs text-[var(--muted)]">{uiText(active.help ?? "")}{uiText(" Nothing moves until you apply it.")}</p>
 
       <div className="flex gap-2">
         <input
@@ -92,7 +94,7 @@ export default function Distributor({
             setAmount(e.target.value);
             setPlan(null);
           }}
-          placeholder={`Amount to distribute (${fmt(available, currency)} free)`}
+          placeholder={uiText("Amount to distribute ({0} free)", { "0": fmt(available, currency) })}
           className="input"
         />
         <button
@@ -102,15 +104,12 @@ export default function Distributor({
           className="btn whitespace-nowrap"
           style={!valid || pending ? { opacity: 0.5 } : undefined}
         >
-          {pending ? "Working…" : "Plan it"}
+          {pending ? uiText("Working…") : uiText("Plan it")}
         </button>
       </div>
 
       {valid && value > available && (
-        <div className="text-xs text-[var(--amber)]">
-          That&apos;s more than the <span translate="no">{fmt(available, currency)}</span> of free cash you have. The plan will
-          show what can actually be funded.
-        </div>
+        <div className="text-xs text-[var(--amber)]">{uiText("That's more than the ")}<span translate="no">{fmt(available, currency)}</span>{uiText(" of free cash you have. The plan will show what can actually be funded.")}</div>
       )}
 
       {/* Editable shares. Touching one switches to "my own split", because the
@@ -118,7 +117,7 @@ export default function Distributor({
       {strategy !== "waterfall" && shares.length > 0 && (
         <div className="border border-[var(--border)] rounded-lg p-3 space-y-1">
           <div className="flex justify-between text-[10px] text-[var(--muted)] mb-1">
-            <span>Where each share goes</span>
+            <span>{uiText("Where each share goes")}</span>
             <span style={{ color: Math.abs(shareTotal - 100) > 0.01 ? "var(--amber)" : undefined }}>
               {shareTotal}%{Math.abs(shareTotal - 100) > 0.01 && " — will be scaled to 100"}
             </span>
@@ -156,9 +155,7 @@ export default function Distributor({
                 setPlan(null);
               }}
               className="text-[10px] text-[var(--accent)] hover:underline pt-1"
-            >
-              Back to the priority split
-            </button>
+            >{uiText("Back to the priority split")}</button>
           )}
         </div>
       )}
@@ -166,18 +163,16 @@ export default function Distributor({
       {plan && (
         <div className="space-y-3">
           {plan.sourcedMoves.length === 0 ? (
-            <div className="text-xs text-[var(--muted)] py-3">
-              Nothing to do — every goal with a target is already full.
-            </div>
+            <div className="text-xs text-[var(--muted)] py-3">{uiText("Nothing to do — every goal with a target is already full.")}</div>
           ) : (
             <div className="overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
                 <thead>
                   <tr>
-                    <th>Move</th>
-                    <th>From</th>
-                    <th>To</th>
-                    <th>Why</th>
+                    <th>{uiText("Move")}</th>
+                    <th>{uiText("From")}</th>
+                    <th>{uiText("To")}</th>
+                    <th>{uiText("Why")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -189,8 +184,8 @@ export default function Distributor({
                         <span translate="no">{m.bucketName}</span>
                         {m.completes && <span className="text-[var(--green)] ml-1">✓</span>}
                       </td>
-                      <td className="text-[var(--muted)] max-w-[18rem] truncate" title={m.reason}>
-                        {m.reason}
+                      <td className="text-[var(--muted)] max-w-[18rem] truncate" title={uiText(m.reason)}>
+                        {uiText(m.reason)}
                       </td>
                     </tr>
                   ))}
@@ -201,23 +196,19 @@ export default function Distributor({
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
             <span className="text-[var(--green)]">
-              <span translate="no">{fmt(plan.distributed, plan.baseCurrency)}</span> allocated
-            </span>
+              <span translate="no">{fmt(plan.distributed, plan.baseCurrency)}</span>{uiText(" allocated")}</span>
             {plan.leftOver > 0 && (
               <span className="text-[var(--muted)]">
-                <span translate="no">{fmt(plan.leftOver, plan.baseCurrency)}</span> left over — every goal is full
-              </span>
+                <span translate="no">{fmt(plan.leftOver, plan.baseCurrency)}</span>{uiText(" left over — every goal is full")}</span>
             )}
             {plan.unfunded > 0 && (
               <span className="text-[var(--amber)]">
-                <span translate="no">{fmt(plan.unfunded, plan.baseCurrency)}</span> couldn&apos;t be funded from free cash
-              </span>
+                <span translate="no">{fmt(plan.unfunded, plan.baseCurrency)}</span>{uiText(" couldn't be funded from free cash")}</span>
             )}
           </div>
 
           {plan.stillShort.length > 0 && (
-            <div className="text-xs text-[var(--muted)]">
-              Still short:{" "}
+            <div className="text-xs text-[var(--muted)]">{uiText("Still short:")}{" "}
               <span translate="no">{plan.stillShort
                 .slice(0, 4)
                 .map((s) => `${s.name} (${fmt(s.missing, plan.baseCurrency)})`)
@@ -242,13 +233,8 @@ export default function Distributor({
                   )
                     e.preventDefault();
                 }}
-              >
-                Apply these moves
-              </button>
-              <p className="text-xs text-[var(--muted)] mt-2">
-                This marks the money as reserved inside the accounts it already sits in. No real
-                transfer happens — do that at your bank if the goal lives elsewhere.
-              </p>
+              >{uiText("Apply these moves")}</button>
+              <p className="text-xs text-[var(--muted)] mt-2">{uiText("This marks the money as reserved inside the accounts it already sits in. No real transfer happens — do that at your bank if the goal lives elsewhere.")}</p>
             </form>
           )}
         </div>

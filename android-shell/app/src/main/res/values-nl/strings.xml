@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">Registreer een uitgave of inkomen</string>
+    <string name="widget_expense" formatted="false">− Kosten</string>
+    <string name="widget_income" formatted="false">+ Inkomen</string>
+    <string name="shortcut_expense" formatted="false">Kosten</string>
+    <string name="shortcut_expense_long" formatted="false">Kosten registreren</string>
+    <string name="shortcut_income" formatted="false">Inkomen</string>
+    <string name="shortcut_income_long" formatted="false">Recordinkomen</string>
+    <string name="widget_dashboard_description" formatted="false">Nettowaarde, deze maand en de lijn in de loop van de tijd</string>
+    <string name="widget_net_worth_description" formatted="false">Het nettovermogen in de loop van de tijd, en hoe ver het is geëvolueerd</string>
+    <string name="widget_where_money_description" formatted="false">Waar het geld is, als een donut met percentages</string>
+    <string name="widget_cash_flow_description" formatted="false">Deze maand: geld erin, geld eruit en wat er nog over is</string>
+    <string name="widget_investments_description" formatted="false">Portefeuillewaarde, ongerealiseerde winst-en-verliesrekening en elke positie met zijn winst-en-verliesrekening in euro\'s en procenten</string>
+    <string name="widget_allocation_description" formatted="false">De portefeuille per activatype, als een donut met percentages</string>
+    <string name="widget_movers_description" formatted="false">De beste en slechtste posities op basis van rendement op kosten</string>
+    <string name="widget_dividends_description" formatted="false">Ontvangen dividenden, dit jaar, en de volgende verwachte betaling</string>
+    <string name="widget_open_trades_description" formatted="false">Open hefboomposities: ongerealiseerde winst- en verliesrekening, marge en elke transactie</string>
+    <string name="ui_registo_r_pido" formatted="false">Registreer snel</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">Netto waarde</string>
+    <string name="ui_where_the_money_is" formatted="false">Waar het geld is</string>
+    <string name="ui_cash_flow" formatted="false">Transacties</string>
+    <string name="ui_investments" formatted="false">Beleggingen</string>
+    <string name="ui_allocation" formatted="false">Toewijzing</string>
+    <string name="ui_winners_losers" formatted="false">Winnaars &amp; verliezers</string>
+    <string name="ui_dividends" formatted="false">Dividenden</string>
+    <string name="ui_open_trades" formatted="false">Openstaande transacties</string>
+    <string name="ui_record_expense" formatted="false">Kosten registreren</string>
+    <string name="ui_refresh" formatted="false">Vernieuwen</string>
+    <string name="ui_chart" formatted="false">Grafiek</string>
+</resources>

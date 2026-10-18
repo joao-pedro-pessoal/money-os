@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listAccountsWithState } from "@/actions/accounts";
 import { listTransactions } from "@/actions/transactions";
@@ -37,6 +38,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ currency?: string }>;
 }) {
+  const uiText = await textForRequest();
   /**
    * Reading the same money in another currency.
    *
@@ -282,7 +284,7 @@ export default async function DashboardPage({
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-lg font-semibold">Dashboard</h1>
+        <h1 className="text-lg font-semibold">{uiText("Dashboard")}</h1>
         <CurrencySwitch
           favourites={favouriteCurrencies}
           display={base}
@@ -296,7 +298,7 @@ export default async function DashboardPage({
 
       <SimpleOverview>
         <StatCard
-          label="Net Worth"
+          label={uiText("Net Worth")}
           simpleLabel="Net worth"
           value={inDisplay(nw.total)}
           floating={inDisplay(nw.floating)}
@@ -321,7 +323,7 @@ export default async function DashboardPage({
         />
         <div className="overview-secondary">
         <StatCard
-          label="Investments"
+          label={uiText("Investments")}
           simpleLabel="Investments"
           value={inDisplay(nw.portfolio)}
           floating={inDisplay(nw.floating)}
@@ -339,7 +341,7 @@ export default async function DashboardPage({
         />
         </div>
         <StatCard
-          label="Free Cash"
+          label={uiText("Free Cash")}
           simpleLabel="Available to spend"
           value={freeToSpend}
           currency={base}
@@ -358,7 +360,7 @@ export default async function DashboardPage({
         />
         <div className="overview-secondary">
         <StatCard
-          label="Allocated Cash"
+          label={uiText("Allocated Cash")}
           simpleLabel="Reserved money"
           value={inDisplay(totalAllocated) + keptForBudgets}
           currency={base}
@@ -369,7 +371,7 @@ export default async function DashboardPage({
         />
         </div>
         <StatCard
-          label="Net Cash Flow (month)"
+          label={uiText("Net Cash Flow (month)")}
           simpleLabel="Monthly cash flow"
           value={inDisplay(income - expenses)}
           currency={base}
@@ -381,11 +383,11 @@ export default async function DashboardPage({
         />
       </SimpleOverview>
 
-      <nav className="simple-only simple-dashboard-actions" aria-label="Tarefas do dia a dia">
-        <Link href="/accounts">View accounts <span aria-hidden="true">→</span></Link>
-        <Link href="/transactions">View transactions <span aria-hidden="true">→</span></Link>
-        <Link href="/budgets">Budgets <span aria-hidden="true">→</span></Link>
-        <Link href="/savings">Savings <span aria-hidden="true">→</span></Link>
+      <nav className="simple-only simple-dashboard-actions" aria-label={uiText("Tarefas do dia a dia")}>
+        <Link href="/accounts">{uiText("View accounts ")}<span aria-hidden="true">→</span></Link>
+        <Link href="/transactions">{uiText("View transactions ")}<span aria-hidden="true">→</span></Link>
+        <Link href="/budgets">{uiText("Budgets ")}<span aria-hidden="true">→</span></Link>
+        <Link href="/savings">{uiText("Savings ")}<span aria-hidden="true">→</span></Link>
       </nav>
 
       <MonthAheadCard ahead={aheadShown} currency={base} />
@@ -393,28 +395,16 @@ export default async function DashboardPage({
       {subs.activeCount > 0 && (
         <div className="card p-3 text-xs flex items-center justify-between gap-3 flex-wrap">
           <span className="text-[var(--muted)]">
-            <span className="text-[var(--foreground)]"><span translate="no">{fmt(inDisplay(subs.monthly), base)}</span></span> a month is
-            already committed across {subs.activeCount} subscription
-            {subs.activeCount === 1 ? "" : "s"} — <span translate="no">{fmt(inDisplay(subs.yearly), base)}</span> a year. Not counted in the
-            figures above; those charges arrive as normal transactions.
-          </span>
-          <Link href="/subscriptions" className="text-[var(--accent)] whitespace-nowrap">
-            Review
-          </Link>
+            <span className="text-[var(--foreground)]"><span translate="no">{fmt(inDisplay(subs.monthly), base)}</span></span>{uiText(" a month is already committed across ")}{uiText(subs.activeCount === 1 ? "{count} subscription" : "{count} subscriptions", { count: subs.activeCount })} — <span translate="no">{fmt(inDisplay(subs.yearly), base)}</span>{uiText(" a year. Not counted in the figures above; those charges arrive as normal transactions.")}</span>
+          <Link href="/subscriptions" className="text-[var(--accent)] whitespace-nowrap">{uiText("Review")}</Link>
         </div>
       )}
 
       {unconverted.length > 0 && (
         <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
-          <div className="text-sm">Some amounts could not be converted to EUR</div>
-          <div className="text-xs text-[var(--muted)] mt-1">
-            No exchange rate for {Array.from(new Set(unconverted.map((u) => u.currency))).join(", ")}. Those
-            balances — and any debt in the same currency, which would otherwise make net worth look
-            higher than it is — are left out of the totals above rather than counted as if they were
-            euros. Add a rate in{" "}
-            <Link href="/settings" className="text-[var(--accent)]">
-              Settings
-            </Link>
+          <div className="text-sm">{uiText("Some amounts could not be converted to EUR")}</div>
+          <div className="text-xs text-[var(--muted)] mt-1">{uiText("No exchange rate for ")}{Array.from(new Set(unconverted.map((u) => u.currency))).join(", ")}{uiText(". Those balances — and any debt in the same currency, which would otherwise make net worth look higher than it is — are left out of the totals above rather than counted as if they were euros. Add a rate in")}{" "}
+            <Link href="/settings" className="text-[var(--accent)]">{uiText("Settings")}</Link>
             .
           </div>
         </div>
@@ -422,15 +412,13 @@ export default async function DashboardPage({
 
       {warnings.length > 0 && (
         <div className="card p-4 space-y-2">
-          <div className="text-sm font-medium">Attention</div>
+          <div className="text-sm font-medium">{uiText("Attention")}</div>
           {warnings.map((a) => (
             <div key={a.id} className="text-sm text-[var(--muted)] flex items-center justify-between">
               <span>
-                {a.state === "OVERALLOCATED" ? "⚠️" : "🕒"} <span translate="no">{a.name}</span> — {a.state === "OVERALLOCATED" ? `overallocated by €${a.overallocatedBy.toFixed(2)}` : "balance is stale"}
+                {a.state === "OVERALLOCATED" ? "⚠️" : "🕒"} <span translate="no">{a.name}</span> — {a.state === "OVERALLOCATED" ? uiText("overallocated by €{0}", { "0": a.overallocatedBy.toFixed(2) }) : uiText("balance is stale")}
               </span>
-              <Link href={`/accounts/${a.id}`} className="text-[var(--accent)] text-xs">
-                Reconcile
-              </Link>
+              <Link href={`/accounts/${a.id}`} className="text-[var(--accent)] text-xs">{uiText("Reconcile")}</Link>
             </div>
           ))}
         </div>
@@ -441,7 +429,7 @@ export default async function DashboardPage({
       <Section
         title="Net worth over time"
         defaultOpen
-        summary={<Link href="/analytics" className="text-xs text-[var(--accent)]">More charts →</Link>}
+        summary={<Link href="/analytics" className="text-xs text-[var(--accent)]">{uiText("More charts →")}</Link>}
       >
         {/* The series is stored in the base currency, so every point converts
             with the same helper the cards use — a chart labelled in dollars
@@ -501,11 +489,8 @@ export default async function DashboardPage({
           }
         >
           {topBuckets.length === 0 ? (
-            <div className="text-xs text-[var(--muted)] py-4 text-center">
-              No buckets yet.{" "}
-              <Link href="/buckets" className="text-[var(--accent)]">
-                Create one
-              </Link>
+            <div className="text-xs text-[var(--muted)] py-4 text-center">{uiText("No buckets yet.")}{" "}
+              <Link href="/buckets" className="text-[var(--accent)]">{uiText("Create one")}</Link>
             </div>
           ) : (
             <div className="space-y-3">
@@ -536,16 +521,14 @@ export default async function DashboardPage({
                           <div
                             className="absolute top-0 bottom-0 w-px bg-[var(--foreground)] opacity-50"
                             style={{ left: `${Math.min(100, b.progress.conservativePercent)}%` }}
-                            title={`${b.progress.conservativePercent.toFixed(0)}% guaranteed`}
+                            title={uiText("{0}% guaranteed", { "0": b.progress.conservativePercent.toFixed(0) })}
                           />
                         )}
                     </div>
                   )}
                 </div>
               ))}
-              <Link href="/buckets" className="text-xs text-[var(--accent)] block pt-1">
-                All buckets →
-              </Link>
+              <Link href="/buckets" className="text-xs text-[var(--accent)] block pt-1">{uiText("All buckets →")}</Link>
             </div>
           )}
         </Section>
@@ -556,13 +539,11 @@ export default async function DashboardPage({
         defaultOpen
         summary={
           <>
-            {composition.length} accounts
-            {totalFloating > 0 && (
+            {composition.length}{uiText(" accounts")}{totalFloating > 0 && (
               <>
                 {" · "}
                 <span className="text-[var(--amber)]">
-                  <Money value={inDisplay(totalFloating)} currency={base} /> variable
-                </span>
+                  <Money value={inDisplay(totalFloating)} currency={base} />{uiText(" variable")}</span>
               </>
             )}
           </>
@@ -582,16 +563,16 @@ export default async function DashboardPage({
         </div>
       </Section>
 
-      <Section title="Recent transactions" summary={`${recentTx.length} shown · ${recentTxData.baseCurrency}`}>
-        {recentTxData.approximate && <p className="text-xs text-[var(--muted)] mb-3">Converted amounts use current exchange rates.</p>}
-        {recentTxData.unconverted.length > 0 && <p className="text-xs text-[var(--amber)] mb-3">{recentTxData.unconverted.length} transaction(s) omitted because an exchange rate is missing. See all transactions for details.</p>}
-        <div className="overflow-x-auto" role="region" aria-label="Recent transactions" tabIndex={0}>
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
+      <Section title="Recent transactions" summary={uiText("{0} shown · {1}", { "0": recentTx.length, "1": recentTxData.baseCurrency })}>
+        {recentTxData.approximate && <p className="text-xs text-[var(--muted)] mb-3">{uiText("Converted amounts use current exchange rates.")}</p>}
+        {recentTxData.unconverted.length > 0 && <p className="text-xs text-[var(--amber)] mb-3">{recentTxData.unconverted.length}{uiText(" transaction(s) omitted because an exchange rate is missing. See all transactions for details.")}</p>}
+        <div className="overflow-x-auto" role="region" aria-label={uiText("Recent transactions")} tabIndex={0}>
+        <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th>Amount</th>
+              <th>{uiText("Date")}</th>
+              <th>{uiText("Description")}</th>
+              <th>{uiText("Amount")}</th>
             </tr>
           </thead>
           <tbody>
@@ -607,9 +588,7 @@ export default async function DashboardPage({
           </tbody>
         </ResponsiveTable></div>
         </div>
-        <Link href="/transactions" className="text-xs text-[var(--accent)] block pt-3">
-          All transactions →
-        </Link>
+        <Link href="/transactions" className="text-xs text-[var(--accent)] block pt-3">{uiText("All transactions →")}</Link>
       </Section>
       </MobileFold>
     </div>
@@ -630,7 +609,7 @@ export default async function DashboardPage({
  * of the portfolio and the card says so. A gain that quietly leaves positions
  * out is the confident-but-incomplete number this codebase keeps removing.
  */
-function StatCard({
+async function StatCard({
   label,
   simpleLabel,
   value,
@@ -650,6 +629,7 @@ function StatCard({
   /** What this figure counts, shown on hover or keyboard focus. */
   explain?: string | string[];
 }) {
+  const uiText = await textForRequest();
   const showFloating = floating !== undefined && floating > 0;
   /**
    * Nothing measurable means nothing to show. A P&L of exactly zero while some
@@ -661,7 +641,7 @@ function StatCard({
 
   const card = (
     <div className="card p-4 h-full">
-      <div className="text-xs text-[var(--muted)] mb-1"><span className={simpleLabel ? "complex-visible" : undefined}>{label}</span>{simpleLabel && <span className="simple-only">{simpleLabel}</span>}</div>
+      <div className="text-xs text-[var(--muted)] mb-1"><span className={simpleLabel ? "complex-visible" : undefined}>{uiText(label ?? "")}</span>{simpleLabel && <span className="simple-only">{uiText(simpleLabel ?? "")}</span>}</div>
       <div className="text-xl font-semibold">
         <Money value={value} currency={currency} />
         {showPnl && (
@@ -676,14 +656,10 @@ function StatCard({
         )}
       </div>
       {showPnl && (
-        <div className="text-[10px] text-[var(--muted)] mt-1">
-          in parentheses: unrealised {up ? "gain" : "loss"}
+        <div className="text-[10px] text-[var(--muted)] mt-1">{uiText("in parentheses: unrealised ")}{up ? uiText("gain") : uiText("loss")}
           {pnl.costUnknown > 0 && (
             <span style={{ color: "var(--amber)" }}>
-              {" "}
-              · partial, <Money value={pnl.costUnknown} currency={currency} /> of it has no
-              recorded cost
-            </span>
+              {" "}{uiText("· partial, ")}<Money value={pnl.costUnknown} currency={currency} />{uiText(" of it has no recorded cost")}</span>
           )}
         </div>
       )}
@@ -692,15 +668,11 @@ function StatCard({
         <div className="text-[10px] text-[var(--muted)] mt-1">
           <span className="text-[var(--amber)]">
             <Money value={floating} currency={currency} />
-          </span>{" "}
-          not guaranteed
-        </div>
+          </span>{" "}{uiText("not guaranteed")}</div>
       )}
       {note && <div className="text-[10px] text-[var(--muted)] mt-1">{note}</div>}
       {explain && (
-        <div className="text-[10px] mt-1" style={{ color: "var(--accent)" }}>
-          what is this?
-        </div>
+        <div className="text-[10px] mt-1" style={{ color: "var(--accent)" }}>{uiText("what is this?")}</div>
       )}
     </div>
   );

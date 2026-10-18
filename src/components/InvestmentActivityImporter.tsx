@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -30,6 +31,7 @@ export default function InvestmentActivityImporter({
   accounts: { id: string; name: string; currency: string }[];
   baseCurrency: string;
 }) {
+  const uiText = useText();
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [promptOpen, setPromptOpen] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -138,49 +140,41 @@ export default function InvestmentActivityImporter({
       <div className="card p-4" style={{ background: "var(--surface-2)" }}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-sm font-medium">Convert any broker statement with AI</div>
-            <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
-              Copy this prompt, attach the broker&apos;s CSV, PDF, screenshot, or copied table to the AI,
-              then save its answer as a CSV. Remove account numbers first if they are not needed.
-            </p>
+            <div className="text-sm font-medium">{uiText("Convert any broker statement with AI")}</div>
+            <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{uiText("Copy this prompt, attach the broker's CSV, PDF, screenshot, or copied table to the AI, then save its answer as a CSV. Remove account numbers first if they are not needed.")}</p>
           </div>
           <button type="button" className="btn" onClick={() => setPromptOpen((open) => !open)}>
-            {promptOpen ? "Hide prompt" : "Show prompt"}
+            {promptOpen ? uiText("Hide prompt") : uiText("Show prompt")}
           </button>
         </div>
         {promptOpen ? (
           <div className="mt-4 space-y-3">
             <button type="button" className="btn" onClick={copyPrompt}>
-              {copied ? "Copied" : "Copy AI prompt"}
+              {copied ? uiText("Copied") : uiText("Copy AI prompt")}
             </button>
             <pre className="text-[10px] font-mono bg-[var(--surface)] border border-[var(--border)] rounded p-3 overflow-auto max-h-72 whitespace-pre-wrap">
               {prompt}
             </pre>
             <div>
-              <div className="text-xs font-medium mb-1">Expected CSV</div>
+              <div className="text-xs font-medium mb-1">{uiText("Expected CSV")}</div>
               <pre className="text-[10px] font-mono bg-[var(--surface)] border border-[var(--border)] rounded p-3 overflow-x-auto">
                 {INVESTMENT_ACTIVITY_EXAMPLE}
               </pre>
             </div>
-            <p className="text-xs text-[var(--amber)]">
-              The app does not send the statement anywhere. If you attach it to an AI, that provider receives
-              the data, so redact names and account identifiers first.
-            </p>
+            <p className="text-xs text-[var(--amber)]">{uiText("The app does not send the statement anywhere. If you attach it to an AI, that provider receives the data, so redact names and account identifiers first.")}</p>
           </div>
         ) : null}
       </div>
 
       <div className="card p-4 space-y-3">
         <div>
-          <div className="text-sm font-medium">Upload and preview</div>
-          <p className="text-xs text-[var(--muted)] mt-1">
-            History is attached to one account. It does not change today&apos;s balance or current holdings.
-          </p>
+          <div className="text-sm font-medium">{uiText("Upload and preview")}</div>
+          <p className="text-xs text-[var(--muted)] mt-1">{uiText("History is attached to one account. It does not change today's balance or current holdings.")}</p>
         </div>
         {accounts.length > 0 ? (
           <>
             <label className="text-xs block">
-              <span className="text-[var(--muted)]">Investment account</span>
+              <span className="text-[var(--muted)]">{uiText("Investment account")}</span>
               <select
                 className="input mt-1"
                 value={accountId}
@@ -217,7 +211,7 @@ export default function InvestmentActivityImporter({
                     color: mode === m ? "var(--accent)" : undefined,
                   }}
                 >
-                  {m === "file" ? "Upload a file" : "Paste or type"}
+                  {m === "file" ? uiText("Upload a file") : uiText("Paste or type")}
                 </button>
               ))}
             </div>
@@ -235,8 +229,7 @@ export default function InvestmentActivityImporter({
                   className="input font-mono text-xs w-full"
                   rows={8}
                   spellCheck={false}
-                  placeholder={`${INVESTMENT_ACTIVITY_COLUMNS.join(",")}
-2026-01-04,BUY,VWCE,5,125.00,-626.00,1.00,EUR,Buy VWCE,ord-101`}
+                  placeholder={uiText("{0}\n2026-01-04,BUY,VWCE,5,125.00,-626.00,1.00,EUR,Buy VWCE,ord-101", { "0": INVESTMENT_ACTIVITY_COLUMNS.join(",") })}
                   value={pasted}
                   onChange={(e) => setPasted(e.target.value)}
                 />
@@ -247,16 +240,12 @@ export default function InvestmentActivityImporter({
                     onClick={() =>
                       ingest(pasted, `Typed ${new Date().toISOString().slice(0, 16).replace("T", " ")}`)
                     }
-                  >
-                    Read these rows
-                  </button>
+                  >{uiText("Read these rows")}</button>
                   <button
                     type="button"
                     className="text-xs text-[var(--accent)]"
                     onClick={() => setPasted(INVESTMENT_ACTIVITY_EXAMPLE)}
-                  >
-                    Start from an example
-                  </button>
+                  >{uiText("Start from an example")}</button>
                   {pasted !== "" && (
                     <button
                       type="button"
@@ -266,21 +255,15 @@ export default function InvestmentActivityImporter({
                         setPreview([]);
                         setMessage(null);
                       }}
-                    >
-                      Clear
-                    </button>
+                    >{uiText("Clear")}</button>
                   )}
                 </div>
-                <p className="text-[10px] text-[var(--muted)] leading-relaxed">
-                  The first line must be the header. Everything the file path checks is checked
-                  here too — the same reader, so a row that would be rejected from a file is
-                  rejected here, with the same reason.
-                </p>
+                <p className="text-[10px] text-[var(--muted)] leading-relaxed">{uiText("The first line must be the header. Everything the file path checks is checked here too — the same reader, so a row that would be rejected from a file is rejected here, with the same reason.")}</p>
               </div>
             )}
           </>
         ) : (
-          <p className="text-xs text-[var(--amber)]">Create an active account before importing history.</p>
+          <p className="text-xs text-[var(--amber)]">{uiText("Create an active account before importing history.")}</p>
         )}
 
         {message ? (
@@ -292,13 +275,13 @@ export default function InvestmentActivityImporter({
         {preview.length > 0 ? (
           <>
             <div className="text-xs flex flex-wrap gap-4">
-              <span className="text-[var(--green)]">{importable.length} to import</span>
-              {duplicates > 0 ? <span className="text-[var(--amber)]">{duplicates} duplicates</span> : null}
-              {invalid > 0 ? <span className="text-[var(--red)]">{invalid} unreadable</span> : null}
+              <span className="text-[var(--green)]">{importable.length}{uiText(" to import")}</span>
+              {duplicates > 0 ? <span className="text-[var(--amber)]">{duplicates}{uiText(" duplicates")}</span> : null}
+              {invalid > 0 ? <span className="text-[var(--red)]">{invalid}{uiText(" unreadable")}</span> : null}
             </div>
             <div className="overflow-auto max-h-80 border border-[var(--border)] rounded-lg">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
-                <thead><tr><th>Date</th><th>Type</th><th>Asset</th><th>Description</th><th className="text-right">Amount</th><th>Status</th></tr></thead>
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
+                <thead><tr><th>{uiText("Date")}</th><th>{uiText("Type")}</th><th>{uiText("Asset")}</th><th>{uiText("Description")}</th><th className="text-right">{uiText("Amount")}</th><th>{uiText("Status")}</th></tr></thead>
                 <tbody>
                   {preview.slice(0, 200).map((item, index) => {
                     const duplicate = item.row ? existing.has(investmentActivityFingerprint(item.row)) : false;
@@ -309,7 +292,7 @@ export default function InvestmentActivityImporter({
                         <td className={`text-right ${(item.row?.amount ?? 0) > 0 ? "text-[var(--green)]" : (item.row?.amount ?? 0) < 0 ? "text-[var(--red)]" : "text-[var(--accent)]"}`}>
                           {item.row ? `${item.row.amount.toFixed(2)} ${item.row.currency}` : "—"}
                         </td>
-                        <td>{item.problem ? <span className="text-[var(--red)]">{item.problem}</span> : duplicate ? <span className="text-[var(--amber)]">Duplicate</span> : <span className="text-[var(--green)]">Ready</span>}</td>
+                        <td>{item.problem ? <span className="text-[var(--red)]">{item.problem}</span> : duplicate ? <span className="text-[var(--amber)]">{uiText("Duplicate")}</span> : <span className="text-[var(--green)]">{uiText("Ready")}</span>}</td>
                       </tr>
                     );
                   })}
@@ -317,7 +300,7 @@ export default function InvestmentActivityImporter({
               </ResponsiveTable></div>
             </div>
             <button type="button" className="btn w-full" disabled={busy || importable.length === 0} onClick={doImport} style={busy || importable.length === 0 ? { opacity: 0.5 } : undefined}>
-              {busy ? "Importing…" : `Import ${importable.length} events`}
+              {busy ? uiText("Importing…") : uiText("Import {0} events", { "0": importable.length })}
             </button>
           </>
         ) : null}

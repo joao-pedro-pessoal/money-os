@@ -1,3 +1,6 @@
+"use client";
+
+import { useText } from "@/components/useText";
 import { paletteFor, coverLines, coverByline } from "@/lib/library/cover";
 
 /**
@@ -23,6 +26,7 @@ export default function BookCover({
   width: number;
   height: number;
 }) {
+  const uiText = useText();
   const palette = paletteFor(seed);
 
   // The SVG is drawn in a fixed 120×168 space and scaled by the viewBox, so
@@ -39,7 +43,7 @@ export default function BookCover({
       height={height}
       viewBox="0 0 120 168"
       role="img"
-      aria-label={`${title} by ${creator}`}
+      aria-label={uiText("{0} by {1}", { "0": title, "1": creator })}
       style={{ display: "block" }}
     >
       <defs>

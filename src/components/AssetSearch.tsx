@@ -1,11 +1,13 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { searchAssets } from '@/actions/assetSearch';
 import type { AssetSuggestion } from '@/lib/quotes/assetSearch';
 
 export default function AssetSearch({ navigate = false }: { navigate?: boolean }) {
+  const uiText = useText();
   const [query, setQuery] = useState('');
   const [name, setName] = useState('');
   const [results, setResults] = useState<AssetSuggestion[]>([]);
@@ -26,25 +28,25 @@ export default function AssetSearch({ navigate = false }: { navigate?: boolean }
     let cancelled = false;
     const stale = () => cancelled || generation !== sequence.current;
     const timer = setTimeout(async () => {
-      setMessage('Searching…');
+      setMessage(uiText("Searching…"));
       try {
         const response = await searchAssets(query);
         if (stale()) return;
         setResults(response.results); setActive(-1);
-        setMessage(response.warning ?? (response.results.length ? '' : 'No matches. You can type the ticker manually.'));
-      } catch { if (!stale()) setMessage('Search unavailable. You can type the ticker manually.'); }
+        setMessage(response.warning ?? (response.results.length ? '' : uiText("No matches. You can type the ticker manually.")));
+      } catch { if (!stale()) setMessage(uiText("Search unavailable. You can type the ticker manually.")); }
     }, 350);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [query, expanded, selected]);
+  }, [query, expanded, selected, uiText]);
   function choose(asset: AssetSuggestion) {
     sequence.current++; setSelected(asset); setQuery(asset.symbol); setName(asset.name); setExpanded(false); setResults([]); setMessage('');
     if (navigate) router.push(`/investments/asset/${encodeURIComponent(asset.symbol)}?${new URLSearchParams({ name: asset.name, ...(asset.assetType ? { type: asset.assetType } : {}) })}`);
   }
   return <div className="space-y-2 relative" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setExpanded(false); }}>
-    <label className="block text-xs">{navigate ? 'Find an asset' : 'Asset name, ticker or ISIN'}
+    <label className="block text-xs">{navigate ? uiText("Find an asset") : uiText("Asset name, ticker or ISIN")}
       <input role="combobox" aria-autocomplete="list" aria-expanded={expanded && results.length > 0} aria-controls={`${id}-results`}
         aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined} autoComplete="off" name={navigate ? undefined : 'symbol'}
-        className="input w-full mt-1" required={!navigate} value={query} placeholder="e.g. Apple, BTC, S&P 500, IE00B5BMR087"
+        className="input w-full mt-1" required={!navigate} value={query} placeholder={uiText("e.g. Apple, BTC, S&P 500, IE00B5BMR087")}
         onFocus={() => setExpanded(true)} onChange={e => { setQuery(e.target.value); setSelected(null); setResults([]); setMessage(''); setActive(-1); setExpanded(true); }}
         onKeyDown={e => {
           if (e.key === 'Escape') { setExpanded(false); setActive(-1); }
@@ -53,16 +55,16 @@ export default function AssetSearch({ navigate = false }: { navigate?: boolean }
           if (e.key === 'Enter' && expanded && active >= 0 && results[active]) { e.preventDefault(); choose(results[active]); }
         }} />
     </label>
-    {expanded && results.length > 0 && <ul id={`${id}-results`} role="listbox" aria-label="Asset suggestions" className="border rounded max-h-64 overflow-y-auto" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+    {expanded && results.length > 0 && <ul id={`${id}-results`} role="listbox" aria-label={uiText("Asset suggestions")} className="border rounded max-h-64 overflow-y-auto" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
       {results.map((r, i) => <li key={r.symbol} role="option" aria-selected={i === active} id={`${id}-${i}`}>
         <button type="button" tabIndex={-1} onMouseDown={e => e.preventDefault()} onClick={() => choose(r)} className="block w-full text-left p-2 text-xs hover:bg-[var(--surface-2)]"
           style={{ background: i === active ? 'var(--surface-2)' : undefined }}>
-          <strong><span translate="no">{r.symbol}</span></strong> · <span translate="no">{r.name}</span><span className="block text-[var(--muted)]">{r.assetType ?? 'Unclassified'} · {r.exchange ?? 'Exchange not reported'} · {r.source}</span>
+          <strong><span translate="no">{r.symbol}</span></strong> · <span translate="no">{r.name}</span><span className="block text-[var(--muted)]">{r.assetType ?? uiText("Unclassified")} · {r.exchange ?? uiText("Exchange not reported")} · {r.source}</span>
         </button>
       </li>)}
     </ul>}
-    <div role="status" className="text-xs text-[var(--muted)]">{message}</div>
-    {selected && !navigate && <p className="text-xs text-[var(--muted)]">Selected: <span translate="no">{selected.symbol}</span> · {selected.exchange ?? 'Exchange not reported'}. Check the asset type and currency below.</p>}
-    {!navigate && <input name="name" aria-label="Asset name" value={name} onChange={e => setName(e.target.value)} placeholder="Name (optional)" className="input w-full" />}
+    <div role="status" className="text-xs text-[var(--muted)]">{uiText(message ?? "")}</div>
+    {selected && !navigate && <p className="text-xs text-[var(--muted)]">{uiText("Selected: ")}<span translate="no">{selected.symbol}</span> · {selected.exchange ?? uiText("Exchange not reported")}{uiText(". Check the asset type and currency below.")}</p>}
+    {!navigate && <input name="name" aria-label={uiText("Asset name")} value={name} onChange={e => setName(e.target.value)} placeholder={uiText("Name (optional)")} className="input w-full" />}
   </div>;
 }

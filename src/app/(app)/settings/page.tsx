@@ -1,3 +1,5 @@
+import { textForRequest } from "@/actions/pageLanguage";
+import { directionOf } from "@/lib/i18n/languages";
 import {
   getBaseCurrency,
   setBaseCurrency,
@@ -29,6 +31,7 @@ import { messagesFor } from "@/lib/i18n/messages";
 import { LEGAL_PATHS } from "@/lib/legal/paths";
 
 export default async function SettingsGeneralPage() {
+  const uiText = await textForRequest();
   const baseCurrency = await getBaseCurrency();
   const favourites = await getFavouriteCurrencies();
   const dashboardCurrency = await getDashboardCurrency();
@@ -45,7 +48,7 @@ export default async function SettingsGeneralPage() {
   const legal = messagesFor(language).legal;
 
   return (
-    <div translate="no" lang={language} className="space-y-6">
+    <div translate="no" lang={language} dir={directionOf(language)} className="space-y-6">
       <div className="card">
         <SettingRow
           title={w.appTitle}
@@ -74,7 +77,7 @@ export default async function SettingsGeneralPage() {
             <select name="baseCurrency" className="input" defaultValue={baseCurrency}>
               {SUPPORTED_CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.label}
+                  {uiText(c.label ?? "")}
                 </option>
               ))}
             </select>

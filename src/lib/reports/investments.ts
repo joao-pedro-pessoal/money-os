@@ -1,3 +1,4 @@
+import { sourceText, type TextTranslator } from "@/lib/i18n/text";
 /**
  * The investing side of a report: what one stretch of days did to the
  * portfolio.
@@ -478,42 +479,42 @@ export function buildInvestmentReport(input: InvestmentReportInput): InvestmentR
 const percentOf = (rate: number | null) => (rate === null ? null : round2(rate * 100));
 
 /** The investing part of the CSV, one section after another, in the same currency as the rest. */
-export function investmentCsvLines(report: InvestmentReport): (string | number | null)[][] {
+export function investmentCsvLines(report: InvestmentReport, uiText: TextTranslator = sourceText): (string | number | null)[][] {
   const lines: (string | number | null)[][] = [
-    ["Investments", "This period"],
-    ["Value at start", report.value?.start ?? null],
-    ["Value at end", report.value?.end ?? null],
-    ["Value change", report.value?.change ?? null],
-    ["Deposited", report.flows.deposited],
-    ["Withdrawn", report.flows.withdrawn],
-    ["Change not explained by deposits", report.unexplained, report.unexplainedWithheld],
-    ["Bought", report.trades.bought],
-    ["Sold", report.trades.sold],
-    ["Realised from trades", report.trades.realised],
-    ["Trading fees", report.trades.fees],
-    ["Dividends", report.income.dividends],
-    ["Interest", report.income.interest],
-    ["Time-weighted return %", percentOf(report.returns.timeWeighted?.total ?? null)],
-    ["Money-weighted return %", percentOf(report.returns.moneyWeighted)],
+    [uiText("Investments"), uiText("This period")],
+    [uiText("Value at start"), report.value?.start ?? null],
+    [uiText("Value at end"), report.value?.end ?? null],
+    [uiText("Value change"), report.value?.change ?? null],
+    [uiText("Deposited"), report.flows.deposited],
+    [uiText("Withdrawn"), report.flows.withdrawn],
+    [uiText("Change not explained by deposits"), report.unexplained, report.unexplainedWithheld],
+    [uiText("Bought"), report.trades.bought],
+    [uiText("Sold"), report.trades.sold],
+    [uiText("Realised from trades"), report.trades.realised],
+    [uiText("Trading fees"), report.trades.fees],
+    [uiText("Dividends"), report.income.dividends],
+    [uiText("Interest"), report.income.interest],
+    [uiText("Time-weighted return %"), percentOf(report.returns.timeWeighted?.total ?? null)],
+    [uiText("Money-weighted return %"), percentOf(report.returns.moneyWeighted)],
   ];
   if (report.benchmark !== null && "indexReturn" in report.benchmark) {
     lines.push(
-      [`${report.benchmark.name} return %`, percentOf(report.benchmark.indexReturn)],
-      ["Ahead of the index, points", report.benchmark.differencePoints]
+      [uiText("{0} return %", {0: report.benchmark.name}), percentOf(report.benchmark.indexReturn)],
+      [uiText("Ahead of the index, points"), report.benchmark.differencePoints]
     );
   }
   if (report.trades.bySymbol.length > 0) {
-    lines.push([], ["Instrument", "Closed trades", "Realised", "Fees", "Net"]);
+    lines.push([], [uiText("Instrument"), uiText("Closed trades"), uiText("Realised"), uiText("Fees"), uiText("Net")]);
     for (const s of report.trades.bySymbol) lines.push([s.symbol, s.closedTrades, s.realized, s.fees, s.net]);
   }
   if (report.income.byInstrument.length > 0) {
-    lines.push([], ["Dividends from", "Payments", "Amount"]);
+    lines.push([], [uiText("Dividends from"), uiText("Payments"), uiText("Amount")]);
     for (const d of report.income.byInstrument) lines.push([d.name, d.payments, d.amount]);
   }
   if (report.composition !== null) {
-    lines.push([], [`Held on ${report.composition.asOf}, by type`, "Value", "Share %"]);
-    for (const t of report.composition.byType) lines.push([t.name, t.value, t.percent]);
-    lines.push([], ["Largest positions", "Account", "Value", "Share %", "Unrealised"]);
+    lines.push([], [uiText("Held on {0}, by type", {0: report.composition.asOf}), uiText("Value"), uiText("Share %")]);
+    for (const t of report.composition.byType) lines.push([uiText(t.name), t.value, t.percent]);
+    lines.push([], [uiText("Largest positions"), uiText("Account"), uiText("Value"), uiText("Share %"), uiText("Unrealised")]);
     for (const p of report.composition.largest) lines.push([p.name, p.account, p.value, p.percent, p.pnl]);
   }
   return lines;

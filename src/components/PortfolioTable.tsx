@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { playlistsText } from "@/lib/portfolio/playlists";
 import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -158,6 +159,7 @@ export default function PortfolioTable({
    */
   logos?: Record<string, string>;
 }) {
+  const uiText = useText();
   /**
    * Which columns are shown, remembered between visits.
    *
@@ -291,7 +293,7 @@ export default function PortfolioTable({
     group === "assetType" ? "assetType" : group === "side" ? "direction" : undefined;
 
   const label = (value: string) =>
-    value === UNTAGGED ? "Untagged" : tagLabel(value, groupAxis) ?? value;
+    value === UNTAGGED ? uiText("Untagged") : groupAxis ? uiText(tagLabel(value, groupAxis) ?? value) : value;
 
   const dropdown = (
     key: keyof Filters,
@@ -299,15 +301,15 @@ export default function PortfolioTable({
     values: string[]
   ) => (
     <select
-      aria-label={all}
+      aria-label={uiText(all)}
       value={filters[key]}
       onChange={(e) => set({ [key]: e.target.value } as Partial<Filters>)}
       className="input input-narrow text-xs py-1"
     >
-      <option value="">{all}</option>
+      <option value="">{uiText(all)}</option>
       {values.map((v) => (
         <option translate={key === "account" || key === "playlist" ? "no" : undefined} key={v} value={v}>
-          {label(v)}
+          {key === "account" || key === "playlist" ? v : uiText(tagLabel(v) ?? v)}
         </option>
       ))}
     </select>
@@ -316,21 +318,21 @@ export default function PortfolioTable({
   return (
     <div className="holdings-browser space-y-4">
       <div className="holdings-phone-search">
-        <input type="search" aria-label="Search holdings" placeholder="Search your holdings…" className="input" value={filters.search} onChange={(e) => set({ search: e.target.value })} />
-        {Object.values(filters).some(Boolean) && <button type="button" onClick={() => setFilters(NO_FILTERS)} className="text-xs text-[var(--accent)]">Clear filters</button>}
+        <input type="search" aria-label={uiText("Search holdings")} placeholder={uiText("Search your holdings…")} className="input" value={filters.search} onChange={(e) => set({ search: e.target.value })} />
+        {Object.values(filters).some(Boolean) && <button type="button" onClick={() => setFilters(NO_FILTERS)} className="text-xs text-[var(--accent)]">{uiText("Clear filters")}</button>}
       </div>
       <div className="holdings-toolbar flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--muted)]">Group by</span>
+          <span className="text-xs text-[var(--muted)]">{uiText("Group by")}</span>
           <select
-            aria-label="Group holdings by"
+            aria-label={uiText("Group holdings by")}
             value={group}
             onChange={(e) => setGroup(e.target.value as GroupKey)}
             className="input input-narrow text-xs py-1"
           >
             {GROUP_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
-                {o.label}
+                {uiText(o.label)}
               </option>
             ))}
           </select>
@@ -342,7 +344,7 @@ export default function PortfolioTable({
             aria-expanded={showColumns}
             className="text-xs text-[var(--accent)] hover:underline"
           >
-            {showColumns ? "Hide columns" : "Columns"}
+            {showColumns ? uiText("Hide columns") : uiText("Columns")}
           </button>
           <button
             type="button"
@@ -350,7 +352,7 @@ export default function PortfolioTable({
             aria-expanded={showFilters}
             className="text-xs text-[var(--accent)] hover:underline"
           >
-            {showFilters ? "Hide filters" : "Filters"}
+            {showFilters ? uiText("Hide filters") : uiText("Filters")}
           </button>
         </div>
       </div>
@@ -365,24 +367,21 @@ export default function PortfolioTable({
                 onChange={() => toggleColumn(c.key)}
               />
               <span className={visible.includes(c.key) ? undefined : "text-[var(--muted)]"}>
-                {c.label}
+                {uiText(c.label ?? "")}
               </span>
             </label>
           ))}
-          <span className="text-[10px] text-[var(--muted)] ml-auto">
-            Remembered on this device. &ldquo;Symbol&rdquo; is the full name as your broker wrote
-            it; &ldquo;Name&rdquo; is the short form, with the full one on hover.
-          </span>
+          <span className="text-[10px] text-[var(--muted)] ml-auto">{uiText("Remembered on this device. &ldquo;Symbol&rdquo; is the full name as your broker wrote it; &ldquo;Name&rdquo; is the short form, with the full one on hover.")}</span>
         </div>
       )}
 
       {showFilters && (
         <div className="holdings-filters flex gap-2 flex-wrap items-center pb-3 border-b border-[var(--border)]">
           <input
-            aria-label="Search positions"
+            aria-label={uiText("Search positions")}
             value={filters.search}
             onChange={(e) => set({ search: e.target.value })}
-            placeholder="Search"
+            placeholder={uiText("Search")}
             className="input input-narrow text-xs py-1 w-40"
           />
           {dropdown("assetType", "All types", options.assetTypes)}
@@ -394,16 +393,14 @@ export default function PortfolioTable({
               type="button"
               onClick={() => setFilters(NO_FILTERS)}
               className="text-xs text-[var(--accent)] hover:underline ml-auto"
-            >
-              Clear ({hidden} hidden)
-            </button>
+            >{uiText("Clear (")}{hidden}{uiText(" hidden)")}</button>
           )}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
         <div className="min-w-0 order-2 lg:order-1">
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable
+          <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable
             id="portfolio-table"
             className="data-table w-full"
             style={{ tableLayout: "fixed" }}
@@ -421,14 +418,14 @@ export default function PortfolioTable({
                     className={c.numeric ? "text-right" : undefined}
                     style={{ position: "relative" }}
                   >
-                    {c.label}
+                    {uiText(c.label ?? "")}
                     {/* Drag the edge between two columns. The pair shares a
                         fixed total, so widening one narrows its neighbour and
                         the table never overflows into a scrollbar. */}
                     {i < shown.length - 1 && (
                       <span
                         onMouseDown={startDrag(i)}
-                        title="Drag to resize"
+                        title={uiText("Drag to resize")}
                         style={{
                           position: "absolute",
                           top: 0,
@@ -480,19 +477,15 @@ export default function PortfolioTable({
                         const badges = c.key === shown[0]?.key && (
                           <>
                             {i.side === "short" && (
-                              <span className="badge ml-1 text-[var(--red)] border border-[var(--red)]">
-                                SHORT
-                              </span>
+                              <span className="badge ml-1 text-[var(--red)] border border-[var(--red)]">{uiText("SHORT")}</span>
                             )}
                             {/* Already inside the account balance, so it's shown
                                 but never added on top of it. */}
                             {i.insideBalance && (
                               <span
                                 className="text-[10px] text-[var(--muted)] ml-1"
-                                title="Part of the account balance, not money on top of it. Counted once, in Net Worth."
-                              >
-                                in balance
-                              </span>
+                                title={uiText("Part of the account balance, not money on top of it. Counted once, in Net Worth.")}
+                              >{uiText("in balance")}</span>
                             )}
                             {/* The value in this row is what it cost, not what
                                 it is worth. Said on the row itself, because a
@@ -502,10 +495,8 @@ export default function PortfolioTable({
                               <span
                                 className="text-[10px] ml-1"
                                 style={{ color: "var(--amber)" }}
-                                title="Rebuilt from an imported statement. The quantity is exact; the figure shown is what you paid, because the statement carries no current price."
-                              >
-                                at cost
-                              </span>
+                                title={uiText("Rebuilt from an imported statement. The quantity is exact; the figure shown is what you paid, because the statement carries no current price.")}
+                              >{uiText("at cost")}</span>
                             )}
                           </>
                         );
@@ -547,9 +538,7 @@ export default function PortfolioTable({
                                   <Link
                                     href="/positions"
                                     className="text-[var(--accent)] hover:underline"
-                                  >
-                                    set type
-                                  </Link>
+                                  >{uiText("set type")}</Link>
                                 )}
                                 {badges}
                               </td>
@@ -602,17 +591,14 @@ export default function PortfolioTable({
                                     <Link
                                       href="/positions"
                                       className="text-[var(--accent)] hover:underline"
-                                      title="Cash and stablecoins earn nothing unless they're paying interest. Set the rate and it shows here."
-                                    >
-                                      set rate
-                                    </Link>
+                                      title={uiText("Cash and stablecoins earn nothing unless they're paying interest. Set the rate and it shows here.")}
+                                    >{uiText("set rate")}</Link>
                                   ) : (
                                     <span
                                       className="text-[var(--green)]"
-                                      title={`${i.apr}% a year on ${fmt(i.value, currency)}`}
+                                      title={uiText("{0}% a year on {1}", { "0": i.apr, "1": fmt(i.value, currency) })}
                                     >
-                                      +<span translate="no">{fmt(yearlyYield(i)!, currency)}</span>/yr
-                                    </span>
+                                      +<span translate="no">{fmt(yearlyYield(i)!, currency)}</span>{uiText("/yr")}</span>
                                   )}
                                 </td>
                               );
@@ -626,10 +612,8 @@ export default function PortfolioTable({
                                 <td
                                   key={c.key}
                                   className="text-right text-[var(--muted)] text-xs"
-                                  title="This platform doesn't report what the holding cost, so there is nothing to compare today's value against."
-                                >
-                                  no cost basis
-                                </td>
+                                  title={uiText("This platform doesn't report what the holding cost, so there is nothing to compare today's value against.")}
+                                >{uiText("no cost basis")}</td>
                               );
                             }
                             if (i.atCost) {
@@ -641,10 +625,8 @@ export default function PortfolioTable({
                                 <td
                                   key={c.key}
                                   className="text-right text-[var(--muted)]"
-                                  title="No price set yet, so there is nothing to compare the cost against. Set one on the Positions page."
-                                >
-                                  not priced
-                                </td>
+                                  title={uiText("No price set yet, so there is nothing to compare the cost against. Set one on the Positions page.")}
+                                >{uiText("not priced")}</td>
                               );
                             }
                             return (
@@ -667,16 +649,13 @@ export default function PortfolioTable({
           </ResponsiveTable></div>
 
           {filtered.length === 0 && (
-            <div className="text-xs text-[var(--muted)] py-8 text-center">
-              Nothing matches these filters.
-            </div>
+            <div className="text-xs text-[var(--muted)] py-8 text-center">{uiText("Nothing matches these filters.")}</div>
           )}
 
           {filtered.length > 0 && (
             <div className="text-xs text-[var(--muted)] mt-3">
-              {filtered.length} position{filtered.length === 1 ? "" : "s"} ·{" "}
-              <span translate="no">{fmt(total, currency)}</span> held
-              {totalNotional > total && ` · ${fmt(totalNotional, currency)} exposure`} ·{" "}
+              {uiText(filtered.length === 1 ? "{count} position" : "{count} positions", { count: filtered.length })} ·{" "}
+              <span translate="no">{fmt(total, currency)}</span>{uiText(" held")}{totalNotional > total && ` · ${fmt(totalNotional, currency)} exposure`} ·{" "}
               <span style={{ color: totalPnl >= 0 ? "var(--green)" : "var(--red)" }}>
                 {totalPnl >= 0 ? "+" : "−"}
                 <span translate="no">{fmt(Math.abs(totalPnl), currency)}</span>
@@ -686,26 +665,23 @@ export default function PortfolioTable({
               {unpriced.length > 0 && (
                 <span style={{ color: "var(--amber)" }}>
                   {" "}
-                  · {unpriced.length} not priced yet, so left out of that figure
-                </span>
+                  · {unpriced.length}{uiText(" not priced yet, so left out of that figure")}</span>
               )}
             </div>
           )}
         </div>
 
         <div className="min-w-0 order-1 lg:order-2">
-          <div className="text-sm font-medium mb-3">Allocation</div>
+          <div className="text-sm font-medium mb-3">{uiText("Allocation")}</div>
           {allocation.length === 0 ? (
-            <div className="text-xs text-[var(--muted)] py-8 text-center">Nothing to show.</div>
+            <div className="text-xs text-[var(--muted)] py-8 text-center">{uiText("Nothing to show.")}</div>
           ) : (
             <>
               <DonutChart data={allocation} currency={currency} />
               <p className="text-[10px] text-[var(--muted)] mt-3">
                 {group === "none"
-                  ? "By asset type"
-                  : `By ${GROUP_OPTIONS.find((o) => o.value === group)?.label.toLowerCase()}`}
-                , by capital committed, following the filters above.
-              </p>
+                  ? uiText("By asset type")
+                  : uiText("By {0}", { "0": GROUP_OPTIONS.find((o) => o.value === group)?.label.toLowerCase() })}{uiText(", by capital committed, following the filters above.")}</p>
             </>
           )}
         </div>

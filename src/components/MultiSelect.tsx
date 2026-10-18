@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { NONE, toggled } from "@/lib/filters/multi";
 
 /**
@@ -24,22 +25,23 @@ export default function MultiSelect({
   /** Offers "none" as a choice — no playlist, no tag — with this wording. */
   noneLabel?: string;
 }) {
+  const uiText = useText();
   const all = noneLabel ? [...options, NONE] : [...options];
-  const shown = (v: string) => (v === NONE ? noneLabel ?? "None" : render(v));
+  const shown = (v: string) => (v === NONE ? uiText(noneLabel ?? "None") : render(v));
   const summary =
-    selected.length === 0 ? "All" : selected.length === 1 ? shown(selected[0]) : `${selected.length} chosen`;
+    selected.length === 0 ? uiText("All") : selected.length === 1 ? shown(selected[0]) : uiText("{0} chosen", { 0: selected.length });
   return (
     <div className="block min-w-0">
-      <span className="text-[10px] text-[var(--muted)] block mb-1">{label}</span>
+      <span className="text-[10px] text-[var(--muted)] block mb-1">{uiText(label ?? "")}</span>
       <details className="relative">
         <summary
           className={`input input-narrow text-xs w-full cursor-pointer list-none truncate ${selected.length > 0 ? "text-[var(--accent)]" : ""}`}
-          aria-label={`${label}: ${summary}`}
+          aria-label={`${uiText(label)}: ${summary}`}
         >
           <span translate="no">{summary}</span>
         </summary>
         <div className="absolute z-20 mt-1 w-64 max-w-[80vw] max-h-72 overflow-auto card p-2 space-y-1 shadow-lg">
-          {all.length === 0 && <p className="text-xs text-[var(--muted)]">Nothing to choose.</p>}
+          {all.length === 0 && <p className="text-xs text-[var(--muted)]">{uiText("Nothing to choose.")}</p>}
           {all.map((v) => (
             <label key={v} className="flex items-center gap-2 text-xs py-0.5">
               <input type="checkbox" checked={selected.includes(v)} onChange={() => onChange(toggled(selected, v))} />
@@ -49,8 +51,7 @@ export default function MultiSelect({
             </label>
           ))}
           {selected.length > 0 && (
-            <button type="button" className="text-xs text-[var(--accent)] pt-1" onClick={() => onChange([])}>
-              Clear {label.toLowerCase()}
+            <button type="button" className="text-xs text-[var(--accent)] pt-1" onClick={() => onChange([])}>{uiText("Clear ")}{uiText(label.toLowerCase() ?? "")}
             </button>
           )}
         </div>

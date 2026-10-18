@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">Gider veya gelir kaydedin</string>
+    <string name="widget_expense" formatted="false">− Gider</string>
+    <string name="widget_income" formatted="false">+ Gelir</string>
+    <string name="shortcut_expense" formatted="false">Gider</string>
+    <string name="shortcut_expense_long" formatted="false">Gideri kaydedin</string>
+    <string name="shortcut_income" formatted="false">Gelir</string>
+    <string name="shortcut_income_long" formatted="false">Rekor gelir</string>
+    <string name="widget_dashboard_description" formatted="false">Net değer, bu ay ve zaman içindeki çizgi</string>
+    <string name="widget_net_worth_description" formatted="false">Zaman içindeki net değer ve ne kadar ilerlediği</string>
+    <string name="widget_where_money_description" formatted="false">Yüzdeli çörek olarak paranın olduğu yer</string>
+    <string name="widget_cash_flow_description" formatted="false">Bu ay: para girdi, para çıktı ve geriye ne kaldı</string>
+    <string name="widget_investments_description" formatted="false">Portföy değeri, gerçekleşmemiş K&amp;Z ve P&amp;Z ile birlikte her pozisyon euro ve yüzde olarak</string>
+    <string name="widget_allocation_description" formatted="false">Yüzdelerle birlikte varlık türüne göre portföy</string>
+    <string name="widget_movers_description" formatted="false">Maliyet getirisine göre en iyi ve en kötü konumlar</string>
+    <string name="widget_dividends_description" formatted="false">Bu yıl alınan temettüler ve bir sonraki beklenen ödeme</string>
+    <string name="widget_open_trades_description" formatted="false">Açık kaldıraçlı pozisyonlar: gerçekleşmemiş kar ve zarar, marj ve her işlem</string>
+    <string name="ui_registo_r_pido" formatted="false">Hızlı Kayıt</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">Net değer</string>
+    <string name="ui_where_the_money_is" formatted="false">Para nerede</string>
+    <string name="ui_cash_flow" formatted="false">İşlemler</string>
+    <string name="ui_investments" formatted="false">Yatırımlar</string>
+    <string name="ui_allocation" formatted="false">Tahsis</string>
+    <string name="ui_winners_losers" formatted="false">Kazananlar ve kaybedenler</string>
+    <string name="ui_dividends" formatted="false">Temettüler</string>
+    <string name="ui_open_trades" formatted="false">Açık işlemler</string>
+    <string name="ui_record_expense" formatted="false">Gideri kaydedin</string>
+    <string name="ui_refresh" formatted="false">Yenile</string>
+    <string name="ui_chart" formatted="false">Grafik</string>
+</resources>

@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import { getStatementHistory } from "@/actions/brokerImport";
 import { Money } from "@/components/PrivacyContext";
 
@@ -11,6 +12,7 @@ import { Money } from "@/components/PrivacyContext";
  * value line, which would have to be invented.
  */
 export default async function StatementHistory() {
+  const uiText = await textForRequest();
   const data = await getStatementHistory();
   if (data === null || data.history.length < 2) return null;
 
@@ -32,18 +34,12 @@ export default async function StatementHistory() {
   return (
     <div className="card p-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <div className="text-sm font-medium">Before tracking started</div>
+        <div className="text-sm font-medium">{uiText("Before tracking started")}</div>
         <div className="text-xs text-[var(--muted)]">
-          {from} to {to}, from the imported statement
-        </div>
+          {from}{uiText(" to ")}{to}{uiText(", from the imported statement")}</div>
       </div>
 
-      <p className="text-xs text-[var(--muted)] mt-1 mb-4 max-w-2xl">
-        The chart above starts when the app took its first snapshot. This one reaches back to your
-        first statement entry — but it can only show what the file records: money committed, what
-        purchases cost, and income received. What those holdings were <em>worth</em> on any day
-        before tracking began isn&apos;t in the statement, and the app won&apos;t make it up.
-      </p>
+      <p className="text-xs text-[var(--muted)] mt-1 mb-4 max-w-2xl">{uiText("The chart above starts when the app took its first snapshot. This one reaches back to your first statement entry — but it can only show what the file records: money committed, what purchases cost, and income received. What those holdings were ")}<em>{uiText("worth")}</em>{uiText(" on any day before tracking began isn't in the statement, and the app won't make it up.")}</p>
 
       {(converted || unconverted.length > 0) && (
         <p className="text-xs mb-3" style={{ color: "var(--amber)" }}>
@@ -70,25 +66,25 @@ export default async function StatementHistory() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 text-xs">
         <div>
-          <div className="text-[var(--accent)]">Cost of purchases</div>
+          <div className="text-[var(--accent)]">{uiText("Cost of purchases")}</div>
           <div className="text-sm mt-0.5">
             <Money value={last.investedAtCost} currency={currency} />
           </div>
         </div>
         <div>
-          <div className="text-[var(--muted)]">Net committed</div>
+          <div className="text-[var(--muted)]">{uiText("Net committed")}</div>
           <div className="text-sm mt-0.5">
             <Money value={last.contributed} currency={currency} />
           </div>
         </div>
         <div>
-          <div className="text-[var(--muted)]">Income received</div>
+          <div className="text-[var(--muted)]">{uiText("Income received")}</div>
           <div className="text-sm mt-0.5" style={{ color: "var(--green)" }}>
             <Money value={last.incomeReceived} currency={currency} />
           </div>
         </div>
         <div>
-          <div className="text-[var(--muted)]">Fees paid</div>
+          <div className="text-[var(--muted)]">{uiText("Fees paid")}</div>
           <div className="text-sm mt-0.5">
             <Money value={last.feesPaid} currency={currency} />
           </div>

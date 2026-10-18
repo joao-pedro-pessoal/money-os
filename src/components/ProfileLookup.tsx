@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { refreshAssetProfiles } from "@/actions/exposure";
@@ -12,6 +13,7 @@ import { refreshAssetProfiles } from "@/actions/exposure";
  * each listing, which takes a few seconds and should happen when you choose.
  */
 export default function ProfileLookup({ due = 0, label }: { due?: number; label?: string }) {
+  const uiText = useText();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -29,10 +31,10 @@ export default function ProfileLookup({ due = 0, label }: { due?: number; label?
       if (r.notFound.length > 0) parts.push(`Nothing answered to: ${r.notFound.join(", ")}.`);
       if (r.remaining > 0) parts.push(`${r.remaining} still to look up — press again.`);
       if (r.problem) parts.push(r.problem);
-      setMessage(parts.join(" ") || "Everything is up to date.");
+      setMessage(parts.join(" ") || uiText("Everything is up to date."));
       router.refresh();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "The look-up failed.");
+      setMessage(e instanceof Error ? e.message : uiText("The look-up failed."));
     } finally {
       setBusy(false);
     }
@@ -41,11 +43,11 @@ export default function ProfileLookup({ due = 0, label }: { due?: number; label?
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <button type="button" className="btn" onClick={run} disabled={busy}>
-        {busy ? "Looking up…" : label ?? (due > 0 ? `Look up sectors & countries (${due})` : "Refresh sectors & countries")}
+        {busy ? uiText("Looking up…") : label ?? (due > 0 ? uiText("Look up sectors & countries ({0})", { "0": due }) : uiText("Refresh sectors & countries"))}
       </button>
       {message && (
         <span role="status" className="text-xs text-[var(--muted)]">
-          {message}
+          {uiText(message ?? "")}
         </span>
       )}
     </div>

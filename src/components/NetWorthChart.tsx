@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { usePrivacy } from "./PrivacyContext";
 import { fmt } from "@/lib/format";
@@ -11,13 +12,12 @@ export default function NetWorthChart({
   data: { date: string; netWorth: number }[];
   currency?: string;
 }) {
+  const uiText = useText();
   const { hidden } = usePrivacy();
 
   if (data.length < 2) {
     return (
-      <div className="text-sm text-[var(--muted)] py-12 text-center">
-        Not enough history yet — this fills in as your account balances change over time.
-      </div>
+      <div className="text-sm text-[var(--muted)] py-12 text-center">{uiText("Not enough history yet — this fills in as your account balances change over time.")}</div>
     );
   }
 

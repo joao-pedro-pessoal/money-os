@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { getAccount, getAccountSnapshots, updateAccountBalance, updateAccount, archiveAccount } from "@/actions/accounts";
 import { listBucketsWithTotals, setAllocation } from "@/actions/buckets";
@@ -14,6 +15,7 @@ import Section from "@/components/Section";
 import AccountViews from "@/components/AccountViews";
 
 export default async function AccountDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const uiText = await textForRequest();
   const { id } = await params;
   const account = await getAccount(id);
   if (!account) notFound();
@@ -70,15 +72,15 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
   ];
 
   const windows = [
-    { label: "30d", days: 30 },
-    { label: "90d", days: 90 },
-    { label: "1y", days: 365 },
+    { label: uiText("30d"), days: 30 },
+    { label: uiText("90d"), days: 90 },
+    { label: uiText("1y"), days: 365 },
   ].map((w) => ({ label: w.label, growth: growthOverDays(series, w.days) }));
 
   // Since the beginning is always answerable when there are two points.
   if (series.length >= 2) {
     windows.push({
-      label: "all",
+      label: uiText("all"),
       growth: growth({ from: series[0].value, to: series[series.length - 1].value }),
     });
   }
@@ -105,15 +107,14 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
                 className="badge border text-[10px]"
                 style={{ borderColor: "var(--border)", color: "var(--muted)" }}
               >
-                {Number(account.portfolioCashPercent)}% investing cash
-              </span>
+                {Number(account.portfolioCashPercent)}{uiText("% investing cash")}</span>
             )}
           </div>
         </div>
         <form action={archiveAccount}>
           <input type="hidden" name="id" value={account.id} />
           <ConfirmSubmitButton
-            label={account.active ? "Archive account" : "Account archived"}
+            label={account.active ? uiText("Archive account") : uiText("Account archived")}
             confirmMessage={`Archive "${account.name}"? Its history stays intact, it just leaves the active lists.`}
           />
         </form>
@@ -121,7 +122,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">Current balance</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("Current balance")}</div>
           <div className="text-xl font-semibold">
             <Money value={Number(account.balance)} currency={account.currency} />
           </div>
@@ -130,7 +131,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             nowhere on it, so the balance stood without the context that makes
             it actionable. */}
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">Free</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("Free")}</div>
           <div className="text-xl font-semibold">
             <Money value={free} currency={account.currency} />
           </div>
@@ -139,35 +140,32 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               claim that none of it was invested. */}
           <div className="text-[10px] text-[var(--muted)] mt-1 leading-snug">
             {platform && (
-              <div>{(Number(account.balance) - platform.available).toFixed(2)} invested</div>
+              <div>{(Number(account.balance) - platform.available).toFixed(2)}{uiText(" invested")}</div>
             )}
             {/* A declared split, stated in the same place a synced one is. The
                 figure was invisible here, so a wrong Free had no explanation
                 on screen and no way to be traced to its cause. */}
             {investedHere !== null && investedHere > 0 && (
-              <div>{investedHere.toFixed(2)} invested (you told the app)</div>
+              <div>{investedHere.toFixed(2)}{uiText(" invested (you told the app)")}</div>
             )}
-            {allocatedTotal > 0 && <div>{allocatedTotal.toFixed(2)} assigned to buckets</div>}
+            {allocatedTotal > 0 && <div>{allocatedTotal.toFixed(2)}{uiText(" assigned to buckets")}</div>}
           </div>
           {/* The split was chosen but never filled in: everything then counts
               as spendable, and an account of ETFs looks like ready money. */}
           {meaningOf(account.balanceMeaning) === "bank_and_broker" &&
             account.investedValue === null && (
-              <div className="text-[10px] mt-1 leading-snug" style={{ color: "var(--amber)" }}>
-                This account is set to hold cash and investments together, but hasn&apos;t said how
-                much is invested — so all of it counts as spendable. Fill it in below.
-              </div>
+              <div className="text-[10px] mt-1 leading-snug" style={{ color: "var(--amber)" }}>{uiText("This account is set to hold cash and investments together, but hasn't said how much is invested — so all of it counts as spendable. Fill it in below.")}</div>
             )}
         </div>
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">Last Updated</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("Last Updated")}</div>
           <div className="text-sm">
-            {account.lastManualUpdate ? new Date(account.lastManualUpdate).toLocaleString("pt-PT") : "never"}
+            {account.lastManualUpdate ? new Date(account.lastManualUpdate).toLocaleString("pt-PT") : uiText("never")}
           </div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">History points</div>
-          <div className="text-sm">{snapshots.length} snapshots</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("History points")}</div>
+          <div className="text-sm">{snapshots.length}{uiText(" snapshots")}</div>
         </div>
       </div>
 
@@ -180,8 +178,8 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
           <div className="flex items-baseline justify-end gap-3 flex-wrap mb-3">
             <div className="flex gap-4 text-xs">
               {windows.map((w) => (
-                <span key={w.label}>
-                  <span className="text-[var(--muted)]">{w.label} </span>
+                <span key={uiText(w.label)}>
+                  <span className="text-[var(--muted)]">{uiText(w.label)} </span>
                   {w.growth === null ? (
                     <span className="text-[var(--muted)]">—</span>
                   ) : (
@@ -203,24 +201,19 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             data={series.map((p) => ({ date: p.date, netWorth: p.value }))}
             currency={account.currency}
           />
-          <p className="text-xs text-[var(--muted)] mt-2">
-            Change in balance, not investment return — a deposit shows here as growth because from
-            the account&apos;s point of view that&apos;s exactly what it is.
-          </p>
+          <p className="text-xs text-[var(--muted)] mt-2">{uiText("Change in balance, not investment return — a deposit shows here as growth because from the account's point of view that's exactly what it is.")}</p>
         </Section>
       )}
 
       </div>}
       manage={
         <div className="space-y-6">
-      <Section title="Account actions" summary="Archive this account" defaultOpen>
-        <p className="text-xs text-[var(--muted)] mb-3">
-          Archiving keeps the history and transactions, but removes the account from active totals and lists.
-        </p>
+      <Section title="Account actions" summary={uiText("Archive this account")} defaultOpen>
+        <p className="text-xs text-[var(--muted)] mb-3">{uiText("Archiving keeps the history and transactions, but removes the account from active totals and lists.")}</p>
         <form action={archiveAccount}>
           <input type="hidden" name="id" value={account.id} />
           <ConfirmSubmitButton
-            label={account.active ? "Archive account" : "Account archived"}
+            label={account.active ? uiText("Archive account") : uiText("Account archived")}
             confirmMessage={`Archive "${account.name}"? Its history stays intact, it just leaves the active lists.`}
           />
         </form>
@@ -230,44 +223,39 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
           <form action={updateAccountBalance} className="space-y-3">
             <input type="hidden" name="accountId" value={account.id} />
             <label className="block text-xs">
-              <span className="text-[var(--muted)]">What the account really holds now</span>
+              <span className="text-[var(--muted)]">{uiText("What the account really holds now")}</span>
               <input
                 name="newBalance"
                 type="number"
                 step="0.01"
-                placeholder={`e.g. ${Number(account.balance).toFixed(2)}`}
+                placeholder={uiText("e.g. {0}", { "0": Number(account.balance).toFixed(2) })}
                 className="input mt-1"
                 required
               />
             </label>
             <label className="block text-xs">
-              <span className="text-[var(--muted)]">Record the difference as</span>
+              <span className="text-[var(--muted)]">{uiText("Record the difference as")}</span>
             <select name="classification" className="input">
-              <option value="interest">Interest</option>
-              <option value="deposit">Deposit</option>
-              <option value="withdrawal">Withdrawal</option>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-              <option value="correction">Correction (no cash-flow impact)</option>
-              <option value="other">Other (no cash-flow impact)</option>
+              <option value="interest">{uiText("Interest")}</option>
+              <option value="deposit">{uiText("Deposit")}</option>
+              <option value="withdrawal">{uiText("Withdrawal")}</option>
+              <option value="income">{uiText("Income")}</option>
+              <option value="expense">{uiText("Expense")}</option>
+              <option value="correction">{uiText("Correction (no cash-flow impact)")}</option>
+              <option value="other">{uiText("Other (no cash-flow impact)")}</option>
               </select>
             </label>
-            <button type="submit" className="btn w-full">
-              Save
-            </button>
-            <p className="text-xs text-[var(--muted)]">
-              The difference vs. the current balance is recorded as a transaction of this type (except
-              Correction/Other, which just fixes the number without affecting cash flow).
-            </p>
+            <button type="submit" className="btn w-full">{uiText("Save")}</button>
+            <p className="text-xs text-[var(--muted)]">{uiText("The difference vs. the current balance is recorded as a transaction of this type (except Correction/Other, which just fixes the number without affecting cash flow).")}</p>
           </form>
         </Section>
 
         <Section title="Bucket allocations" defaultOpen>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table mb-4">
+          <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table mb-4">
             <thead>
               <tr>
-                <th>Bucket</th>
-                <th>Amount</th>
+                <th>{uiText("Bucket")}</th>
+                <th>{uiText("Amount")}</th>
               </tr>
             </thead>
             <tbody>
@@ -290,25 +278,20 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
                 </option>
               ))}
             </select>
-            <input name="amount" type="number" step="0.01" placeholder="Amount (0 removes it)" className="input" required />
-            <button type="submit" className="btn w-full">
-              Set exact total
-            </button>
+            <input name="amount" type="number" step="0.01" placeholder={uiText("Amount (0 removes it)")} className="input" required />
+            <button type="submit" className="btn w-full">{uiText("Set exact total")}</button>
           </form>
         </Section>
       </div>
 
       <Section title="Account details" defaultOpen className="max-w-lg">
-        <p className="text-xs text-[var(--muted)] mb-3">
-          Naming and currency. Changing the currency does not convert anything already
-          recorded — it only changes how new figures are read.
-        </p>
+        <p className="text-xs text-[var(--muted)] mb-3">{uiText("Naming and currency. Changing the currency does not convert anything already recorded — it only changes how new figures are read.")}</p>
         <form action={updateAccount} className="space-y-3">
           <input type="hidden" name="id" value={account.id} />
           {/* Labelled. Four boxes reading "Trading 212", "Trading 212",
               "Exchange", "USD" gave no clue which was which. */}
           <label className="block text-xs">
-            <span className="text-[var(--muted)]">Institution</span>
+            <span className="text-[var(--muted)]">{uiText("Institution")}</span>
             <input
               name="institution"
               defaultValue={account.institution}
@@ -317,21 +300,21 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             />
           </label>
           <label className="block text-xs">
-            <span className="text-[var(--muted)]">Account name</span>
+            <span className="text-[var(--muted)]">{uiText("Account name")}</span>
             <input name="name" defaultValue={account.name} className="input mt-1" required />
           </label>
           <label className="block text-xs">
-            <span className="text-[var(--muted)]">Type</span>
+            <span className="text-[var(--muted)]">{uiText("Type")}</span>
             <select name="accountType" defaultValue={account.accountType} className="input mt-1">
-            <option value="bank">Bank</option>
-            <option value="broker">Broker</option>
-            <option value="exchange">Exchange</option>
-            <option value="cash">Cash</option>
-            <option value="other">Other</option>
+            <option value="bank">{uiText("Bank")}</option>
+            <option value="broker">{uiText("Broker")}</option>
+            <option value="exchange">{uiText("Exchange")}</option>
+            <option value="cash">{uiText("Cash")}</option>
+            <option value="other">{uiText("Other")}</option>
             </select>
           </label>
           <label className="block text-xs">
-            <span className="text-[var(--muted)]">Currency</span>
+            <span className="text-[var(--muted)]">{uiText("Currency")}</span>
             <select name="currency" defaultValue={account.currency} className="input mt-1">
               <option value="EUR">EUR</option>
               <option value="USD">USD</option>
@@ -349,9 +332,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               before you commit to a purchase. This keeps it out of the
               dashboard's Free Cash without hiding it. */}
           <label className="block text-xs">
-            <span className="text-[var(--muted)]">
-              How much of this account&apos;s spare cash is investing money?
-            </span>
+            <span className="text-[var(--muted)]">{uiText("How much of this account's spare cash is investing money?")}</span>
             <div className="flex items-center gap-2 mt-1">
               <input
                 name="portfolioCashPercent"
@@ -360,18 +341,16 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
                 max="100"
                 step="1"
                 defaultValue={account.portfolioCashPercent ?? ""}
-                placeholder="e.g. 100 for a broker, 0 for a current account"
+                placeholder={uiText("e.g. 100 for a broker, 0 for a current account")}
                 className="input"
               />
               <span className="text-[var(--muted)]">%</span>
             </div>
-            <span className="text-[10px] text-[var(--muted)] block mt-1">
-              Left blank, it counts as spendable and the dashboard says it hasn&apos;t been set.
-            </span>
+            <span className="text-[10px] text-[var(--muted)] block mt-1">{uiText("Left blank, it counts as spendable and the dashboard says it hasn't been set.")}</span>
           </label>
 
           <label className="block text-xs">
-            <span className="text-[var(--muted)]">Notes</span>
+            <span className="text-[var(--muted)]">{uiText("Notes")}</span>
             <textarea
               name="notes"
               defaultValue={account.notes ?? ""}
@@ -379,9 +358,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               rows={2}
             />
           </label>
-          <button type="submit" className="btn w-full">
-            Save changes
-          </button>
+          <button type="submit" className="btn w-full">{uiText("Save changes")}</button>
         </form>
       </Section>
         </div>}

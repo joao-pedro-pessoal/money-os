@@ -1,3 +1,6 @@
+"use client";
+
+import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { Money } from "@/components/PrivacyContext";
 import type { PositionItem } from "@/lib/portfolio/positionView";
@@ -23,6 +26,7 @@ export default function PortfolioAudit({
   items: PositionItem[];
   currency: string;
 }) {
+  const uiText = useText();
   const rows = auditByPlatform(items);
   if (rows.length === 0) return null;
 
@@ -30,25 +34,19 @@ export default function PortfolioAudit({
 
   return (
     <details className="card p-4">
-      <summary className="text-sm font-medium cursor-pointer">
-        Where these numbers come from
-      </summary>
+      <summary className="text-sm font-medium cursor-pointer">{uiText("Where these numbers come from")}</summary>
 
-      <p className="text-xs text-[var(--muted)] mt-2 mb-3 max-w-2xl">
-        Each platform&apos;s contribution to the totals above. Compare a line against the
-        broker&apos;s own app — if one disagrees, the problem is in that connection rather than in
-        the arithmetic.
-      </p>
+      <p className="text-xs text-[var(--muted)] mt-2 mb-3 max-w-2xl">{uiText("Each platform's contribution to the totals above. Compare a line against the broker's own app — if one disagrees, the problem is in that connection rather than in the arithmetic.")}</p>
 
       <div className="overflow-x-auto">
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
+        <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
           <thead>
             <tr>
-              <th>Platform</th>
-              <th>Positions</th>
-              <th>Market-exposed</th>
-              <th>Cash &amp; stable</th>
-              <th>Total</th>
+              <th>{uiText("Platform")}</th>
+              <th>{uiText("Positions")}</th>
+              <th>{uiText("Market-exposed")}</th>
+              <th>{uiText("Cash & stable")}</th>
+              <th>{uiText("Total")}</th>
             </tr>
           </thead>
           <tbody>
@@ -84,13 +82,8 @@ export default function PortfolioAudit({
           style={{ borderColor: "var(--amber)", color: "var(--amber)" }}
         >
           <strong>
-            {overlapping.map((r) => r.platform).join(", ")} report{" "}
-            {overlapping.length === 1 ? "s" : ""} cash that already backs its own positions.
-          </strong>{" "}
-          On these platforms the coin balances are the margin pool, not money sitting beside the
-          trades — so counting both inflates the total by roughly the margin in use. Check this
-          line against the platform before trusting it.
-        </div>
+            {overlapping.map((r) => r.platform).join(", ")}{uiText(" report")}{" "}
+            {overlapping.length === 1 ? uiText("s") : ""}{uiText(" cash that already backs its own positions.")}</strong>{" "}{uiText("On these platforms the coin balances are the margin pool, not money sitting beside the trades — so counting both inflates the total by roughly the margin in use. Check this line against the platform before trusting it.")}</div>
       )}
     </details>
   );

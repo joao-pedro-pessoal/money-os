@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">记录支出或收入</string>
+    <string name="widget_expense" formatted="false">− 费用</string>
+    <string name="widget_income" formatted="false">+ 收入</string>
+    <string name="shortcut_expense" formatted="false">费用</string>
+    <string name="shortcut_expense_long" formatted="false">记录费用</string>
+    <string name="shortcut_income" formatted="false">收入</string>
+    <string name="shortcut_income_long" formatted="false">创纪录的收入</string>
+    <string name="widget_dashboard_description" formatted="false">本月净资产以及一段时间内的净资产</string>
+    <string name="widget_net_worth_description" formatted="false">随着时间的推移，净资产以及其变化程度</string>
+    <string name="widget_where_money_description" formatted="false">钱在哪里，就像一个带有百分比的甜甜圈</string>
+    <string name="widget_cash_flow_description" formatted="false">本月：资金流入、资金流出以及剩余金额</string>
+    <string name="widget_investments_description" formatted="false">投资组合价值、未实现损益以及每个头寸及其损益（以欧元和百分比表示）</string>
+    <string name="widget_allocation_description" formatted="false">按资产类型划分的投资组合，如带有百分比的甜甜圈</string>
+    <string name="widget_movers_description" formatted="false">按成本回报率划分的最佳和最差位置</string>
+    <string name="widget_dividends_description" formatted="false">今年已收到的股息以及下一次预计支付的股息</string>
+    <string name="widget_open_trades_description" formatted="false">未平仓杠杆头寸：未实现盈亏、保证金和每笔交易</string>
+    <string name="ui_registo_r_pido" formatted="false">快速注册</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">净资产</string>
+    <string name="ui_where_the_money_is" formatted="false">钱在哪里</string>
+    <string name="ui_cash_flow" formatted="false">收支</string>
+    <string name="ui_investments" formatted="false">投资</string>
+    <string name="ui_allocation" formatted="false">分配</string>
+    <string name="ui_winners_losers" formatted="false">赢家和输家</string>
+    <string name="ui_dividends" formatted="false">股息</string>
+    <string name="ui_open_trades" formatted="false">开放交易</string>
+    <string name="ui_record_expense" formatted="false">记录费用</string>
+    <string name="ui_refresh" formatted="false">刷新</string>
+    <string name="ui_chart" formatted="false">图表</string>
+</resources>

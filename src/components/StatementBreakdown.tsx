@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -64,6 +65,7 @@ export default function StatementBreakdown({
     } | null;
   };
 }) {
+  const uiText = useText();
   const [showInterest, setShowInterest] = useState(false);
   const [showDividends, setShowDividends] = useState(false);
   const c = data.currency;
@@ -81,7 +83,7 @@ export default function StatementBreakdown({
           className="rounded-lg border p-3 text-xs leading-relaxed"
           style={{ borderColor: "var(--amber)", color: "var(--amber)" }}
         >
-          <strong>This statement is in {data.currencies.join(", ")}.</strong>{" "}
+          <strong>{uiText("This statement is in ")}{data.currencies.join(", ")}.</strong>{" "}
           {data.converted &&
             `The totals are converted into ${c} at today's rates, so they are approximate; each instrument and payment is shown in its own currency.`}
           {data.unconverted.length > 0 &&
@@ -90,11 +92,11 @@ export default function StatementBreakdown({
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-        <Figure label="You put in" value={data.flows.deposits} currency={c} />
-        <Figure label="You took out" value={data.flows.withdrawals} currency={c} />
-        <Figure label="Still invested, at cost" value={data.stillInvested} currency={c} />
+        <Figure label={uiText("You put in")} value={data.flows.deposits} currency={c} />
+        <Figure label={uiText("You took out")} value={data.flows.withdrawals} currency={c} />
+        <Figure label={uiText("Still invested, at cost")} value={data.stillInvested} currency={c} />
         <Figure
-          label="Interest + dividends"
+          label={uiText("Interest + dividends")}
           value={data.interest.total + data.dividends.total}
           currency={c}
           tone="good"
@@ -105,24 +107,24 @@ export default function StatementBreakdown({
           the gain, and it needs no market prices at all. */}
       {data.gain && (
         <div className="card p-4">
-          <div className="text-sm font-medium mb-1">What it has done</div>
+          <div className="text-sm font-medium mb-1">{uiText("What it has done")}</div>
           <div className="flex items-baseline gap-6 flex-wrap mt-2">
             <div>
-              <div className="text-[10px] text-[var(--muted)]">Worth today</div>
+              <div className="text-[10px] text-[var(--muted)]">{uiText("Worth today")}</div>
               <div className="text-base font-semibold">
                 <Money value={data.gain.value} currency={c} />
               </div>
             </div>
             <div className="text-[var(--muted)]">−</div>
             <div>
-              <div className="text-[10px] text-[var(--muted)]">Cost</div>
+              <div className="text-[10px] text-[var(--muted)]">{uiText("Cost")}</div>
               <div className="text-base font-semibold">
                 <Money value={data.gain.cost} currency={c} />
               </div>
             </div>
             <div className="text-[var(--muted)]">=</div>
             <div>
-              <div className="text-[10px] text-[var(--muted)]">Unrealised</div>
+              <div className="text-[10px] text-[var(--muted)]">{uiText("Unrealised")}</div>
               <div
                 className="text-base font-semibold"
                 style={{ color: data.gain.unrealized >= 0 ? "var(--green)" : "var(--red)" }}
@@ -140,36 +142,26 @@ export default function StatementBreakdown({
             </div>
           </div>
 
-          <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">
-            Exact, and built without a single market price: the statement knows what you paid, and
-            the account knows what it is worth. Which instrument earned it is not knowable from
-            those two numbers, so the table above stays at cost rather than splitting this figure
-            across rows that would then look like measurements.
-          </p>
+          <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">{uiText("Exact, and built without a single market price: the statement knows what you paid, and the account knows what it is worth. Which instrument earned it is not knowable from those two numbers, so the table above stays at cost rather than splitting this figure across rows that would then look like measurements.")}</p>
         </div>
       )}
 
       {/* Where it went. Cost, not value: the statement knows what you paid. */}
       <div className="card p-4">
-        <div className="text-sm font-medium mb-1">Where the money went</div>
-        <p className="text-xs text-[var(--muted)] mb-3">
-          What each position cost you, from your own buys and sells. Not what it is worth today —
-          the statement doesn&apos;t carry prices for days it wasn&apos;t traded.
-        </p>
+        <div className="text-sm font-medium mb-1">{uiText("Where the money went")}</div>
+        <p className="text-xs text-[var(--muted)] mb-3">{uiText("What each position cost you, from your own buys and sells. Not what it is worth today — the statement doesn't carry prices for days it wasn't traded.")}</p>
 
         {held.length === 0 ? (
-          <div className="text-xs text-[var(--muted)] py-4">
-            Nothing still held according to this statement.
-          </div>
+          <div className="text-xs text-[var(--muted)] py-4">{uiText("Nothing still held according to this statement.")}</div>
         ) : (
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full text-xs">
+          <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="w-full text-xs">
             <thead>
               <tr className="text-[var(--muted)] text-[10px]">
-                <th className="text-left font-normal pb-1">Instrument</th>
-                <th className="text-right font-normal pb-1">Shares</th>
-                <th className="text-right font-normal pb-1">Avg price</th>
-                <th className="text-right font-normal pb-1">Cost</th>
-                <th className="text-right font-normal pb-1">Paid you</th>
+                <th className="text-left font-normal pb-1">{uiText("Instrument")}</th>
+                <th className="text-right font-normal pb-1">{uiText("Shares")}</th>
+                <th className="text-right font-normal pb-1">{uiText("Avg price")}</th>
+                <th className="text-right font-normal pb-1">{uiText("Cost")}</th>
+                <th className="text-right font-normal pb-1">{uiText("Paid you")}</th>
               </tr>
             </thead>
             <tbody>
@@ -180,7 +172,7 @@ export default function StatementBreakdown({
                     {h.isin && <div className="text-[10px] text-[var(--muted)]">{h.isin}</div>}
                     {h.incomplete && (
                       <div className="text-[10px]" style={{ color: "var(--amber)" }}>
-                        {h.reasons[0]}
+                        {uiText(h.reasons[0] ?? "")}
                       </div>
                     )}
                   </td>
@@ -205,9 +197,7 @@ export default function StatementBreakdown({
 
         {closed.length > 0 && (
           <div className="mt-3 pt-3 border-t border-[var(--border)]">
-            <div className="text-[10px] text-[var(--muted)] mb-1">
-              Closed — sold in full, kept here because the profit is yours either way
-            </div>
+            <div className="text-[10px] text-[var(--muted)] mb-1">{uiText("Closed — sold in full, kept here because the profit is yours either way")}</div>
             {closed.map((h) => (
               <div key={`${h.currency}:${h.key}`} className="flex justify-between text-xs py-0.5">
                 <span><span translate="no">{h.symbol ?? h.key}</span></span>
@@ -226,7 +216,7 @@ export default function StatementBreakdown({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <PaymentList
-          title="Interest on idle cash"
+          title={uiText("Interest on idle cash")}
           total={data.interest.total}
           currency={c}
           open={showInterest}
@@ -241,7 +231,7 @@ export default function StatementBreakdown({
           }))}
         />
         <PaymentList
-          title="Dividends"
+          title={uiText("Dividends")}
           total={data.dividends.total}
           currency={c}
           open={showDividends}
@@ -257,12 +247,8 @@ export default function StatementBreakdown({
         />
       </div>
 
-      <div className="text-[10px] text-[var(--muted)] leading-snug">
-        From {data.events} imported rows, up to {data.lastEvent ?? "—"}. Fees paid:{" "}
-        <span translate="no">{fmt(data.fees, c)}</span>. Profit on sales, <span translate="no">{fmt(data.realizedPnl, c)}</span>, is this app&apos;s own
-        calculation using average cost — your broker may state a different figure using a different
-        method.
-      </div>
+      <div className="text-[10px] text-[var(--muted)] leading-snug">{uiText("From ")}{data.events}{uiText(" imported rows, up to ")}{data.lastEvent ?? "—"}{uiText(". Fees paid:")}{" "}
+        <span translate="no">{fmt(data.fees, c)}</span>{uiText(". Profit on sales, ")}<span translate="no">{fmt(data.realizedPnl, c)}</span>{uiText(", is this app's own calculation using average cost — your broker may state a different figure using a different method.")}</div>
     </div>
   );
 }
@@ -279,9 +265,10 @@ function Figure({
   currency: string;
   tone?: "good";
 }) {
+  const uiText = useText();
   return (
     <div className="card p-3">
-      <div className="text-[10px] text-[var(--muted)] mb-1">{label}</div>
+      <div className="text-[10px] text-[var(--muted)] mb-1">{uiText(label ?? "")}</div>
       <div
         className="text-base font-semibold"
         style={{ color: tone === "good" && value !== null && value > 0 ? "var(--green)" : undefined }}
@@ -318,6 +305,7 @@ function PaymentList({
   open: boolean;
   onToggle: () => void;
 }) {
+  const uiText = useText();
   return (
     <div className="card p-4">
       <div className="flex items-baseline justify-between gap-2">
@@ -329,7 +317,7 @@ function PaymentList({
       <p className="text-[10px] text-[var(--muted)] leading-snug mt-1">{note}</p>
 
       {count === 0 ? (
-        <div className="text-xs text-[var(--muted)] mt-3">None in this statement.</div>
+        <div className="text-xs text-[var(--muted)] mt-3">{uiText("None in this statement.")}</div>
       ) : (
         <>
           <button
@@ -338,7 +326,7 @@ function PaymentList({
             className="text-[10px] mt-2"
             style={{ color: "var(--accent)" }}
           >
-            {open ? "Hide" : `Show all ${count}`}
+            {open ? uiText("Hide") : uiText("Show all {0}", { "0": count })}
           </button>
           {open && (
             <div className="mt-2 space-y-0.5 max-h-64 overflow-y-auto">

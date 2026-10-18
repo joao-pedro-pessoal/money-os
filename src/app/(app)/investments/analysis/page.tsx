@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
@@ -47,6 +48,7 @@ export default async function PortfolioAnalysisPage({
   /** Filters repeat a parameter, one per value (`f_playlist=Core&f_playlist=Growth`). */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const uiText = await textForRequest();
   const params = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const sp = {
@@ -128,8 +130,9 @@ export default async function PortfolioAnalysisPage({
   const filtered = Object.values(filters).some((v) => v && v.length > 0);
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)!.label;
   const best = [...grouped].filter((g) => g.cost > 0).sort((x, y) => y.pnlPercent - x.pnlPercent)[0];
-  const label = (k: string) => groupValueLabel(groupBy, k);
-  const subLabel = (k: string) => (thenBy ? groupValueLabel(thenBy, k) : k);
+  const displayGroup = (axis: GroupByKey, key: string) => ['account', 'playlist', 'symbol'].includes(axis) ? groupValueLabel(axis, key) : uiText(groupValueLabel(axis, key));
+  const label = (k: string) => displayGroup(groupBy, k);
+  const subLabel = (k: string) => (thenBy ? displayGroup(thenBy, k) : k);
   /**
    * The view's address with some of it changed. Filters are carried as they
    * are unless replaced, and repeat their parameter once per value.
@@ -190,27 +193,20 @@ export default async function PortfolioAnalysisPage({
     return (
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <h1 className="text-lg font-semibold">Portfolio analysis</h1>
+          <h1 className="text-lg font-semibold">{uiText("Portfolio analysis")}</h1>
           {/* The toggle must stay reachable here, or switching it off with no
               manual positions would leave no way to switch it back on. */}
           <FilterLink href={qs({ synced: includeSynced ? "off" : "on" })} className="btn whitespace-nowrap">
-            {includeSynced ? "Cash & stablecoins: ON" : "Cash & stablecoins: OFF"}
+            {includeSynced ? uiText("Cash & stablecoins: ON") : uiText("Cash & stablecoins: OFF")}
           </FilterLink>
         </div>
         <CashExplanation />
         <div className="card p-8 text-center text-sm text-[var(--muted)]">
           {includeSynced ? (
-            <>
-              Nothing to analyse yet —{" "}
-              <Link href="/investments" className="text-[var(--accent)]">
-                add a position
-              </Link>{" "}
-              first.
-            </>
+            <>{uiText("Nothing to analyse yet —")}{" "}
+              <Link href="/investments" className="text-[var(--accent)]">{uiText("add a position")}</Link>{" "}{uiText("first.")}</>
           ) : (
-            <>
-              No positions match this view. Turn cash and stablecoins back on above to include them.
-            </>
+            <>{uiText("No positions match this view. Turn cash and stablecoins back on above to include them.")}</>
           )}
         </div>
 
@@ -222,21 +218,17 @@ export default async function PortfolioAnalysisPage({
         <section className="card p-4" style={{ borderLeft: "2px solid var(--amber)" }}>
           <div className="text-sm font-medium">
             {a.tagging.complete === 0
-              ? "None of these positions is fully classified"
-              : `${a.needsTags.length} of ${a.tagging.positions} positions are not fully classified`}
+              ? uiText("None of these positions is fully classified")
+              : uiText("{0} of {1} positions are not fully classified", { "0": a.needsTags.length, "1": a.tagging.positions })}
           </div>
-          <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl leading-relaxed">
-            The breakdowns above group anything unanswered under <em>unset</em>, so where that
-            slice is large they are mostly drawing the absence of an answer.{" "}
-            <Money value={a.tagging.incompleteValue} currency={currency} /> sits in positions missing
-            at least one axis.
-          </p>
+          <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl leading-relaxed">{uiText("The breakdowns above group anything unanswered under ")}<em>{uiText("unset")}</em>{uiText(", so where that slice is large they are mostly drawing the absence of an answer.")}{" "}
+            <Money value={a.tagging.incompleteValue} currency={currency} />{uiText(" sits in positions missing at least one axis.")}</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
             {a.coverage.map((c) => (
               <div key={c.axis}>
                 <div className="text-[10px] text-[var(--muted)] uppercase tracking-wide">
-                  {c.label}
+                  {uiText(c.label ?? "")}
                 </div>
                 <div
                   className="text-lg font-semibold"
@@ -257,8 +249,8 @@ export default async function PortfolioAnalysisPage({
                 </div>
                 <div className="text-[10px] text-[var(--muted)]">
                   {c.untagged === 0
-                    ? "every position answered"
-                    : `${c.untagged} unanswered · ${c.untaggedValue.toFixed(2)} ${currency}`}
+                    ? uiText("every position answered")
+                    : uiText("{0} unanswered · {1} {2}", { "0": c.untagged, "1": c.untaggedValue.toFixed(2), "2": currency })}
                 </div>
               </div>
             ))}
@@ -267,12 +259,12 @@ export default async function PortfolioAnalysisPage({
           {/* Ordered by money: classifying the largest holding moves every
               breakdown on the page, and classifying the smallest moves none. */}
           <div className="overflow-auto max-h-72 mt-4">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs w-full">
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs w-full">
               <thead>
                 <tr>
-                  <th>Position</th>
-                  <th className="text-right">Value</th>
-                  <th>Still to answer</th>
+                  <th>{uiText("Position")}</th>
+                  <th className="text-right">{uiText("Value")}</th>
+                  <th>{uiText("Still to answer")}</th>
                   <th />
                 </tr>
               </thead>
@@ -287,9 +279,7 @@ export default async function PortfolioAnalysisPage({
                       {g.missing.map((m) => m.label).join(", ")}
                     </td>
                     <td className="text-right">
-                      <Link href="/positions" className="text-[var(--accent)]">
-                        tag →
-                      </Link>
+                      <Link href="/positions" className="text-[var(--accent)]">{uiText("tag →")}</Link>
                     </td>
                   </tr>
                 ))}
@@ -306,7 +296,7 @@ export default async function PortfolioAnalysisPage({
 
         {statement && (
           <div>
-            <div className="text-sm font-medium mb-3">From your imported statement</div>
+            <div className="text-sm font-medium mb-3">{uiText("From your imported statement")}</div>
             <StatementBreakdown data={statement} />
           </div>
         )}
@@ -318,13 +308,11 @@ export default async function PortfolioAnalysisPage({
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-lg font-semibold">Portfolio analysis</h1>
-          <p className="text-xs text-[var(--muted)] mt-1">
-            Exposure, P&amp;L and yield across everything you hold — manual,
-            imported and synced.{" "}
+          <h1 className="text-lg font-semibold">{uiText("Portfolio analysis")}</h1>
+          <p className="text-xs text-[var(--muted)] mt-1">{uiText("Exposure, P&L and yield across everything you hold — manual, imported and synced.")}{" "}
             {includeSynced
-              ? "Cash and stablecoins are included."
-              : "Cash and stablecoins are excluded from the allocation and position breakdowns."}
+              ? uiText("Cash and stablecoins are included.")
+              : uiText("Cash and stablecoins are excluded from the allocation and position breakdowns.")}
           </p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
@@ -333,7 +321,7 @@ export default async function PortfolioAnalysisPage({
             className="btn whitespace-nowrap"
             aria-describedby="cash-stablecoins-help"
           >
-            {includeSynced ? "Cash & stablecoins: ON" : "Cash & stablecoins: OFF"}
+            {includeSynced ? uiText("Cash & stablecoins: ON") : uiText("Cash & stablecoins: OFF")}
           </FilterLink>
         </div>
       </div>
@@ -341,12 +329,12 @@ export default async function PortfolioAnalysisPage({
       {/* ---- Headline numbers ---- */}
       <Section title="Portfolio overview" essential defaultOpen persistKey="analysis-overview">
       <div className="grid grid-cols-1 min-[390px]:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat currency={currency} label="Portfolio Value" value={a.totals.totalValue} />
-        <Stat currency={currency} label="Cost Basis" value={a.totals.totalCost} />
-        <Stat currency={currency} label="Unrealized P&L" value={a.totals.totalPnL} percent={a.totals.totalCost > 0 ? a.totals.totalPnLPercent : null} note="Return on known cost of open positions" className={pnlColor} />
+        <Stat currency={currency} label={uiText("Portfolio Value")} value={a.totals.totalValue} />
+        <Stat currency={currency} label={uiText("Cost Basis")} value={a.totals.totalCost} />
+        <Stat currency={currency} label={uiText("Unrealized P&L")} value={a.totals.totalPnL} percent={a.totals.totalCost > 0 ? a.totals.totalPnLPercent : null} note="Return on known cost of open positions" className={pnlColor} />
         <Stat
           currency={currency}
-          label="Realized P&L"
+          label={uiText("Realized P&L")}
           value={realised.total}
           percent={null}
           note={`${realisedNote({
@@ -367,19 +355,19 @@ export default async function PortfolioAnalysisPage({
       <Section title="Cash & stablecoins vs other assets" essential defaultOpen persistKey="analysis-asset-split">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <div className="text-xs text-[var(--muted)] mb-1">Cash &amp; stablecoins</div>
+            <div className="text-xs text-[var(--muted)] mb-1">{uiText("Cash & stablecoins")}</div>
             <div className="text-lg font-semibold text-[var(--green)]">
               <Money value={a.split.stable} currency={currency} />
             </div>
           </div>
           <div>
-            <div className="text-xs text-[var(--muted)] mb-1">Floating (market-exposed)</div>
+            <div className="text-xs text-[var(--muted)] mb-1">{uiText("Floating (market-exposed)")}</div>
             <div className="text-lg font-semibold text-[var(--amber)]">
               <Money value={a.split.floating} currency={currency} />
             </div>
           </div>
           <div>
-            <div className="text-xs text-[var(--muted)] mb-1">Market-exposed share</div>
+            <div className="text-xs text-[var(--muted)] mb-1">{uiText("Market-exposed share")}</div>
             <div className="text-lg font-semibold">{a.split.floatingPercent.toFixed(1)}%</div>
           </div>
         </div>
@@ -408,13 +396,11 @@ export default async function PortfolioAnalysisPage({
 
         <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
           <div>
-            <div className="text-sm font-medium">
-              Performance by {groupLabel.toLowerCase()}
+            <div className="text-sm font-medium">{uiText("Performance by ")}{uiText(groupLabel.toLowerCase() ?? "")}
               {thenBy && `, then by ${GROUP_BY_OPTIONS.find((o) => o.value === thenBy)!.label.toLowerCase()}`}
             </div>
             {best && (
-              <div className="text-xs text-[var(--muted)] mt-1">
-                Best: <span className="text-[var(--green)]">{label(best.key)}</span> at{" "}
+              <div className="text-xs text-[var(--muted)] mt-1">{uiText("Best: ")}<span className="text-[var(--green)]">{label(best.key)}</span>{uiText(" at")}{" "}
                 {best.pnlPercent.toFixed(1)}%
               </div>
             )}
@@ -424,10 +410,10 @@ export default async function PortfolioAnalysisPage({
               inputs and stopped there, so changing the grouping dropped
               `synced` — whose absence reads as on — and closed the open group. */}
           <div className="flex flex-wrap gap-2 text-xs">
-            <FilterSelect label="Position status" value={status}
+            <FilterSelect label={uiText("Position status")} value={status}
               options={PERFORMANCE_STATUS_OPTIONS.map(o => ({ value: o.value, label: o.label, href: qs({ status: o.value }) }))} />
             <FilterSelect
-              label="Group by"
+              label={uiText("Group by")}
               value={groupBy}
               options={GROUP_BY_OPTIONS.map((o) => ({
                 value: o.value,
@@ -439,7 +425,7 @@ export default async function PortfolioAnalysisPage({
             {/* Groups inside groups: each playlist split by risk, each account by
                 asset type. Opening a group shows its own groups. */}
             <FilterSelect
-              label="Then by"
+              label={uiText("Then by")}
               value={thenBy ?? ""}
               options={[
                 { value: "", label: "Then by: nothing", href: qs({ then: "", sub: "" }) },
@@ -453,16 +439,14 @@ export default async function PortfolioAnalysisPage({
           </div>
         </div>
 
-        <p className="text-xs text-[var(--muted)] mt-2">This filter applies to this performance breakdown and its details.</p>
+        <p className="text-xs text-[var(--muted)] mt-2">{uiText("This filter applies to this performance breakdown and its details.")}</p>
         {(groupBy === "playlist" || thenBy === "playlist") && (
-          <p className="text-xs text-[var(--muted)] mt-1">
-            A position in several playlists counts in full in each, so the playlists can add up to more than the whole.
-          </p>
+          <p className="text-xs text-[var(--muted)] mt-1">{uiText("A position in several playlists counts in full in each, so the playlists can add up to more than the whole.")}</p>
         )}
         {status !== "closed" && <DonutChart data={grouped.filter((g) => g.value > 0).map((g) => ({ name: label(g.key), value: g.value }))} currency={currency} />}
 
         <div className="overflow-x-auto mt-4">
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+          <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
             <thead>
               <tr>
                 {SORT_COLUMNS.map((c) => (
@@ -471,7 +455,7 @@ export default async function PortfolioAnalysisPage({
                       href={qs({ sort: c.key, dir: sort === c.key && dir === "desc" ? "asc" : "desc" })}
                       className="hover:underline"
                     >
-                      {c.label}
+                      {uiText(c.label ?? "")}
                       {sort === c.key && (dir === "desc" ? " ↓" : " ↑")}
                     </FilterLink>
                   </th>
@@ -479,7 +463,7 @@ export default async function PortfolioAnalysisPage({
               </tr>
             </thead>
             <tbody>
-              {grouped.length === 0 && <tr><td colSpan={7}>No {status === "open" ? "open positions" : status === "closed" ? "closed trades" : "positions or trades"} match this selection.</td></tr>}
+              {grouped.length === 0 && <tr><td colSpan={7}>{uiText("No ")}{status === "open" ? uiText("open positions") : status === "closed" ? uiText("closed trades") : uiText("positions or trades")}{uiText(" match this selection.")}</td></tr>}
               {grouped.map((g) => (
                 <Fragment key={g.key}>
                 <tr>
@@ -496,7 +480,7 @@ export default async function PortfolioAnalysisPage({
                     </FilterLink>
                     {status !== "closed" && (
                       <div className="text-xs text-[var(--muted)]">
-                        {g.percent.toFixed(1)}% of {filtered ? "what the filters show" : "portfolio"}
+                        {g.percent.toFixed(1)}{uiText("% of ")}{filtered ? uiText("what the filters show") : uiText("portfolio")}
                       </div>
                     )}
                   </td>
@@ -525,7 +509,7 @@ export default async function PortfolioAnalysisPage({
                                 </FilterLink>
                                 {status !== "closed" && (
                                   <div className="text-xs text-[var(--muted)]">
-                                    {c.percent.toFixed(1)}% of {label(g.key)}
+                                    {c.percent.toFixed(1)}{uiText("% of ")}{label(g.key)}
                                   </div>
                                 )}
                               </td>
@@ -538,11 +522,7 @@ export default async function PortfolioAnalysisPage({
 
                     <tr style={{ background: "var(--surface-2)" }}>
                       <td colSpan={7}>
-                        <p className="text-[10px] text-[var(--muted)] leading-relaxed whitespace-normal max-w-prose">
-                          Open positions and individual realised trades are grouped by their own tags.
-                          Value and unrealized P&amp;L come from open positions; realised P&amp;L comes
-                          from closed trades, including assets no longer held. Missing tags appear under Unset.
-                        </p>
+                        <p className="text-[10px] text-[var(--muted)] leading-relaxed whitespace-normal max-w-prose">{uiText("Open positions and individual realised trades are grouped by their own tags. Value and unrealized P&L come from open positions; realised P&L comes from closed trades, including assets no longer held. Missing tags appear under Unset.")}</p>
                       </td>
                     </tr>
                   </>
@@ -556,8 +536,8 @@ export default async function PortfolioAnalysisPage({
 
       <Section title="Portfolio allocation" persistKey="analysis-allocation">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BreakdownCard currency={currency} title="By account / wallet" rows={a.byAccount} donut />
-        <BreakdownCard currency={currency} title="By asset type" rows={a.byAssetType} axis="assetType" translate donut />
+        <BreakdownCard currency={currency} title={uiText("By account / wallet")} rows={a.byAccount} donut />
+        <BreakdownCard currency={currency} title={uiText("By asset type")} rows={a.byAssetType} axis="assetType" translate donut />
       </div>
       </Section>
 
@@ -595,31 +575,29 @@ export default async function PortfolioAnalysisPage({
         <Section title="Yield & staking">
           <div className="grid grid-cols-1 min-[390px]:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Earning yield</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("Earning yield")}</div>
               <div className="text-lg font-semibold">
                 <Money value={a.staking.stakedValue} currency={currency} />
               </div>
             </div>
             <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Weighted APR</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("Weighted APR")}</div>
               <div className="text-lg font-semibold">{a.staking.weightedApr.toFixed(2)}%</div>
             </div>
             <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Projected / year</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("Projected / year")}</div>
               <div className="text-lg font-semibold text-[var(--accent)]">
                 <Money value={a.staking.projectedAnnual} currency={currency} />
               </div>
             </div>
             <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Rewards received</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("Rewards received")}</div>
               <div className="text-lg font-semibold text-[var(--green)]">
                 <Money value={a.staking.rewardsEarned} currency={currency} />
               </div>
             </div>
           </div>
-          <p className="text-xs text-[var(--muted)] mt-3">
-            &quot;Projected / year&quot; is an estimate (APR × current value), not realised income.
-          </p>
+          <p className="text-xs text-[var(--muted)] mt-3">{uiText("\"Projected / year\" is an estimate (APR × current value), not realised income.")}</p>
         </Section>
       )}
 
@@ -628,15 +606,12 @@ export default async function PortfolioAnalysisPage({
         <Section title="Things worth a look">
           {a.concentration.map((c) => (
             <div key={c.key} className="text-sm text-[var(--muted)]">
-              ⚠️ <span className="text-[var(--foreground)]">{c.key}</span> is {c.percent.toFixed(1)}% of the portfolio —
-              a single position carrying most of the risk.
-            </div>
+              ⚠️ <span className="text-[var(--foreground)]">{c.key}</span>{uiText(" is ")}{c.percent.toFixed(1)}{uiText("% of the portfolio — a single position carrying most of the risk.")}</div>
           ))}
           {a.mismatches.map((m) => (
             <div key={m.id} className="text-sm text-[var(--muted)]">
-              🕒 <span className="text-[var(--foreground)]"><SymbolName symbol={m.symbol} short /></span> is tagged short term but{" "}
-              {tagLabel(m.riskLevel, "risk")?.toLowerCase()} — money you may need soon sitting in a volatile position.
-            </div>
+              🕒 <span className="text-[var(--foreground)]"><SymbolName symbol={m.symbol} short /></span>{uiText(" is tagged short term but")}{" "}
+              {uiText(tagLabel(m.riskLevel, "risk")?.toLowerCase() ?? "")}{uiText(" — money you may need soon sitting in a volatile position.")}</div>
           ))}
         </Section>
       )}
@@ -644,8 +619,8 @@ export default async function PortfolioAnalysisPage({
       {/* ---- Breakdowns ---- */}
       <Section title="Risk and time horizon">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BreakdownCard currency={currency} title="By risk level" rows={a.byRisk} axis="risk" translate colorByRisk />
-        <BreakdownCard currency={currency} title="By time horizon" rows={a.byTimeHorizon} axis="timeHorizon" translate />
+        <BreakdownCard currency={currency} title={uiText("By risk level")} rows={a.byRisk} axis="risk" translate colorByRisk />
+        <BreakdownCard currency={currency} title={uiText("By time horizon")} rows={a.byTimeHorizon} axis="timeHorizon" translate />
       </div>
       </Section>
 
@@ -659,17 +634,13 @@ export default async function PortfolioAnalysisPage({
       <Section title="Biggest gains and losses">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card p-4">
-          <div className="text-sm font-medium">Biggest gains</div>
-          <div className="text-[10px] text-[var(--muted)] mb-3">
-            On paper — nothing here has been sold.
-          </div>
+          <div className="text-sm font-medium">{uiText("Biggest gains")}</div>
+          <div className="text-[10px] text-[var(--muted)] mb-3">{uiText("On paper — nothing here has been sold.")}</div>
           <MoversTable currency={currency} rows={a.movers.winners} positive />
         </div>
         <div className="card p-4">
-          <div className="text-sm font-medium">Biggest losses</div>
-          <div className="text-[10px] text-[var(--muted)] mb-3">
-            On paper — a price move can take these back.
-          </div>
+          <div className="text-sm font-medium">{uiText("Biggest losses")}</div>
+          <div className="text-[10px] text-[var(--muted)] mb-3">{uiText("On paper — a price move can take these back.")}</div>
           <MoversTable currency={currency} rows={a.movers.losers} />
         </div>
       </div>
@@ -679,15 +650,15 @@ export default async function PortfolioAnalysisPage({
 
       <Section title="All positions">
         <div className="overflow-x-auto">
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+        <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
           <thead>
             <tr>
-              <th>Symbol</th>
-              <th>Account</th>
-              <th>Type</th>
-              <th>Risk</th>
-              <th>Horizon</th>
-              <th>Value</th>
+              <th>{uiText("Symbol")}</th>
+              <th>{uiText("Account")}</th>
+              <th>{uiText("Type")}</th>
+              <th>{uiText("Risk")}</th>
+              <th>{uiText("Horizon")}</th>
+              <th>{uiText("Value")}</th>
               <th>APR</th>
             </tr>
           </thead>
@@ -700,9 +671,9 @@ export default async function PortfolioAnalysisPage({
                   </Link>
                 </td>
                 <td><span translate="no">{h.accountName ?? "—"}</span></td>
-                <td>{tagLabel(h.assetType, "assetType") ?? "—"}</td>
-                <td style={{ color: riskColor(h.riskLevel) }}>{tagLabel(h.riskLevel, "risk") ?? "—"}</td>
-                <td>{tagLabel(h.timeHorizon, "timeHorizon") ?? "—"}</td>
+                <td>{uiText(tagLabel(h.assetType, "assetType") ?? "—")}</td>
+                <td style={{ color: riskColor(h.riskLevel) }}>{uiText(tagLabel(h.riskLevel, "risk") ?? "—")}</td>
+                <td>{uiText(tagLabel(h.timeHorizon, "timeHorizon") ?? "—")}</td>
                 <td>
                   <Money value={h.quantity * h.currentPrice} currency={currency} />
                 </td>
@@ -717,27 +688,29 @@ export default async function PortfolioAnalysisPage({
   );
 }
 
-function CashExplanation() {
+async function CashExplanation() {
+  const uiText = await textForRequest();
   return (
     <details className="card p-4" id="cash-stablecoins-help">
-      <summary className="cursor-pointer text-sm font-medium">What are cash &amp; stablecoins?</summary>
+      <summary className="cursor-pointer text-sm font-medium">{uiText("What are cash & stablecoins?")}</summary>
       <div className="mt-3 space-y-2 text-xs text-[var(--muted)] leading-relaxed">
-        <p><strong className="text-[var(--foreground)]">Cash</strong> means currency balances included in this portfolio, such as EUR or USD.</p>
-        <p><strong className="text-[var(--foreground)]">Stablecoins</strong> are cryptoassets such as USDC and USDT designed to track a currency, usually the US dollar. They can lose that peg, and their value in euros can change with exchange rates.</p>
-        <p>ON includes these balances in allocation charts and position breakdowns; OFF hides them from those views. It does not move money or change your holdings. Investment returns, gain attribution and imported statement figures keep their own scope.</p>
+        <p><strong className="text-[var(--foreground)]">{uiText("Cash")}</strong>{uiText(" means currency balances included in this portfolio, such as EUR or USD.")}</p>
+        <p><strong className="text-[var(--foreground)]">{uiText("Stablecoins")}</strong>{uiText(" are cryptoassets such as USDC and USDT designed to track a currency, usually the US dollar. They can lose that peg, and their value in euros can change with exchange rates.")}</p>
+        <p>{uiText("ON includes these balances in allocation charts and position breakdowns; OFF hides them from those views. It does not move money or change your holdings. Investment returns, gain attribution and imported statement figures keep their own scope.")}</p>
       </div>
     </details>
   );
 }
 
-function Stat({ label, value, percent, note, className = "", currency }: { label: string; value: number; percent?: number | null; note?: string; className?: string; currency: string }) {
+async function Stat({ label, value, percent, note, className = "", currency }: { label: string; value: number; percent?: number | null; note?: string; className?: string; currency: string }) {
+  const uiText = await textForRequest();
   return (
     <div className="min-w-0">
-      <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
+      <div className="text-xs text-[var(--muted)] mb-1">{uiText(label ?? "")}</div>
       <div className={`text-xl font-semibold truncate ${className}`}>
         <Money value={value} currency={currency} />
       </div>
-      {percent !== undefined && <div className={`text-sm mt-1 ${className}`}>{percent === null ? "Percentage unavailable" : `${percent.toFixed(2)}%`}</div>}
+      {percent !== undefined && <div className={`text-sm mt-1 ${className}`}>{percent === null ? uiText("Percentage unavailable") : `${percent.toFixed(2)}%`}</div>}
       {note && <p className="text-xs text-[var(--muted)] mt-1">{note}</p>}
     </div>
   );
@@ -792,7 +765,7 @@ function BreakdownCard({
   );
 }
 
-function MoversTable({
+async function MoversTable({
   rows,
   positive = false,
   currency,
@@ -801,18 +774,19 @@ function MoversTable({
   rows: { id: string; symbol: string; pnl: number; value: number }[];
   positive?: boolean;
 }) {
+  const uiText = await textForRequest();
   if (rows.length === 0) {
-    return <div className="text-sm text-[var(--muted)] py-4 text-center">None yet</div>;
+    return <div className="text-sm text-[var(--muted)] py-4 text-center">{uiText("None yet")}</div>;
   }
   return (
-    <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
+    <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
       <thead>
         <tr>
-          <th>Symbol</th>
-          <th>Value</th>
+          <th>{uiText("Symbol")}</th>
+          <th>{uiText("Value")}</th>
           {/* On paper. "Biggest gains" already reads like money made; without
               the qualifier the column beside it reads like money banked. */}
-          <th>Unrealized P&amp;L</th>
+          <th>{uiText("Unrealized P&L")}</th>
         </tr>
       </thead>
       <tbody>
@@ -837,10 +811,11 @@ function MoversTable({
 }
 
 /** A group's figures, the same for a group and for a group inside it. */
-function GroupCells({ g, status, currency }: { g: GroupPerformance; status: PerformanceStatus; currency: string }) {
+async function GroupCells({ g, status, currency }: { g: GroupPerformance; status: PerformanceStatus; currency: string }) {
+  const uiText = await textForRequest();
   return (
     <>
-      <td className="text-right">{g.openCount ?? g.count} open / {g.closedCount ?? 0} closed</td>
+      <td className="text-right">{g.openCount ?? g.count}{uiText(" open / ")}{g.closedCount ?? 0}{uiText(" closed")}</td>
       <td className="text-right">
         {status === "closed" ? "N/A" : <Money value={g.value} currency={currency} />}
       </td>
@@ -870,25 +845,24 @@ function GroupCells({ g, status, currency }: { g: GroupPerformance; status: Perf
  * measuring by eye. Sharing the table makes the alignment structural rather
  * than something to maintain.
  */
-function MemberRows({ members, currency, indent }: { members: GroupMember[]; currency: string; indent: string }) {
+async function MemberRows({ members, currency, indent }: { members: GroupMember[]; currency: string; indent: string }) {
+  const uiText = await textForRequest();
   return (
     <>
       <tr style={{ background: "var(--surface-2)" }}>
-        <th className={`text-[10px] uppercase tracking-wide ${indent}`}>Position</th>
+        <th className={`text-[10px] uppercase tracking-wide ${indent}`}>{uiText("Position")}</th>
         {/*
           Wraps rather than widening the column. The heading is longer than any
           figure beneath it, and on one line it stretched the "Positions"
           column of every row in the table to fit a label only the open group
           shows.
         */}
-        <th className="text-[10px] uppercase tracking-wide text-right whitespace-normal">
-          Weight in group
-        </th>
-        <th className="text-[10px] uppercase tracking-wide text-right">Value</th>
-        <th className="text-[10px] uppercase tracking-wide text-right">Cost</th>
-        <th className="text-[10px] uppercase tracking-wide text-right">Unrealized</th>
-        <th className="text-[10px] uppercase tracking-wide text-right">Unrealized %</th>
-        <th className="text-[10px] uppercase tracking-wide text-right">Realized</th>
+        <th className="text-[10px] uppercase tracking-wide text-right whitespace-normal">{uiText("Weight in group")}</th>
+        <th className="text-[10px] uppercase tracking-wide text-right">{uiText("Value")}</th>
+        <th className="text-[10px] uppercase tracking-wide text-right">{uiText("Cost")}</th>
+        <th className="text-[10px] uppercase tracking-wide text-right">{uiText("Unrealized")}</th>
+        <th className="text-[10px] uppercase tracking-wide text-right">{uiText("Unrealized %")}</th>
+        <th className="text-[10px] uppercase tracking-wide text-right">{uiText("Realized")}</th>
       </tr>
 
       {members.map((m) => (

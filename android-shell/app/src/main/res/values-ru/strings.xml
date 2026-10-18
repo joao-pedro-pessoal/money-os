@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">Запишите расход или доход</string>
+    <string name="widget_expense" formatted="false">− Расход</string>
+    <string name="widget_income" formatted="false">+ Доход</string>
+    <string name="shortcut_expense" formatted="false">Расход</string>
+    <string name="shortcut_expense_long" formatted="false">Запись расходов</string>
+    <string name="shortcut_income" formatted="false">Доход</string>
+    <string name="shortcut_income_long" formatted="false">Рекордный доход</string>
+    <string name="widget_dashboard_description" formatted="false">Чистый капитал в этом месяце и линия с течением времени</string>
+    <string name="widget_net_worth_description" formatted="false">Чистый капитал с течением времени и как далеко он продвинулся</string>
+    <string name="widget_where_money_description" formatted="false">Где деньги, как пончик с процентами</string>
+    <string name="widget_cash_flow_description" formatted="false">В этом месяце: деньги получены, деньги выплачены и что осталось</string>
+    <string name="widget_investments_description" formatted="false">Стоимость портфеля, нереализованные прибыли и убытки и каждая позиция с ее прибылями и убытками в евро и процентах.</string>
+    <string name="widget_allocation_description" formatted="false">Портфель по типу активов, в виде бублика с процентами</string>
+    <string name="widget_movers_description" formatted="false">Лучшие и худшие позиции по рентабельности</string>
+    <string name="widget_dividends_description" formatted="false">Дивиденды полученные в этом году и следующая ожидаемая выплата</string>
+    <string name="widget_open_trades_description" formatted="false">Открытые позиции с кредитным плечом: нереализованные прибыли и убытки, маржа и каждая сделка.</string>
+    <string name="ui_registo_r_pido" formatted="false">Регистрация быстрого доступа</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">Чистая стоимость</string>
+    <string name="ui_where_the_money_is" formatted="false">Где деньги</string>
+    <string name="ui_cash_flow" formatted="false">Операции</string>
+    <string name="ui_investments" formatted="false">Инвестиции</string>
+    <string name="ui_allocation" formatted="false">Распределение</string>
+    <string name="ui_winners_losers" formatted="false">Победители и проигравшие</string>
+    <string name="ui_dividends" formatted="false">Дивиденды</string>
+    <string name="ui_open_trades" formatted="false">Открытые сделки</string>
+    <string name="ui_record_expense" formatted="false">Запись расходов</string>
+    <string name="ui_refresh" formatted="false">Обновить</string>
+    <string name="ui_chart" formatted="false">Диаграмма</string>
+</resources>

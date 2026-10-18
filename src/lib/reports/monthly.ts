@@ -1,3 +1,4 @@
+import { sourceText, type TextTranslator } from "@/lib/i18n/text";
 /**
  * The weekly, monthly, annual and custom report: one stretch of days, read
  * back as a whole.
@@ -371,12 +372,12 @@ export function csvHeader(
   kind: ReportKind,
   label: string,
   window: { from: string; to: string },
-  currency: string
+  currency: string, uiText: TextTranslator = sourceText
 ): CsvLine[] {
   return [
-    [`Money OS ${reportName(kind)} report`, label],
-    ["From", window.from, "To", window.to],
-    ["Currency", currency],
+    [uiText("Money OS {0} report", {0: uiText(reportName(kind))}), label],
+    [uiText("From"), window.from, uiText("To"), window.to],
+    [uiText("Currency"), currency],
   ];
 }
 
@@ -394,42 +395,42 @@ export function reportToCsv(report: PeriodReport, currency: string): string {
 }
 
 /** The day-to-day money part of the CSV, one section after another. */
-export function moneyCsvLines(report: PeriodReport): CsvLine[] {
-  const noun = periodNoun(report.kind);
+export function moneyCsvLines(report: PeriodReport, uiText: TextTranslator = sourceText): CsvLine[] {
+  const noun = uiText(periodNoun(report.kind));
   const lines: CsvLine[] = [
-    ["Summary", `This ${noun}`, report.previous ? report.previous.label : `The ${noun} before`],
-    ["Income", report.totals.income, report.previous?.totals.income ?? null],
-    ["Spent", report.totals.spent, report.previous?.totals.spent ?? null],
-    ["Net", report.totals.net, report.previous?.totals.net ?? null],
-    ["Savings rate %", report.savingsRate, null],
-    ["Invested", report.invested, null],
-    ["Fixed spending", report.split.fixed, null],
-    ["Variable spending", report.split.variable, null],
-    ["Uncategorised spending", report.totals.uncategorised, null],
+    [uiText("Summary"), uiText("This {0}", {0: noun}), report.previous ? uiText(report.previous.label) : uiText("The {0} before", {0: noun})],
+    [uiText("Income"), report.totals.income, report.previous?.totals.income ?? null],
+    [uiText("Spent"), report.totals.spent, report.previous?.totals.spent ?? null],
+    [uiText("Net"), report.totals.net, report.previous?.totals.net ?? null],
+    [uiText("Savings rate %"), report.savingsRate, null],
+    [uiText("Invested"), report.invested, null],
+    [uiText("Fixed spending"), report.split.fixed, null],
+    [uiText("Variable spending"), report.split.variable, null],
+    [uiText("Uncategorised spending"), report.totals.uncategorised, null],
   ];
   if (report.netWorth) {
     lines.push(
-      ["Net worth at start", report.netWorth.start, null],
-      ["Net worth at end", report.netWorth.end, null],
-      ["Net worth change", report.netWorth.change, null]
+      [uiText("Net worth at start"), report.netWorth.start, null],
+      [uiText("Net worth at end"), report.netWorth.end, null],
+      [uiText("Net worth change"), report.netWorth.change, null]
     );
   }
   if (report.months) {
-    lines.push([], ["Month", "Income", "Spent", "Net"]);
+    lines.push([], [uiText("Month"), uiText("Income"), uiText("Spent"), uiText("Net")]);
     for (const m of report.months) {
-      const label = m.partial ? `${m.label} (part)` : m.label;
+      const label = m.partial ? uiText("{0} (part)", {0: uiText(m.label)}) : uiText(m.label);
       lines.push([label, m.totals?.income ?? null, m.totals?.spent ?? null, m.totals?.net ?? null]);
     }
   }
-  lines.push([], ["Category", "Spent", "Share %", "Transactions", `The ${noun} before`, "Change %"]);
+  lines.push([], [uiText("Category"), uiText("Spent"), uiText("Share %"), uiText("Transactions"), uiText("The {0} before", {0: noun}), uiText("Change %")]);
   for (const c of report.categories) {
     lines.push([c.name, c.spent, c.share, c.count, c.previous, c.changePercent]);
   }
   if (report.budgets.length > 0) {
-    lines.push([], ["Budget", "Limit", "Spent", "Used %", "Status"]);
-    for (const b of report.budgets) lines.push([b.name, b.limit, b.spent, b.percent, b.status]);
+    lines.push([], [uiText("Budget"), uiText("Limit"), uiText("Spent"), uiText("Used %"), uiText("Status")]);
+    for (const b of report.budgets) lines.push([b.name, b.limit, b.spent, b.percent, uiText(b.status)]);
   }
-  lines.push([], ["Largest expenses", "Date", "Category", "Account", "Amount"]);
+  lines.push([], [uiText("Largest expenses"), uiText("Date"), uiText("Category"), uiText("Account"), uiText("Amount")]);
   for (const e of report.topExpenses) lines.push([e.name, e.date, e.category, e.account, e.amount]);
   return lines;
 }

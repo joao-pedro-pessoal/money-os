@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { exportAllData, exportTransactionsCsv, exportHoldingsCsv, inspectBackup } from "@/actions/export";
 
@@ -16,6 +17,7 @@ export default function BackupPanel({
 }: {
   restoreAction: (formData: FormData) => Promise<void>;
 }) {
+  const uiText = useText();
   const [busy, setBusy] = useState<string | null>(null);
   const [fileText, setFileText] = useState<string>("");
   const [check, setCheck] = useState<Check | null>(null);
@@ -56,30 +58,20 @@ export default function BackupPanel({
   return (
     <div className="space-y-6">
       <div>
-        <div className="text-sm font-medium mb-1">Backup &amp; export</div>
-        <p className="text-xs text-[var(--muted)] mb-3">
-          The JSON backup contains every table and is what you&apos;d restore from. The CSVs are for reading
-          elsewhere — they don&apos;t restore.
-        </p>
+        <div className="text-sm font-medium mb-1">{uiText("Backup & export")}</div>
+        <p className="text-xs text-[var(--muted)] mb-3">{uiText("The JSON backup contains every table and is what you'd restore from. The CSVs are for reading elsewhere — they don't restore.")}</p>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => download("json")} className="btn" disabled={busy !== null}>
-            {busy === "json" ? "Preparing…" : "Download full backup (JSON)"}
+            {busy === "json" ? uiText("Preparing…") : uiText("Download full backup (JSON)")}
           </button>
-          <button onClick={() => download("tx")} className="btn" disabled={busy !== null}>
-            Transactions (CSV)
-          </button>
-          <button onClick={() => download("holdings")} className="btn" disabled={busy !== null}>
-            Holdings (CSV)
-          </button>
+          <button onClick={() => download("tx")} className="btn" disabled={busy !== null}>{uiText("Transactions (CSV)")}</button>
+          <button onClick={() => download("holdings")} className="btn" disabled={busy !== null}>{uiText("Holdings (CSV)")}</button>
         </div>
       </div>
 
       <div className="border-t border-[var(--border)] pt-4">
-        <div className="text-sm font-medium mb-1">Restore from a backup</div>
-        <p className="text-xs text-[var(--muted)] mb-3">
-          This <span className="text-[var(--red)]">replaces everything</span> currently in the app with the
-          contents of the file. Take a fresh backup first if you&apos;re unsure.
-        </p>
+        <div className="text-sm font-medium mb-1">{uiText("Restore from a backup")}</div>
+        <p className="text-xs text-[var(--muted)] mb-3">{uiText("This ")}<span className="text-[var(--red)]">{uiText("replaces everything")}</span>{uiText(" currently in the app with the contents of the file. Take a fresh backup first if you're unsure.")}</p>
 
         <input type="file" accept="application/json,.json" onChange={onFile} className="input text-xs" />
 
@@ -94,9 +86,7 @@ export default function BackupPanel({
             )}
             {check.ok && (
               <>
-                <div className="text-[var(--green)]">
-                  Valid backup — {totalRows} rows across {Object.keys(check.counts).length} tables.
-                </div>
+                <div className="text-[var(--green)]">{uiText("Valid backup — ")}{totalRows}{uiText(" rows across ")}{Object.keys(check.counts).length}{uiText(" tables.")}</div>
                 <div className="text-[var(--muted)] flex flex-wrap gap-x-3">
                   {Object.entries(check.counts)
                     .filter(([, n]) => n > 0)
@@ -108,7 +98,7 @@ export default function BackupPanel({
                 </div>
                 {check.warnings.length > 0 && (
                   <details className="text-[var(--amber)]">
-                    <summary className="cursor-pointer">{check.warnings.length} warnings</summary>
+                    <summary className="cursor-pointer">{check.warnings.length}{uiText(" warnings")}</summary>
                     {check.warnings.map((w, i) => (
                       <div key={i}>{w}</div>
                     ))}
@@ -121,7 +111,7 @@ export default function BackupPanel({
                     name="confirmation"
                     value={confirmText}
                     onChange={(e) => setConfirmText(e.target.value)}
-                    placeholder="Type RESTORE to confirm"
+                    placeholder={uiText("Type RESTORE to confirm")}
                     className="input"
                   />
                   <button
@@ -129,9 +119,7 @@ export default function BackupPanel({
                     className="btn"
                     disabled={confirmText !== "RESTORE"}
                     style={confirmText !== "RESTORE" ? { opacity: 0.5 } : undefined}
-                  >
-                    Replace all data
-                  </button>
+                  >{uiText("Replace all data")}</button>
                 </form>
               </>
             )}

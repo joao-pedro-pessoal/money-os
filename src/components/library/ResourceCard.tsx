@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import Link from "next/link";
 import type { LibraryResource } from "@/actions/library";
 import { tagLabelFor } from "@/components/library/labels";
@@ -17,7 +18,8 @@ import { EDITORIAL, EDITORIAL_LINE } from "@/components/library/editorial";
  * and guest, a course's institution and lesson count. Showing the same fields
  * for all four would mean showing "—" three times out of four.
  */
-export default function ResourceCard({ resource }: { resource: LibraryResource }) {
+export default async function ResourceCard({ resource }: { resource: LibraryResource }) {
+  const uiText = await textForRequest();
   const r = resource;
   const image = r.type === "BOOK" ? (r.meta.coverUrl ?? r.imageUrl) : r.imageUrl;
 
@@ -89,7 +91,7 @@ export default function ResourceCard({ resource }: { resource: LibraryResource }
           <span className="text-sm font-medium leading-tight line-clamp-2">{r.title}</span>
           {/* Right margin leaves room for the star sitting above this corner. */}
           <span className="badge border border-[var(--border)] text-[var(--muted)] text-[10px] shrink-0 mr-5">
-            {tagLabelFor(r.type)}
+            {uiText(tagLabelFor(r.type) ?? "")}
           </span>
         </div>
 
@@ -129,7 +131,7 @@ export default function ResourceCard({ resource }: { resource: LibraryResource }
                 }}
               />
             </div>
-            <div className="text-[10px] text-[var(--muted)] mt-0.5">{r.progress.label}</div>
+            <div className="text-[10px] text-[var(--muted)] mt-0.5">{uiText(r.progress.label ?? "")}</div>
           </div>
         )}
         </div>

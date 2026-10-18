@@ -1,3 +1,4 @@
+import { directionOf } from "@/lib/i18n/languages";
 import Link from "next/link";
 import InstallApp from "./InstallApp";
 import LanguagePicker from "./LanguagePicker";
@@ -16,7 +17,7 @@ export default async function AuthFrame({ children }: { children: React.ReactNod
   const m = await words();
   const w = m.auth;
   return (
-    <div translate="no" lang={language} className="app-frame grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+    <div translate="no" lang={language} dir={directionOf(language)} className="app-frame grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <aside className="auth-hero hidden lg:flex flex-col justify-between gap-10 p-12 xl:p-16">
         {/* First, so everything after it is drawn on top. */}
         <Trend />

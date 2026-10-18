@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import {
   listResources,
   listTaxonomy,
@@ -31,6 +32,7 @@ export default async function LibraryPage({
 }: {
   searchParams: Promise<{ type?: string; category?: string; view?: string }>;
 }) {
+  const uiText = await textForRequest();
   const sp = await searchParams;
   const activeType = sp.type && isResourceType(sp.type) ? (sp.type as ResourceType) : null;
   const activeCategory = sp.category ?? null;
@@ -77,7 +79,7 @@ export default async function LibraryPage({
         color: active ? "var(--accent)" : "var(--muted)",
       }}
     >
-      {label}
+      {uiText(label ?? "")}
       {/* Set apart by weight, not by fading: at 70% opacity the count was under
           3:1 on every light theme. */}
       {count !== undefined && <span className="ml-1 font-normal tabular-nums">{count}</span>}
@@ -100,11 +102,8 @@ export default async function LibraryPage({
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-lg font-semibold">Library</h1>
-          <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
-            Books, videos, podcasts and courses under one set of categories. The app stores what a
-            thing is and how far through it you are — never the media itself.
-          </p>
+          <h1 className="text-lg font-semibold">{uiText("Library")}</h1>
+          <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{uiText("Books, videos, podcasts and courses under one set of categories. The app stores what a thing is and how far through it you are — never the media itself.")}</p>
         </div>
         {/* Always available, never only on an empty library.
             Seeding is idempotent by slug: it adds what's missing and touches
@@ -116,8 +115,8 @@ export default async function LibraryPage({
             <form action={seedAction}>
               <button type="submit" className="btn whitespace-nowrap">
                 {all.length === 0
-                  ? "Add the starter library"
-                  : `Add ${missing} missing starter titles`}
+                  ? uiText("Add the starter library")
+                  : uiText("Add {0} missing starter titles", { "0": missing })}
               </button>
             </form>
           )}
@@ -127,9 +126,8 @@ export default async function LibraryPage({
               <button
                 type="submit"
                 className="badge border border-[var(--border)] text-[var(--muted)] text-xs px-3 py-2 whitespace-nowrap"
-                title="Rewrites the editorial text and shelf order for starter titles. Your progress, notes, rating and favourites are untouched."
-              >
-                Update text for {stale}
+                title={uiText("Rewrites the editorial text and shelf order for starter titles. Your progress, notes, rating and favourites are untouched.")}
+              >{uiText("Update text for ")}{stale}
               </button>
             </form>
           )}
@@ -168,26 +166,18 @@ export default async function LibraryPage({
       </div>
 
       {all.length === 0 ? (
-        <div className="card p-8 text-center text-sm text-[var(--muted)]">
-          Nothing here yet. The button above adds the shared categories, a master list of fifty
-          books led by The Holy Bible, and ten university courses whose links were checked against
-          each institution&apos;s own site. No page counts or lesson counts are invented — add the
-          ones for your own edition as you go.
-        </div>
+        <div className="card p-8 text-center text-sm text-[var(--muted)]">{uiText("Nothing here yet. The button above adds the shared categories, a master list of fifty books led by The Holy Bible, and ten university courses whose links were checked against each institution's own site. No page counts or lesson counts are invented — add the ones for your own edition as you go.")}</div>
       ) : (
         <>
           {heroVisible && hero && <HeroResource resource={hero} />}
 
           {onlyFavourites && visible.length === 0 && (
-            <div className="card p-8 text-center text-sm text-[var(--muted)]">
-              You haven&apos;t starred anything yet. The ☆ on any card adds it here — the app
-              never picks your favourites for you.
-            </div>
+            <div className="card p-8 text-center text-sm text-[var(--muted)]">{uiText("You haven't starred anything yet. The ☆ on any card adds it here — the app never picks your favourites for you.")}</div>
           )}
 
           {continueLearning.length > 0 && (
             <div>
-              <div className="text-sm font-medium mb-2">Continue learning</div>
+              <div className="text-sm font-medium mb-2">{uiText("Continue learning")}</div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {continueLearning.map((r) => (
                   <ResourceCard key={r.id} resource={r} />
@@ -201,9 +191,8 @@ export default async function LibraryPage({
           {!onlyFavourites && favourites.length > 0 && (
             <div>
               <div className="flex items-baseline justify-between mb-2">
-                <span className="text-sm font-medium">Your favourites</span>
-                <FilterLink href={qs({ view: "favourites" })} className="text-xs text-[var(--accent)]">
-                  All {favourites.length} →
+                <span className="text-sm font-medium">{uiText("Your favourites")}</span>
+                <FilterLink href={qs({ view: "favourites" })} className="text-xs text-[var(--accent)]">{uiText("All ")}{favourites.length} →
                 </FilterLink>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -223,9 +212,7 @@ export default async function LibraryPage({
                 {RESOURCE_TYPES.find((t) => t.value === activeType)!.label}
               </div>
               {visible.length === 0 ? (
-                <div className="card p-6 text-center text-xs text-[var(--muted)]">
-                  Nothing here with these filters.
-                </div>
+                <div className="card p-6 text-center text-xs text-[var(--muted)]">{uiText("Nothing here with these filters.")}</div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                   {visible.map((r) => (
@@ -241,9 +228,8 @@ export default async function LibraryPage({
               return (
                 <div key={t.value}>
                   <div className="flex items-baseline justify-between mb-2">
-                    <span className="text-sm font-medium">{t.label}</span>
-                    <FilterLink href={qs({ type: t.value })} className="text-xs text-[var(--accent)]">
-                      All {rows.length} →
+                    <span className="text-sm font-medium">{uiText(t.label)}</span>
+                    <FilterLink href={qs({ type: t.value })} className="text-xs text-[var(--accent)]">{uiText("All ")}{rows.length} →
                     </FilterLink>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -257,7 +243,7 @@ export default async function LibraryPage({
           )}
 
           <div>
-            <div className="text-sm font-medium mb-2">Browse by category</div>
+            <div className="text-sm font-medium mb-2">{uiText("Browse by category")}</div>
             <div className="flex gap-2 flex-wrap">
               {taxonomy.map((c) => (
                 <FilterLink
@@ -267,8 +253,7 @@ export default async function LibraryPage({
                 >
                   <div className="text-xs font-medium"><span translate="no">{c.name}</span></div>
                   <div className="text-[10px] text-[var(--muted)]">
-                    {c.count} {c.count === 1 ? "resource" : "resources"} · {c.subtags.length} subtags
-                  </div>
+                    {c.count} {c.count === 1 ? uiText("resource") : uiText("resources")} · {c.subtags.length}{uiText(" subtags")}</div>
                 </FilterLink>
               ))}
             </div>
@@ -286,17 +271,16 @@ export default async function LibraryPage({
 
           {/* Counts per type, never added together: pages and minutes measure
               different things and a combined figure would mean nothing. */}
-          <Section title="Statistics" summary="by type and category">
+          <Section title="Statistics" summary={uiText("by type and category")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {RESOURCE_TYPES.map((t) => {
                 const s = stats.byType[t.value];
                 return (
                   <div key={t.value} className="card p-3">
-                    <div className="text-xs text-[var(--muted)]">{t.label}</div>
-                    <div className="text-lg font-semibold mt-1">{s.completed} completed</div>
+                    <div className="text-xs text-[var(--muted)]">{uiText(t.label)}</div>
+                    <div className="text-lg font-semibold mt-1">{s.completed}{uiText(" completed")}</div>
                     <div className="text-[10px] text-[var(--muted)] mt-1">
-                      {s.unitsDone} {s.unit.toLowerCase()} · {s.inProgress} in progress
-                    </div>
+                      {s.unitsDone} {s.unit.toLowerCase()} · {s.inProgress}{uiText(" in progress")}</div>
                   </div>
                 );
               })}
@@ -304,7 +288,7 @@ export default async function LibraryPage({
 
             {stats.byCategory.length > 0 && (
               <div className="mt-4">
-                <div className="text-xs text-[var(--muted)] mb-2">Completed by category</div>
+                <div className="text-xs text-[var(--muted)] mb-2">{uiText("Completed by category")}</div>
                 <div className="space-y-1">
                   {stats.byCategory.map((c) => (
                     <div key={c.category} className="flex items-center gap-2 text-xs">
@@ -327,15 +311,9 @@ export default async function LibraryPage({
         </>
       )}
 
-      <Section title="Add a resource" summary="book, video, podcast or course">
-        <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">
-          The form adapts to the type you pick — a podcast never asks for an ISBN. Videos, podcasts
-          and courses need a link, because the app stores metadata and progress and hosts no media
-          of its own.
-        </p>
-        <Link href="/library/new" className="btn inline-block">
-          Open the form
-        </Link>
+      <Section title="Add a resource" summary={uiText("book, video, podcast or course")}>
+        <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">{uiText("The form adapts to the type you pick — a podcast never asks for an ISBN. Videos, podcasts and courses need a link, because the app stores metadata and progress and hosts no media of its own.")}</p>
+        <Link href="/library/new" className="btn inline-block">{uiText("Open the form")}</Link>
       </Section>
     </div>
   );

@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import PlaylistPicker from "@/components/PlaylistPicker";
 import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -26,6 +27,7 @@ import Link from "next/link";
 import { ageLabel, valuationAge } from "@/lib/portfolio/valuation";
 
 export default async function HoldingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const uiText = await textForRequest();
   const { id } = await params;
   const holding = await getHolding(id);
   if (!holding) notFound();
@@ -55,13 +57,13 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div className="text-xs text-[var(--muted)]">
-            <span translate="no">{holdingAccount?.name ?? holding.platform ?? "No account linked"}</span>
-            {holding.assetType && <span> · {tagLabel(holding.assetType, "assetType")}</span>}
+            <span translate="no">{holdingAccount?.name ?? holding.platform ?? uiText("No account linked")}</span>
+            {holding.assetType && <span> · {uiText(tagLabel(holding.assetType, "assetType") ?? "")}</span>}
           </div>
           <h1 className="text-lg font-semibold">
             <SymbolName symbol={holding.symbol} />
             {holding.direction === "short" && (
-              <span className="badge ml-2 align-middle text-[var(--red)] border border-[var(--red)]">SHORT</span>
+              <span className="badge ml-2 align-middle text-[var(--red)] border border-[var(--red)]">{uiText("SHORT")}</span>
             )}
             {holding.name && <span className="text-[var(--muted)] font-normal"> — <span translate="no">{holding.name}</span></span>}
           </h1>
@@ -75,7 +77,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
         <form action={deleteHolding}>
           <input type="hidden" name="id" value={holding.id} />
           <ConfirmSubmitButton
-            label="Delete position"
+            label={uiText("Delete position")}
             confirmMessage={`Delete ${holding.symbol}? This removes the position and its price history.`}
           />
         </form>
@@ -83,39 +85,39 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
 
       <div className="grid grid-cols-1 min-[390px]:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">Market Value</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("Market Value")}</div>
           <div className="text-xl font-semibold">
             <Money value={marketValue(h)} currency={holding.currency} />
           </div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">Cost Basis</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("Cost Basis")}</div>
           <div className="text-xl font-semibold">
             <Money value={costBasis(h)} currency={holding.currency} />
           </div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">Unrealized P&amp;L</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("Unrealized P&L")}</div>
           <div className={`text-xl font-semibold ${pnlColor}`}>
             <Money value={pnl} currency={holding.currency} />
           </div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">Unrealized P&amp;L %</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("Unrealized P&L %")}</div>
           <div className={`text-xl font-semibold ${pnlColor}`}>{unrealizedPnLPercent(h).toFixed(2)}%</div>
         </div>
       </div>
 
       <HoldingPurposes holdingId={holding.id} />
 
-      <Link href={`/investments/asset/${encodeURIComponent(holding.symbol)}?type=${encodeURIComponent(holding.assetType ?? "")}&name=${encodeURIComponent(holding.name ?? "")}`} className="btn">View asset information</Link>
+      <Link href={`/investments/asset/${encodeURIComponent(holding.symbol)}?type=${encodeURIComponent(holding.assetType ?? "")}&name=${encodeURIComponent(holding.name ?? "")}`} className="btn">{uiText("View asset information")}</Link>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section
           title={valuation ? "Update value" : "Update price"}
           defaultOpen
           persistKey="holding:price"
-          summary={holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleDateString("pt-PT") : "never updated"}
+          summary={holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleDateString("pt-PT") : uiText("never updated")}
         >
           <form action={updateHoldingPrice} className="space-y-3">
             <input type="hidden" name="id" value={holding.id} />
@@ -125,35 +127,24 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
                 style={{ borderColor: valuation.due ? "var(--amber)" : "var(--border)" }}
               >
                 {valuation.due ? (
-                  <span className="text-[var(--amber)]">
-                    Valued {ageLabel(valuation.days)} ago — time to look again.
-                  </span>
+                  <span className="text-[var(--amber)]">{uiText("Valued ")}{uiText(ageLabel(valuation.days) ?? "")}{uiText(" ago — time to look again.")}</span>
                 ) : (
-                  <>Valued {ageLabel(valuation.days)} ago.</>
+                  <>{uiText("Valued ")}{uiText(ageLabel(valuation.days) ?? "")}{uiText(" ago.")}</>
                 )}{" "}
-                <span className="text-[var(--muted)]">
-                  Nothing prices this from a market, so what you enter is what counts in your net
-                  worth. Worth checking every {ageLabel(valuation.limit)}: a recent sale nearby, an
-                  auction result, a funding round, a used-car listing.
-                </span>
+                <span className="text-[var(--muted)]">{uiText("Nothing prices this from a market, so what you enter is what counts in your net worth. Worth checking every ")}{uiText(ageLabel(valuation.limit) ?? "")}{uiText(": a recent sale nearby, an auction result, a funding round, a used-car listing.")}</span>
               </p>
             )}
             <input
               name="currentPrice"
               type="number"
               step="0.0001"
-              placeholder="New current price"
+              placeholder={uiText("New current price")}
               className="input"
               required
             />
-            <button type="submit" className="btn w-full">
-              Save price
-            </button>
-            <p className="text-xs text-[var(--muted)]">
-              Last updated{" "}
-              {holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleString("pt-PT") : "never"}. Each
-              update is recorded so the value-over-time chart fills in.
-            </p>
+            <button type="submit" className="btn w-full">{uiText("Save price")}</button>
+            <p className="text-xs text-[var(--muted)]">{uiText("Last updated")}{" "}
+              {holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleString("pt-PT") : uiText("never")}{uiText(". Each update is recorded so the value-over-time chart fills in.")}</p>
           </form>
         </Section>
 
@@ -162,17 +153,17 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           defaultOpen
           essential
           persistKey="holding:history"
-          summary={snapshots.length === 0 ? "none yet" : `${snapshots.length} ${snapshots.length === 1 ? "reading" : "readings"}`}
+          summary={snapshots.length === 0 ? uiText("none yet") : `${snapshots.length} ${snapshots.length === 1 ? "reading" : "readings"}`}
         >
           {snapshots.length === 0 ? (
-            <div className="text-sm text-[var(--muted)] py-4 text-center">No history yet</div>
+            <div className="text-sm text-[var(--muted)] py-4 text-center">{uiText("No history yet")}</div>
           ) : (
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Price</th>
-                  <th>Value</th>
+                  <th>{uiText("Date")}</th>
+                  <th>{uiText("Price")}</th>
+                  <th>{uiText("Value")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,15 +189,11 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           <form action={reinforceHolding} className="space-y-3">
             <input type="hidden" name="id" value={holding.id} />
             <div className="flex gap-2">
-              <input name="quantity" type="number" step="0.00000001" placeholder="Quantity bought" className="input" required />
-              <input name="price" type="number" step="0.0001" placeholder="Price paid" className="input" required />
+              <input name="quantity" type="number" step="0.00000001" placeholder={uiText("Quantity bought")} className="input" required />
+              <input name="price" type="number" step="0.0001" placeholder={uiText("Price paid")} className="input" required />
             </div>
-            <button type="submit" className="btn w-full">
-              Add to position
-            </button>
-            <p className="text-xs text-[var(--muted)]">
-              The average entry price is recalculated as a weighted average of what you already held and this new lot.
-            </p>
+            <button type="submit" className="btn w-full">{uiText("Add to position")}</button>
+            <p className="text-xs text-[var(--muted)]">{uiText("The average entry price is recalculated as a weighted average of what you already held and this new lot.")}</p>
           </form>
         </Section>
 
@@ -218,22 +205,17 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
                 name="quantity"
                 type="number"
                 step="0.00000001"
-                placeholder={`Quantity sold (holding ${holding.quantity})`}
+                placeholder={uiText("Quantity sold (holding {0})", { "0": holding.quantity })}
                 className="input"
                 required
               />
-              <input name="price" type="number" step="0.0001" placeholder="Price sold at" className="input" required />
+              <input name="price" type="number" step="0.0001" placeholder={uiText("Price sold at")} className="input" required />
             </div>
-            <button type="submit" className="btn w-full">
-              Sell
-            </button>
-            <p className="text-xs text-[var(--muted)]">
-              Realized so far:{" "}
+            <button type="submit" className="btn w-full">{uiText("Sell")}</button>
+            <p className="text-xs text-[var(--muted)]">{uiText("Realized so far:")}{" "}
               <span className={Number(holding.realizedPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>
                 <Money value={Number(holding.realizedPnl ?? 0)} currency={holding.currency} />
-              </span>
-              . The average entry price stays put — only the quantity drops.
-            </p>
+              </span>{uiText(". The average entry price stays put — only the quantity drops.")}</p>
           </form>
         </Section>
       </div>
@@ -245,7 +227,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             <div className="text-sm">{holding.apr ? `${Number(holding.apr).toFixed(2)}%` : "—"}</div>
           </div>
           <div>
-            <div className="text-xs text-[var(--muted)] mb-1">Projected / year</div>
+            <div className="text-xs text-[var(--muted)] mb-1">{uiText("Projected / year")}</div>
             <div className="text-sm">
               {holding.apr ? (
                 <Money value={(marketValue(h) * Number(holding.apr)) / 100} currency={holding.currency} />
@@ -255,7 +237,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
           <div>
-            <div className="text-xs text-[var(--muted)] mb-1">Rewards received</div>
+            <div className="text-xs text-[var(--muted)] mb-1">{uiText("Rewards received")}</div>
             <div className="text-sm text-[var(--green)]">
               <Money value={Number(holding.rewardsEarned ?? 0)} currency={holding.currency} />
             </div>
@@ -267,27 +249,22 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             name="amount"
             type="number"
             step="0.01"
-            placeholder="Rewards received now"
+            placeholder={uiText("Rewards received now")}
             className="input"
             required
           />
-          <button type="submit" className="btn whitespace-nowrap">
-            Add
-          </button>
+          <button type="submit" className="btn whitespace-nowrap">{uiText("Add")}</button>
         </form>
-        <p className="text-xs text-[var(--muted)] mt-2">
-          &quot;Projected / year&quot; is an estimate from the APR. &quot;Rewards received&quot; is what actually
-          landed — the two are kept apart on purpose.
-        </p>
+        <p className="text-xs text-[var(--muted)] mt-2">{uiText("\"Projected / year\" is an estimate from the APR. \"Rewards received\" is what actually landed — the two are kept apart on purpose.")}</p>
       </Section>
 
       <Section title="Edit position" defaultOpen persistKey="holding:edit" className="max-w-lg">
         <form action={updateHolding} className="space-y-3">
           <input type="hidden" name="id" value={holding.id} />
           <input name="symbol" defaultValue={holding.symbol} className="input" required />
-          <input name="name" defaultValue={holding.name ?? ""} placeholder="Name" className="input" />
+          <input name="name" defaultValue={holding.name ?? ""} placeholder={uiText("Name")} className="input" />
           <select name="accountId" defaultValue={holding.accountId ?? ""} className="input" required>
-            <option value="">Account holding this position…</option>
+            <option value="">{uiText("Account holding this position…")}</option>
             {accountList.map((a) => (
               <option translate="no" key={a.id} value={a.id}>
                 {a.institution} — {a.name}
@@ -318,45 +295,43 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
 
           <input type="hidden" name="rewardsEarned" value={String(holding.rewardsEarned ?? 0)} />
 
-          <div className="pt-1 text-xs text-[var(--muted)]">Asset allocation tags</div>
+          <div className="pt-1 text-xs text-[var(--muted)]">{uiText("Asset allocation tags")}</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <select name="riskLevel" className="input" defaultValue={holding.riskLevel ?? ""}>
-              <option value="">Risk — unset</option>
+              <option value="">{uiText("Risk — unset")}</option>
               {RISK_LEVELS.map((r) => (
                 <option key={r.value} value={r.value}>
-                  {r.label}
+                  {uiText(r.label ?? "")}
                 </option>
               ))}
             </select>
             <select name="timeHorizon" className="input" defaultValue={holding.timeHorizon ?? ""}>
-              <option value="">Time horizon — unset</option>
+              <option value="">{uiText("Time horizon — unset")}</option>
               {TIME_HORIZONS.map((t) => (
                 <option key={t.value} value={t.value}>
-                  {t.label}
+                  {uiText(t.label)}
                 </option>
               ))}
             </select>
             <select name="expectedReturn" className="input" defaultValue={holding.expectedReturn ?? ""}>
-              <option value="">Expected return — unset</option>
+              <option value="">{uiText("Expected return — unset")}</option>
               {EXPECTED_RETURNS.map((r) => (
                 <option key={r.value} value={r.value}>
-                  {r.label}
+                  {uiText(r.label ?? "")}
                 </option>
               ))}
             </select>
             <select name="liquidity" className="input" defaultValue={holding.liquidity ?? ""}>
-              <option value="">Liquidity — unset</option>
+              <option value="">{uiText("Liquidity — unset")}</option>
               {LIQUIDITY_LEVELS.map((l) => (
                 <option key={l.value} value={l.value}>
-                  {l.label}
+                  {uiText(l.label ?? "")}
                 </option>
               ))}
             </select>
           </div>
 
-          <button type="submit" className="btn w-full">
-            Save changes
-          </button>
+          <button type="submit" className="btn w-full">{uiText("Save changes")}</button>
         </form>
       </Section>
     </div>

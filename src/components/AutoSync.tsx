@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 /**
@@ -21,6 +22,7 @@ export default function AutoSync({
   staleMinutes?: number;
   intervalMinutes?: number;
 }) {
+  const uiText = useText();
   const [isPending, startTransition] = useTransition();
   const [ranAt, setRanAt] = useState<Date | null>(null);
   // Guards against React 18 double-mounting in dev firing two syncs.
@@ -54,11 +56,11 @@ export default function AutoSync({
   return (
     <div className="text-xs text-[var(--muted)]">
       {isPending ? (
-        <span className="text-[var(--accent)]">Syncing…</span>
+        <span className="text-[var(--accent)]">{uiText("Syncing…")}</span>
       ) : ranAt ? (
-        <>Auto-synced at {ranAt.toLocaleTimeString("pt-PT")} · refreshes every {intervalMinutes} min</>
+        <>{uiText("Auto-synced at ")}{ranAt.toLocaleTimeString("pt-PT")}{uiText(" · refreshes every ")}{intervalMinutes}{uiText(" min")}</>
       ) : (
-        <>Auto-syncs every {intervalMinutes} min while this page is open</>
+        <>{uiText("Auto-syncs every ")}{intervalMinutes}{uiText(" min while this page is open")}</>
       )}
     </div>
   );

@@ -8,6 +8,9 @@ import { monthTick, spansYears } from "../periods";
 import { pdfSafe, renderReportPdf, reportBlocks, type Block, type ReportPdfInput } from "../pdf";
 import { reportCsv, reportFileName } from "../document";
 import { fmt } from "@/lib/format";
+import { translateText } from "@/lib/i18n/text";
+import portuguese from "@/lib/i18n/full/pt.json";
+import { moneyCsvLines } from "../monthly";
 
 function row(date: string, type: string, amount: number, extra: Partial<SpendingRow> = {}): SpendingRow {
   return {
@@ -78,6 +81,23 @@ const input: ReportPdfInput = {
 const allText = (blocks: Block[]) => JSON.stringify(blocks);
 
 describe("what the PDF says", () => {
+  it("translates populated report cells without translating personal names", () => {
+    const translate = (s: string) => translateText(portuguese, s);
+    const populated = { ...money,
+      categories: money.categories.map(c => ({ ...c, name: "Income", changePercent: null })),
+      budgets: [{ name: "September", spent: 150, limit: 100, percent: 150, status: "over" as const }],
+    };
+    const blocks = reportBlocks({ ...input, money: populated, translate });
+    const tables = blocks.filter(b => b.type === "table");
+    expect(tables.some(b => b.rows.some(r => r.includes("novo")))).toBe(true);
+    expect(tables.some(b => b.rows.some(r => r.includes("150% acima do limite")))).toBe(true);
+    expect(tables.some(b => b.rows.some(r => r[0] === "September"))).toBe(true);
+    expect(tables.some(b => b.rows.some(r => r[0].startsWith("Income (")))).toBe(true);
+    const csv = moneyCsvLines(populated, translate);
+    expect(csv.some(r => r[0] === "September" && r.includes("acima do limite"))).toBe(true);
+    const title = blocks.find(b => b.type === "title");
+    expect(title?.subtitle).not.toContain(" Sep ");
+  });
   const blocks = reportBlocks(input);
 
   it("states the same totals as the report the page shows", () => {

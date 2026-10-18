@@ -3,6 +3,8 @@ import "./globals.css";
 import { PAGE_BACKGROUND } from "@/lib/themeColors";
 import { currentLanguage } from "@/actions/language";
 import { LanguageProvider } from "@/components/LanguageContext";
+import { pageCatalog } from "@/actions/pageLanguage";
+import { directionOf } from "@/lib/i18n/languages";
 
 export const metadata: Metadata = {
   title: "Money OS",
@@ -124,6 +126,7 @@ window.addEventListener("appinstalled", function () {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // The language chosen, from its cookie: the server draws in it from the first byte.
   const language = await currentLanguage();
+  const catalog = await pageCatalog();
   return (
     /**
      * `suppressHydrationWarning` because the script above writes `data-accent`
@@ -132,14 +135,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
      * every page for exactly this. Scoped to this element, so a real mismatch
      * anywhere inside still reports.
      */
-    <html lang="en" translate={language === "en" ? "no" : "yes"} className="h-full antialiased" suppressHydrationWarning>
+    <html lang={language} dir={directionOf(language)} translate="no" className="h-full antialiased" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: applyStoredTheme }} />
         <script dangerouslySetInnerHTML={{ __html: registerServiceWorker }} />
         <script dangerouslySetInnerHTML={{ __html: keepInstallPrompt }} />
       </head>
       <body className="min-h-full">
-        <LanguageProvider language={language}>{children}</LanguageProvider>
+        <LanguageProvider language={language} catalog={catalog}>{children}</LanguageProvider>
       </body>
     </html>
   );

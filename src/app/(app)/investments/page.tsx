@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import AssetSearch from "@/components/AssetSearch";
 import {
   createHolding,
@@ -44,6 +45,7 @@ async function adoptAction(formData: FormData) {
 }
 
 export default async function InvestmentsPage() {
+  const uiText = await textForRequest();
   const [
     valueSeries,
     accountList,
@@ -97,11 +99,8 @@ export default async function InvestmentsPage() {
     <div className="holdings-page space-y-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-lg font-semibold">Investments</h1>
-          <p className="text-xs text-[var(--muted)] mt-1">
-            Everything you hold, synced and manual, in one place. Account
-            balances hold your idle cash; positions add on top.
-          </p>
+          <h1 className="text-lg font-semibold">{uiText("Investments")}</h1>
+          <p className="text-xs text-[var(--muted)] mt-1">{uiText("Everything you hold, synced and manual, in one place. Account balances hold your idle cash; positions add on top.")}</p>
           {/*
             Keeps quoted prices current while this page is open.
 
@@ -120,16 +119,10 @@ export default async function InvestmentsPage() {
             />
           </div>
         </div>
-        <nav aria-label="Holdings sections" className="flex flex-wrap gap-2">
-          <a href="#what-you-hold" className="btn">
-            What you hold
-          </a>
-          <a href="#portfolio-value-over-time" className="btn">
-            Portfolio value over time
-          </a>
-          <Link href="/settings/names" className="btn">
-            Name your tickers
-          </Link>
+        <nav aria-label={uiText("Holdings sections")} className="flex flex-wrap gap-2">
+          <a href="#what-you-hold" className="btn">{uiText("What you hold")}</a>
+          <a href="#portfolio-value-over-time" className="btn">{uiText("Portfolio value over time")}</a>
+          <Link href="/settings/names" className="btn">{uiText("Name your tickers")}</Link>
         </nav>
       </div>
 
@@ -147,7 +140,7 @@ export default async function InvestmentsPage() {
             never be reconciled by anyone looking at them. What the contribution
             figure answers is a different question, and it now says so. */}
         <Stat
-          label="Portfolio Value"
+          label={uiText("Portfolio Value")}
           value={summary.floating + summary.stable}
           currency={base}
           note={
@@ -157,7 +150,7 @@ export default async function InvestmentsPage() {
           }
         />
         <Stat
-          label="Unrealized P&L"
+          label={uiText("Unrealized P&L")}
           value={summary.pnl}
           currency={base}
           className={pnlColor}
@@ -168,13 +161,13 @@ export default async function InvestmentsPage() {
           note={`${summary.pnlPercent.toFixed(2)}% on ${fmt(summary.cost, base)} invested`}
         />
         <Stat
-          label="Market-exposed"
+          label={uiText("Market-exposed")}
           value={summary.floating}
           currency={base}
           note={`cost ${summary.cost.toFixed(2)}`}
         />
         <Stat
-          label="Cash & stablecoins"
+          label={uiText("Cash & stablecoins")}
           value={summary.stable}
           currency={base}
           note={
@@ -186,7 +179,7 @@ export default async function InvestmentsPage() {
           }
         />
         <Stat
-          label="Realized P&L"
+          label={uiText("Realized P&L")}
           value={realised.total}
           currency={base}
           className={
@@ -202,9 +195,9 @@ export default async function InvestmentsPage() {
       </div>
 
       {/* Keep both shortcut destinations visible in every display mode. */}
-      <section id="portfolio-value-over-time" aria-label="Portfolio value over time" className="scroll-mt-24">
+      <section id="portfolio-value-over-time" aria-label={uiText("Portfolio value over time")} className="scroll-mt-24">
         <TimeSeriesCard
-          title="Portfolio value over time"
+          title={uiText("Portfolio value over time")}
           series={valueSeries.map((p) => ({ date: p.date, value: p.portfolioValue }))}
           currency={contribution.baseCurrency}
           note="Built from snapshots, so it starts the day tracking did. An imported statement reaches further back but records prices paid, not what things were worth since."
@@ -231,18 +224,11 @@ export default async function InvestmentsPage() {
           in Portfolio Value: their value is already inside the account equity. */}
       <div id="what-you-hold" className="holdings-list card p-4 scroll-mt-24">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
-          <div className="text-sm font-medium">What you hold</div>
-          <div className="text-xs text-[var(--muted)]">
-            open trades are shown but not added to Portfolio Value
-          </div>
+          <div className="text-sm font-medium">{uiText("What you hold")}</div>
+          <div className="text-xs text-[var(--muted)]">{uiText("open trades are shown but not added to Portfolio Value")}</div>
         </div>
-        <div className="text-xs text-[var(--muted)] mb-3">
-          Tag positions on the{" "}
-          <Link href="/positions" className="text-[var(--accent)]">
-            Positions page
-          </Link>{" "}
-          and they group here.
-        </div>
+        <div className="text-xs text-[var(--muted)] mb-3">{uiText("Tag positions on the")}{" "}
+          <Link href="/positions" className="text-[var(--accent)]">{uiText("Positions page")}</Link>{" "}{uiText("and they group here.")}</div>
         <PortfolioTable
           items={portfolioItems.items}
           currency={portfolioItems.baseCurrency}
@@ -278,11 +264,11 @@ export default async function InvestmentsPage() {
         {knownIsins.length > 0 && <QuoteProbe suggestions={knownIsins} />}
       </MobileFold>
 
-      <Section title="Add a position by hand" summary="for anything not synced">
+      <Section title="Add a position by hand" summary={uiText("for anything not synced")}>
         <form action={createHolding} className="space-y-3 max-w-2xl">
           <AssetSearch />
           <select name="accountId" className="input" required defaultValue="">
-            <option value="">Account holding this position…</option>
+            <option value="">{uiText("Account holding this position…")}</option>
             {accountList.map((a) => (
               <option translate="no" key={a.id} value={a.id}>
                 {a.institution} — {a.name}
@@ -295,7 +281,7 @@ export default async function InvestmentsPage() {
               name="quantity"
               type="number"
               step="0.00000001"
-              placeholder="Quantity"
+              placeholder={uiText("Quantity")}
               className="input"
               required
             />
@@ -307,16 +293,14 @@ export default async function InvestmentsPage() {
 
           <HoldingFormFields playlistOptions={playlistList} />
 
-          <button type="submit" className="btn w-full">
-            Add position
-          </button>
+          <button type="submit" className="btn w-full">{uiText("Add position")}</button>
         </form>
       </Section>
     </div>
   );
 }
 
-function Stat({
+async function Stat({
   label,
   value,
   className = "",
@@ -329,9 +313,10 @@ function Stat({
   currency?: string;
   note?: string;
 }) {
+  const uiText = await textForRequest();
   return (
     <div className="card p-4">
-      <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
+      <div className="text-xs text-[var(--muted)] mb-1">{uiText(label ?? "")}</div>
       <div className={`text-xl font-semibold truncate ${className}`}>
         <Money value={value} currency={currency} />
       </div>

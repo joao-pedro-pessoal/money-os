@@ -1,3 +1,6 @@
+"use client";
+
+import { useText } from "@/components/useText";
 import Link from "next/link";
 import { Money } from "@/components/PrivacyContext";
 
@@ -28,21 +31,19 @@ export default function UnitemisedInvestments({
   total: number;
   currency: string;
 }) {
+  const uiText = useText();
   if (items.length === 0) return null;
 
   return (
     <div className="card p-4">
       <div className="flex items-baseline justify-between gap-2 mb-1">
-        <div className="text-sm font-medium">Invested, but not itemised</div>
+        <div className="text-sm font-medium">{uiText("Invested, but not itemised")}</div>
         <div className="text-sm font-semibold">
           <Money value={total} currency={currency} />
         </div>
       </div>
 
-      <p className="text-xs text-[var(--muted)] leading-snug mb-3">
-        This money is counted in your net worth and in the investments total. It isn&apos;t in the
-        table below because the app knows how much is invested, not what it is invested in.
-      </p>
+      <p className="text-xs text-[var(--muted)] leading-snug mb-3">{uiText("This money is counted in your net worth and in the investments total. It isn't in the table below because the app knows how much is invested, not what it is invested in.")}</p>
 
       <ul className="space-y-1.5">
         {items.map((a) => (
@@ -50,7 +51,7 @@ export default function UnitemisedInvestments({
             <span className="truncate">
               <span translate="no">{a.institution}</span> — <span translate="no">{a.name}</span>
               {a.itemised && (
-                <span className="text-[var(--muted)]"> · some instruments already recorded</span>
+                <span className="text-[var(--muted)]">{uiText(" · some instruments already recorded")}</span>
               )}
             </span>
             <span className="shrink-0 tabular-nums">
@@ -60,12 +61,8 @@ export default function UnitemisedInvestments({
         ))}
       </ul>
 
-      <div className="text-[10px] text-[var(--muted)] mt-3 leading-snug">
-        Import the broker&apos;s transaction export and the individual positions appear here, rebuilt
-        from your own buys and sells.{" "}
-        <Link href="/import" className="text-[var(--accent)]">
-          Import a statement
-        </Link>
+      <div className="text-[10px] text-[var(--muted)] mt-3 leading-snug">{uiText("Import the broker's transaction export and the individual positions appear here, rebuilt from your own buys and sells.")}{" "}
+        <Link href="/import" className="text-[var(--accent)]">{uiText("Import a statement")}</Link>
       </div>
     </div>
   );

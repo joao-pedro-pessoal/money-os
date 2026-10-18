@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAlerts } from "@/actions/alerts";
+import { textForRequest } from "@/actions/pageLanguage";
 import { shouldNotify } from "@/lib/alerts/rules";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
  * of its own about what is worth saying.
  */
 export async function GET() {
+  const uiText = await textForRequest();
   const { alerts } = await getAlerts();
   return NextResponse.json(
     {
@@ -21,8 +23,8 @@ export async function GET() {
       alerts: alerts.filter(shouldNotify).map((a) => ({
         id: a.id,
         severity: a.severity,
-        title: a.title,
-        detail: a.detail ?? null,
+        title: uiText(a.title),
+        detail: a.detail ? uiText(a.detail) : null,
         href: a.href,
       })),
     },

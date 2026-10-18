@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { autoPriceHoldings, forgetFoundPrices } from "@/actions/quotes";
 
@@ -16,6 +17,7 @@ import { autoPriceHoldings, forgetFoundPrices } from "@/actions/quotes";
  * hand is never overwritten and pressing it twice costs nothing.
  */
 export default function AutoPrice() {
+  const uiText = useText();
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [rows, setRows] = useState<{ symbol: string; ok: boolean; note: string }[]>([]);
@@ -75,21 +77,18 @@ export default function AutoPrice() {
     <div className="card p-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <div>
-          <div className="text-sm font-medium">Find prices automatically</div>
-          <p className="text-xs text-[var(--muted)] leading-snug mt-1 max-w-2xl">
-            Looks up each ISIN, finds what it is called on the exchanges, and takes the first price
-            that comes back in the currency you paid in. Two free services, no account, no key.
-          </p>
+          <div className="text-sm font-medium">{uiText("Find prices automatically")}</div>
+          <p className="text-xs text-[var(--muted)] leading-snug mt-1 max-w-2xl">{uiText("Looks up each ISIN, finds what it is called on the exchanges, and takes the first price that comes back in the currency you paid in. Two free services, no account, no key.")}</p>
         </div>
         <div className="flex gap-2">
           {/* Undo for prices saved before the check above existed. Without it a
               wrong price is permanent, because the guard only refuses to write
               a new one. */}
           <button type="button" onClick={forget} disabled={busy} className="btn text-xs whitespace-nowrap">
-            {busy ? "…" : "Forget found prices"}
+            {busy ? "…" : uiText("Forget found prices")}
           </button>
           <button type="button" onClick={run} disabled={busy} className="btn text-xs whitespace-nowrap">
-            {busy ? "Looking up…" : "Find prices"}
+            {busy ? uiText("Looking up…") : uiText("Find prices")}
           </button>
         </div>
       </div>
@@ -115,12 +114,7 @@ export default function AutoPrice() {
         </ul>
       )}
 
-      <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">
-        Daily closing prices, not live ones. Three checks before anything is saved: the price must
-        state the currency you paid in, it must be from the last few days rather than from a venue
-        that stopped trading, and the prices together must agree with what your broker says the
-        account is worth. A batch that fails the last one is reported, not stored.
-      </p>
+      <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">{uiText("Daily closing prices, not live ones. Three checks before anything is saved: the price must state the currency you paid in, it must be from the last few days rather than from a venue that stopped trading, and the prices together must agree with what your broker says the account is worth. A batch that fails the last one is reported, not stored.")}</p>
     </div>
   );
 }

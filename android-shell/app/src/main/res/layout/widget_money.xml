@@ -29,7 +29,7 @@
             android:id="@+id/widget_refresh"
             android:layout_width="32dp"
             android:layout_height="28dp"
-            android:contentDescription="Refresh"
+            android:contentDescription="@string/ui_refresh"
             android:gravity="center"
             android:text="↻"
             android:textColor="#ff8a8375"
@@ -75,7 +75,7 @@
         android:layout_height="0dp"
         android:layout_marginTop="6dp"
         android:layout_weight="1"
-        android:contentDescription="Chart"
+        android:contentDescription="@string/ui_chart"
         android:scaleType="fitCenter"
         android:visibility="gone" />
 

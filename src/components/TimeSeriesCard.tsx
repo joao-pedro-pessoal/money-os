@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useMemo, useState } from "react";
 import NetWorthChart from "@/components/NetWorthChart";
 import { fmt } from "@/lib/format";
@@ -37,6 +38,7 @@ export default function TimeSeriesCard({
   note?: React.ReactNode;
   action?: React.ReactNode;
 }) {
+  const uiText = useText();
   const [range, setRange] = useState<RangeKey>("3m");
   const [bucket, setBucket] = useState<Bucket>(suggestBucket("3m"));
   const [touchedBucket, setTouchedBucket] = useState(false);
@@ -76,16 +78,12 @@ export default function TimeSeriesCard({
       </div>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <label className="min-w-0 text-xs text-[var(--muted)]">
-          Period
-          <select aria-label="Chart period" value={range} onChange={(e) => pickRange(e.target.value as RangeKey)} className="input w-full mt-1">
-            {RANGES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+        <label className="min-w-0 text-xs text-[var(--muted)]">{uiText("Period")}<select aria-label={uiText("Chart period")} value={range} onChange={(e) => pickRange(e.target.value as RangeKey)} className="input w-full mt-1">
+            {RANGES.map((r) => <option key={r.value} value={r.value}>{uiText(r.label ?? "")}</option>)}
           </select>
         </label>
-        <label className="min-w-0 text-xs text-[var(--muted)]">
-          Group points by
-          <select
-            aria-label="Group chart points by"
+        <label className="min-w-0 text-xs text-[var(--muted)]">{uiText("Group points by")}<select
+            aria-label={uiText("Group chart points by")}
             value={bucket}
             onChange={(e) => {
               setBucket(e.target.value as Bucket);
@@ -95,7 +93,7 @@ export default function TimeSeriesCard({
           >
             {BUCKETS.map((b) => (
               <option key={b.value} value={b.value}>
-                {b.label}
+                {uiText(b.label ?? "")}
               </option>
             ))}
           </select>
@@ -104,16 +102,14 @@ export default function TimeSeriesCard({
 
       {range === "custom" && (
         <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-          <label className="min-w-0">From
-          <input
+          <label className="min-w-0">{uiText("From")}<input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
             className="input w-full min-w-0 mt-1"
           />
           </label>
-          <label className="min-w-0">To
-          <input
+          <label className="min-w-0">{uiText("To")}<input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
@@ -126,8 +122,8 @@ export default function TimeSeriesCard({
       {view.length < 2 ? (
         <div className="text-sm text-[var(--muted)] py-10 text-center">
           {series.length === 0
-            ? "No history yet. This fills in as your balances change and your connections sync."
-            : "Not enough points in this window — try a longer range."}
+            ? uiText("No history yet. This fills in as your balances change and your connections sync.")
+            : uiText("Not enough points in this window — try a longer range.")}
         </div>
       ) : (
         <NetWorthChart

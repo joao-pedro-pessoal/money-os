@@ -1,3 +1,4 @@
+import { directionOf } from "@/lib/i18n/languages";
 import Link from "next/link";
 import LanguagePicker from "./LanguagePicker";
 import { currentLanguage } from "@/actions/language";
@@ -16,7 +17,7 @@ export default async function LegalPage({ kind }: { kind: LegalKind }) {
   const names: Record<LegalKind, string> = { privacy: w.privacy, terms: w.terms, deletion: w.deletion };
 
   return (
-    <div translate="no" lang={language} className="app-frame">
+    <div translate="no" lang={language} dir={directionOf(language)} className="app-frame">
       <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-8 sm:py-12 space-y-8">
         <header className="flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">

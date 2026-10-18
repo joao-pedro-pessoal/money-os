@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { accrue, daysBetween, compare, type DayCount } from "@/lib/accounting/interest";
 
@@ -32,6 +33,7 @@ export default function InterestForm({
   action: (formData: FormData) => void;
   today: string;
 }) {
+  const uiText = useText();
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const account = accounts.find((a) => a.id === accountId);
 
@@ -79,14 +81,14 @@ export default function InterestForm({
         {accounts.map((a) => (
           <option translate="no" key={a.id} value={a.id}>
             {a.name}
-            {a.apr ? ` — ${a.apr}%` : " — no rate set"}
+            {a.apr ? ` — ${a.apr}%` : uiText(" — no rate set")}
           </option>
         ))}
       </select>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <label className="text-xs">
-          <span className="text-[var(--muted)]">From</span>
+          <span className="text-[var(--muted)]">{uiText("From")}</span>
           <input
             type="date"
             value={from}
@@ -95,7 +97,7 @@ export default function InterestForm({
           />
         </label>
         <label className="text-xs">
-          <span className="text-[var(--muted)]">To</span>
+          <span className="text-[var(--muted)]">{uiText("To")}</span>
           <input
             type="date"
             name="date"
@@ -107,9 +109,7 @@ export default function InterestForm({
       </div>
 
       {account && !account.apr && (
-        <div className="text-xs text-[var(--amber)]">
-          This account has no rate yet. Set one below and the amount fills itself in.
-        </div>
+        <div className="text-xs text-[var(--amber)]">{uiText("This account has no rate yet. Set one below and the amount fills itself in.")}</div>
       )}
 
       {computed && days > 0 && (
@@ -117,38 +117,29 @@ export default function InterestForm({
           {/* The arithmetic in full, so the figure can be argued with. */}
           <div className="text-[var(--muted)]">
             {account!.balance.toFixed(2)} {account!.currency} × {account!.apr}% × {days}/
-            {account!.dayCount} days
-          </div>
+            {account!.dayCount}{uiText(" days")}</div>
           <div className="font-medium">
-            {computed.gross.toFixed(2)} {account!.currency} gross
-          </div>
+            {computed.gross.toFixed(2)} {account!.currency}{uiText(" gross")}</div>
           {computed.tax > 0 && (
             <div className="text-[var(--muted)]">
-              − {computed.tax.toFixed(2)} tax withheld ({account!.withholding}%) ={" "}
+              − {computed.tax.toFixed(2)}{uiText(" tax withheld (")}{account!.withholding}%) ={" "}
               <span className="text-[var(--foreground)]">{computed.net.toFixed(2)}</span>
             </div>
           )}
-          <div className="text-[10px] text-[var(--muted)] pt-1">
-            Simple accrual on the current balance. If your balance moved during the period, the real
-            figure differs — record shorter periods to follow it closely.
-          </div>
+          <div className="text-[10px] text-[var(--muted)] pt-1">{uiText("Simple accrual on the current balance. If your balance moved during the period, the real figure differs — record shorter periods to follow it closely.")}</div>
         </div>
       )}
 
       {days < 0 && (
-        <div className="text-xs text-[var(--red)]">The end date is before the start date.</div>
+        <div className="text-xs text-[var(--red)]">{uiText("The end date is before the start date.")}</div>
       )}
 
       {futureDated && (
-        <div className="text-xs text-[var(--amber)]">
-          This is dated in the future. The balance goes up today for money you haven&apos;t received
-          yet.
-        </div>
+        <div className="text-xs text-[var(--amber)]">{uiText("This is dated in the future. The balance goes up today for money you haven't received yet.")}</div>
       )}
 
       <label className="text-xs block">
-        <span className="text-[var(--muted)]">
-          Amount {computed ? "— leave blank to use the calculated figure" : ""}
+        <span className="text-[var(--muted)]">{uiText("Amount ")}{computed ? uiText("— leave blank to use the calculated figure") : ""}
         </span>
         <input
           name="amount"
@@ -156,7 +147,7 @@ export default function InterestForm({
           step="0.01"
           value={manual}
           onChange={(e) => setManual(e.target.value)}
-          placeholder={computed ? computed.net.toFixed(2) : "Amount"}
+          placeholder={computed ? computed.net.toFixed(2) : uiText("Amount")}
           className="input mt-1"
           required={!computed}
         />
@@ -169,17 +160,14 @@ export default function InterestForm({
           className="text-xs"
           style={{ color: disagreement.level === "off" ? "var(--red)" : "var(--amber)" }}
         >
-          {disagreement.level === "off" ? "⚠ " : ""}
-          You received {disagreement.difference > 0 ? "more" : "less"} than the rate implies:{" "}
-          {disagreement.actual.toFixed(2)} against {disagreement.expected.toFixed(2)} (
-          {disagreement.percentOff?.toFixed(0)}% off). Worth checking the rate and the day count.
-        </div>
+          {disagreement.level === "off" ? "⚠ " : ""}{uiText("You received ")}{disagreement.difference > 0 ? uiText("more") : uiText("less")}{uiText(" than the rate implies:")}{" "}
+          {disagreement.actual.toFixed(2)}{uiText(" against ")}{disagreement.expected.toFixed(2)} (
+          {disagreement.percentOff?.toFixed(0)}{uiText("% off). Worth checking the rate and the day count.")}</div>
       )}
 
       <input type="hidden" name="computedAmount" value={computed?.net ?? ""} />
 
-      <button type="submit" className="btn w-full" disabled={days < 0}>
-        Record {amount > 0 ? `${amount.toFixed(2)} ${account?.currency ?? ""}` : "interest"}
+      <button type="submit" className="btn w-full" disabled={days < 0}>{uiText("Record ")}{amount > 0 ? `${amount.toFixed(2)} ${account?.currency ?? ""}` : uiText("interest")}
       </button>
     </form>
   );

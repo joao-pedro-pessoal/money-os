@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import Link from "next/link";
 import { isConverted } from "@/lib/fx/favourites";
 
@@ -12,7 +13,7 @@ import { isConverted } from "@/lib/fx/favourites";
  * compared in; switching here converts what you see and changes nothing about
  * what the app keeps — which is why a converted view says so.
  */
-export default function CurrencySwitch({
+export default async function CurrencySwitch({
   favourites,
   display,
   base,
@@ -24,6 +25,7 @@ export default function CurrencySwitch({
   /** Builds the URL for a currency, preserving whatever else is in the query. */
   hrefFor: (currency: string) => string;
 }) {
+  const uiText = await textForRequest();
   if (favourites.length < 2) return null;
 
   return (
@@ -49,9 +51,7 @@ export default function CurrencySwitch({
       </div>
 
       {isConverted(display, base) && (
-        <span className="text-[10px] text-[var(--muted)]">
-          converted from {base} at today&apos;s rate
-        </span>
+        <span className="text-[10px] text-[var(--muted)]">{uiText("converted from ")}{base}{uiText(" at today's rate")}</span>
       )}
     </div>
   );

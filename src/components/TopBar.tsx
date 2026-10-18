@@ -1,5 +1,6 @@
 "use client";
 
+import { directionOf } from "@/lib/i18n/languages";
 import { usePrivacy } from "./PrivacyContext";
 import { useTheme } from "./ThemeContext";
 import { useNav } from "./NavContext";
@@ -41,7 +42,7 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
   const { t, language } = useLanguage();
 
   return (
-    <div lang={language} className="app-topbar flex items-center gap-2 px-4 md:px-8 pt-4 md:pt-6">
+    <div lang={language} dir={directionOf(language)} className="app-topbar flex items-center gap-2 px-4 md:px-8 pt-4 md:pt-6">
       {/*
         Opens the nav drawer. Only exists where the nav is a drawer.
 

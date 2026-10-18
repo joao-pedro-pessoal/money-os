@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Alert } from "@/lib/alerts/rules";
@@ -23,6 +24,7 @@ const TONE: Record<Alert["severity"], { colour: string; label: string }> = {
 };
 
 export default function AlertBell({ alerts }: { alerts: Alert[] }) {
+  const uiText = useText();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const popup = useRef<HTMLDivElement>(null);
@@ -60,14 +62,14 @@ export default function AlertBell({ alerts }: { alerts: Alert[] }) {
   const worst = alerts[0].severity;
 
   return (
-    <div lang="en" className="relative">
+    <div className="relative">
       <div>
         <button
           ref={trigger}
           type="button"
           onClick={() => setOpen(!open)}
           className="icon-btn relative"
-          aria-label={`${alerts.length} thing${alerts.length === 1 ? "" : "s"} need attention`}
+          aria-label={uiText("Items needing attention: {count}", { count: alerts.length })}
           aria-expanded={open}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -95,11 +97,11 @@ export default function AlertBell({ alerts }: { alerts: Alert[] }) {
             className="alerts-popover card absolute right-0 mt-2 z-50 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto"
             role="dialog"
             aria-modal="true"
-            aria-label="Attention"
+            aria-label={uiText("Attention")}
           >
             <div className="p-3 border-b border-[var(--border)] text-xs font-medium flex items-center justify-between gap-3">
-              <span>{alerts.length} thing{alerts.length === 1 ? "" : "s"} to look at</span>
-              <button type="button" className="icon-btn shrink-0" aria-label="Close alerts" onClick={() => setOpen(false)}>×</button>
+              <span>{uiText("Items needing attention: {count}", { count: alerts.length })}</span>
+              <button type="button" className="icon-btn shrink-0" aria-label={uiText("Close alerts")} onClick={() => setOpen(false)}>×</button>
             </div>
 
             <ul>
@@ -116,12 +118,12 @@ export default function AlertBell({ alerts }: { alerts: Alert[] }) {
                       <span
                         className="mt-1.5 shrink-0 rounded-full"
                         style={{ width: 6, height: 6, background: TONE[a.severity].colour }}
-                        title={TONE[a.severity].label}
+                        title={uiText(TONE[a.severity].label)}
                       />
                       <div className="min-w-0">
-                        <div className="text-xs font-medium">{a.title}</div>
+                        <div className="text-xs font-medium">{uiText(a.title ?? "")}</div>
                         {a.detail && (
-                          <div className="text-[11px] text-[var(--muted)] mt-0.5">{a.detail}</div>
+                          <div className="text-[11px] text-[var(--muted)] mt-0.5">{uiText(a.detail ?? "")}</div>
                         )}
                       </div>
                     </div>

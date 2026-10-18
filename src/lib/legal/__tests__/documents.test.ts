@@ -34,6 +34,19 @@ describe("who runs the site", () => {
 });
 
 describe("the two languages", () => {
+  it("preserves structure, links and literal identity in all 15 languages", () => {
+    for (const { code } of LANGUAGES) {
+      for (const kind of LEGAL_KINDS) {
+        const doc = legalDocument(kind, code, someone);
+        expect(doc.sections.map(section => section.paragraphs.length)).toEqual(
+          legalDocument(kind, "en", someone).sections.map(section => section.paragraphs.length)
+        );
+        expect(all(doc)).not.toMatch(/\{(?:operatorName|operatorEmail|settings|account|yourData|deleteAccount|forgot)\}|ZXQ/);
+      }
+      expect(all(legalDocument("privacy", code, someone))).toContain("https://www.cnpd.pt");
+      expect(all(legalDocument("privacy", code, { name: "A $& {operatorEmail}", email: "literal@example.org" }))).toContain("A $& {operatorEmail}");
+    }
+  });
   it("say the same things, section for section and paragraph for paragraph", () => {
     for (const kind of LEGAL_KINDS) {
       const shape = (code: "en" | "pt") => legalDocument(kind, code, someone).sections.map((s) => s.paragraphs.length);

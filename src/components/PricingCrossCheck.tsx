@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import { getPricingCrossCheck } from "@/actions/quotes";
 import { fmt } from "@/lib/format";
 
@@ -11,6 +12,7 @@ import { fmt } from "@/lib/format";
  * looks perfect.
  */
 export default async function PricingCrossCheck() {
+  const uiText = await textForRequest();
   const rows = await getPricingCrossCheck();
   const worth = rows.filter((r) => r.check !== null);
   if (worth.length === 0) return null;
@@ -27,40 +29,26 @@ export default async function PricingCrossCheck() {
             style={check.suspicious ? { borderLeft: "2px solid var(--amber)" } : undefined}
           >
             <div className="text-sm font-medium mb-1">
-              {check.suspicious ? "These prices don't add up" : "Prices agree with the account"}
+              {check.suspicious ? uiText("These prices don't add up") : uiText("Prices agree with the account")}
             </div>
 
             <p className="text-xs text-[var(--muted)] leading-snug">
-              {accountName} says it holds{" "}
-              <span className="text-[var(--foreground)]"><span translate="no">{fmt(check.declared, currency)}</span></span>. The
-              instruments come to{" "}
+              {accountName}{uiText(" says it holds")}{" "}
+              <span className="text-[var(--foreground)]"><span translate="no">{fmt(check.declared, currency)}</span></span>{uiText(". The instruments come to")}{" "}
               <span className="text-[var(--foreground)]"><span translate="no">{fmt(check.estimate, currency)}</span></span>
               {check.unpricedCount > 0 && (
                 <>
                   {" "}
-                  ({fmt(check.pricedValue, currency)} priced, plus {check.unpricedCount} still at
-                  cost)
-                </>
+                  ({fmt(check.pricedValue, currency)}{uiText(" priced, plus ")}{check.unpricedCount}{uiText(" still at cost)")}</>
               )}
               .
             </p>
 
             {check.suspicious ? (
-              <p className="text-xs mt-2 leading-snug" style={{ color: "var(--amber)" }}>
-                They differ by <span translate="no">{fmt(Math.abs(check.difference), currency)}</span>
-                {check.percent !== null && ` (${Math.abs(check.percent).toFixed(1)}%)`}, which is
-                more than a few days of market movement. The likeliest cause is a price matched to
-                the wrong listing — the same fund on another exchange, or a different share class.
-                Both are real instruments with real prices, so the wrong one looks entirely normal
-                on its own row. Check the symbols on the Positions page against what your broker
-                shows.
-              </p>
+              <p className="text-xs mt-2 leading-snug" style={{ color: "var(--amber)" }}>{uiText("They differ by ")}<span translate="no">{fmt(Math.abs(check.difference), currency)}</span>
+                {check.percent !== null && ` (${Math.abs(check.percent).toFixed(1)}%)`}{uiText(", which is more than a few days of market movement. The likeliest cause is a price matched to the wrong listing — the same fund on another exchange, or a different share class. Both are real instruments with real prices, so the wrong one looks entirely normal on its own row. Check the symbols on the Positions page against what your broker shows.")}</p>
             ) : (
-              <p className="text-[10px] text-[var(--muted)] mt-2 leading-snug">
-                Within a few percent, which is ordinary movement between the day you last updated
-                the balance and the day these prices were fetched. Two independent routes to the
-                same figure agreeing is the best evidence available that the listings are right.
-              </p>
+              <p className="text-[10px] text-[var(--muted)] mt-2 leading-snug">{uiText("Within a few percent, which is ordinary movement between the day you last updated the balance and the day these prices were fetched. Two independent routes to the same figure agreeing is the best evidence available that the listings are right.")}</p>
             )}
           </div>
         );

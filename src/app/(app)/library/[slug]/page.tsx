@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import { getResourceBySlug, listResources, setProgress, updateResource } from "@/actions/library";
 import { isRelevant, STATUSES, PROGRESS_UNITS, type Level } from "@/lib/library/types";
 import { relFor, safeUrl, displayHost, youtubeEmbedUrl, sourceLabel } from "@/lib/library/links";
@@ -18,6 +19,7 @@ export default async function ResourceDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const uiText = await textForRequest();
   const { slug } = await params;
   const r = await getResourceBySlug(slug);
   if (!r) notFound();
@@ -49,7 +51,7 @@ export default async function ResourceDetailPage({
   const field = (label: string, value: string | number | null | undefined) =>
     value === null || value === undefined || value === "" ? null : (
       <div key={label}>
-        <div className="text-[10px] text-[var(--muted)]">{label}</div>
+        <div className="text-[10px] text-[var(--muted)]">{uiText(label ?? "")}</div>
         <div className="text-sm">{value}</div>
       </div>
     );
@@ -57,9 +59,7 @@ export default async function ResourceDetailPage({
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <Link href="/library" className="text-xs text-[var(--accent)]">
-          ← Library
-        </Link>
+        <Link href="/library" className="text-xs text-[var(--accent)]">{uiText("← Library")}</Link>
         <div className="flex items-start gap-4 mt-2 flex-wrap">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -79,7 +79,7 @@ export default async function ResourceDetailPage({
           <div className="min-w-0 flex-1">
             <div className="flex gap-2 flex-wrap items-center">
               <span className="badge border border-[var(--border)] text-[var(--muted)] text-[10px]">
-                {tagLabelFor(r.type)}
+                {uiText(tagLabelFor(r.type) ?? "")}
               </span>
               {/* The application's editorial claim, read from the row. It sits
                   apart from the stars below, which are the reader's. */}
@@ -104,7 +104,7 @@ export default async function ResourceDetailPage({
             )}
             <div className="flex gap-2 flex-wrap items-center mt-2 text-xs">
               <LevelBadge level={r.level as Level} size="md" />
-              <span className="text-[var(--muted)]">{tagLabelFor(r.status)}</span>
+              <span className="text-[var(--muted)]">{uiText(tagLabelFor(r.status) ?? "")}</span>
               {r.personalRating && (
                 <span className="text-[var(--accent)]">· {"★".repeat(r.personalRating)}</span>
               )}
@@ -130,9 +130,7 @@ export default async function ResourceDetailPage({
               target="_blank"
               rel={relFor("external")}
               className="btn whitespace-nowrap"
-            >
-              Watch on YouTube ↗
-            </a>
+            >{uiText("Watch on YouTube ↗")}</a>
           )}
           {url && (
             <a
@@ -145,7 +143,7 @@ export default async function ResourceDetailPage({
                   : "btn whitespace-nowrap"
               }
             >
-              {video ? "Syllabus and readings" : "Open on"} {displayHost(url)} ↗
+              {video ? uiText("Syllabus and readings") : uiText("Open on")} {displayHost(url)} ↗
             </a>
           )}
           {affiliate && (
@@ -154,10 +152,8 @@ export default async function ResourceDetailPage({
               target="_blank"
               rel={relFor("affiliate")}
               className="badge border border-[var(--border)] text-[var(--muted)] text-xs px-3 py-2"
-              title="This is an affiliate link — it may earn a commission."
-            >
-              Buy (affiliate) ↗
-            </a>
+              title={uiText("This is an affiliate link — it may earn a commission.")}
+            >{uiText("Buy (affiliate) ↗")}</a>
           )}
         </div>
       )}
@@ -174,15 +170,13 @@ export default async function ResourceDetailPage({
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
             />
           </div>
-          <div className="text-[10px] text-[var(--muted)] p-2">
-            Embedded from youtube-nocookie.com, no autoplay.
-          </div>
+          <div className="text-[10px] text-[var(--muted)] p-2">{uiText("Embedded from youtube-nocookie.com, no autoplay.")}</div>
         </div>
       )}
 
       {r.description && (
         <div className="card p-4">
-          <div className="text-sm font-medium mb-2">About</div>
+          <div className="text-sm font-medium mb-2">{uiText("About")}</div>
           <p className="text-sm text-[var(--muted)] whitespace-pre-line"><span translate="no">{r.description}</span></p>
         </div>
       )}
@@ -191,7 +185,7 @@ export default async function ResourceDetailPage({
         <div className="card p-4 space-y-3">
           {r.whyLearn && (
             <div>
-              <div className="text-sm font-medium mb-1">Why learn from this</div>
+              <div className="text-sm font-medium mb-1">{uiText("Why learn from this")}</div>
               <p className="text-sm text-[var(--muted)] whitespace-pre-line">{r.whyLearn}</p>
             </div>
           )}
@@ -200,7 +194,7 @@ export default async function ResourceDetailPage({
               thing you were trying to avoid by reading a summary. */}
           {r.lessons && (
             <div>
-              <div className="text-sm font-medium mb-1">What it covers</div>
+              <div className="text-sm font-medium mb-1">{uiText("What it covers")}</div>
               <ul className="text-sm text-[var(--muted)] space-y-1">
                 {r.lessons
                   .split("\n")
@@ -217,7 +211,7 @@ export default async function ResourceDetailPage({
           )}
           {r.perspective && (
             <div>
-              <div className="text-sm font-medium mb-1">Perspective</div>
+              <div className="text-sm font-medium mb-1">{uiText("Perspective")}</div>
               <p className="text-sm text-[var(--muted)]">{r.perspective}</p>
             </div>
           )}
@@ -228,7 +222,7 @@ export default async function ResourceDetailPage({
           than "Philosophy → Stoicism". */}
       {r.categories.length > 0 && (
         <div className="card p-4">
-          <div className="text-sm font-medium mb-2">Categories</div>
+          <div className="text-sm font-medium mb-2">{uiText("Categories")}</div>
           <div className="space-y-2">
             {r.subtagsByCategory.map((group) => (
               <div key={group.categorySlug}>
@@ -258,7 +252,7 @@ export default async function ResourceDetailPage({
 
       {/* Only fields this medium actually has — a podcast never shows an ISBN. */}
       <div className="card p-4">
-        <div className="text-sm font-medium mb-3">Details</div>
+        <div className="text-sm font-medium mb-3">{uiText("Details")}</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {isRelevant(r.type, "isbn13") && field("ISBN-13", r.meta.isbn13)}
           {isRelevant(r.type, "pageCount") && field("Pages", r.meta.pageCount)}
@@ -286,8 +280,8 @@ export default async function ResourceDetailPage({
 
       <div className="card p-4" id="progress">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">
-          <div className="text-sm font-medium">Progress</div>
-          <div className="text-xs text-[var(--muted)]">{r.progress.label}</div>
+          <div className="text-sm font-medium">{uiText("Progress")}</div>
+          <div className="text-xs text-[var(--muted)]">{uiText(r.progress.label ?? "")}</div>
         </div>
 
         {r.progress.percent !== null && (
@@ -306,8 +300,7 @@ export default async function ResourceDetailPage({
           <input type="hidden" name="id" value={r.id} />
           <label className="text-xs">
             <span className="text-[var(--muted)]">
-              {PROGRESS_UNITS.find((u) => u.value === r.progress.unit)?.label} done
-            </span>
+              {PROGRESS_UNITS.find((u) => u.value === r.progress.unit)?.label}{uiText(" done")}</span>
             <input
               name="progress"
               type="number"
@@ -318,27 +311,25 @@ export default async function ResourceDetailPage({
             />
           </label>
           <label className="text-xs">
-            <span className="text-[var(--muted)]">of</span>
+            <span className="text-[var(--muted)]">{uiText("of")}</span>
             <input
               name="totalUnits"
               type="number"
               step="0.01"
               min="0"
               defaultValue={r.progress.total ?? ""}
-              placeholder="total"
+              placeholder={uiText("total")}
               className="input input-narrow text-xs py-1 w-24 mt-1"
             />
           </label>
           <select name="status" defaultValue={r.status} className="input input-narrow text-xs py-1">
             {STATUSES.map((s) => (
               <option key={s.value} value={s.value}>
-                {s.label}
+                {uiText(s.label ?? "")}
               </option>
             ))}
           </select>
-          <button type="submit" className="btn text-xs py-1">
-            Save
-          </button>
+          <button type="submit" className="btn text-xs py-1">{uiText("Save")}</button>
         </form>
       </div>
 
@@ -349,7 +340,7 @@ export default async function ResourceDetailPage({
       {r.type === "BOOK" && (
         <Section
           title="Your edition"
-          summary="optional"
+          summary={uiText("optional")}
           defaultOpen={Boolean(r.meta.translation || r.meta.edition || r.meta.publisher)}
           essential
         >
@@ -364,7 +355,7 @@ export default async function ResourceDetailPage({
               { name: "coverUrl", label: "Cover image URL", value: r.meta.coverUrl },
             ].map((f) => (
               <label key={f.name} className="text-xs block">
-                <span className="text-[var(--muted)]">{f.label}</span>
+                <span className="text-[var(--muted)]">{uiText(f.label ?? "")}</span>
                 <input
                   name={f.name}
                   defaultValue={f.value ?? ""}
@@ -373,9 +364,7 @@ export default async function ResourceDetailPage({
               </label>
             ))}
             <div className="md:col-span-2 flex items-center gap-3 flex-wrap">
-              <button type="submit" className="btn text-xs py-1">
-                Save edition
-              </button>
+              <button type="submit" className="btn text-xs py-1">{uiText("Save edition")}</button>
               {/* A search page, never a guessed image URL: only you know which
                   edition is on your shelf, and the artwork differs between them. */}
               <a
@@ -383,9 +372,7 @@ export default async function ResourceDetailPage({
                 target="_blank"
                 rel={relFor("external")}
                 className="text-xs text-[var(--accent)]"
-              >
-                Find a cover on Open Library ↗
-              </a>
+              >{uiText("Find a cover on Open Library ↗")}</a>
             </div>
           </form>
         </Section>
@@ -411,25 +398,25 @@ export default async function ResourceDetailPage({
             name="notes"
             defaultValue={r.notes ?? ""}
             rows={5}
-            placeholder="What you took from it"
+            placeholder={uiText("What you took from it")}
             className="input"
           />
           <textarea
             name="whyLearn"
             defaultValue={r.whyLearn ?? ""}
             rows={2}
-            placeholder="Why it's worth learning from"
+            placeholder={uiText("Why it's worth learning from")}
             className="input"
           />
           <textarea
             name="lessons"
             defaultValue={r.lessons ?? ""}
             rows={3}
-            placeholder="Main lessons"
+            placeholder={uiText("Main lessons")}
             className="input"
           />
           <label className="text-xs block">
-            <span className="text-[var(--muted)]">Your rating, 1 to 5</span>
+            <span className="text-[var(--muted)]">{uiText("Your rating, 1 to 5")}</span>
             <input
               name="personalRating"
               type="number"
@@ -439,18 +426,14 @@ export default async function ResourceDetailPage({
               className="input input-narrow text-xs py-1 w-20 mt-1"
             />
           </label>
-          <button type="submit" className="btn">
-            Save
-          </button>
+          <button type="submit" className="btn">{uiText("Save")}</button>
         </form>
       </Section>
 
       {related.length > 0 && (
         <div>
-          <div className="text-sm font-medium mb-2">Related</div>
-          <p className="text-xs text-[var(--muted)] mb-2">
-            Sharing a category, whatever the medium.
-          </p>
+          <div className="text-sm font-medium mb-2">{uiText("Related")}</div>
+          <p className="text-xs text-[var(--muted)] mb-2">{uiText("Sharing a category, whatever the medium.")}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {related.map((x) => (
               <ResourceCard key={x.id} resource={x} />

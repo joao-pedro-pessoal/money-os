@@ -29,7 +29,7 @@
             android:id="@+id/widget_refresh"
             android:layout_width="32dp"
             android:layout_height="28dp"
-            android:contentDescription="Refresh"
+            android:contentDescription="@string/ui_refresh"
             android:gravity="center"
             android:text="↻"
             android:textColor="#ff8a8375"
@@ -59,7 +59,7 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:adjustViewBounds="true"
-            android:contentDescription="Chart"
+            android:contentDescription="@string/ui_chart"
             android:scaleType="fitCenter" />
 
         <TextView

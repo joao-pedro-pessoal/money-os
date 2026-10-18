@@ -1,3 +1,5 @@
+import { textForRequest } from "@/actions/pageLanguage";
+import { directionOf } from "@/lib/i18n/languages";
 import SettingRow from "@/components/SettingRow";
 import { listSymbolsToName, setSymbolName } from "@/actions/symbolNames";
 import { currentLanguage } from "@/actions/language";
@@ -10,6 +12,7 @@ import { SYMBOL_NAME_MAX } from "@/lib/portfolio/symbolNames";
  * comes first, then what was traded, then the watchlist.
  */
 export default async function SymbolNamesPage() {
+  const uiText = await textForRequest();
   const [symbols, language] = await Promise.all([listSymbolsToName(), currentLanguage()]);
   const w = messagesFor(language).symbolNames;
   const groups = (["held", "traded", "watched"] as const)
@@ -17,13 +20,13 @@ export default async function SymbolNamesPage() {
     .filter((g) => g.rows.length > 0);
 
   return (
-    <div translate="no" lang={language} className="card">
+    <div translate="no" lang={language} dir={directionOf(language)} className="card">
       <SettingRow title={w.title} description={w.text} stacked>
         {groups.length === 0 && <p className="text-sm text-[var(--muted)]">{w.empty}</p>}
         <div className="space-y-6">
           {groups.map((g) => (
             <section key={g.where} className="space-y-2">
-              <h2 className="text-xs uppercase tracking-wide text-[var(--muted)]">{g.title}</h2>
+              <h2 className="text-xs uppercase tracking-wide text-[var(--muted)]">{uiText(g.title ?? "")}</h2>
               <ul className="space-y-2">
                 {g.rows.map((s) => (
                   <li key={s.symbol}>

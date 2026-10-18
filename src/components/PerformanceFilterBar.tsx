@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useRouter } from "next/navigation";
 import MultiSelect from "./MultiSelect";
 import { useSymbolNames } from "./SymbolName";
@@ -25,6 +26,7 @@ export default function PerformanceFilterBar({
   filters: PerformanceFilters;
   options: Record<GroupByKey, FilterChoices>;
 }) {
+  const uiText = useText();
   const router = useRouter();
   const names = useSymbolNames();
   const go = (next: PerformanceFilters) => {
@@ -36,12 +38,11 @@ export default function PerformanceFilterBar({
   };
   const chosen = GROUP_BY_OPTIONS.reduce((n, o) => n + (filters[o.value]?.length ?? 0), 0);
   const text = (key: GroupByKey) => (value: string) =>
-    key === "symbol" ? (names[value] ? `${names[value]} (${value})` : value) : groupValueLabel(key, value);
+    key === "symbol" ? (names[value] ? `${names[value]} (${value})` : value) : key === "account" || key === "playlist" ? groupValueLabel(key, value) : uiText(groupValueLabel(key, value));
 
   return (
     <details className="mb-3" open={chosen > 0}>
-      <summary className="text-xs cursor-pointer text-[var(--accent)]">
-        Filters{chosen > 0 ? ` · ${chosen} chosen` : ""}
+      <summary className="text-xs cursor-pointer text-[var(--accent)]">{uiText("Filters")}{chosen > 0 ? uiText(" · {0} chosen", { "0": chosen }) : ""}
       </summary>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mt-2">
         {GROUP_BY_OPTIONS.filter((o) => options[o.value].values.length > 0 || options[o.value].unset).map((o) => (
@@ -57,13 +58,9 @@ export default function PerformanceFilterBar({
         ))}
       </div>
       {chosen > 0 && (
-        <button type="button" className="text-xs text-[var(--accent)] mt-2 hover:underline" onClick={() => go({})}>
-          Clear all filters
-        </button>
+        <button type="button" className="text-xs text-[var(--accent)] mt-2 hover:underline" onClick={() => go({})}>{uiText("Clear all filters")}</button>
       )}
-      <p className="text-[10px] text-[var(--muted)] mt-2 max-w-prose">
-        Several values in one field show either; filled fields all apply. Unset picks what has nothing set there.
-      </p>
+      <p className="text-[10px] text-[var(--muted)] mt-2 max-w-prose">{uiText("Several values in one field show either; filled fields all apply. Unset picks what has nothing set there.")}</p>
     </details>
   );
 }

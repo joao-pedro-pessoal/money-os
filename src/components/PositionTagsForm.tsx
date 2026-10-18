@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { playlistsText } from "@/lib/portfolio/playlists";
 import PlaylistPicker from "./PlaylistPicker";
 import { useState } from "react";
@@ -62,6 +63,7 @@ export default function PositionTagsForm({
    */
   entryFor: "position" | "balance";
 }) {
+  const uiText = useText();
   const [open, setOpen] = useState(false);
   // Controlled so the rate field can be named after the type as you change it.
   const [type, setType] = useState(assetType ?? "");
@@ -84,14 +86,12 @@ export default function PositionTagsForm({
             you did. */}
         {assetType && (
           <div className="text-xs mt-1">
-            <span className="text-[var(--foreground)]">{tagLabel(assetType, "assetType") ?? assetType}</span>
+            <span className="text-[var(--foreground)]">{uiText(tagLabel(assetType, "assetType") ?? assetType ?? "")}</span>
             {assetTypeAuto && (
               <span
                 className="text-[10px] text-[var(--muted)] ml-1"
-                title="Read from the platform. Change it and it stays changed."
-              >
-                auto
-              </span>
+                title={uiText("Read from the platform. Change it and it stays changed.")}
+              >{uiText("auto")}</span>
             )}
           </div>
         )}
@@ -105,7 +105,7 @@ export default function PositionTagsForm({
           onClick={() => setOpen(true)}
           className="text-xs text-[var(--accent)] hover:underline mt-1"
         >
-          {hasTags ? "Edit tags" : "Add tags"}
+          {hasTags ? uiText("Edit tags") : uiText("Add tags")}
         </button>
       </div>
     );
@@ -123,10 +123,10 @@ export default function PositionTagsForm({
         value={type}
         onChange={(e) => setType(e.target.value)}
       >
-        <option value="">Asset type — unset</option>
+        <option value="">{uiText("Asset type — unset")}</option>
         {ASSET_TYPES.map((a) => (
           <option key={a.value} value={a.value}>
-            {a.label}
+            {uiText(a.label ?? "")}
           </option>
         ))}
       </select>
@@ -137,48 +137,48 @@ export default function PositionTagsForm({
           none. */}
       {yieldLabel && (
         <label className="text-xs block">
-          <span className="text-[var(--muted)]">{yieldLabel}, if it earns one</span>
+          <span className="text-[var(--muted)]">{uiText(yieldLabel ?? "")}{uiText(", if it earns one")}</span>
           <input
             name="apr"
             type="number"
             step="0.001"
             min="0"
             defaultValue={apr ?? ""}
-            placeholder="e.g. 4.5 for 4.5% a year"
+            placeholder={uiText("e.g. 4.5 for 4.5% a year")}
             className="input py-1 text-xs mt-1"
           />
         </label>
       )}
 
       <select name="riskLevel" className="input py-1 text-xs" defaultValue={riskLevel ?? ""}>
-        <option value="">Risk — unset</option>
+        <option value="">{uiText("Risk — unset")}</option>
         {RISK_LEVELS.map((r) => (
           <option key={r.value} value={r.value}>
-            {r.label}
+            {uiText(r.label ?? "")}
           </option>
         ))}
       </select>
       <select name="timeHorizon" className="input py-1 text-xs" defaultValue={timeHorizon ?? ""}>
-        <option value="">Time horizon — unset</option>
+        <option value="">{uiText("Time horizon — unset")}</option>
         {TIME_HORIZONS.map((t) => (
           <option key={t.value} value={t.value}>
-            {t.label}
+            {uiText(t.label)}
           </option>
         ))}
       </select>
       <select name="expectedReturn" className="input py-1 text-xs" defaultValue={expectedReturn ?? ""}>
-        <option value="">Expected return — unset</option>
+        <option value="">{uiText("Expected return — unset")}</option>
         {EXPECTED_RETURNS.map((r) => (
           <option key={r.value} value={r.value}>
-            {r.label}
+            {uiText(r.label ?? "")}
           </option>
         ))}
       </select>
       <select name="liquidity" className="input py-1 text-xs" defaultValue={liquidity ?? ""}>
-        <option value="">Liquidity — unset</option>
+        <option value="">{uiText("Liquidity — unset")}</option>
         {LIQUIDITY_LEVELS.map((l) => (
           <option key={l.value} value={l.value}>
-            {tagLabel(l.value, "liquidity")}
+            {uiText(tagLabel(l.value, "liquidity") ?? "")}
           </option>
         ))}
       </select>
@@ -186,7 +186,7 @@ export default function PositionTagsForm({
       <input
         name="notes"
         defaultValue={notes ?? ""}
-        placeholder="Notes (e.g. strategy)"
+        placeholder={uiText("Notes (e.g. strategy)")}
         className="input py-1 text-xs"
       />
 
@@ -200,9 +200,7 @@ export default function PositionTagsForm({
       */}
       {venueEntryPrice !== undefined && (
         <label className="text-xs block">
-          <span className="text-[var(--muted)]">
-            Entry price, if the platform&apos;s is not what you paid
-          </span>
+          <span className="text-[var(--muted)]">{uiText("Entry price, if the platform's is not what you paid")}</span>
           <input
             name="entryPriceOverride"
             type="number"
@@ -211,30 +209,24 @@ export default function PositionTagsForm({
             defaultValue={entryPriceOverride ?? ""}
             placeholder={
               venueEntryPrice === null
-                ? "the platform states none"
-                : `platform says ${venueEntryPrice}`
+                ? uiText("the platform states none")
+                : uiText("platform says {0}", { "0": venueEntryPrice })
             }
             className="input py-1 text-xs mt-1"
           />
-          <span className="text-[10px] text-[var(--muted)]">
-            In the currency the platform quotes it in. Empty uses theirs.
-          </span>
+          <span className="text-[10px] text-[var(--muted)]">{uiText("In the currency the platform quotes it in. Empty uses theirs.")}</span>
         </label>
       )}
 
       <div className="flex gap-2">
-        <button type="submit" className="btn py-1 px-3 text-xs">
-          Save
-        </button>
+        <button type="submit" className="btn py-1 px-3 text-xs">{uiText("Save")}</button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="text-xs text-[var(--muted)] hover:underline"
-        >
-          Cancel
-        </button>
+        >{uiText("Cancel")}</button>
       </div>
-      <p className="text-[10px] text-[var(--muted)]">Tags are kept when the position re-syncs.</p>
+      <p className="text-[10px] text-[var(--muted)]">{uiText("Tags are kept when the position re-syncs.")}</p>
     </form>
   );
 }

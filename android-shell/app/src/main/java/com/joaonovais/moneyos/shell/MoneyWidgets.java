@@ -164,7 +164,7 @@ public final class MoneyWidgets {
 
         RemoteViews views = new RemoteViews(context.getPackageName(),
                 isDonut(kind) ? R.layout.widget_where : kind == 4 ? R.layout.widget_investments : R.layout.widget_money);
-        views.setTextViewText(R.id.widget_title, TITLES[kind]);
+        views.setTextViewText(R.id.widget_title, LocalText.text(context, TITLES[kind]));
         views.setOnClickPendingIntent(R.id.widget_root, openPage(context, PATHS[kind], kind));
         views.setOnClickPendingIntent(R.id.widget_refresh, refresh(context, ALL[kind], kind));
 
@@ -203,7 +203,7 @@ public final class MoneyWidgets {
                 views.setViewVisibility(R.id.widget_legend, View.GONE);
                 views.setTextViewText(R.id.widget_value, WidgetData.money(data.netWorth, data.currency));
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
-                views.setTextViewText(R.id.widget_sub, signed("This month ", data.net, data.currency));
+                views.setTextViewText(R.id.widget_sub, signed(LocalText.text(context, "This month "), data.net, data.currency));
                 int chartHeight = Math.round(Math.max(20, heightDp - 96) * density);
                 views.setViewVisibility(R.id.widget_chart, View.VISIBLE);
                 views.setImageViewBitmap(R.id.widget_chart, Charts.line(data.series, chartWidth, chartHeight, density));
@@ -215,21 +215,21 @@ public final class MoneyWidgets {
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
                 double change = data.series.size() < 2 ? 0
                         : data.series.get(data.series.size() - 1)[1] - data.series.get(0)[1];
-                views.setTextViewText(R.id.widget_sub, signed("Since tracking began ", change, data.currency));
+                views.setTextViewText(R.id.widget_sub, signed(LocalText.text(context, "Since tracking began "), change, data.currency));
                 int chartHeight = Math.round(Math.max(30, heightDp - 90) * density);
                 views.setViewVisibility(R.id.widget_chart, View.VISIBLE);
                 views.setImageViewBitmap(R.id.widget_chart, Charts.line(data.series, chartWidth, chartHeight, density));
                 break;
             }
             case 2: // Where the money is: a donut and the biggest places.
-                donut(views, data.sliceNames, data.sliceValues, data.currency, "Nothing held yet", widthDp, heightDp, density);
+                donut(views, data.sliceNames, data.sliceValues, data.currency, LocalText.text(context, "Nothing held yet"), widthDp, heightDp, density);
                 break;
             case 5: // Allocation: the portfolio by asset type.
-                donut(views, data.allocationNames, data.allocationValues, data.currency, "No positions yet", widthDp, heightDp, density);
+                donut(views, data.allocationNames, data.allocationValues, data.currency, LocalText.text(context, "No positions yet"), widthDp, heightDp, density);
                 break;
             case 4: { // Investments: what is held, how it is doing, and every position below.
                 views.setTextViewText(R.id.widget_value, WidgetData.money(data.investedValue, data.currency));
-                SpannableStringBuilder sub = new SpannableStringBuilder(signed("Unrealized ", data.investedPnl, data.currency));
+                SpannableStringBuilder sub = new SpannableStringBuilder(signed(LocalText.text(context, "Unrealized "), data.investedPnl, data.currency));
                 if (data.investedPnl != 0) {
                     int start = sub.length();
                     sub.append(String.format(java.util.Locale.ROOT, "  %+.2f%%", data.investedPnlPercent));
@@ -237,7 +237,7 @@ public final class MoneyWidgets {
                             start, sub.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
                 sub.append("  ·  ").append(String.valueOf(data.positionCount))
-                        .append(data.positionCount == 1 ? " position" : " positions");
+                        .append(data.positionCount == 1 ? LocalText.text(context, " position") : LocalText.text(context, " positions"));
                 views.setTextViewText(R.id.widget_sub, sub);
                 break;
             }
@@ -253,11 +253,11 @@ public final class MoneyWidgets {
                     views.setTextViewText(R.id.widget_value, "—");
                 }
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
-                views.setTextViewText(R.id.widget_sub, "Best and worst on what they cost");
+                views.setTextViewText(R.id.widget_sub, LocalText.text(context, "Best and worst on what they cost"));
                 SpannableStringBuilder list = new SpannableStringBuilder();
                 for (int i = 0; i < bestRows; i++) moverRow(list, data.bestNames.get(i), data.bestPercent.get(i), data.bestPnl.get(i), data.currency);
                 for (int i = 0; i < worstRows; i++) moverRow(list, data.worstNames.get(i), data.worstPercent.get(i), data.worstPnl.get(i), data.currency);
-                if (list.length() == 0) list.append("No measured results yet");
+                if (list.length() == 0) list.append(LocalText.text(context, "No measured results yet"));
                 showList(views, list, room);
                 break;
             }
@@ -265,21 +265,21 @@ public final class MoneyWidgets {
                 views.setViewVisibility(R.id.widget_chart, View.GONE);
                 views.setTextViewText(R.id.widget_value, WidgetData.money(data.dividendsTotal, data.currency));
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
-                views.setTextViewText(R.id.widget_sub, "Received, all time");
+                views.setTextViewText(R.id.widget_sub, LocalText.text(context, "Received, all time"));
                 SpannableStringBuilder list = new SpannableStringBuilder();
                 if (!data.dividendsAny) {
-                    list.append("No distributions on record yet");
+                    list.append(LocalText.text(context, "No distributions on record yet"));
                 } else {
-                    list.append("This year  ");
+                    list.append(LocalText.text(context, "This year  "));
                     int start = list.length();
                     list.append(WidgetData.money(data.dividendsThisYear, data.currency));
                     list.setSpan(new ForegroundColorSpan(Charts.GREEN), start, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     list.append("  ·  ").append(String.valueOf(data.dividendPaymentsThisYear))
-                            .append(data.dividendPaymentsThisYear == 1 ? " payment" : " payments");
+                            .append(data.dividendPaymentsThisYear == 1 ? LocalText.text(context, " payment") : LocalText.text(context, " payments"));
                     if (data.nextDividendName != null) {
-                        list.append("\nNext  ").append(data.nextDividendName);
+                        list.append(LocalText.text(context, "\nNext  ")).append(data.nextDividendName);
                         int when = list.length();
-                        list.append("  ~ ").append(monthOf(data.nextDividendMonth));
+                        list.append("  ~ ").append(monthOf(context, data.nextDividendMonth));
                         list.setSpan(new ForegroundColorSpan(Charts.ACCENT), when, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     }
                 }
@@ -290,7 +290,7 @@ public final class MoneyWidgets {
                 views.setViewVisibility(R.id.widget_chart, View.GONE);
                 views.setTextViewText(R.id.widget_value, signed("", data.tradeUnrealized, data.currency));
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
-                views.setTextViewText(R.id.widget_sub, data.tradeCount + (data.tradeCount == 1 ? " open · margin " : " open · margin ")
+                views.setTextViewText(R.id.widget_sub, data.tradeCount + (data.tradeCount == 1 ? LocalText.text(context, " open · margin ") : LocalText.text(context, " open · margin "))
                         + WidgetData.money(data.tradeMargin, data.currency));
                 SpannableStringBuilder list = new SpannableStringBuilder();
                 for (int i = 0; i < Math.min(rows(heightDp), data.tradeNames.size()); i++) {
@@ -298,7 +298,7 @@ public final class MoneyWidgets {
                     list.append(data.tradeNames.get(i)).append(" ");
                     String side = data.tradeSides.get(i);
                     int sideStart = list.length();
-                    list.append(side.toUpperCase(java.util.Locale.ROOT));
+                    list.append(LocalText.text(context, "long".equals(side) ? "Long" : "Short"));
                     list.setSpan(new ForegroundColorSpan("long".equals(side) ? Charts.GREEN : Charts.RED),
                             sideStart, list.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     double leverage = data.tradeLeverage.get(i);
@@ -310,7 +310,7 @@ public final class MoneyWidgets {
                     double result = data.tradePnl.get(i);
                     if (!Double.isNaN(result)) list.append("  ").append(signed("", result, data.currency));
                 }
-                if (data.tradeNames.isEmpty()) list.append("No open trades");
+                if (data.tradeNames.isEmpty()) list.append(LocalText.text(context, "No open trades"));
                 // A total that is short says so, first, rather than passing for the whole.
                 if (data.tradeLeftOut != null) {
                     list.insert(0, data.tradeLeftOut + "\n");
@@ -323,14 +323,14 @@ public final class MoneyWidgets {
                 views.setViewVisibility(R.id.widget_legend, View.GONE);
                 views.setTextViewText(R.id.widget_value, signed("", data.net, data.currency));
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
-                views.setTextViewText(R.id.widget_title, TITLES[kind] + " · " + data.monthLabel);
+                views.setTextViewText(R.id.widget_title, LocalText.text(context, TITLES[kind]) + " · " + data.monthLabel);
                 SpannableStringBuilder sub = new SpannableStringBuilder();
                 int in = sub.length();
-                sub.append("In ").append(WidgetData.money(data.income, data.currency));
+                sub.append(LocalText.text(context, "In ")).append(WidgetData.money(data.income, data.currency));
                 sub.setSpan(new ForegroundColorSpan(Charts.GREEN), in, sub.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 sub.append("  ");
                 int out = sub.length();
-                sub.append("Out ").append(WidgetData.money(data.expenses, data.currency));
+                sub.append(LocalText.text(context, "Out ")).append(WidgetData.money(data.expenses, data.currency));
                 sub.setSpan(new ForegroundColorSpan(Charts.RED), out, sub.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 views.setTextViewText(R.id.widget_sub, sub);
                 int chartHeight = Math.round(Math.min(28, Math.max(16, heightDp - 96)) * density);
@@ -361,10 +361,10 @@ public final class MoneyWidgets {
     }
 
     /** "October 2026" from the site's ISO date, in the phone's time zone. */
-    private static String monthOf(String iso) {
+    private static String monthOf(Context context, String iso) {
         try {
             return java.time.Instant.parse(iso).atZone(java.time.ZoneId.systemDefault())
-                    .format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", java.util.Locale.ENGLISH));
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", java.util.Locale.forLanguageTag(LocalText.language(context))));
         } catch (RuntimeException e) {
             return "";
         }
@@ -411,12 +411,12 @@ public final class MoneyWidgets {
         String when = data == null ? null
                 : DateUtils.formatSameDayTime(data.readAt, System.currentTimeMillis(),
                         java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).toString();
-        if (WidgetData.PROBLEM_NO_ADDRESS.equals(problem)) return "Open the app to connect";
-        if (WidgetData.PROBLEM_LOGIN.equals(problem)) return "Open the app and log in";
+        if (WidgetData.PROBLEM_NO_ADDRESS.equals(problem)) return LocalText.text(context, "Open the app to connect");
+        if (WidgetData.PROBLEM_LOGIN.equals(problem)) return LocalText.text(context, "Open the app and log in");
         if (WidgetData.PROBLEM_OFFLINE.equals(problem)) {
-            return when == null ? "Can't reach the computer" : "Offline · figures from " + when;
+            return when == null ? LocalText.text(context, "Can't reach the computer") : LocalText.text(context, "Offline · figures from ") + when;
         }
-        return when == null ? "Loading…" : "Updated " + when;
+        return when == null ? LocalText.text(context, "Loading…") : LocalText.text(context, "Updated ") + when;
     }
 
     private static PendingIntent openPage(Context context, String path, int kind) {

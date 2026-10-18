@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useEffect, useState, useTransition } from "react";
 import { deleteSavedFilters, listSavedFilters, saveFilters } from "@/actions/savedViews";
 
@@ -21,12 +22,13 @@ export default function SavedFilters({
   active: boolean;
   onApply: (config: string) => void;
 }) {
+  const uiText = useText();
   const [saved, setSaved] = useState<{ id: string; name: string; config: string }[]>([]);
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
 
-  const reload = () => listSavedFilters(scope).then(setSaved).catch(() => setMessage("Saved filters could not be read."));
+  const reload = () => listSavedFilters(scope).then(setSaved).catch(() => setMessage(uiText("Saved filters could not be read.")));
   useEffect(() => {
     void reload();
     // Once per screen: the list changes only through this component.
@@ -36,7 +38,7 @@ export default function SavedFilters({
   return (
     <div className="space-y-2">
       {saved.length > 0 && (
-        <div className="flex flex-wrap gap-2" aria-label="Saved filters">
+        <div className="flex flex-wrap gap-2" aria-label={uiText("Saved filters")}>
           {saved.map((s) => (
             <span key={s.id} className={`badge inline-flex items-center gap-1 ${s.config === current ? "border border-[var(--accent)]" : ""}`}>
               <button type="button" className="hover:underline" onClick={() => onApply(s.config)} translate="no">
@@ -44,7 +46,7 @@ export default function SavedFilters({
               </button>
               <button
                 type="button"
-                aria-label={`Delete saved filters ${s.name}`}
+                aria-label={uiText("Delete saved filters {0}", { "0": s.name })}
                 className="text-[var(--muted)] hover:text-[var(--red)]"
                 onClick={() => start(async () => { await deleteSavedFilters(s.id); await reload(); })}
               >
@@ -74,16 +76,14 @@ export default function SavedFilters({
         >
           <input
             className="input input-narrow text-xs flex-1 min-w-32"
-            placeholder="Name these filters"
-            aria-label="Name for these filters"
+            placeholder={uiText("Name these filters")}
+            aria-label={uiText("Name for these filters")}
             maxLength={60}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <button type="submit" className="btn text-xs" disabled={pending || name.trim() === ""}>
-            Save filters
-          </button>
-          <span role="status" className="text-xs text-[var(--muted)]">{message}</span>
+          <button type="submit" className="btn text-xs" disabled={pending || name.trim() === ""}>{uiText("Save filters")}</button>
+          <span role="status" className="text-xs text-[var(--muted)]">{uiText(message ?? "")}</span>
         </form>
       )}
     </div>

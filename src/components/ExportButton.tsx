@@ -1,8 +1,10 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { exportAllData } from "@/actions/export";
 
 export default function ExportButton() {
+  const uiText = useText();
   async function handleExport() {
     const json = await exportAllData();
     const blob = new Blob([json], { type: "application/json" });
@@ -15,8 +17,6 @@ export default function ExportButton() {
   }
 
   return (
-    <button onClick={handleExport} className="btn">
-      Export all data (JSON)
-    </button>
+    <button onClick={handleExport} className="btn">{uiText("Export all data (JSON)")}</button>
   );
 }

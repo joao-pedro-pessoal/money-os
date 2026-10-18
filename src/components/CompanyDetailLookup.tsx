@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { refreshCompanyDetails } from "@/actions/exposure";
@@ -11,6 +12,7 @@ import { refreshCompanyDetails } from "@/actions/exposure";
  * publishes for some funds, name the company and nothing else about it.
  */
 export default function CompanyDetailLookup({ due = 0 }: { due?: number }) {
+  const uiText = useText();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -27,10 +29,10 @@ export default function CompanyDetailLookup({ due = 0 }: { due?: number }) {
       }
       if (r.remaining > 0) parts.push(`${r.remaining} still to read — press again.`);
       if (r.problem) parts.push(r.problem);
-      setMessage(parts.join(" ") || "Every company is classified.");
+      setMessage(parts.join(" ") || uiText("Every company is classified."));
       router.refresh();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "The read failed.");
+      setMessage(e instanceof Error ? e.message : uiText("The read failed."));
     } finally {
       setBusy(false);
     }
@@ -39,11 +41,11 @@ export default function CompanyDetailLookup({ due = 0 }: { due?: number }) {
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <button type="button" className="btn" onClick={run} disabled={busy}>
-        {busy ? "Reading the companies…" : due > 0 ? `Read what each company is (${due})` : "Refresh what each company is"}
+        {busy ? uiText("Reading the companies…") : due > 0 ? uiText("Read what each company is ({0})", { "0": due }) : uiText("Refresh what each company is")}
       </button>
       {message && (
         <span role="status" className="text-xs text-[var(--muted)]">
-          {message}
+          {uiText(message ?? "")}
         </span>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listConnections,
@@ -23,6 +24,7 @@ import Link from "next/link";
 import Section from "@/components/Section";
 
 export default async function ConnectionsPage() {
+  const uiText = await textForRequest();
   const [connections, accountList, secretsAvailable] = await Promise.all([
     listConnections(),
     listAccountsForHoldings(),
@@ -39,19 +41,16 @@ export default async function ConnectionsPage() {
       <PageTabs tabs={INVESTMENT_TABS} />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-lg font-semibold">Connections</h1>
+          <h1 className="text-lg font-semibold">{uiText("Connections")}</h1>
           {connections.length > 0 && (
             <p className="text-sm mt-1">
-              {connections.length} {connections.length === 1 ? "connection" : "connections"}
+              {connections.length} {connections.length === 1 ? uiText("connection") : uiText("connections")}
               {failing > 0 && (
-                <span className="text-[var(--red)]"> · {failing} failing</span>
+                <span className="text-[var(--red)]"> · {failing}{uiText(" failing")}</span>
               )}
             </p>
           )}
-          <p className="connections-intro text-xs text-[var(--muted)] mt-1">
-            Read-only links to external platforms. The app can read balances and positions — it can never place
-            an order or move funds.
-          </p>
+          <p className="connections-intro text-xs text-[var(--muted)] mt-1">{uiText("Read-only links to external platforms. The app can read balances and positions — it can never place an order or move funds.")}</p>
           {connections.length > 0 && (
             <div className="mt-1">
               <AutoSync
@@ -67,9 +66,7 @@ export default async function ConnectionsPage() {
             </div>
           )}
         </div>
-        <Link href="/positions" className="btn whitespace-nowrap">
-          Open positions
-        </Link>
+        <Link href="/positions" className="btn whitespace-nowrap">{uiText("Open positions")}</Link>
       </div>
 
       {/* Two readings of the same absence. On a hosted copy it is deliberate:
@@ -80,35 +77,22 @@ export default async function ConnectionsPage() {
           service. */}
       {!secretsAvailable && (
         <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
-          <div className="text-sm">API secrets cannot be opened on this copy</div>
+          <div className="text-sm">{uiText("API secrets cannot be opened on this copy")}</div>
           <div className="text-xs text-[var(--muted)] mt-2 space-y-2">
-            <p>
-              Secrets are stored encrypted, and only a copy holding{" "}
-              <span className="font-mono text-[var(--foreground)]">ENCRYPTION_KEY</span> can open them. On a
-              copy running on a hosting service that is on purpose: the key stays on your own computer, so the
-              service never holds what opens your broker accounts. Connections with a secret are synced and
-              added there; here you see what they last read. Hyperliquid needs no secret and syncs anywhere.
-            </p>
-            <p>
-              If this <span className="text-[var(--foreground)]">is</span> your own computer, add this line to{" "}
-              <span className="font-mono text-[var(--foreground)]">.env</span> in the project folder:
-            </p>
+            <p>{uiText("Secrets are stored encrypted, and only a copy holding")}{" "}
+              <span className="font-mono text-[var(--foreground)]">{uiText("ENCRYPTION_KEY")}</span>{uiText(" can open them. On a copy running on a hosting service that is on purpose: the key stays on your own computer, so the service never holds what opens your broker accounts. Connections with a secret are synced and added there; here you see what they last read. Hyperliquid needs no secret and syncs anywhere.")}</p>
+            <p>{uiText("If this ")}<span className="text-[var(--foreground)]">{uiText("is")}</span>{uiText(" your own computer, add this line to")}{" "}
+              <span className="font-mono text-[var(--foreground)]">{uiText(".env")}</span>{uiText(" in the project folder:")}</p>
             <pre className="font-mono text-[10px] bg-[var(--surface-2)] p-2 rounded overflow-x-auto">
 ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
             </pre>
-            <p>
-              Then stop the app and start it again — the file is only read at startup, so editing it while the
-              app runs changes nothing. Keep that key somewhere safe: whoever has it can decrypt your stored API
-              secrets, and losing it means losing them.
-            </p>
+            <p>{uiText("Then stop the app and start it again — the file is only read at startup, so editing it while the app runs changes nothing. Keep that key somewhere safe: whoever has it can decrypt your stored API secrets, and losing it means losing them.")}</p>
           </div>
         </div>
       )}
 
       {connections.length === 0 ? (
-        <div className="card p-8 text-center text-sm text-[var(--muted)]">
-          No connections yet. Add one below.
-        </div>
+        <div className="card p-8 text-center text-sm text-[var(--muted)]">{uiText("No connections yet. Add one below.")}</div>
       ) : (
         <div className="space-y-4">
           {connections.map((c) => (
@@ -123,14 +107,14 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                     <span className="font-medium">{PLATFORM_LABELS[c.platform] ?? c.platform}</span>
                     {c.region && (
                       <span className="text-xs text-[var(--muted)]">
-                        {c.region === "eu" ? "bybit.eu" : "bybit.com"}
+                        {c.region === "eu" ? uiText("bybit.eu") : uiText("bybit.com")}
                       </span>
                     )}
                     <span
                       className="badge"
                       style={{ border: `1px solid ${freshnessColor(c.freshness)}`, color: freshnessColor(c.freshness) }}
                     >
-                      {freshnessLabel(c.freshness)}
+                      {uiText(freshnessLabel(c.freshness) ?? "")}
                     </span>
                   </div>
                   {c.lastSyncStatus === "ok" && (
@@ -141,19 +125,16 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                       />
                     </div>
                   )}
-                  <div className="connection-extra text-xs text-[var(--muted)] mt-1 break-words">
-                    feeds <span className="text-[var(--foreground)]"><span translate="no">{c.accountName}</span></span> ·{" "}
+                  <div className="connection-extra text-xs text-[var(--muted)] mt-1 break-words">{uiText("feeds ")}<span className="text-[var(--foreground)]"><span translate="no">{c.accountName}</span></span> ·{" "}
                     <span className="font-mono">{c.externalIdMasked}</span>
                     {c.hasSecret && (
-                      <span className="ml-2 badge border border-[var(--border)] text-[var(--muted)]">
-                        secret encrypted
-                      </span>
+                      <span className="ml-2 badge border border-[var(--border)] text-[var(--muted)]">{uiText("secret encrypted")}</span>
                     )}
                   </div>
                   <div className="text-xs text-[var(--muted)] mt-1">
                     {c.lastSyncAt
-                      ? `Last sync ${new Date(c.lastSyncAt).toLocaleString("pt-PT")}`
-                      : "Never synced"}
+                      ? uiText("Last sync {0}", { "0": new Date(c.lastSyncAt).toLocaleString("pt-PT") })
+                      : uiText("Never synced")}
                   </div>
                   {c.lastSyncError && (
                     <div className="text-xs text-[var(--red)] mt-1 max-w-xl">{c.lastSyncError}</div>
@@ -161,14 +142,8 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                   {c.freshness === "ERROR" && (
                     <form action={convertToManual} className="mt-2">
                       <input type="hidden" name="id" value={c.id} />
-                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">
-                        Give up on syncing — track this account manually instead
-                      </button>
-                      <div className="connection-extra text-[10px] text-[var(--muted)] mt-1 max-w-xl">
-                        Removes the connection and keeps the account, its balance and its history. You update
-                        the balance yourself, and everything still counts toward Net Worth, buckets and
-                        statistics — only the automatic refresh goes away.
-                      </div>
+                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Give up on syncing — track this account manually instead")}</button>
+                      <div className="connection-extra text-[10px] text-[var(--muted)] mt-1 max-w-xl">{uiText("Removes the connection and keeps the account, its balance and its history. You update the balance yourself, and everything still counts toward Net Worth, buckets and statistics — only the automatic refresh goes away.")}</div>
                     </form>
                   )}
                   {c.lastSyncStatus === "ok" && (
@@ -176,13 +151,11 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                       {/* Each connection's own currency, not an assumption.
                           Trading 212 reports euros, and a euro figure with a
                           dollar sign is wrong by the exchange rate while
-                          looking entirely normal. */}
-                      account value{" "}
+                          looking entirely normal. */}{uiText("account value")}{" "}
                       <Money
                         value={Number(c.lastEquity ?? 0)}
                         currency={c.reportingCurrency ?? "USD"}
-                      />{" "}
-                      + coins{" "}
+                      />{" "}{uiText("+ coins")}{" "}
                       <Money
                         value={Number(c.lastSpotValue ?? 0)}
                         currency={c.reportingCurrency ?? "USD"}
@@ -213,9 +186,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                     });
                     if (scope === null) return null;
                     return (
-                      <div className="text-xs text-[var(--amber)] mt-2 max-w-xl leading-relaxed">
-                        Synced fine, and the {scope.wallet} it reads is empty — so this zero is
-                        about that wallet, not about the whole account. {scope.elsewhere}
+                      <div className="text-xs text-[var(--amber)] mt-2 max-w-xl leading-relaxed">{uiText("Synced fine, and the ")}{scope.wallet}{uiText(" it reads is empty — so this zero is about that wallet, not about the whole account. ")}{scope.elsewhere}
                       </div>
                     );
                   })()}
@@ -223,21 +194,17 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
 
                 <div className="connection-actions flex items-center gap-3">
                   {c.lockedHere ? (
-                    <span className="text-xs text-[var(--muted)]" title="This copy does not hold ENCRYPTION_KEY">
-                      Synced where its key is
-                    </span>
+                    <span className="text-xs text-[var(--muted)]" title={uiText("This copy does not hold ENCRYPTION_KEY")}>{uiText("Synced where its key is")}</span>
                   ) : (
                     <form action={syncConnectionAction}>
                       <input type="hidden" name="id" value={c.id} />
-                      <button type="submit" className="btn">
-                        Sync now
-                      </button>
+                      <button type="submit" className="btn">{uiText("Sync now")}</button>
                     </form>
                   )}
                   <form action={deleteConnection} className="connection-remove">
                     <input type="hidden" name="id" value={c.id} />
                     <ConfirmSubmitButton
-                      label="Remove"
+                      label={uiText("Remove")}
                       confirmMessage={`Remove this ${c.platform} connection? Synced positions are removed too; the account and its balance stay.`}
                     />
                   </form>
@@ -249,17 +216,14 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                   is one tap away, including Remove, which should not sit beside
                   the button you press most. */}
               <details className="connections-phone-only connection-details mt-3 text-xs">
-                <summary className="cursor-pointer text-[var(--accent)] py-2">Details</summary>
+                <summary className="cursor-pointer text-[var(--accent)] py-2">{uiText("Details")}</summary>
                 <div className="space-y-2 pt-1 text-[var(--muted)] break-words">
-                  <div>
-                    Feeds <span className="text-[var(--foreground)]"><span translate="no">{c.accountName}</span></span> ·{" "}
+                  <div>{uiText("Feeds ")}<span className="text-[var(--foreground)]"><span translate="no">{c.accountName}</span></span> ·{" "}
                     <span className="font-mono">{c.externalIdMasked}</span>
                     {c.hasSecret && " · secret encrypted"}
                   </div>
                   {c.lastSyncStatus === "ok" && (
-                    <div>
-                      Account value <Money value={Number(c.lastEquity ?? 0)} currency={c.reportingCurrency ?? "USD"} />{" "}
-                      + coins <Money value={Number(c.lastSpotValue ?? 0)} currency={c.reportingCurrency ?? "USD"} />
+                    <div>{uiText("Account value ")}<Money value={Number(c.lastEquity ?? 0)} currency={c.reportingCurrency ?? "USD"} />{" "}{uiText("+ coins ")}<Money value={Number(c.lastSpotValue ?? 0)} currency={c.reportingCurrency ?? "USD"} />
                     </div>
                   )}
                   {(logsFor.get(c.id) ?? []).length > 0 && (
@@ -273,10 +237,10 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                             <span>{new Date(l.startedAt).toLocaleString("pt-PT")}</span>
                           </div>
                           <div className="text-[11px] mt-0.5">
-                            {l.trigger} · {l.positionsFound ?? "—"} positions ·{" "}
+                            {l.trigger} · {l.positionsFound ?? "—"}{uiText(" positions ·")}{" "}
                             {l.equity === null ? "—" : <Money value={Number(l.equity)} currency={c.reportingCurrency ?? "USD"} />}
                           </div>
-                          {l.message && <div className="text-[11px] mt-0.5">{l.message}</div>}
+                          {l.message && <div className="text-[11px] mt-0.5">{uiText(l.message ?? "")}</div>}
                         </li>
                       ))}
                     </ul>
@@ -284,7 +248,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                   <form action={deleteConnection}>
                     <input type="hidden" name="id" value={c.id} />
                     <ConfirmSubmitButton
-                      label="Remove connection"
+                      label={uiText("Remove connection")}
                       confirmMessage={`Remove this ${c.platform} connection? Synced positions are removed too; the account and its balance stay.`}
                     />
                   </form>
@@ -294,14 +258,14 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
               {(logsFor.get(c.id) ?? []).length > 0 && (
                 <div className="connections-desktop-only mt-4">
                 <div className="overflow-x-auto">
-                  <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+                  <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
                     <thead>
                       <tr>
-                        <th>When</th>
-                        <th>Status</th>
-                        <th>Trigger</th>
-                        <th className="text-right">Positions</th>
-                        <th className="text-right">Equity</th>
+                        <th>{uiText("When")}</th>
+                        <th>{uiText("Status")}</th>
+                        <th>{uiText("Trigger")}</th>
+                        <th className="text-right">{uiText("Positions")}</th>
+                        <th className="text-right">{uiText("Equity")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -315,7 +279,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                                 className="text-xs text-[var(--muted)] max-w-[28rem] truncate"
                                 title={l.message}
                               >
-                                {l.message}
+                                {uiText(l.message ?? "")}
                               </div>
                             )}
                           </td>

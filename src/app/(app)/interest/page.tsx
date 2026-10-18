@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { db } from "@/db/client";
 import { interestPayments, accounts } from "@/db/schema";
@@ -17,6 +18,7 @@ import Section from "@/components/Section";
 import { localDay } from "@/lib/calendar/localDay";
 
 export default async function InterestPage() {
+  const uiText = await textForRequest();
   const payments = await db
     .select({
       id: interestPayments.id,
@@ -93,24 +95,24 @@ export default async function InterestPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold">Accounts</h1>
+      <h1 className="text-lg font-semibold">{uiText("Accounts")}</h1>
       <PageTabs tabs={ACCOUNTS_TABS} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">This year</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("This year")}</div>
           <div className="text-xl font-semibold">
             <Money value={ytd} currency={base} />
           </div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">All time</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("All time")}</div>
           <div className="text-xl font-semibold">
             <Money value={total} currency={base} />
           </div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-[var(--muted)] mb-1">By platform</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("By platform")}</div>
           <div className="space-y-1 text-sm">
             {[...byAccount.entries()].map(([name, amt]) => (
               <div key={name} className="flex justify-between">
@@ -131,20 +133,16 @@ export default async function InterestPage() {
           essential
           summary={`${outlook.length} ${outlook.length === 1 ? "account" : "accounts"}`}
         >
-          <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">
-            Worked out from each account&apos;s rate and the days since it was last paid. Simple
-            accrual on the current balance — if the balance moved during the period, the real figure
-            differs.
-          </p>
+          <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">{uiText("Worked out from each account's rate and the days since it was last paid. Simple accrual on the current balance — if the balance moved during the period, the real figure differs.")}</p>
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
-                  <th>Account</th>
-                  <th className="text-right">Rate</th>
-                  <th className="text-right">Per day</th>
-                  <th className="text-right">Days</th>
-                  <th className="text-right">Owed to you</th>
+                  <th>{uiText("Account")}</th>
+                  <th className="text-right">{uiText("Rate")}</th>
+                  <th className="text-right">{uiText("Per day")}</th>
+                  <th className="text-right">{uiText("Days")}</th>
+                  <th className="text-right">{uiText("Owed to you")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -152,18 +150,16 @@ export default async function InterestPage() {
                   <tr key={o.accountId}>
                     <td className="font-medium">
                       <span translate="no">{o.name}</span>
-                      <div className="text-[10px] text-[var(--muted)]">
-                        since{" "}
+                      <div className="text-[10px] text-[var(--muted)]">{uiText("since")}{" "}
                         {o.lastPaid
                           ? o.lastPaid.toLocaleDateString("pt-PT")
-                          : "the account was created"}
+                          : uiText("the account was created")}
                       </div>
                     </td>
                     <td className="text-right">
                       {o.apr}%
                       <div className="text-[10px] text-[var(--muted)]">
-                        {o.effectiveMonthly}% if paid monthly
-                      </div>
+                        {o.effectiveMonthly}{uiText("% if paid monthly")}</div>
                     </td>
                     <td className="text-right text-[var(--muted)]">
                       {o.perDay.toFixed(4)} {o.currency}
@@ -173,8 +169,7 @@ export default async function InterestPage() {
                       <Money value={o.accrual.net} currency={o.currency} />
                       {o.accrual.tax > 0 && (
                         <div className="text-[10px] text-[var(--muted)]">
-                          {o.accrual.gross.toFixed(2)} before {o.withholding}% tax
-                        </div>
+                          {o.accrual.gross.toFixed(2)}{uiText(" before ")}{o.withholding}{uiText("% tax")}</div>
                       )}
                     </td>
                   </tr>
@@ -195,10 +190,7 @@ export default async function InterestPage() {
         </Section>
 
         <Section title="Set an account's rate" defaultOpen>
-          <p className="text-xs text-[var(--muted)] mb-3">
-            With a rate set, the amount above fills itself in and you can tell whether what arrived
-            matches what was owed.
-          </p>
+          <p className="text-xs text-[var(--muted)] mb-3">{uiText("With a rate set, the amount above fills itself in and you can tell whether what arrived matches what was owed.")}</p>
           <form action={setAccountRate} className="space-y-3">
             <select name="accountId" className="input" required>
               {accountList.map((a) => (
@@ -209,7 +201,7 @@ export default async function InterestPage() {
             </select>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <label className="text-xs">
-                <span className="text-[var(--muted)]">Annual rate %</span>
+                <span className="text-[var(--muted)]">{uiText("Annual rate %")}</span>
                 <input
                   name="apr"
                   type="number"
@@ -220,18 +212,18 @@ export default async function InterestPage() {
                 />
               </label>
               <label className="text-xs">
-                <span className="text-[var(--muted)]">Days in a year</span>
+                <span className="text-[var(--muted)]">{uiText("Days in a year")}</span>
                 <select name="dayCount" className="input mt-1" defaultValue="365">
                   {DAY_COUNTS.map((d) => (
                     <option key={d.value} value={d.value}>
-                      {d.label}
+                      {uiText(d.label ?? "")}
                     </option>
                   ))}
                 </select>
               </label>
             </div>
             <label className="text-xs block">
-              <span className="text-[var(--muted)]">Tax withheld at source %</span>
+              <span className="text-[var(--muted)]">{uiText("Tax withheld at source %")}</span>
               <input
                 name="withholding"
                 type="number"
@@ -242,34 +234,24 @@ export default async function InterestPage() {
                 className="input mt-1"
               />
             </label>
-            <button type="submit" className="btn w-full">
-              Save rate
-            </button>
-            <p className="text-xs text-[var(--muted)]">
-              Many countries withhold tax on interest before it reaches you, which is why the gross
-              figure won&apos;t match your statement. Use your own rate — leave it blank if none
-              applies. If the computed figure is consistently a little under what you receive, try
-              ACT/360: it pays about 1.4% more for the same rate.
-            </p>
+            <button type="submit" className="btn w-full">{uiText("Save rate")}</button>
+            <p className="text-xs text-[var(--muted)]">{uiText("Many countries withhold tax on interest before it reaches you, which is why the gross figure won't match your statement. Use your own rate — leave it blank if none applies. If the computed figure is consistently a little under what you receive, try ACT/360: it pays about 1.4% more for the same rate.")}</p>
           </form>
         </Section>
       </div>
 
       {unconvertible > 0 && (
         <div className="text-xs" style={{ color: "var(--amber)" }}>
-          {unconvertible} payment{unconvertible === 1 ? " is" : "s are"} in a currency with no
-          exchange rate, so {unconvertible === 1 ? "it is" : "they are"} left out of the totals
-          above rather than added unconverted.
-        </div>
+          {unconvertible}{uiText(" payment")}{unconvertible === 1 ? uiText(" is") : uiText("s are")}{uiText(" in a currency with no exchange rate, so ")}{unconvertible === 1 ? uiText("it is") : uiText("they are")}{uiText(" left out of the totals above rather than added unconverted.")}</div>
       )}
 
       <Section title="Payments received" defaultOpen>
-        <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
+        <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Account</th>
-              <th>Amount</th>
+              <th>{uiText("Date")}</th>
+              <th>{uiText("Account")}</th>
+              <th>{uiText("Amount")}</th>
             </tr>
           </thead>
           <tbody>

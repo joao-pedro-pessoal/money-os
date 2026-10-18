@@ -1,5 +1,6 @@
 "use client";
 
+import { directionOf } from "@/lib/i18n/languages";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "./LanguageContext";
@@ -17,7 +18,7 @@ export default function SettingsTabs() {
   const { m, language } = useLanguage();
 
   return (
-    <nav translate="no" lang={language} aria-label={m.nav.settingsPages} className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
+    <nav translate="no" lang={language} dir={directionOf(language)} aria-label={m.nav.settingsPages} className="page-tabs border-b border-[var(--border)] flex gap-1 -mb-px overflow-x-auto">
       {TABS.map((t) => {
         const active = pathname === t.href;
         return (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -25,6 +26,7 @@ const sha256 = sha256Text;
  * guessed from the headers so the common case needs no work.
  */
 export default function CsvImportForm({ accounts }: { accounts: { id: string; name: string }[] }) {
+  const uiText = useText();
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [fileName, setFileName] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
@@ -136,13 +138,13 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
     optional = false
   ) => (
     <label className="text-xs block">
-      <span className="text-[var(--muted)]">{label}</span>
+      <span className="text-[var(--muted)]">{uiText(label ?? "")}</span>
       <select
         className="input mt-1"
         value={(mapping[key] as string) ?? ""}
         onChange={(e) => setMapping({ ...mapping, [key]: e.target.value || undefined })}
       >
-        <option value="">{optional ? "— none —" : "— pick a column —"}</option>
+        <option value="">{optional ? uiText("— none —") : uiText("— pick a column —")}</option>
         {headers.map((h) => (
           <option key={h} value={h}>
             {h}
@@ -165,13 +167,10 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
       <input type="file" accept=".csv,text/csv" onChange={handleFile} className="input text-xs" />
 
       {result && (
-        <div className="text-xs text-[var(--green)]">
-          Imported {result.created} transactions (net {result.net.toFixed(2)})
+        <div className="text-xs text-[var(--green)]">{uiText("Imported ")}{result.created}{uiText(" transactions (net ")}{result.net.toFixed(2)})
           {result.categorised !== undefined && result.categorised > 0 && (
-            <> · {result.categorised} categorised automatically</>
-          )}
-          . You can undo this below.
-        </div>
+            <> · {result.categorised}{uiText(" categorised automatically")}</>
+          )}{uiText(". You can undo this below.")}</div>
       )}
 
       {/* The single most common failure when pasting an AI's answer. Naming it
@@ -181,30 +180,18 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
           className="rounded-lg border p-3 text-xs space-y-1"
           style={{ borderColor: "var(--amber)" }}
         >
-          <div style={{ color: "var(--amber)" }}>This looks like a broker export.</div>
-          <p className="text-[var(--muted)] leading-snug">
-            It names instruments and quantities, which this importer cannot store. Imported here,
-            every purchase becomes an expense and every sale and dividend becomes income — the rows
-            land, the cash flow goes wrong, and nothing appears in your portfolio.
-          </p>
-          <p className="text-[var(--muted)] leading-snug">
-            Use <strong>Import the broker statement instead</strong>, higher up this page.
-          </p>
+          <div style={{ color: "var(--amber)" }}>{uiText("This looks like a broker export.")}</div>
+          <p className="text-[var(--muted)] leading-snug">{uiText("It names instruments and quantities, which this importer cannot store. Imported here, every purchase becomes an expense and every sale and dividend becomes income — the rows land, the cash flow goes wrong, and nothing appears in your portfolio.")}</p>
+          <p className="text-[var(--muted)] leading-snug">{uiText("Use ")}<strong>{uiText("Import the broker statement instead")}</strong>{uiText(", higher up this page.")}</p>
         </div>
       )}
 
       {fenceLeftIn && (
-        <div className="text-xs text-[var(--red)]">
-          This file still has the ``` fence the AI wrapped its answer in. Open it in a text editor, delete the
-          first and last lines, and upload again.
-        </div>
+        <div className="text-xs text-[var(--red)]">{uiText("This file still has the ``` fence the AI wrapped its answer in. Open it in a text editor, delete the first and last lines, and upload again.")}</div>
       )}
 
       {!fenceLeftIn && headerProblem && !headerProblem.ok && categoryColumn === undefined && (
-        <div className="text-xs text-[var(--muted)]">
-          Not the app&apos;s own format — map the columns yourself below, or use the instruction above to
-          convert the file first.
-        </div>
+        <div className="text-xs text-[var(--muted)]">{uiText("Not the app's own format — map the columns yourself below, or use the instruction above to convert the file first.")}</div>
       )}
 
       {headers.length > 0 && (
@@ -235,8 +222,8 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
             }
           >
             {mapping.debit || mapping.credit
-              ? "This file has one signed amount column instead"
-              : "This file has separate debit and credit columns"}
+              ? uiText("This file has one signed amount column instead")
+              : uiText("This file has separate debit and credit columns")}
           </button>
 
           {mapping.date && rows.length > 0 && (
@@ -253,7 +240,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
                       style={{ color: d.level === "warn" ? "var(--red)" : "var(--muted)" }}
                     >
                       {d.level === "warn" ? "⚠ " : ""}
-                      {d.message}
+                      {uiText(d.message ?? "")}
                     </div>
                   ))}
                 </div>
@@ -261,30 +248,30 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
 
               <div className="text-xs flex flex-wrap gap-x-4 gap-y-1">
                 <span className="text-[var(--muted)]">
-                  {rowsInFile} rows in file · out {sums.debits.toFixed(2)} · in{" "}
+                  {rowsInFile}{uiText(" rows in file · out ")}{sums.debits.toFixed(2)}{uiText(" · in")}{" "}
                   {sums.credits.toFixed(2)}
                 </span>
               </div>
 
               <div className="text-xs flex flex-wrap gap-x-4 gap-y-1">
-                <span className="text-[var(--green)]">{stats.importable} to import</span>
+                <span className="text-[var(--green)]">{stats.importable}{uiText(" to import")}</span>
                 {stats.duplicates > 0 && (
-                  <span className="text-[var(--amber)]">{stats.duplicates} duplicates (skipped)</span>
+                  <span className="text-[var(--amber)]">{stats.duplicates}{uiText(" duplicates (skipped)")}</span>
                 )}
                 {stats.invalid > 0 && (
-                  <span className="text-[var(--red)]">{stats.invalid} unreadable (skipped)</span>
+                  <span className="text-[var(--red)]">{stats.invalid}{uiText(" unreadable (skipped)")}</span>
                 )}
-                <span className="text-[var(--muted)]">net {stats.net.toFixed(2)}</span>
+                <span className="text-[var(--muted)]">{uiText("net ")}{stats.net.toFixed(2)}</span>
               </div>
 
               <div className="overflow-x-auto max-h-72 overflow-y-auto border border-[var(--border)] rounded-lg">
-                <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
+                <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Description</th>
-                      <th className="text-right">Amount</th>
-                      <th>Status</th>
+                      <th>{uiText("Date")}</th>
+                      <th>{uiText("Description")}</th>
+                      <th className="text-right">{uiText("Amount")}</th>
+                      <th>{uiText("Status")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -303,9 +290,9 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
                           {r.problem ? (
                             <span className="text-[var(--red)]">{r.problem}</span>
                           ) : r.duplicate ? (
-                            <span className="text-[var(--amber)]">Duplicate</span>
+                            <span className="text-[var(--amber)]">{uiText("Duplicate")}</span>
                           ) : (
-                            <span className="text-[var(--green)]">OK</span>
+                            <span className="text-[var(--green)]">{uiText("OK")}</span>
                           )}
                         </td>
                       </tr>
@@ -314,9 +301,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
                 </ResponsiveTable></div>
               </div>
               {rows.length > 200 && (
-                <div className="text-xs text-[var(--muted)]">
-                  Showing the first 200 of {rows.length} rows; all of them will be imported.
-                </div>
+                <div className="text-xs text-[var(--muted)]">{uiText("Showing the first 200 of ")}{rows.length}{uiText(" rows; all of them will be imported.")}</div>
               )}
 
               <label className="flex items-start gap-2 text-xs">
@@ -326,11 +311,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
                   onChange={(e) => setAdjustBalance(e.target.checked)}
                   className="mt-0.5"
                 />
-                <span className="text-[var(--muted)]">
-                  Also add the net ({stats.net.toFixed(2)}) to the account balance. Leave this off when
-                  importing past statements — the balance already includes those movements, and adding them
-                  again would count the same money twice.
-                </span>
+                <span className="text-[var(--muted)]">{uiText("Also add the net (")}{stats.net.toFixed(2)}{uiText(") to the account balance. Leave this off when importing past statements — the balance already includes those movements, and adding them again would count the same money twice.")}</span>
               </label>
 
               <button
@@ -340,15 +321,13 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
                 className="btn w-full"
                 style={busy || stats.importable === 0 ? { opacity: 0.5 } : undefined}
               >
-                {busy ? "Importing…" : `Import ${stats.importable} transactions`}
+                {busy ? uiText("Importing…") : uiText("Import {0} transactions", { "0": stats.importable })}
               </button>
             </>
           )}
 
           {!mapping.date && (
-            <div className="text-xs text-[var(--amber)]">
-              Pick which column holds the date to see a preview.
-            </div>
+            <div className="text-xs text-[var(--amber)]">{uiText("Pick which column holds the date to see a preview.")}</div>
           )}
         </>
       )}

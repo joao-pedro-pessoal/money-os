@@ -1,3 +1,6 @@
+"use client";
+
+import { useText } from "@/components/useText";
 import DonutChart from "@/components/DonutChart";
 import ProfileLookup from "@/components/ProfileLookup";
 import { Money } from "@/components/PrivacyContext";
@@ -24,14 +27,12 @@ export default function ExposureCards({
   showAllHref?: string | null;
   showFewerHref?: string | null;
 }) {
+  const uiText = useText();
   const { sector, country, region, classes, inside, matches, due, files, filesDue, sectors, movesDue, detailsDue, currency } = view;
 
   if (sector.total === 0 && classes.total === 0 && matches.length === 0) {
     return (
-      <p className="text-sm text-[var(--muted)]">
-        No stocks or ETFs held. This breakdown covers positions typed as Stocks or ETF; set the asset
-        type on a position to include it.
-      </p>
+      <p className="text-sm text-[var(--muted)]">{uiText("No stocks or ETFs held. This breakdown covers positions typed as Stocks or ETF; set the asset type on a position to include it.")}</p>
     );
   }
 
@@ -39,28 +40,21 @@ export default function ExposureCards({
     <div className="space-y-4">
       <div className="space-y-2">
         <p className="text-xs text-[var(--muted)] max-w-3xl">
-          <strong className="text-[var(--foreground)]">By kind</strong> covers everything you hold,{" "}
-          <Money value={classes.total} currency={currency} />. The three breakdowns beside it cover the shares and funds
-          alone, <Money value={sector.total} currency={currency} />
+          <strong className="text-[var(--foreground)]">{uiText("By kind")}</strong>{uiText(" covers everything you hold,")}{" "}
+          <Money value={classes.total} currency={currency} />{uiText(". The three breakdowns beside it cover the shares and funds alone, ")}<Money value={sector.total} currency={currency} />
           {sector.excluded > 0 && (
             <>
-              {" "}
-              — a sector of bitcoin or a country of idle cash is no number, so the other{" "}
-              <Money value={sector.excluded} currency={currency} /> appears by kind and not there
-            </>
-          )}
-          . A fund is spread by the sector weights and the share/bond/cash split its provider reports. Countries of a
-          fund&apos;s companies are not reported, so a fund stays Unclassified by country and region rather than being
-          guessed. Source: Yahoo Finance.
-        </p>
+              {" "}{uiText("— a sector of bitcoin or a country of idle cash is no number, so the other")}{" "}
+              <Money value={sector.excluded} currency={currency} />{uiText(" appears by kind and not there")}</>
+          )}{uiText(". A fund is spread by the sector weights and the share/bond/cash split its provider reports. Countries of a fund's companies are not reported, so a fund stays Unclassified by country and region rather than being guessed. Source: Yahoo Finance.")}</p>
         <ProfileLookup due={due} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ExposureCard title="By kind" data={classes} currency={currency} />
-        <ExposureCard title="By sector" data={sector} currency={currency} />
-        <ExposureCard title="By country" data={country} currency={currency} />
-        <ExposureCard title="By region" data={region} currency={currency} />
+        <ExposureCard title={uiText("By kind")} data={classes} currency={currency} />
+        <ExposureCard title={uiText("By sector")} data={sector} currency={currency} />
+        <ExposureCard title={uiText("By country")} data={country} currency={currency} />
+        <ExposureCard title={uiText("By region")} data={region} currency={currency} />
       </div>
 
       <InsideFunds
@@ -79,13 +73,9 @@ export default function ExposureCards({
 
       {matches.length > 0 && (
         <details className="card p-4">
-          <summary className="text-sm font-medium cursor-pointer">
-            What each position was matched to ({matches.length})
+          <summary className="text-sm font-medium cursor-pointer">{uiText("What each position was matched to (")}{matches.length})
           </summary>
-          <p className="text-xs text-[var(--muted)] mt-2">
-            Check these against your broker. A wrong match can be forgotten and looked up again; a
-            name that finds nothing stays Unclassified.
-          </p>
+          <p className="text-xs text-[var(--muted)] mt-2">{uiText("Check these against your broker. A wrong match can be forgotten and looked up again; a name that finds nothing stays Unclassified.")}</p>
           <ul className="mt-3 space-y-2">
             {matches.map((m) => (
               <li key={m.lookup + m.name} className="flex items-center justify-between gap-3 text-sm">
@@ -94,15 +84,13 @@ export default function ExposureCards({
                     <span translate="no">{shortName(m.name)}</span>
                   </div>
                   <div className="text-xs text-[var(--muted)]">
-                    <span translate="no">{m.symbol ? `${m.symbol}${m.quoteType ? ` · ${m.quoteType}` : ""}` : m.looked ? "not found" : "not looked up yet"}</span>
+                    <span translate="no">{m.symbol ? `${m.symbol}${m.quoteType ? ` · ${m.quoteType}` : ""}` : m.looked ? uiText("not found") : uiText("not looked up yet")}</span>
                   </div>
                 </div>
                 {m.symbol && (
                   <form action={forgetAssetProfile}>
                     <input type="hidden" name="lookup" value={m.lookup} />
-                    <button type="submit" className="text-xs text-[var(--muted)] hover:underline">
-                      Forget
-                    </button>
+                    <button type="submit" className="text-xs text-[var(--muted)] hover:underline">{uiText("Forget")}</button>
                   </form>
                 )}
               </li>
@@ -115,11 +103,12 @@ export default function ExposureCards({
 }
 
 function ExposureCard({ title, data, currency }: { title: string; data: Exposure; currency: string }) {
+  const uiText = useText();
   return (
     <div className="card p-4">
       <div className="text-sm font-medium mb-3">{title}</div>
       {data.slices.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">Nothing to show yet.</p>
+        <p className="text-sm text-[var(--muted)]">{uiText("Nothing to show yet.")}</p>
       ) : (
         <>
           <DonutChart data={data.slices.map((s) => ({ name: s.name, value: s.value }))} currency={currency} />

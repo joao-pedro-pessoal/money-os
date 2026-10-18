@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { recoverAccount, signIn, signUp } from "@/actions/auth";
@@ -26,6 +27,7 @@ type Step = "sign-in" | "sign-up" | "recover" | "code";
  * recovery code, shown once: the only way back in without the password.
  */
 export default function LoginScreen({ signUps, inviteRequired = false, destination = "/" }: { signUps: boolean; inviteRequired?: boolean; destination?: string }) {
+  const uiText = useText();
   const router = useRouter();
   const { m, language } = useLanguage();
   const w = m.auth;
@@ -174,7 +176,7 @@ export default function LoginScreen({ signUps, inviteRequired = false, destinati
 
   const problemNotice = problem && (
     <p role="alert" className="text-sm text-[var(--red)]">
-      {problem}
+      {uiText(problem ?? "")}
     </p>
   );
 
@@ -315,7 +317,7 @@ export default function LoginScreen({ signUps, inviteRequired = false, destinati
       )}
       {signUps && switchTo(w.newHere, w.createAnAccount, "sign-up")}
       <a className="btn-secondary w-full text-center" href={`/login/qr?next=${encodeURIComponent(safeReturnPath(destination))}`}>
-        {language === "pt" ? "Entrar com QR" : "Sign in with QR"}
+        {m.qr.title}
       </a>
     </>
   );

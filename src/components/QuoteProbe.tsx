@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -21,6 +22,7 @@ type Result = Awaited<ReturnType<typeof probeIbkrQuotes>>;
  * assumed rather than checked, the connector spent a day returning 401.
  */
 export default function QuoteProbe({ suggestions }: { suggestions: string[] }) {
+  const uiText = useText();
   const [isin, setIsin] = useState(suggestions[0] ?? "");
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,7 +35,7 @@ export default function QuoteProbe({ suggestions }: { suggestions: string[] }) {
     try {
       setResult(await probeIbkrQuotes(isin.trim()));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "The probe failed.");
+      setError(e instanceof Error ? e.message : uiText("The probe failed."));
     } finally {
       setBusy(false);
     }
@@ -42,23 +44,19 @@ export default function QuoteProbe({ suggestions }: { suggestions: string[] }) {
   return (
     <div className="card p-4 space-y-3">
       <div>
-        <div className="text-sm font-medium">Can Interactive Brokers price these?</div>
-        <p className="text-xs text-[var(--muted)] leading-snug mt-1">
-          You already run an IBKR gateway, and IBKR knows what these ETFs are worth. The ISIN is the
-          bridge — no new provider, no key, nothing to subscribe to. This asks your gateway whether
-          it will answer, before anything is built on top of it.
-        </p>
+        <div className="text-sm font-medium">{uiText("Can Interactive Brokers price these?")}</div>
+        <p className="text-xs text-[var(--muted)] leading-snug mt-1">{uiText("You already run an IBKR gateway, and IBKR knows what these ETFs are worth. The ISIN is the bridge — no new provider, no key, nothing to subscribe to. This asks your gateway whether it will answer, before anything is built on top of it.")}</p>
       </div>
 
       <div className="flex gap-2 flex-wrap items-center">
         <input
           value={isin}
           onChange={(e) => setIsin(e.target.value)}
-          placeholder="ISIN, e.g. IE00B5BMR087"
+          placeholder={uiText("ISIN, e.g. IE00B5BMR087")}
           className="input text-xs font-mono w-52"
         />
         <button type="button" onClick={run} disabled={busy || isin.trim() === ""} className="btn text-xs">
-          {busy ? "Asking…" : "Ask the gateway"}
+          {busy ? uiText("Asking…") : uiText("Ask the gateway")}
         </button>
         {suggestions.length > 1 && (
           <select
@@ -77,13 +75,13 @@ export default function QuoteProbe({ suggestions }: { suggestions: string[] }) {
 
       {error && (
         <div className="text-xs" style={{ color: "var(--red)" }}>
-          {error}
+          {uiText(error ?? "")}
         </div>
       )}
 
       {result && !result.ok && (
         <div className="text-xs space-y-2">
-          <div style={{ color: "var(--amber)" }}>{result.reason}</div>
+          <div style={{ color: "var(--amber)" }}>{uiText(result.reason ?? "")}</div>
           {"attempts" in result && result.attempts && (
             <ul className="space-y-0.5 text-[10px] text-[var(--muted)]">
               {result.attempts.map((a) => (
@@ -99,23 +97,18 @@ export default function QuoteProbe({ suggestions }: { suggestions: string[] }) {
       {result && result.ok && (
         <div className="text-xs space-y-3">
           <div style={{ color: result.priced ? "var(--green)" : "var(--amber)" }}>
-            {result.priced ? "It answered with a price." : "It found the instrument but gave no price."}{" "}
+            {result.priced ? uiText("It answered with a price.") : uiText("It found the instrument but gave no price.")}{" "}
             {result.quoteNote}
           </div>
 
           <div>
             <div className="text-[10px] text-[var(--muted)] mb-1">
-              {result.candidates.length} listing{result.candidates.length === 1 ? "" : "s"} for that
-              ISIN
-              {result.currencies.length > 1 && (
+              {uiText(result.candidates.length === 1 ? "{count} listing" : "{count} listings", { count: result.candidates.length })}{uiText(" for that ISIN")}{result.currencies.length > 1 && (
                 <span style={{ color: "var(--amber)" }}>
-                  {" "}
-                  · in {result.currencies.length} currencies, which is why the choice can&apos;t be
-                  automatic
-                </span>
+                  {" "}{uiText("· in ")}{result.currencies.length}{uiText(" currencies, which is why the choice can't be automatic")}</span>
               )}
             </div>
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full text-[11px]">
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="w-full text-[11px]">
               <tbody>
                 {result.candidates.slice(0, 8).map((c) => (
                   <tr key={c.conid} className="border-t border-[var(--border)]">

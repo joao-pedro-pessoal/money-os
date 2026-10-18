@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useMemo, useState } from "react";
 import { Money } from "@/components/PrivacyContext";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -85,6 +86,7 @@ export default function InsideFunds({
   /** Set while every company is listed, to go back to the largest ones. */
   showFewerHref?: string | null;
 }) {
+  const uiText = useText();
   const [query, setQuery] = useState("");
   const [sector, setSector] = useState("");
   const [industry, setIndustry] = useState("");
@@ -167,29 +169,20 @@ export default function InsideFunds({
   return (
     <div className="card p-4 space-y-3">
       <div>
-        <div className="text-sm font-medium">Inside your ETFs</div>
-        <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl">
-          The companies you hold, adding what your funds hold of them to the shares you own directly. Every position of{" "}
-          <Money value={data.fundsFromFile} currency={currency} /> in funds comes from the file their manager publishes;{" "}
+        <div className="text-sm font-medium">{uiText("Inside your ETFs")}</div>
+        <p className="text-xs text-[var(--muted)] mt-1 max-w-3xl">{uiText("The companies you hold, adding what your funds hold of them to the shares you own directly. Every position of")}{" "}
+          <Money value={data.fundsFromFile} currency={currency} />{uiText(" in funds comes from the file their manager publishes;")}{" "}
           {data.fundsFromIndex > 0 && (
             <>
-              <Money value={data.fundsFromIndex} currency={currency} /> is in a fund that follows its index by swap and
-              owns none of those companies — they are the index&apos;s, from the file of a fund that does hold them, so
-              they are your exposure rather than your shares;{" "}
+              <Money value={data.fundsFromIndex} currency={currency} />{uiText(" is in a fund that follows its index by swap and owns none of those companies — they are the index's, from the file of a fund that does hold them, so they are your exposure rather than your shares;")}{" "}
             </>
           )}
-          <Money value={data.fundsFromTopTen} currency={currency} /> is known only by its ten largest holdings, and{" "}
-          <Money value={data.fundsWithoutHoldings} currency={currency} /> by neither. That covers{" "}
-          <Money value={data.fundSeen} currency={currency} /> ({seenPercent.toFixed(0)}%) of the{" "}
-          <Money value={data.fundValue} currency={currency} /> you hold in funds
-          {unseen > 0 && (
-            <>
-              ; the other <Money value={unseen} currency={currency} /> is companies this cannot see, so a company&apos;s
-              real total can be higher than shown
-            </>
-          )}
-          . A fund&apos;s own cash and futures are left out here — they are in <em>By kind</em> above.
-        </p>
+          <Money value={data.fundsFromTopTen} currency={currency} />{uiText(" is known only by its ten largest holdings, and")}{" "}
+          <Money value={data.fundsWithoutHoldings} currency={currency} />{uiText(" by neither. That covers")}{" "}
+          <Money value={data.fundSeen} currency={currency} /> ({seenPercent.toFixed(0)}{uiText("%) of the")}{" "}
+          <Money value={data.fundValue} currency={currency} />{uiText(" you hold in funds")}{unseen > 0 && (
+            <>{uiText("; the other ")}<Money value={unseen} currency={currency} />{uiText(" is companies this cannot see, so a company's real total can be higher than shown")}</>
+          )}{uiText(". A fund's own cash and futures are left out here — they are in ")}<em>{uiText("By kind")}</em>{uiText(" above.")}</p>
       </div>
 
       {/* Four outside reads, each a few seconds: worth a tap to reach on a
@@ -206,8 +199,7 @@ export default function InsideFunds({
       <SectorMoves sectors={sectors[window] ?? []} currency={currency} window={window} onWindow={setWindow} />
 
       {data.companies.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">
-          No fund holdings read yet. Press the buttons above, and <em>Refresh sectors &amp; countries</em>.
+        <p className="text-sm text-[var(--muted)]">{uiText("No fund holdings read yet. Press the buttons above, and ")}<em>{uiText("Refresh sectors & countries")}</em>.
         </p>
       ) : (
         <>
@@ -218,40 +210,40 @@ export default function InsideFunds({
           >
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-end">
             <label className="text-xs">
-              <span className="block text-[var(--muted)] mb-1">Company</span>
+              <span className="block text-[var(--muted)] mb-1">{uiText("Company")}</span>
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Name or symbol"
+                placeholder={uiText("Name or symbol")}
                 className="input py-1 text-xs w-full"
               />
             </label>
             <label className="text-xs">
-              <span className="block text-[var(--muted)] mb-1">Sector</span>
+              <span className="block text-[var(--muted)] mb-1">{uiText("Sector")}</span>
               <select value={sector} onChange={(e) => setSector(e.target.value)} className="input py-1 text-xs w-full">
-                <option value="">All sectors</option>
+                <option value="">{uiText("All sectors")}</option>
                 {sectorOptions.map((s) => (
                   <option key={s} value={s}>
-                    {sectorLabel(s)}
+                    {uiText(sectorLabel(s) ?? "")}
                   </option>
                 ))}
               </select>
             </label>
             <label className="text-xs">
-              <span className="block text-[var(--muted)] mb-1">Industry</span>
+              <span className="block text-[var(--muted)] mb-1">{uiText("Industry")}</span>
               <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="input py-1 text-xs w-full">
-                <option value="">All industries</option>
+                <option value="">{uiText("All industries")}</option>
                 {industryOptions.map((i) => (
                   <option key={i} value={i}>
-                    {industryLabel(i)}
+                    {uiText(industryLabel(i) ?? "")}
                   </option>
                 ))}
               </select>
             </label>
             <label className="text-xs">
-              <span className="block text-[var(--muted)] mb-1">Country</span>
+              <span className="block text-[var(--muted)] mb-1">{uiText("Country")}</span>
               <select value={country} onChange={(e) => setCountry(e.target.value)} className="input py-1 text-xs w-full">
-                <option value="">All countries</option>
+                <option value="">{uiText("All countries")}</option>
                 {countryOptions.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -260,9 +252,9 @@ export default function InsideFunds({
               </select>
             </label>
             <label className="text-xs">
-              <span className="block text-[var(--muted)] mb-1">Through</span>
+              <span className="block text-[var(--muted)] mb-1">{uiText("Through")}</span>
               <select value={fund} onChange={(e) => setFund(e.target.value)} className="input py-1 text-xs w-full">
-                <option value="">Any fund or directly</option>
+                <option value="">{uiText("Any fund or directly")}</option>
                 {fundOptions.map((f) => (
                   <option key={f} value={f}>
                     {shortName(f)}
@@ -274,17 +266,17 @@ export default function InsideFunds({
                 companies the useful threshold is not one anybody guessed in
                 advance. Empty means all of them. */}
             <label className="text-xs">
-              <span className="block text-[var(--muted)] mb-1">At least (% of shares and funds)</span>
+              <span className="block text-[var(--muted)] mb-1">{uiText("At least (% of shares and funds)")}</span>
               <input
                 value={minimum}
                 onChange={(e) => setMinimum(e.target.value)}
                 inputMode="decimal"
-                placeholder="any"
+                placeholder={uiText("any")}
                 className="input py-1 text-xs w-full"
               />
             </label>
             <label className="text-xs">
-              <span className="block text-[var(--muted)] mb-1">Show</span>
+              <span className="block text-[var(--muted)] mb-1">{uiText("Show")}</span>
               <select
                 value={String(rows)}
                 onChange={(e) => setRows(Number(e.target.value))}
@@ -292,25 +284,24 @@ export default function InsideFunds({
               >
                 {ROW_COUNTS.map((n) => (
                   <option key={n} value={n}>
-                    {n === 0 ? `All ${matching.length}` : `${n} rows`}
+                    {n === 0 ? uiText("All {0}", { "0": matching.length }) : uiText("{0} rows", { "0": n })}
                   </option>
                 ))}
               </select>
             </label>
             <label className="text-xs">
-              <span className="block text-[var(--muted)] mb-1">Sort by</span>
+              <span className="block text-[var(--muted)] mb-1">{uiText("Sort by")}</span>
               <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="input py-1 text-xs w-full">
-                <option value="total">Most held</option>
-                <option value="yours">Your gain, biggest first</option>
+                <option value="total">{uiText("Most held")}</option>
+                <option value="yours">{uiText("Your gain, biggest first")}</option>
                 {WINDOWS.map((w) => (
-                  <option key={w.key} value={w.key}>
-                    Grew most over {w.label}
+                  <option key={w.key} value={w.key}>{uiText("Grew most over ")}{uiText(w.label)}
                   </option>
                 ))}
-                <option value="sector">Sector</option>
-                <option value="industry">Industry</option>
-                <option value="country">Country</option>
-                <option value="name">Name</option>
+                <option value="sector">{uiText("Sector")}</option>
+                <option value="industry">{uiText("Industry")}</option>
+                <option value="country">{uiText("Country")}</option>
+                <option value="name">{uiText("Name")}</option>
               </select>
             </label>
             {(query || sector || industry || country || fund || minimum !== "") && (
@@ -325,18 +316,16 @@ export default function InsideFunds({
                   setFund("");
                   setMinimum("");
                 }}
-              >
-                Clear filters
-              </button>
+              >{uiText("Clear filters")}</button>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--muted)]">
-            <span>Columns:</span>
+            <span>{uiText("Columns:")}</span>
             {EXTRA_COLUMNS.map((c) => (
               <label key={c.key} className="flex items-center gap-1">
                 <input type="checkbox" checked={shows(c.key)} onChange={() => toggleColumn(c.key)} />
-                {c.label}
+                {uiText(c.label ?? "")}
               </label>
             ))}
           </div>
@@ -345,26 +334,19 @@ export default function InsideFunds({
           <p className="text-[11px] text-[var(--muted)]">
             {narrowed ? (
               <>
-                {matching.length} of {data.companies.length} companies match,{" "}
-                <Money value={matchingValue} currency={currency} /> of <Money value={data.total} currency={currency} /> in
-                shares and funds.
-              </>
+                {matching.length}{uiText(" of ")}{data.companies.length}{uiText(" companies match,")}{" "}
+                <Money value={matchingValue} currency={currency} />{uiText(" of ")}<Money value={data.total} currency={currency} />{uiText(" in shares and funds.")}</>
             ) : (
-              <>{data.companies.length} companies.</>
+              <>{data.companies.length}{uiText(" companies.")}</>
             )}
-            {shown.length < matching.length && <> Showing the first {shown.length}.</>}
+            {shown.length < matching.length && <>{uiText(" Showing the first ")}{shown.length}.</>}
             {data.hiddenCompanies > 0 && (
               <>
-                {" "}
-                Another {data.hiddenCompanies} smaller ones, <Money value={data.hiddenValue} currency={currency} /> in
-                total, were not sent to this page
-                {showAllHref ? (
+                {" "}{uiText("Another ")}{data.hiddenCompanies}{uiText(" smaller ones, ")}<Money value={data.hiddenValue} currency={currency} />{uiText(" in total, were not sent to this page")}{showAllHref ? (
                   <>
                     {" "}
                     —{" "}
-                    <FilterLink href={showAllHref} className="text-[var(--accent)] hover:underline">
-                      send every company
-                    </FilterLink>
+                    <FilterLink href={showAllHref} className="text-[var(--accent)] hover:underline">{uiText("send every company")}</FilterLink>
                   </>
                 ) : null}
                 .
@@ -372,34 +354,31 @@ export default function InsideFunds({
             )}
             {showFewerHref && (
               <>
-                {" "}
-                Every company a fund publishes was sent to this page —{" "}
-                <FilterLink href={showFewerHref} className="text-[var(--accent)] hover:underline">
-                  send the largest 250 instead
-                </FilterLink>
+                {" "}{uiText("Every company a fund publishes was sent to this page —")}{" "}
+                <FilterLink href={showFewerHref} className="text-[var(--accent)] hover:underline">{uiText("send the largest 250 instead")}</FilterLink>
                 .
               </>
             )}
           </p>
 
-          <div className="table-scroll" role="region" aria-label="Companies inside your ETFs" tabIndex={0}>
+          <div className="table-scroll" role="region" aria-label={uiText("Companies inside your ETFs")} tabIndex={0}>
             <ResponsiveTable className="data-table">
               <thead>
                 <tr>
-                  <th>Company</th>
-                  {shows("sector") && <th>Sector</th>}
-                  {shows("industry") && <th>Industry</th>}
-                  {shows("country") && <th>Country</th>}
-                  <th className="text-right">Directly</th>
-                  <th className="text-right">Through funds</th>
-                  <th className="text-right">Total</th>
-                  <th className="text-right">Share</th>
+                  <th>{uiText("Company")}</th>
+                  {shows("sector") && <th>{uiText("Sector")}</th>}
+                  {shows("industry") && <th>{uiText("Industry")}</th>}
+                  {shows("country") && <th>{uiText("Country")}</th>}
+                  <th className="text-right">{uiText("Directly")}</th>
+                  <th className="text-right">{uiText("Through funds")}</th>
+                  <th className="text-right">{uiText("Total")}</th>
+                  <th className="text-right">{uiText("Share")}</th>
                   {chosenWindows.map((w) => (
                     <th key={w.key} className="text-right">
-                      {w.label}
+                      {uiText(w.label)}
                     </th>
                   ))}
-                  {shows("yours") && <th className="text-right">Since you bought</th>}
+                  {shows("yours") && <th className="text-right">{uiText("Since you bought")}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -416,19 +395,19 @@ export default function InsideFunds({
                             {c.symbol && <span className="text-[11px] text-[var(--muted)] ml-2"><span translate="no">{c.symbol}</span></span>}
                           </div>
                           {c.funds.length > 0 && (
-                            <div className="text-[11px] text-[var(--muted)]">via {c.funds.map(shortName).join(", ")}</div>
+                            <div className="text-[11px] text-[var(--muted)]">{uiText("via ")}{c.funds.map(shortName).join(", ")}</div>
                           )}
                         </div>
                       </div>
                     </td>
                     {shows("sector") && (
                       <td className={c.sector ? undefined : "text-[var(--muted)]"}>
-                        {c.sector ? sectorLabel(c.sector) : UNCLASSIFIED}
+                        {uiText(c.sector ? sectorLabel(c.sector) : UNCLASSIFIED ?? "")}
                       </td>
                     )}
                     {shows("industry") && (
                       <td className={c.industry ? undefined : "text-[var(--muted)]"}>
-                        {c.industry ? industryLabel(c.industry) : UNCLASSIFIED}
+                        {uiText(c.industry ? industryLabel(c.industry) : UNCLASSIFIED ?? "")}
                       </td>
                     )}
                     {shows("country") && (
@@ -466,14 +445,8 @@ export default function InsideFunds({
         </>
       )}
 
-      <p className="text-[11px] text-[var(--muted)]">
-        Share is of the stocks and funds you hold.{" "}
-        <strong className="text-[var(--foreground)]">The month and year columns are the company&apos;s own move</strong>,
-        not your return: you bought a fund, not the shares inside it, and what its slice of a company cost you is not
-        knowable. <strong className="text-[var(--foreground)]">Since you bought</strong> is yours, and is filled in only
-        for what you bought yourself. A window a listing is younger than is left empty rather than measured from its
-        first day. Sources: the fund managers&apos; own published files
-        {files.length > 0 && (
+      <p className="text-[11px] text-[var(--muted)]">{uiText("Share is of the stocks and funds you hold.")}{" "}
+        <strong className="text-[var(--foreground)]">{uiText("The month and year columns are the company's own move")}</strong>{uiText(", not your return: you bought a fund, not the shares inside it, and what its slice of a company cost you is not knowable. ")}<strong className="text-[var(--foreground)]">{uiText("Since you bought")}</strong>{uiText(" is yours, and is filled in only for what you bought yourself. A window a listing is younger than is left empty rather than measured from its first day. Sources: the fund managers' own published files")}{files.length > 0 && (
           <>
             {" "}
             (
@@ -487,11 +460,7 @@ export default function InsideFunds({
               .join("; ")}
             )
           </>
-        )}
-        , Yahoo Finance for sectors, countries and prices, and Parqet for the logos — each one asked for once, by
-        listing, and kept here, so opening this page tells nobody what you hold. A company with no logo published shows
-        its first letter.
-      </p>
+        )}{uiText(", Yahoo Finance for sectors, countries and prices, and Parqet for the logos — each one asked for once, by listing, and kept here, so opening this page tells nobody what you hold. A company with no logo published shows its first letter.")}</p>
     </div>
   );
 }
@@ -527,6 +496,7 @@ function SectorMoves({
   window: WindowKey;
   onWindow: (key: WindowKey) => void;
 }) {
+  const uiText = useText();
   const measured = sectors.filter((s) => s.change !== null);
   if (sectors.length === 0) return null;
   const best = measured[0];
@@ -535,25 +505,20 @@ function SectorMoves({
   return (
     <div className="rounded-lg border border-[var(--border)] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <div className="text-xs font-medium">
-          How the sectors you hold have moved
-          {best && worst && best !== worst && (
+        <div className="text-xs font-medium">{uiText("How the sectors you hold have moved")}{best && worst && best !== worst && (
             <span className="font-normal text-[var(--muted)]">
               {" "}
-              — {sectorLabel(best.sector ?? "")} most, {sectorLabel(worst.sector ?? "")} least
-            </span>
+              — {uiText(sectorLabel(best.sector ?? "") ?? "")}{uiText(" most, ")}{uiText(sectorLabel(worst.sector ?? "") ?? "")}{uiText(" least")}</span>
           )}
         </div>
-        <label className="text-[11px] text-[var(--muted)] flex items-center gap-1">
-          over
-          <select
+        <label className="text-[11px] text-[var(--muted)] flex items-center gap-1">{uiText("over")}<select
             value={window}
             onChange={(e) => onWindow(e.target.value as WindowKey)}
             className="input py-0.5 text-[11px]"
           >
             {WINDOWS.map((w) => (
               <option key={w.key} value={w.key}>
-                {w.label}
+                {uiText(w.label)}
               </option>
             ))}
           </select>
@@ -565,12 +530,12 @@ function SectorMoves({
           return (
             <div key={s.sector ?? "unclassified"} className="flex items-baseline justify-between gap-3 text-xs">
               <span className={s.sector ? undefined : "text-[var(--muted)]"}>
-                {s.sector ? sectorLabel(s.sector) : UNCLASSIFIED}
+                {uiText(s.sector ? sectorLabel(s.sector) : UNCLASSIFIED ?? "")}
               </span>
               <span className="text-[var(--muted)] shrink-0">
                 <Money value={s.value} currency={currency} />
                 {s.change === null ? (
-                  <span> · not measured</span>
+                  <span>{uiText(" · not measured")}</span>
                 ) : (
                   <>
                     {" · "}
@@ -578,7 +543,7 @@ function SectorMoves({
                       {s.change >= 0 ? "+" : "−"}
                       {Math.abs(s.change).toFixed(1)}%
                     </span>
-                    {coverage < 99 && <span> ({coverage.toFixed(0)}% of it measured)</span>}
+                    {coverage < 99 && <span> ({coverage.toFixed(0)}{uiText("% of it measured)")}</span>}
                   </>
                 )}
               </span>

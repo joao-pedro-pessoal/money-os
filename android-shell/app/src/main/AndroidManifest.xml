@@ -35,7 +35,7 @@
         <receiver
             android:name=".QuickEntryWidget"
             android:exported="false"
-            android:label="Registo rápido">
+            android:label="@string/ui_registo_r_pido">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -47,7 +47,7 @@
         <receiver
             android:name=".MoneyWidgets$Dashboard"
             android:exported="false"
-            android:label="Money OS">
+            android:label="@string/ui_money_os">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -59,7 +59,7 @@
         <receiver
             android:name=".MoneyWidgets$NetWorth"
             android:exported="false"
-            android:label="Net worth">
+            android:label="@string/ui_net_worth">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -71,7 +71,7 @@
         <receiver
             android:name=".MoneyWidgets$WhereMoney"
             android:exported="false"
-            android:label="Where the money is">
+            android:label="@string/ui_where_the_money_is">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -83,7 +83,7 @@
         <receiver
             android:name=".MoneyWidgets$CashFlow"
             android:exported="false"
-            android:label="Cash flow">
+            android:label="@string/ui_cash_flow">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -95,7 +95,7 @@
         <receiver
             android:name=".MoneyWidgets$Investments"
             android:exported="false"
-            android:label="Investments">
+            android:label="@string/ui_investments">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -107,7 +107,7 @@
         <receiver
             android:name=".MoneyWidgets$Allocation"
             android:exported="false"
-            android:label="Allocation">
+            android:label="@string/ui_allocation">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -119,7 +119,7 @@
         <receiver
             android:name=".MoneyWidgets$Movers"
             android:exported="false"
-            android:label="Winners &amp; losers">
+            android:label="@string/ui_winners_losers">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -131,7 +131,7 @@
         <receiver
             android:name=".MoneyWidgets$Dividends"
             android:exported="false"
-            android:label="Dividends">
+            android:label="@string/ui_dividends">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -143,7 +143,7 @@
         <receiver
             android:name=".MoneyWidgets$OpenTrades"
             android:exported="false"
-            android:label="Open trades">
+            android:label="@string/ui_open_trades">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -169,7 +169,7 @@
             android:name=".Tiles$RecordExpense"
             android:exported="true"
             android:icon="@drawable/ic_stat_quick_entry"
-            android:label="Record expense"
+            android:label="@string/ui_record_expense"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
@@ -180,7 +180,7 @@
             android:name=".Tiles$NetWorth"
             android:exported="true"
             android:icon="@drawable/ic_stat_quick_entry"
-            android:label="Net worth"
+            android:label="@string/ui_net_worth"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />

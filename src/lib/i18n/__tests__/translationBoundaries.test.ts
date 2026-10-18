@@ -9,7 +9,7 @@ import { ACCOUNTS_TABS } from "@/lib/navigation";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }), usePathname: () => "/accounts" }));
 
-describe("translation boundaries while pages are still English", () => {
+describe("translation boundaries", () => {
   it("keeps monetary values outside automatic translation", () => {
     for (const element of [createElement(Money, { value: 12.34 }), createElement(Bare, { value: 12.34 })]) {
       expect(renderToStaticMarkup(element)).toMatch(/^<span translate="no">/);
@@ -21,14 +21,15 @@ describe("translation boundaries while pages are still English", () => {
     expect(html).toContain('translate="no" lang="pt"');
     expect(html).toContain("Contas");
   });
-  it("does not label English pages Portuguese or forbid their translation through metadata", () => {
+  it("labels the fully translated document with its selected language", () => {
     const layout = readFileSync("src/app/layout.tsx", "utf8");
-    expect(layout).toContain('<html lang="en" translate={language === "en" ? "no" : "yes"}');
+    expect(layout).toContain('<html lang={language}');
+    expect(layout).toContain('translate="no"');
     expect(layout).not.toMatch(/google:\s*["']notranslate/);
     const context = readFileSync("src/components/LanguageContext.tsx", "utf8");
     expect(context).not.toContain("document.documentElement.lang = next");
-    // Only General and On your phone are translated. Their parent layout also
-    // hosts the still-English Categories, Currency & rates and Your data pages.
+    // The layout keeps its own translated heading without wrapping the pages
+    // in a second translation region.
     const settings = readFileSync("src/app/(app)/settings/layout.tsx", "utf8");
     expect(settings).not.toMatch(/<div translate="no"/);
     expect(settings).toContain('<h1 translate="no" lang={language}');

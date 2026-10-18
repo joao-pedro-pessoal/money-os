@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">支出または収入を記録する</string>
+    <string name="widget_expense" formatted="false">− 経費</string>
+    <string name="widget_income" formatted="false">+ 収入</string>
+    <string name="shortcut_expense" formatted="false">経費</string>
+    <string name="shortcut_expense_long" formatted="false">経費を記録する</string>
+    <string name="shortcut_income" formatted="false">収入</string>
+    <string name="shortcut_income_long" formatted="false">過去最高の収入</string>
+    <string name="widget_dashboard_description" formatted="false">今月の純資産と長期にわたるライン</string>
+    <string name="widget_net_worth_description" formatted="false">長期にわたる純資産とその純資産の推移</string>
+    <string name="widget_where_money_description" formatted="false">お金はどこにあるのか、パーセンテージ付きのドーナツとして</string>
+    <string name="widget_cash_flow_description" formatted="false">今月: 入ったお金、出たお金、そして残ったもの</string>
+    <string name="widget_investments_description" formatted="false">ポートフォリオの価値、未実現損益、および損益を含むすべてのポジション（ユーロとパーセント）</string>
+    <string name="widget_allocation_description" formatted="false">資産タイプ別のポートフォリオ（パーセンテージ付きのドーナツとして）</string>
+    <string name="widget_movers_description" formatted="false">コスト利益率による最良のポジションと最悪のポジション</string>
+    <string name="widget_dividends_description" formatted="false">今年受け取った配当金と次回の支払い予定</string>
+    <string name="widget_open_trades_description" formatted="false">オープンレバレッジポジション: 未実現損益、証拠金、各取引</string>
+    <string name="ui_registo_r_pido" formatted="false">急速な登録</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">純資産</string>
+    <string name="ui_where_the_money_is" formatted="false">お金はどこにあるのか</string>
+    <string name="ui_cash_flow" formatted="false">入出金</string>
+    <string name="ui_investments" formatted="false">投資</string>
+    <string name="ui_allocation" formatted="false">割り当て</string>
+    <string name="ui_winners_losers" formatted="false">勝者と敗者</string>
+    <string name="ui_dividends" formatted="false">配当金</string>
+    <string name="ui_open_trades" formatted="false">オープントレード</string>
+    <string name="ui_record_expense" formatted="false">経費を記録する</string>
+    <string name="ui_refresh" formatted="false">リフレッシュ</string>
+    <string name="ui_chart" formatted="false">チャート</string>
+</resources>

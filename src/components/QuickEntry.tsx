@@ -1,5 +1,7 @@
 "use client";
 
+import { useText } from "@/components/useText";
+import { directionOf } from "@/lib/i18n/languages";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +16,7 @@ import { useLanguage } from "./LanguageContext";
 const today = () => localDay();
 
 export default function QuickEntry({ accounts, categories, defaultAccountId }: QuickEntryOptions) {
+  const uiText = useText();
   const dialog = useRef<HTMLDialogElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const busy = useRef(false);
@@ -138,11 +141,11 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
 
   return (
     <>
-      <button translate="no" lang={language} type="button" className="icon-btn quick-entry-trigger" aria-label={w.open} title={w.openTitle} onClick={() => open()}>
+      <button translate="no" lang={language} dir={directionOf(language)} type="button" className="icon-btn quick-entry-trigger" aria-label={w.open} title={w.openTitle} onClick={() => open()}>
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
         <span className="quick-entry-label"><span className="complex-visible">{w.button}</span><span className="simple-only">{w.button}</span></span>
       </button>
-      <dialog translate="no" lang={language} ref={dialog} className="quick-entry" aria-labelledby="quick-entry-title"
+      <dialog translate="no" lang={language} dir={directionOf(language)} ref={dialog} className="quick-entry" aria-labelledby="quick-entry-title"
         onCancel={event => { event.preventDefault(); close(); }}
         onClose={() => { document.body.style.overflow = scrollBefore.current; }}>
         <div className="flex items-center justify-between gap-3 mb-4">
@@ -157,7 +160,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
         ) : savedId || undone ? (
           <div className="space-y-4">
             <p role="status">{undone ? w.undone : w.saved}</p>
-            {error && <p role="alert" className="text-sm text-[var(--red)]">{error}</p>}
+            {error && <p role="alert" className="text-sm text-[var(--red)]">{uiText(error ?? "")}</p>}
             <div className="flex gap-3 flex-wrap">
               {savedId && <Link href="/savings" className="btn" onClick={close}>{w.savingsLink}</Link>}
               {savedId && <button type="button" className="btn" disabled={pending} onClick={undo}>{pending ? w.undoing : w.undo}</button>}
@@ -200,7 +203,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
                   </label>
                 </div>
               </details>
-              {error && <p role="alert" className="text-sm text-[var(--red)]">{error}</p>}
+              {error && <p role="alert" className="text-sm text-[var(--red)]">{uiText(error ?? "")}</p>}
               {type === 'expense' && <PurchaseSavingsFields />}
               <button type="submit" className="btn w-full">{pending ? w.saving : type === "expense" ? w.saveExpense : w.saveIncome}</button>
             </fieldset>

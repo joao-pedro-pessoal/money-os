@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import { loadReport } from "@/actions/reports";
 import PageTabs from "@/components/PageTabs";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -43,6 +44,7 @@ export default async function ReportPage({
 }: {
   searchParams: Promise<{ period?: string; at?: string; month?: string; from?: string; to?: string; scope?: string }>;
 }) {
+  const uiText = await textForRequest();
   const loaded = await loadReport(await searchParams);
   const { kind, key, current, scope } = loaded;
   const report = loaded.money;
@@ -66,26 +68,26 @@ export default async function ReportPage({
     return `/analytics/report?${query.toString()}`;
   };
   const base = loaded.currency;
-  const csv = reportCsv(loaded);
+  const csv = reportCsv(loaded, uiText);
   const pdfHref = `/api/report/pdf?${href({}).split("?")[1]}`;
   const hasAnything = (report?.totals.transactions ?? 0) > 0;
 
   return (
     <div className="monthly-report space-y-6">
-      <h1 className="text-lg font-semibold">Analytics</h1>
+      <h1 className="text-lg font-semibold">{uiText("Analytics")}</h1>
       <PageTabs tabs={ANALYTICS_TABS} />
 
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-semibold">{REPORT_TITLE[kind]} · {loaded.label}</h2>
+          <h2 className="text-xl font-semibold">{uiText(REPORT_TITLE[kind])} · {uiText(loaded.label ?? "")}</h2>
           <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
             {kind === "custom"
               ? loaded.to === loaded.today
-                ? "Up to today — the figures change until the day closes."
-                : "A range of days, as recorded."
+                ? uiText("Up to today — the figures change until the day closes.")
+                : uiText("A range of days, as recorded.")
               : key === current
-                ? `This ${noun} so far — the figures change until it closes.`
-                : `A closed ${noun}, as recorded.`}{" "}
+                ? uiText("This {0} so far — the figures change until it closes.", { "0": noun })
+                : uiText("A closed {0}, as recorded.", { "0": noun })}{" "}
             {scope !== "investments" &&
               "Transfers between your own accounts and money moved into investments are not spending."}
           </p>
@@ -93,7 +95,7 @@ export default async function ReportPage({
         {/* One row of equal choices on a wide screen, one under another on a phone. */}
         <div className="report-actions grid gap-2 w-full sm:grid-flow-col sm:auto-cols-fr">
           <FilterSelect
-            label="Report"
+            label={uiText("Report")}
             value={kind}
             className="input"
             options={REPORT_KINDS.map((p) => ({ value: p.value, label: p.label, href: href({ period: p.value }) }))}
@@ -107,7 +109,7 @@ export default async function ReportPage({
             />
           )}
           <FilterSelect
-            label="What the report covers"
+            label={uiText("What the report covers")}
             value={scope}
             className="input"
             options={REPORT_SCOPES.map((s) => ({ value: s.value, label: s.label, href: href({ scope: s.value }) }))}
@@ -136,64 +138,59 @@ export default async function ReportPage({
       )}
 
       {report !== null && loaded.investments !== null && (
-        <h3 className="text-base font-semibold">Day-to-day money</h3>
+        <h3 className="text-base font-semibold">{uiText("Day-to-day money")}</h3>
       )}
 
       {report === null ? null : !hasAnything ? (
-        <div className="card p-8 text-center text-sm text-[var(--muted)]">
-          Nothing recorded in {report.label}.{" "}
-          <Link href="/transactions" className="text-[var(--accent)]">Record a movement</Link> or{" "}
-          <Link href="/import" className="text-[var(--accent)]">import a statement</Link>.
+        <div className="card p-8 text-center text-sm text-[var(--muted)]">{uiText("Nothing recorded in ")}{uiText(report.label ?? "")}.{" "}
+          <Link href="/transactions" className="text-[var(--accent)]">{uiText("Record a movement")}</Link>{uiText(" or")}{" "}
+          <Link href="/import" className="text-[var(--accent)]">{uiText("import a statement")}</Link>.
         </div>
       ) : (
         <>
           <div className="report-cards grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="card p-4">
-              <div className="text-xs text-[var(--muted)]">Income</div>
+              <div className="text-xs text-[var(--muted)]">{uiText("Income")}</div>
               <div className="text-xl font-semibold mt-1 text-[var(--green)]"><Money value={report.totals.income} currency={base} /></div>
-              <div className="text-[11px] text-[var(--muted)] mt-1">
-                vs {report.previous?.label ?? `${noun} before`}{" "}
+              <div className="text-[11px] text-[var(--muted)] mt-1">{uiText("vs ")}{report.previous?.label ?? uiText("{0} before", { "0": noun })}{" "}
                 {report.previous ? <Change now={report.totals.income} before={report.previous.totals.income} /> : "—"}
               </div>
             </div>
             <div className="card p-4">
-              <div className="text-xs text-[var(--muted)]">Spent</div>
+              <div className="text-xs text-[var(--muted)]">{uiText("Spent")}</div>
               <div className="text-xl font-semibold mt-1 text-[var(--red)]"><Money value={report.totals.spent} currency={base} /></div>
-              <div className="text-[11px] text-[var(--muted)] mt-1">
-                vs {noun} before{" "}
+              <div className="text-[11px] text-[var(--muted)] mt-1">{uiText("vs ")}{noun}{uiText(" before")}{" "}
                 {report.previous ? <Change now={report.totals.spent} before={report.previous.totals.spent} lowerIsBetter /> : "—"}
               </div>
               {report.averageSpent && (
-                <div className="text-[11px] text-[var(--muted)]">
-                  average of {report.averageSpent.periods} earlier{" "}
-                  {report.averageSpent.periods === 1 ? noun : `${noun}s`}{" "}
+                <div className="text-[11px] text-[var(--muted)]">{uiText("average of ")}{report.averageSpent.periods}{uiText(" earlier")}{" "}
+                  {report.averageSpent.periods === 1 ? noun : uiText("{0}s", { "0": noun })}{" "}
                   <Money value={report.averageSpent.amount} currency={base} />
                 </div>
               )}
             </div>
             <div className="card p-4">
-              <div className="text-xs text-[var(--muted)]">Net</div>
+              <div className="text-xs text-[var(--muted)]">{uiText("Net")}</div>
               <div className={`text-xl font-semibold mt-1 ${tone(report.totals.net)}`}><Money value={report.totals.net} currency={base} /></div>
               {report.invested > 0 && (
                 <div className="text-[11px] text-[var(--muted)] mt-1">
-                  <Money value={report.invested} currency={base} /> moved into investments
-                </div>
+                  <Money value={report.invested} currency={base} />{uiText(" moved into investments")}</div>
               )}
             </div>
             <div className="card p-4">
-              <div className="text-xs text-[var(--muted)]">Savings rate</div>
+              <div className="text-xs text-[var(--muted)]">{uiText("Savings rate")}</div>
               <div className={`text-xl font-semibold mt-1 ${report.savingsRate === null ? "" : tone(report.savingsRate)}`}>
                 {report.savingsRate === null ? "—" : `${report.savingsRate.toFixed(1)}%`}
               </div>
               <div className="text-[11px] text-[var(--muted)] mt-1">
-                {report.savingsRate === null ? `no income recorded this ${noun}` : "of income kept"}
+                {report.savingsRate === null ? uiText("no income recorded this {0}", { "0": noun }) : uiText("of income kept")}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="card p-4">
-              <div className="text-sm font-medium">Net worth</div>
+              <div className="text-sm font-medium">{uiText("Net worth")}</div>
               {report.netWorth ? (
                 <>
                   <div className={`text-xl font-semibold mt-2 ${tone(report.netWorth.change)}`}>
@@ -204,30 +201,26 @@ export default async function ReportPage({
                     <Money value={report.netWorth.start} currency={base} /> →{" "}
                     <Money value={report.netWorth.end} currency={base} />
                   </div>
-                  <p className="text-[11px] text-[var(--muted)] mt-2">
-                    Includes what markets did, so it can differ from the {noun}&apos;s net.
-                  </p>
+                  <p className="text-[11px] text-[var(--muted)] mt-2">{uiText("Includes what markets did, so it can differ from the ")}{noun}{uiText("'s net.")}</p>
                 </>
               ) : (
-                <p className="text-xs text-[var(--muted)] mt-2">No net worth snapshot inside this {noun}.</p>
+                <p className="text-xs text-[var(--muted)] mt-2">{uiText("No net worth snapshot inside this ")}{noun}.</p>
               )}
             </div>
             <div className="card p-4">
-              <div className="text-sm font-medium">Fixed and variable</div>
+              <div className="text-sm font-medium">{uiText("Fixed and variable")}</div>
               {report.split.fixedShare === null ? (
-                <p className="text-xs text-[var(--muted)] mt-2">No spending this {noun}.</p>
+                <p className="text-xs text-[var(--muted)] mt-2">{uiText("No spending this ")}{noun}.</p>
               ) : (
                 <>
                   <div className="h-3 rounded-full bg-[var(--surface-2)] overflow-hidden flex mt-3" aria-hidden="true">
                     <div className="h-full bg-[var(--accent)]" style={{ width: `${report.split.fixedShare}%` }} />
                   </div>
                   <div className="flex justify-between text-xs mt-2 gap-3 flex-wrap">
-                    <span>Fixed <Money value={report.split.fixed} currency={base} /> ({report.split.fixedShare.toFixed(0)}%)</span>
-                    <span>Variable <Money value={report.split.variable} currency={base} /></span>
+                    <span>{uiText("Fixed ")}<Money value={report.split.fixed} currency={base} /> ({report.split.fixedShare.toFixed(0)}%)</span>
+                    <span>{uiText("Variable ")}<Money value={report.split.variable} currency={base} /></span>
                   </div>
-                  <p className="text-[11px] text-[var(--muted)] mt-2">
-                    Variable is what a decision could still have moved.
-                  </p>
+                  <p className="text-[11px] text-[var(--muted)] mt-2">{uiText("Variable is what a decision could still have moved.")}</p>
                 </>
               )}
             </div>
@@ -237,7 +230,7 @@ export default async function ReportPage({
             <div className="card p-4">
               <ReportChart
                 kind="line"
-                title="Net worth through the period"
+                title={uiText("Net worth through the period")}
                 series={[{ name: "Net worth", color: "accent", points: report.netWorthLine }]}
                 range={{ from: report.from, to: report.to }}
                 unit={base}
@@ -247,11 +240,11 @@ export default async function ReportPage({
 
           {report.months && (
             <div className="card p-4">
-              <div className="text-sm font-medium mb-3">Month by month</div>
+              <div className="text-sm font-medium mb-3">{uiText("Month by month")}</div>
               <div className="mb-4">
                 <ReportChart
                   kind="columns"
-                  title="Income and spending"
+                  title={uiText("Income and spending")}
                   groups={report.months.map((m) => ({
                     label: monthTick(m.key, spansYears(report.months!.map((x) => x.key))) + (m.partial ? "*" : ""),
                     values: m.totals === null ? [null, null] : [m.totals.income, m.totals.spent],
@@ -263,26 +256,26 @@ export default async function ReportPage({
                   unit={base}
                 />
               </div>
-              <div className="table-scroll" role="region" aria-label="Month by month" tabIndex={0}>
+              <div className="table-scroll" role="region" aria-label={uiText("Month by month")} tabIndex={0}>
                 <ResponsiveTable className="data-table">
                   <thead>
                     <tr>
-                      <th>Month</th>
-                      <th className="text-right">Income</th>
-                      <th className="text-right">Spent</th>
-                      <th className="text-right">Net</th>
+                      <th>{uiText("Month")}</th>
+                      <th className="text-right">{uiText("Income")}</th>
+                      <th className="text-right">{uiText("Spent")}</th>
+                      <th className="text-right">{uiText("Net")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {report.months.map((m) => (
                       <tr key={m.key}>
                         <td>
-                          <FilterLink href={href({ period: "month", at: m.key })} className="hover:underline">{m.label}</FilterLink>
-                          {m.partial && <span className="text-[10px] text-[var(--muted)]"> · part of the month</span>}
+                          <FilterLink href={href({ period: "month", at: m.key })} className="hover:underline">{uiText(m.label)}</FilterLink>
+                          {m.partial && <span className="text-[10px] text-[var(--muted)]">{uiText(" · part of the month")}</span>}
                         </td>
                         {m.totals === null ? (
                           // Nothing recorded is not a month of nothing spent.
-                          <td className="text-right text-[var(--muted)]" colSpan={3}>nothing recorded</td>
+                          <td className="text-right text-[var(--muted)]" colSpan={3}>{uiText("nothing recorded")}</td>
                         ) : (
                           <>
                             <td className="text-right text-[var(--green)]"><Money value={m.totals.income} currency={base} /></td>
@@ -300,16 +293,16 @@ export default async function ReportPage({
 
           {report.categories.length > 0 && (
             <div className="card p-4">
-              <div className="text-sm font-medium mb-3">Where it went</div>
-              <div className="table-scroll" role="region" aria-label="Spending by category" tabIndex={0}>
+              <div className="text-sm font-medium mb-3">{uiText("Where it went")}</div>
+              <div className="table-scroll" role="region" aria-label={uiText("Spending by category")} tabIndex={0}>
                 <ResponsiveTable className="data-table">
                   <thead>
                     <tr>
-                      <th>Category</th>
-                      <th className="text-right">Spent</th>
-                      <th className="text-right">Share</th>
-                      <th className="text-right">{Noun} before</th>
-                      <th className="text-right">Change</th>
+                      <th>{uiText("Category")}</th>
+                      <th className="text-right">{uiText("Spent")}</th>
+                      <th className="text-right">{uiText("Share")}</th>
+                      <th className="text-right">{Noun}{uiText(" before")}</th>
+                      <th className="text-right">{uiText("Change")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -317,7 +310,7 @@ export default async function ReportPage({
                       <tr key={c.name}>
                         <td>
                           <span translate="no">{c.name}</span>
-                          <div className="text-[10px] text-[var(--muted)]">{c.count} {c.count === 1 ? "payment" : "payments"}</div>
+                          <div className="text-[10px] text-[var(--muted)]">{c.count} {c.count === 1 ? uiText("payment") : uiText("payments")}</div>
                         </td>
                         <td className="text-right"><Money value={c.spent} currency={base} /></td>
                         <td className="text-right">{c.share.toFixed(1)}%</td>
@@ -326,7 +319,7 @@ export default async function ReportPage({
                         </td>
                         <td className="text-right">
                           {c.changePercent === null ? (
-                            <span className="text-[var(--muted)]">new</span>
+                            <span className="text-[var(--muted)]">{uiText("new")}</span>
                           ) : (
                             <span className={c.changePercent > 0 ? "text-[var(--red)]" : c.changePercent < 0 ? "text-[var(--green)]" : ""}>
                               {c.changePercent > 0 ? "+" : ""}
@@ -341,23 +334,22 @@ export default async function ReportPage({
               </div>
               {report.totals.uncategorised > 0 && (
                 <p className="text-[11px] text-[var(--muted)] mt-2">
-                  <Money value={report.totals.uncategorised} currency={base} /> has no category —{" "}
-                  <Link href="/transactions" className="text-[var(--accent)]">file it</Link> and this breakdown gets sharper.
-                </p>
+                  <Money value={report.totals.uncategorised} currency={base} />{uiText(" has no category —")}{" "}
+                  <Link href="/transactions" className="text-[var(--accent)]">{uiText("file it")}</Link>{uiText(" and this breakdown gets sharper.")}</p>
               )}
             </div>
           )}
 
           {report.budgets.length > 0 && (
             <div className="card p-4">
-              <div className="text-sm font-medium mb-3">{kind === "week" ? "Weekly" : kind === "month" ? "Monthly" : "Yearly"} budgets</div>
+              <div className="text-sm font-medium mb-3">{kind === "week" ? uiText("Weekly") : kind === "month" ? uiText("Monthly") : uiText("Yearly")}{uiText(" budgets")}</div>
               <div className="space-y-3">
                 {report.budgets.map((b) => (
                   <div key={b.name}>
                     <div className="flex justify-between text-xs gap-3">
                       <span><span translate="no">{b.name}</span></span>
                       <span className={b.status === "over" ? "text-[var(--red)]" : "text-[var(--muted)]"}>
-                        <Money value={b.spent} currency={base} /> of <Money value={b.limit} currency={base} /> · {b.percent}%
+                        <Money value={b.spent} currency={base} />{uiText(" of ")}<Money value={b.limit} currency={base} /> · {b.percent}%
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden mt-1" aria-hidden="true">
@@ -377,15 +369,15 @@ export default async function ReportPage({
 
           {report.topExpenses.length > 0 && (
             <div className="card p-4">
-              <div className="text-sm font-medium mb-3">Largest expenses</div>
-              <div className="table-scroll" role="region" aria-label="Largest expenses" tabIndex={0}>
+              <div className="text-sm font-medium mb-3">{uiText("Largest expenses")}</div>
+              <div className="table-scroll" role="region" aria-label={uiText("Largest expenses")} tabIndex={0}>
                 <ResponsiveTable className="data-table">
                   <thead>
                     <tr>
-                      <th>What</th>
-                      <th>Date</th>
-                      <th>Account</th>
-                      <th className="text-right">Amount</th>
+                      <th>{uiText("What")}</th>
+                      <th>{uiText("Date")}</th>
+                      <th>{uiText("Account")}</th>
+                      <th className="text-right">{uiText("Amount")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -412,7 +404,7 @@ export default async function ReportPage({
 
       {loaded.investments !== null && (
         <>
-          {report !== null && <h3 className="text-base font-semibold pt-2">Investments</h3>}
+          {report !== null && <h3 className="text-base font-semibold pt-2">{uiText("Investments")}</h3>}
           <InvestmentReportSection report={loaded.investments} currency={base} />
         </>
       )}

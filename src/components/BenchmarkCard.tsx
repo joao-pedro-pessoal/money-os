@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import { getBenchmarkComparison, getBenchmarkFreshness, refreshBenchmark, setBenchmarkChoice } from "@/actions/benchmark";
 import { BENCHMARKS } from "@/lib/portfolio/benchmark";
 import BenchmarkChart from "./BenchmarkChart";
@@ -15,6 +16,7 @@ import BenchmarkChart from "./BenchmarkChart";
  * performance.
  */
 export default async function BenchmarkCard() {
+  const uiText = await textForRequest();
   const [data, freshness] = await Promise.all([
     getBenchmarkComparison(),
     getBenchmarkFreshness(),
@@ -28,7 +30,7 @@ export default async function BenchmarkCard() {
   return (
     <div className="card p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-1">
-        <div className="text-sm font-medium">Against the market</div>
+        <div className="text-sm font-medium">{uiText("Against the market")}</div>
         <form action={setBenchmarkChoice} className="flex items-center gap-2">
           <select
             name="benchmarkId"
@@ -41,17 +43,14 @@ export default async function BenchmarkCard() {
               </option>
             ))}
           </select>
-          <button type="submit" className="btn text-xs">
-            Change
-          </button>
+          <button type="submit" className="btn text-xs">{uiText("Change")}</button>
         </form>
       </div>
 
       {/* The proxy is named, because a wrong entry in the table is not a failed
           lookup — it is a silently wrong comparison, and the only defence is
           that the symbol priced is visible enough to be checked. */}
-      <p className="text-xs text-[var(--muted)] mb-4">
-        Priced as <span translate="no">{data.benchmark.symbol}</span> — {data.benchmark.note}
+      <p className="text-xs text-[var(--muted)] mb-4">{uiText("Priced as ")}<span translate="no">{data.benchmark.symbol}</span> — {data.benchmark.note}
       </p>
 
       {data.comparison === null ? (
@@ -63,12 +62,10 @@ export default async function BenchmarkCard() {
             {data.unavailable}
           </div>
           <form action={refresh} className="mt-3">
-            <button type="submit" className="btn text-xs">
-              Fetch the <span translate="no">{data.benchmark.name}</span> series
-            </button>
+            <button type="submit" className="btn text-xs">{uiText("Fetch the ")}<span translate="no">{data.benchmark.name}</span>{uiText(" series")}</button>
             {freshness.lastDate !== null && (
               <span className="text-xs text-[var(--muted)] ml-3">
-                {freshness.points} days stored, up to {freshness.lastDate}.
+                {freshness.points}{uiText(" days stored, up to ")}{freshness.lastDate}.
               </span>
             )}
           </form>
@@ -77,7 +74,7 @@ export default async function BenchmarkCard() {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             <div>
-              <div className="text-xs text-[var(--muted)] mb-1">You</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("You")}</div>
               <div
                 className="text-lg font-semibold"
                 style={{
@@ -87,7 +84,7 @@ export default async function BenchmarkCard() {
                 {data.comparison.portfolioReturn >= 0 ? "+" : ""}
                 {(data.comparison.portfolioReturn * 100).toFixed(2)}%
               </div>
-              <div className="text-[10px] text-[var(--muted)]">deposits taken out</div>
+              <div className="text-[10px] text-[var(--muted)]">{uiText("deposits taken out")}</div>
             </div>
             <div>
               <div className="text-xs text-[var(--muted)] mb-1"><span translate="no">{data.benchmark.name}</span></div>
@@ -98,10 +95,10 @@ export default async function BenchmarkCard() {
                 {data.comparison.indexReturn >= 0 ? "+" : ""}
                 {(data.comparison.indexReturn * 100).toFixed(2)}%
               </div>
-              <div className="text-[10px] text-[var(--muted)]">same window</div>
+              <div className="text-[10px] text-[var(--muted)]">{uiText("same window")}</div>
             </div>
             <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Difference</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("Difference")}</div>
               <div
                 className="text-lg font-semibold"
                 style={{
@@ -109,9 +106,8 @@ export default async function BenchmarkCard() {
                 }}
               >
                 {data.comparison.differencePoints >= 0 ? "+" : ""}
-                {data.comparison.differencePoints.toFixed(2)} pp
-              </div>
-              <div className="text-[10px] text-[var(--muted)]">percentage points</div>
+                {data.comparison.differencePoints.toFixed(2)}{uiText(" pp")}</div>
+              <div className="text-[10px] text-[var(--muted)]">{uiText("percentage points")}</div>
             </div>
           </div>
 
@@ -122,27 +118,17 @@ export default async function BenchmarkCard() {
           />
 
           <p className="text-xs text-[var(--muted)] mt-3 leading-relaxed">
-            {data.comparison.from} to {data.comparison.to}, which is the window your own return
-            covers — not the whole life of the portfolio. Your line has deposits and withdrawals
-            removed, so it is a return rather than a balance; the index is an accumulating fund,
-            so its dividends are in it too and neither side is flattered.
-            {(data.comparison.indexFrom !== data.comparison.from ||
+            {data.comparison.from}{uiText(" to ")}{data.comparison.to}{uiText(", which is the window your own return covers — not the whole life of the portfolio. Your line has deposits and withdrawals removed, so it is a return rather than a balance; the index is an accumulating fund, so its dividends are in it too and neither side is flattered.")}{(data.comparison.indexFrom !== data.comparison.from ||
               data.comparison.indexTo !== data.comparison.to) && (
               <>
-                {" "}
-                The index is measured {data.comparison.indexFrom} to {data.comparison.indexTo},
-                the nearest trading days inside it.
-              </>
+                {" "}{uiText("The index is measured ")}{data.comparison.indexFrom}{uiText(" to ")}{data.comparison.indexTo}{uiText(", the nearest trading days inside it.")}</>
             )}
           </p>
 
           <form action={refresh} className="mt-3">
-            <button type="submit" className="btn text-xs">
-              Refresh the series
-            </button>
+            <button type="submit" className="btn text-xs">{uiText("Refresh the series")}</button>
             {freshness.lastDate !== null && (
-              <span className="text-xs text-[var(--muted)] ml-3">
-                Stored up to {freshness.lastDate}.
+              <span className="text-xs text-[var(--muted)] ml-3">{uiText("Stored up to ")}{freshness.lastDate}.
               </span>
             )}
           </form>

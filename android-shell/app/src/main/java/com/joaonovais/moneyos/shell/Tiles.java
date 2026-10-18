@@ -22,7 +22,7 @@ public final class Tiles {
         public void onStartListening() {
             Tile tile = getQsTile();
             if (tile == null) return;
-            tile.setLabel("Record expense");
+            tile.setLabel(LocalText.text(this, "Record expense"));
             tile.setIcon(Icon.createWithResource(this, R.drawable.ic_stat_quick_entry));
             tile.setState(Tile.STATE_INACTIVE);
             tile.updateTile();
@@ -58,12 +58,12 @@ public final class Tiles {
             Tile tile = getQsTile();
             if (tile == null) return;
             WidgetData data = WidgetData.cached(this);
-            tile.setLabel("Net worth");
+            tile.setLabel(LocalText.text(this, "Net worth"));
             tile.setIcon(Icon.createWithResource(this, R.drawable.ic_stat_quick_entry));
             tile.setState(Tile.STATE_INACTIVE);
             String subtitle;
-            if (isLocked()) subtitle = "Unlock to see";
-            else if (data == null) subtitle = "Open the app";
+            if (isLocked()) subtitle = LocalText.text(this, "Unlock to see");
+            else if (data == null) subtitle = LocalText.text(this, "Open the app");
             else subtitle = WidgetData.money(data.netWorth, data.currency);
             tile.setSubtitle(subtitle);
             tile.updateTile();

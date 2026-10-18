@@ -1,3 +1,6 @@
+"use client";
+
+import { useText } from "@/components/useText";
 import { asPercent } from "@/lib/portfolio/returns";
 import { fmt } from "@/lib/format";
 import type { TwrResult, ReturnCoverage } from "@/lib/portfolio/returns";
@@ -29,9 +32,10 @@ function Figure({
   withheld: string | null;
   note?: string;
 }) {
+  const uiText = useText();
   return (
     <div className="card p-4">
-      <div className="text-sm font-medium">{label}</div>
+      <div className="text-sm font-medium">{uiText(label ?? "")}</div>
       <div className="text-[10px] text-[var(--muted)] mb-3">{question}</div>
 
       {withheld ? (
@@ -40,7 +44,7 @@ function Figure({
             A missing figure is stated as missing, with the reason. Showing a
             dash alone reads as zero, and zero is a measurement.
           */}
-          <div className="text-lg font-semibold text-[var(--muted)]">Not measurable yet</div>
+          <div className="text-lg font-semibold text-[var(--muted)]">{uiText("Not measurable yet")}</div>
           <p className="text-[11px] text-[var(--muted)] mt-2">{withheld}</p>
         </>
       ) : (
@@ -76,13 +80,14 @@ export default function PortfolioReturns({
   currentValue: number;
   currency: string;
 }) {
+  const uiText = useText();
   const twrPercent = timeWeighted ? asPercent(timeWeighted.totalReturn) : null;
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Figure
-          label="Time-weighted return"
+          label={uiText("Time-weighted return")}
           question="Were the choices good? Deposits and withdrawals are taken out."
           value={twrPercent}
           withheld={withheld.timeWeighted}
@@ -98,7 +103,7 @@ export default function PortfolioReturns({
         />
 
         <Figure
-          label="Money-weighted return"
+          label={uiText("Money-weighted return")}
           question="How did the money actually do? Timing of deposits included."
           value={asPercent(moneyWeighted)}
           suffix="a year"
@@ -121,13 +126,8 @@ export default function PortfolioReturns({
       */}
       {coverage.flowsBeforeHistory > 0 && coverage.historyStarts && (
         <p className="text-[11px] text-[var(--muted)]">
-          {coverage.flowsBeforeHistory} deposit
-          {coverage.flowsBeforeHistory === 1 ? "" : "s"} or withdrawal
-          {coverage.flowsBeforeHistory === 1 ? "" : "s"} happened before{" "}
-          {coverage.historyStarts}, which is as far back as the portfolio&apos;s value is
-          recorded. Anything earlier than that is genuinely unmeasured rather than
-          zero.
-        </p>
+          {uiText(coverage.flowsBeforeHistory === 1 ? "{count} deposit" : "{count} deposits", { count: coverage.flowsBeforeHistory })}{uiText(" or withdrawal")}{coverage.flowsBeforeHistory === 1 ? "" : uiText("s")}{uiText(" happened before")}{" "}
+          {coverage.historyStarts}{uiText(", which is as far back as the portfolio's value is recorded. Anything earlier than that is genuinely unmeasured rather than zero.")}</p>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { usePrivacy } from "./PrivacyContext";
 import { fmt } from "@/lib/format";
@@ -36,10 +37,11 @@ export default function DonutChart({
   data: { name: string; value: number }[];
   currency?: string;
 }) {
+  const uiText = useText();
   const { hidden } = usePrivacy();
 
   if (data.length === 0) {
-    return <div className="text-sm text-[var(--muted)] py-8 text-center">No data yet</div>;
+    return <div className="text-sm text-[var(--muted)] py-8 text-center">{uiText("No data yet")}</div>;
   }
 
   const total = data.reduce((s, d) => s + d.value, 0);

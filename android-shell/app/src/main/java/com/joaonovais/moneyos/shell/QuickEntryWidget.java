@@ -11,6 +11,8 @@ public class QuickEntryWidget extends AppWidgetProvider {
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         for (int id : ids) {
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_quick_entry);
+            views.setTextViewText(R.id.widget_expense, "− " + LocalText.text(context, "Expense"));
+            views.setTextViewText(R.id.widget_income, "+ " + LocalText.text(context, "Income"));
             views.setOnClickPendingIntent(R.id.widget_expense, QuickEntry.open(context, QuickEntry.EXPENSE));
             views.setOnClickPendingIntent(R.id.widget_income, QuickEntry.open(context, QuickEntry.INCOME));
             manager.updateAppWidget(id, views);

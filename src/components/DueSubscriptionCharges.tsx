@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import Link from "next/link";
 import { answerSubscriptionCharge, recordSubscriptionCharge, type DueCharge } from "@/actions/subscriptionCharges";
@@ -26,24 +27,20 @@ export default function DueSubscriptionCharges({
   /** On the dashboard: the first few, with a link to the rest. */
   compact?: boolean;
 }) {
+  const uiText = useText();
   if (charges.length === 0) return null;
   const shown = compact ? charges.slice(0, 3) : charges;
 
   return (
     <section className="card p-4 space-y-3" aria-labelledby="due-charges-title">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <h2 id="due-charges-title" className="text-sm font-medium">
-          Subscription charges to confirm · {charges.length}
+        <h2 id="due-charges-title" className="text-sm font-medium">{uiText("Subscription charges to confirm · ")}{charges.length}
         </h2>
         {compact && charges.length > shown.length && (
-          <Link href="/subscriptions" className="text-xs text-[var(--accent)]">
-            See all
-          </Link>
+          <Link href="/subscriptions" className="text-xs text-[var(--accent)]">{uiText("See all")}</Link>
         )}
       </div>
-      <p className="text-xs text-[var(--muted)]">
-        Due and not yet in your records. Nothing is added until you choose.
-      </p>
+      <p className="text-xs text-[var(--muted)]">{uiText("Due and not yet in your records. Nothing is added until you choose.")}</p>
       <div className="space-y-3">
         {shown.map((c) => (
           <ChargeRow key={`${c.subscriptionId}-${c.dueOn}`} charge={c} accounts={accounts} />
@@ -54,6 +51,7 @@ export default function DueSubscriptionCharges({
 }
 
 function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: string; name: string; currency: string }[] }) {
+  const uiText = useText();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
@@ -75,7 +73,7 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
       const result = await action(form);
       if ("error" in result) setError(result.error);
     } catch {
-      setError("Could not confirm. Check Cash Flow before trying again.");
+      setError(uiText("Could not confirm. Check Cash Flow before trying again."));
     } finally {
       setPending(false);
     }
@@ -84,14 +82,14 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
   const record = () => {
     if (!accountId) {
       setEditing(true);
-      setError("Choose the account it was charged to.");
+      setError(uiText("Choose the account it was charged to."));
       return;
     }
     // The amount starts in the subscription's currency. Recorded as it is on an
     // account in another currency, 10 USD would become 10 EUR.
     if (otherCurrency && !editing) {
       setEditing(true);
-      setError(`Enter the amount in ${accountCurrency}, as the account was charged.`);
+      setError(uiText("Enter the amount in {0}, as the account was charged.", { "0": accountCurrency }));
       return;
     }
     return run(recordSubscriptionCharge, { accountId, amount, date });
@@ -102,8 +100,7 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-medium break-words"><span translate="no">{charge.name}</span></div>
-          <div className="text-xs text-[var(--muted)]">
-            due {dayLabel(charge.dueOn)}
+          <div className="text-xs text-[var(--muted)]">{uiText("due ")}{uiText(dayLabel(charge.dueOn) ?? "")}
             <span translate="no">{charge.categoryName && ` · ${charge.categoryName}`}</span>
           </div>
         </div>
@@ -114,18 +111,16 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
 
       {charge.match && (
         <p className="text-xs">
-          <span className="text-[var(--amber)]">Looks already recorded:</span> {charge.match.label},{" "}
-          {dayLabel(charge.match.date)}, <Money value={charge.match.amount} currency={charge.match.currency} /> ·{" "}
+          <span className="text-[var(--amber)]">{uiText("Looks already recorded:")}</span> {charge.match.label},{" "}
+          {uiText(dayLabel(charge.match.date) ?? "")}, <Money value={charge.match.amount} currency={charge.match.currency} /> ·{" "}
           <span translate="no">{charge.match.accountName}</span>
         </p>
       )}
 
       {editing && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <label className="text-xs">
-            Account
-            <select className="input mt-1" value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={pending}>
-              <option value="">Choose…</option>
+          <label className="text-xs">{uiText("Account")}<select className="input mt-1" value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={pending}>
+              <option value="">{uiText("Choose…")}</option>
               {accounts.map((a) => (
                 <option translate="no" key={a.id} value={a.id}>
                   {a.name}
@@ -133,25 +128,20 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
               ))}
             </select>
           </label>
-          <label className="text-xs">
-            Amount{accountCurrency ? ` (${accountCurrency})` : ""}
+          <label className="text-xs">{uiText("Amount")}{accountCurrency ? ` (${accountCurrency})` : ""}
             <input className="input mt-1" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={pending} />
           </label>
-          <label className="text-xs">
-            Date
-            <input className="input mt-1" type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={pending} />
+          <label className="text-xs">{uiText("Date")}<input className="input mt-1" type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={pending} />
           </label>
           {otherCurrency && (
-            <p className="text-[11px] text-[var(--amber)] sm:col-span-3">
-              The subscription is in {charge.currency} and this account in {accountCurrency}: enter what the account was charged.
-            </p>
+            <p className="text-[11px] text-[var(--amber)] sm:col-span-3">{uiText("The subscription is in ")}{charge.currency}{uiText(" and this account in ")}{accountCurrency}{uiText(": enter what the account was charged.")}</p>
           )}
         </div>
       )}
 
       {error && (
         <p role="alert" className="text-xs text-[var(--red)]">
-          {error}
+          {uiText(error ?? "")}
         </p>
       )}
 
@@ -163,31 +153,23 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
               className="btn"
               disabled={pending}
               onClick={() => run(answerSubscriptionCharge, { answer: "matched", transactionId: charge.match!.id })}
-            >
-              Yes, that&apos;s it
-            </button>
-            <button type="button" className="btn" disabled={pending} onClick={record}>
-              No, record it
-            </button>
+            >{uiText("Yes, that's it")}</button>
+            <button type="button" className="btn" disabled={pending} onClick={record}>{uiText("No, record it")}</button>
           </>
         ) : (
           <button type="button" className="btn" disabled={pending} onClick={record}>
-            {pending ? "Saving…" : "Record expense"}
+            {pending ? uiText("Saving…") : uiText("Record expense")}
           </button>
         )}
         {!editing && (
-          <button type="button" className="btn" disabled={pending} onClick={() => setEditing(true)}>
-            Change details
-          </button>
+          <button type="button" className="btn" disabled={pending} onClick={() => setEditing(true)}>{uiText("Change details")}</button>
         )}
         <button
           type="button"
           className="text-xs text-[var(--muted)] hover:underline px-2"
           disabled={pending}
           onClick={() => run(answerSubscriptionCharge, { answer: "skipped" })}
-        >
-          Skip this charge
-        </button>
+        >{uiText("Skip this charge")}</button>
       </div>
     </div>
   );

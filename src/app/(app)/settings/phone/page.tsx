@@ -1,3 +1,4 @@
+import { directionOf } from "@/lib/i18n/languages";
 import InstallApp from "@/components/InstallApp";
 import Rich from "@/components/Rich";
 import TryQuickEntry from "@/components/TryQuickEntry";
@@ -19,7 +20,7 @@ export default async function PhoneSettingsPage() {
   const language = await currentLanguage();
   const w = messagesFor(language).phone;
   return (
-    <div translate="no" lang={language} className="space-y-6">
+    <div translate="no" lang={language} dir={directionOf(language)} className="space-y-6">
       <section className="card p-4 space-y-3" aria-labelledby="phone-install">
         <h2 id="phone-install" className="text-sm font-medium">{w.installTitle}</h2>
         <p className="text-xs text-[var(--muted)] max-w-2xl">{w.installText}</p>

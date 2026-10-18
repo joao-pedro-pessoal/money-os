@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">कोई व्यय या आय रिकॉर्ड करें</string>
+    <string name="widget_expense" formatted="false">− व्यय</string>
+    <string name="widget_income" formatted="false">+ आय</string>
+    <string name="shortcut_expense" formatted="false">व्यय</string>
+    <string name="shortcut_expense_long" formatted="false">व्यय रिकॉर्ड करें</string>
+    <string name="shortcut_income" formatted="false">आय</string>
+    <string name="shortcut_income_long" formatted="false">रिकॉर्ड आय</string>
+    <string name="widget_dashboard_description" formatted="false">निवल मूल्य, इस महीने और समय के साथ लाइन</string>
+    <string name="widget_net_worth_description" formatted="false">समय के साथ निवल मूल्य, और यह कितना आगे बढ़ गया है</string>
+    <string name="widget_where_money_description" formatted="false">पैसा कहां है, प्रतिशत के साथ डोनट के रूप में</string>
+    <string name="widget_cash_flow_description" formatted="false">इस महीने: पैसा अंदर, पैसा बाहर और क्या बचा है</string>
+    <string name="widget_investments_description" formatted="false">पोर्टफोलियो मूल्य, अप्राप्त पी एंड एल और यूरो और प्रतिशत में इसके पी एंड एल के साथ प्रत्येक स्थिति</string>
+    <string name="widget_allocation_description" formatted="false">परिसंपत्ति प्रकार के अनुसार पोर्टफोलियो, प्रतिशत के साथ डोनट के रूप में</string>
+    <string name="widget_movers_description" formatted="false">लागत पर रिटर्न के हिसाब से सबसे अच्छी और सबसे खराब स्थिति</string>
+    <string name="widget_dividends_description" formatted="false">इस वर्ष लाभांश प्राप्त हुआ, और अगला अपेक्षित भुगतान</string>
+    <string name="widget_open_trades_description" formatted="false">ओपन लीवरेज्ड पोजीशन: अप्राप्त पी एंड एल, मार्जिन और प्रत्येक व्यापार</string>
+    <string name="ui_registo_r_pido" formatted="false">तेजी से पंजीकरण करें</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">निवल मूल्य</string>
+    <string name="ui_where_the_money_is" formatted="false">पैसा कहां है</string>
+    <string name="ui_cash_flow" formatted="false">लेनदेन</string>
+    <string name="ui_investments" formatted="false">निवेश</string>
+    <string name="ui_allocation" formatted="false">आवंटन</string>
+    <string name="ui_winners_losers" formatted="false">विजेता और हारने वाले</string>
+    <string name="ui_dividends" formatted="false">लाभांश</string>
+    <string name="ui_open_trades" formatted="false">व्यापार खोलें</string>
+    <string name="ui_record_expense" formatted="false">व्यय रिकॉर्ड करें</string>
+    <string name="ui_refresh" formatted="false">ताज़ा करें</string>
+    <string name="ui_chart" formatted="false">चार्ट</string>
+</resources>

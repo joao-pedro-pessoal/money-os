@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import {
   LineChart,
   Line,
@@ -36,6 +37,7 @@ export default function BenchmarkChart({
   index: { date: string; value: number }[];
   indexName: string;
 }) {
+  const uiText = useText();
   /**
    * One row per date either line moved, each carrying whichever values that day
    * has. Recharts joins on the x key, and a missing value must be a gap in that
@@ -53,9 +55,7 @@ export default function BenchmarkChart({
 
   if (data.length < 2) {
     return (
-      <div className="text-sm text-[var(--muted)] py-12 text-center">
-        Not enough overlap between your history and the index to draw a comparison.
-      </div>
+      <div className="text-sm text-[var(--muted)] py-12 text-center">{uiText("Not enough overlap between your history and the index to draw a comparison.")}</div>
     );
   }
 
@@ -99,7 +99,7 @@ export default function BenchmarkChart({
           <Line
             type="monotone"
             dataKey="you"
-            name="You"
+            name={uiText("You")}
             stroke="var(--accent)"
             strokeWidth={2}
             dot={false}

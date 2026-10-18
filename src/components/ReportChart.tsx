@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useCallback, useState } from "react";
 import { usePrivacy } from "./PrivacyContext";
 import { columnChart, compactAmount, labelEvery, lineChart, shortDate, type DatedValue } from "@/lib/reports/charts";
@@ -34,6 +35,7 @@ const AREA = { left: 44, right: 8, top: 6, bottom: 20 };
  * figures and keeps its shape.
  */
 export default function ReportChart(props: ReportChartProps) {
+  const uiText = useText();
   const { hidden } = usePrivacy();
   const [width, setWidth] = useState(600);
 
@@ -53,7 +55,7 @@ export default function ReportChart(props: ReportChartProps) {
   return (
     <figure className="space-y-2" aria-label={props.title}>
       <figcaption className="flex justify-between gap-3 text-sm">
-        <span className="font-medium">{props.title}</span>
+        <span className="font-medium">{uiText(props.title ?? "")}</span>
         <span className="text-xs text-[var(--muted)]">{props.unit}</span>
       </figcaption>
       <div ref={measure} className="w-full">
@@ -136,6 +138,7 @@ function Columns({
   area,
   hidden,
 }: Extract<ReportChartProps, { kind: "columns" }> & { area: Area; hidden: boolean }) {
+  const uiText = useText();
   const chart = columnChart(groups, area);
   // As many labels as fit without touching: about 6px a character at this size.
   const every = labelEvery(
@@ -154,7 +157,7 @@ function Columns({
           )}
           {i % every === 0 && (
             <text x={g.x + g.width / 2} y={area.height - 5} fontSize={10} fill="var(--muted)" textAnchor="middle">
-              {g.label}
+              {uiText(g.label ?? "")}
             </text>
           )}
         </g>

@@ -1,5 +1,6 @@
 "use client";
 
+import { directionOf } from "@/lib/i18n/languages";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,8 +13,7 @@ export default function QrSignIn({ approve = false, destination = "/" }: { appro
 }
 
 function Request({ destination }: { destination: string }) {
-  const { language } = useLanguage();
-  const pt = language === "pt";
+  const { language, m } = useLanguage();
   const router = useRouter();
   const canvas = useRef<HTMLCanvasElement>(null);
   const [request, setRequest] = useState<Extract<Awaited<ReturnType<typeof createQrSignIn>>, { kind: "created" }> | null>(null);
@@ -54,23 +54,23 @@ function Request({ destination }: { destination: string }) {
     return () => { stopped = true; clearTimeout(timer); };
   }, [request, status, destination, router]);
 
-  return <div className="space-y-4">
-    <h1 className="text-2xl">{pt ? "Entrar com QR" : "Sign in with QR"}</h1>
-    <p>{pt ? "No telemóvel onde já entraste, usa a câmara para ler este QR. Abre a ligação, escreve o número abaixo e aprova." : "Use the camera on your signed-in phone to scan this QR. Open the link, enter the number below and approve."}</p>
-    <p className="text-sm text-[var(--muted)]">{pt ? "Os dois aparelhos têm de abrir o mesmo site. A sessão do browser pode ser diferente da sessão da app Android." : "Both devices must open the same site. Your browser may have a different session from the Android app."}</p>
+  return <div translate="no" lang={language} dir={directionOf(language)} className="space-y-4">
+    <h1 className="text-2xl">{m.qr.title}</h1>
+    <p>{m.qr.instructions}</p>
+    <p className="text-sm text-[var(--muted)]">{m.qr.sameSite}</p>
     {status === "waiting" && request && <>
-      <canvas ref={canvas} role="img" aria-label={pt ? "QR para aprovar a entrada" : "QR to approve sign-in"} className="mx-auto max-w-full" />
-      <p className="text-center text-3xl font-mono tracking-widest" aria-label={pt ? "Número de confirmação" : "Confirmation number"}>{request.code}</p>
-      <p role="status" className="text-center">{pt ? `À espera de aprovação — ${seconds}s` : `Waiting for approval — ${seconds}s`}</p>
+      <canvas ref={canvas} role="img" aria-label={m.qr.qrLabel} className="mx-auto max-w-full" />
+      <p className="text-center text-3xl font-mono tracking-widest" aria-label={m.qr.numberLabel}>{request.code}</p>
+      <p role="status" className="text-center">{`${m.qr.waiting} ${seconds}s`}</p>
     </>}
-    {status === "expired" && <p role="status">{pt ? "O pedido expirou ou deixou de ser válido. Cria outro QR." : "The request expired or is no longer valid. Create another QR."}</p>}
-    {status === "error" && <p role="alert">{pt ? "Não foi possível continuar. Tenta outra vez." : "Could not continue. Please try again."}</p>}
-    {status !== "waiting" && <button className="btn w-full" disabled={busy} onClick={() => void start()}>{pt ? "Mostrar novo QR" : "Show new QR"}</button>}
+    {status === "expired" && <p role="status">{m.qr.expired}</p>}
+    {status === "error" && <p role="alert">{m.qr.error}</p>}
+    {status !== "waiting" && <button className="btn w-full" disabled={busy} onClick={() => void start()}>{m.qr.newQr}</button>}
     <button className="btn-secondary w-full" disabled={busy} onClick={async () => {
       setBusy(true);
       try { await cancelQrSignIn(); router.replace(`/login?next=${encodeURIComponent(safeReturnPath(destination))}`); }
       catch { setStatus("error"); setBusy(false); }
-    }}>{pt ? "Cancelar e usar palavra-passe" : "Cancel and use password"}</button>
+    }}>{m.qr.cancel}</button>
   </div>;
 }
 
@@ -89,8 +89,7 @@ function ApprovalPage() {
 }
 
 function Approve({ fragment }: { fragment: string }) {
-  const { language } = useLanguage();
-  const pt = language === "pt";
+  const { language, m } = useLanguage();
   const [account, setAccount] = useState<string | null>(null);
   const match = /^#([a-f0-9]{64})\.([a-f0-9]{64})$/.exec(fragment);
   const token = match ? { id: match[1], approval: match[2] } : null;
@@ -105,24 +104,24 @@ function Approve({ fragment }: { fragment: string }) {
     }).catch(() => { if (!stopped) setStatus("error"); });
     return () => { stopped = true; };
   }, []);
-  return <div className="space-y-4">
-    <h1 className="text-2xl">{pt ? "Aprovar outro aparelho" : "Approve another device"}</h1>
-    {!token && <p role="alert">{pt ? "Abre esta página lendo o QR no outro aparelho." : "Open this page by scanning the QR on the other device."}</p>}
-    <p>{pt ? "Só aproves um aparelho teu, à tua frente. Nunca aproves um QR enviado por outra pessoa: dá acesso à tua conta e aos teus dados." : "Only approve your own device in front of you. Never approve a QR someone sent you: it grants access to your account and data."}</p>
-    {account && <p className="break-all">{pt ? "Conta: " : "Account: "}{account}</p>}
-    {status === "sign-in" && <p><a className="btn" href="/login" target="_blank" rel="noopener">{pt ? "Entrar neste browser primeiro" : "Sign in to this browser first"}</a>{pt ? " Depois, volta a ler o QR." : " Then scan the QR again."}</p>}
+  return <div translate="no" lang={language} dir={directionOf(language)} className="space-y-4">
+    <h1 className="text-2xl">{m.qr.approveTitle}</h1>
+    {!token && <p role="alert">{m.qr.scanFirst}</p>}
+    <p>{m.qr.warning}</p>
+    {account && <p className="break-all">{m.qr.account}<bdi translate="no">{account}</bdi></p>}
+    {status === "sign-in" && <p><a className="btn" href="/login" target="_blank" rel="noopener">{m.qr.signInFirst}</a>{m.qr.scanAgain}</p>}
     {(status === "ready" || status === "invalid") && token && <form className="space-y-3" onSubmit={async (e) => {
       e.preventDefault(); if (busy) return; setBusy(true);
       try { setStatus(await approveQrSignIn(token.id, token.approval, code)); }
       catch { setStatus("error"); }
       finally { setBusy(false); }
     }}>
-      <label className="block">{pt ? "Número de 6 dígitos no outro aparelho" : "6-digit number on the other device"}
+      <label className="block">{m.qr.sixDigits}
         <input className="input w-full" inputMode="numeric" autoComplete="off" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(e) => setCode(e.target.value)} />
       </label>
-      <button className="btn w-full" disabled={busy}>{pt ? "Aprovar entrada" : "Approve sign-in"}</button>
+      <button className="btn w-full" disabled={busy}>{m.qr.approve}</button>
     </form>}
-    <p role="status">{status === "approved" ? (pt ? "Aprovado. O outro aparelho vai entrar." : "Approved. The other device will sign in.") : status === "invalid" ? (pt ? "Número incorreto, pedido inválido ou expirado. Depois de 5 tentativas, cria outro QR." : "Wrong number, invalid or expired request. After 5 attempts, create another QR.") : status === "loading" ? (pt ? "A verificar…" : "Checking…") : status === "error" ? (pt ? "Falha de ligação. Volta a abrir o QR." : "Connection failed. Open the QR again.") : ""}</p>
-    <Link className="btn-secondary" href="/">{pt ? "Voltar sem aprovar" : "Return without approving"}</Link>
+    <p role="status">{status === "approved" ? (m.qr.approved) : status === "invalid" ? (m.qr.invalid) : status === "loading" ? (m.qr.checking) : status === "error" ? (m.qr.connectionFailed) : ""}</p>
+    <Link className="btn-secondary" href="/">{m.qr.return}</Link>
   </div>;
 }

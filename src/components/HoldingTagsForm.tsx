@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import PlaylistPicker from "@/components/PlaylistPicker";
 import { useState } from "react";
 import {
@@ -48,6 +49,7 @@ export default function HoldingTagsForm({
   playlistIds: string[];
   playlists: { id: string; name: string }[];
 }) {
+  const uiText = useText();
   const [open, setOpen] = useState(false);
   // Tracked rather than left uncontrolled because the annual-rate field below
   // is named after the type: pick "ETF" and the field has to stop saying APR.
@@ -61,12 +63,12 @@ export default function HoldingTagsForm({
     current: string | null
   ) => (
     <label className="block text-[10px]">
-      <span className="text-[var(--muted)]">{label}</span>
+      <span className="text-[var(--muted)]">{uiText(label ?? "")}</span>
       <select name={name} defaultValue={current ?? ""} className="input input-narrow text-xs py-1 mt-0.5">
         <option value="">—</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
-            {o.label}
+            {uiText(o.label ?? "")}
           </option>
         ))}
       </select>
@@ -81,7 +83,7 @@ export default function HoldingTagsForm({
             tags — and its absence is what the button offers to fix. */}
         {assetType && (
           <span className="badge" style={{ color: "var(--muted)" }}>
-            {tagLabel(assetType, "assetType") ?? assetType}
+            {uiText(tagLabel(assetType, "assetType") ?? assetType ?? "")}
           </span>
         )}
         <HoldingTags
@@ -96,7 +98,7 @@ export default function HoldingTagsForm({
           className="text-[10px]"
           style={{ color: "var(--accent)" }}
         >
-          {open ? "Cancel" : assetType === null ? "Set type" : "Edit tags"}
+          {open ? uiText("Cancel") : assetType === null ? uiText("Set type") : uiText("Edit tags")}
         </button>
       </div>
 
@@ -104,7 +106,7 @@ export default function HoldingTagsForm({
         <form action={action} className="mt-2 flex flex-wrap gap-2 items-end">
           <input type="hidden" name="id" value={id} />
           <label className="block text-[10px]">
-            <span className="text-[var(--muted)]">Type</span>
+            <span className="text-[var(--muted)]">{uiText("Type")}</span>
             <select
               name="assetType"
               value={type}
@@ -114,7 +116,7 @@ export default function HoldingTagsForm({
               <option value="">—</option>
               {ASSET_TYPES.map((o) => (
                 <option key={o.value} value={o.value}>
-                  {o.label}
+                  {uiText(o.label ?? "")}
                 </option>
               ))}
             </select>
@@ -128,7 +130,7 @@ export default function HoldingTagsForm({
 
           {yieldLabel && (
             <label className="block text-[10px]">
-              <span className="text-[var(--muted)]">{yieldLabel} %</span>
+              <span className="text-[var(--muted)]">{uiText(yieldLabel ?? "")} %</span>
               <input
                 name="apr"
                 type="number"
@@ -140,9 +142,7 @@ export default function HoldingTagsForm({
             </label>
           )}
 
-          <button type="submit" className="btn text-xs py-1">
-            Save
-          </button>
+          <button type="submit" className="btn text-xs py-1">{uiText("Save")}</button>
         </form>
       )}
     </div>

@@ -12,7 +12,11 @@
  * Pure: who runs the site arrives as an argument (`operatorFrom` reads it from
  * the environment), so the same text is testable without a server.
  */
-import type { Language } from "@/lib/i18n/languages";
+import { localeOf, type Language } from "@/lib/i18n/languages";
+import { messagesFor } from "@/lib/i18n/messages";
+import { interpolate } from "@/lib/i18n/catalogs";
+import { legalCatalogs } from "./catalogs";
+import { legalTemplate } from "./translation";
 import type { LegalKind } from "./paths";
 
 export { LEGAL_KINDS, LEGAL_PATHS, type LegalKind } from "./paths";
@@ -53,13 +57,35 @@ export function operatorFrom(env: { [name: string]: string | undefined }): Opera
 }
 
 export function legalDocument(kind: LegalKind, language: Language, operator: Operator): LegalDocument {
-  const text = language === "pt" ? pt(operator) : en(operator);
-  return text[kind];
+  if (language === "pt") return pt(operator)[kind];
+  if (language === "en") return en(operator)[kind];
+  // Translate fixed templates before inserting identity, never user content.
+  const template = en({ name: operator.name ? "{operatorName}" : null, email: operator.email ? "{operatorEmail}" : null })[kind];
+  const m = messagesFor(language);
+  const values = {
+    operatorName: operator.name ?? "", operatorEmail: operator.email ?? "",
+    settings: m.nav.settings, account: m.settings.accountTitle,
+    deleteAccount: m.account.deleteStart, forgot: m.auth.forgot,
+    yourData: m.labels["Your data"],
+  };
+  const translate = (text: string) => {
+    const key = legalTemplate(text);
+    const translated = legalCatalogs[language][key];
+    if (!translated) throw new Error(`Missing legal translation: ${language}: ${key}`);
+    return interpolate(translated, values);
+  };
+  return {
+    title: translate(template.title), intro: translate(template.intro), updatedLabel: translate(template.updatedLabel),
+    sections: template.sections.map(section => ({ heading: translate(section.heading), paragraphs: section.paragraphs.map(translate) })),
+  };
 }
 
 /** "6 October 2026" / "6 de outubro de 2026". */
 export function updatedOn(language: Language): string {
   const [y, m, d] = LEGAL_UPDATED.split("-").map(Number);
+  if (language !== "en" && language !== "pt") {
+    return new Intl.DateTimeFormat(localeOf(language), { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, d)));
+  }
   const months =
     language === "pt"
       ? ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]

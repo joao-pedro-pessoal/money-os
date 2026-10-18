@@ -1,3 +1,6 @@
+"use client";
+
+import { useText } from "@/components/useText";
 import { Money } from "@/components/PrivacyContext";
 import Link from "next/link";
 import type { MonthFlows } from "@/lib/accounting/fixedVariable";
@@ -15,12 +18,13 @@ function Bar({
   currency: string;
   colour: string;
 }) {
+  const uiText = useText();
   const pct = (n: number) => (max > 0 ? (n / max) * 100 : 0);
 
   return (
     <div>
       <div className="flex justify-between items-baseline text-xs mb-1">
-        <span className="text-[var(--muted)]">{label}</span>
+        <span className="text-[var(--muted)]">{uiText(label ?? "")}</span>
         <Money value={split.total} currency={currency} />
       </div>
       <div className="h-3 rounded-full bg-[var(--surface-2)] overflow-hidden flex">
@@ -33,9 +37,9 @@ function Bar({
         />
       </div>
       <div className="flex gap-3 text-[10px] text-[var(--muted)] mt-1 flex-wrap">
-        <span>fixed {split.fixed.toFixed(0)}</span>
-        <span>variable {split.variable.toFixed(0)}</span>
-        {split.unclassified > 0 && <span>unclassified {split.unclassified.toFixed(0)}</span>}
+        <span>{uiText("fixed ")}{split.fixed.toFixed(0)}</span>
+        <span>{uiText("variable ")}{split.variable.toFixed(0)}</span>
+        {split.unclassified > 0 && <span>{uiText("unclassified ")}{split.unclassified.toFixed(0)}</span>}
       </div>
     </div>
   );
@@ -56,27 +60,28 @@ export default function FlowBars({
   shape: { flows: MonthFlows; unclassified: { id: string; name: string; amount: number }[] };
   currency: string;
 }) {
+  const uiText = useText();
   const { flows } = shape;
   const max = Math.max(flows.income.total, flows.expenses.total, 1);
 
   return (
     <div className="space-y-4">
-      <Bar label="In" split={flows.income} max={max} currency={currency} colour="var(--green)" />
-      <Bar label="Out" split={flows.expenses} max={max} currency={currency} colour="var(--red)" />
+      <Bar label={uiText("In")} split={flows.income} max={max} currency={currency} colour="var(--green)" />
+      <Bar label={uiText("Out")} split={flows.expenses} max={max} currency={currency} colour="var(--red)" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
         <div>
-          <div className="text-[10px] text-[var(--muted)]">Committed floor</div>
+          <div className="text-[10px] text-[var(--muted)]">{uiText("Committed floor")}</div>
           <div
             className="text-sm font-medium"
             style={{ color: flows.committedNet < 0 ? "var(--red)" : undefined }}
           >
             <Money value={flows.committedNet} currency={currency} />
           </div>
-          <div className="text-[10px] text-[var(--muted)]">fixed in − fixed out</div>
+          <div className="text-[10px] text-[var(--muted)]">{uiText("fixed in − fixed out")}</div>
         </div>
         <div>
-          <div className="text-[10px] text-[var(--muted)]">Net this month</div>
+          <div className="text-[10px] text-[var(--muted)]">{uiText("Net this month")}</div>
           <div
             className="text-sm font-medium"
             style={{ color: flows.discretionary < 0 ? "var(--red)" : undefined }}
@@ -87,22 +92,16 @@ export default function FlowBars({
       </div>
 
       {flows.committedNet < 0 && (
-        <div className="text-[10px] text-[var(--amber)]">
-          Your fixed costs are higher than your fixed income, so the month needs variable earnings
-          just to break even.
-        </div>
+        <div className="text-[10px] text-[var(--amber)]">{uiText("Your fixed costs are higher than your fixed income, so the month needs variable earnings just to break even.")}</div>
       )}
 
       {/* A mixed category lands entirely on one side. Naming the biggest
           unclassified ones is more useful than a generic nudge. */}
       {shape.unclassified.length > 0 && (
-        <div className="text-[10px] text-[var(--muted)]">
-          Not marked fixed or variable yet:{" "}
+        <div className="text-[10px] text-[var(--muted)]">{uiText("Not marked fixed or variable yet:")}{" "}
           <span translate="no">{shape.unclassified.slice(0, 3).map((c) => c.name).join(", ")}</span>
           {shape.unclassified.length > 3 && ` +${shape.unclassified.length - 3}`}.{" "}
-          <Link href="/settings/categories" className="text-[var(--accent)]">
-            Classify
-          </Link>
+          <Link href="/settings/categories" className="text-[var(--accent)]">{uiText("Classify")}</Link>
         </div>
       )}
     </div>

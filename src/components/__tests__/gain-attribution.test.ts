@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { attribute } from "@/lib/portfolio/attribution";
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 
 vi.mock("@/actions/dividends", () => ({
   getGainAttribution: async () => ({

@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { getStatistics } from "@/actions/stats";
 import { Money } from "@/components/PrivacyContext";
@@ -10,6 +11,7 @@ import ProjectionScenario from "@/components/ProjectionScenario";
 import IndependencePlan from "@/components/IndependencePlan";
 
 export default async function StatisticsPage() {
+  const uiText = await textForRequest();
   const s = await getStatistics();
   const c = s.baseCurrency;
   const recent = s.flows.slice(-3);
@@ -18,7 +20,7 @@ export default async function StatisticsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold">Analytics</h1>
+      <h1 className="text-lg font-semibold">{uiText("Analytics")}</h1>
       <PageTabs tabs={ANALYTICS_TABS} />
 
       {/* Every figure on this page is converted to the base currency first.
@@ -26,60 +28,54 @@ export default async function StatisticsPage() {
           counted as though it were already in {c}. */}
       {s.unconverted.length > 0 && (
         <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
-          <div className="text-sm">Some amounts could not be converted to {c}</div>
-          <div className="text-xs text-[var(--muted)] mt-1">
-            No exchange rate for {s.unconverted.join(", ")}. Transactions, balances and bucket
-            allocations in {s.unconverted.length === 1 ? "that currency" : "those currencies"} are
-            left out of every figure below rather than counted as {c}. Add a rate in Settings.
-          </div>
+          <div className="text-sm">{uiText("Some amounts could not be converted to ")}{c}</div>
+          <div className="text-xs text-[var(--muted)] mt-1">{uiText("No exchange rate for ")}{s.unconverted.join(", ")}{uiText(". Transactions, balances and bucket allocations in ")}{s.unconverted.length === 1 ? uiText("that currency") : uiText("those currencies")}{uiText(" are left out of every figure below rather than counted as ")}{c}{uiText(". Add a rate in Settings.")}</div>
         </div>
       )}
 
       <TrendsViews progress={<>
-        <p className="text-sm text-[var(--muted)]">Understand what you have saved and how your net worth has changed.</p>
+        <p className="text-sm text-[var(--muted)]">{uiText("Understand what you have saved and how your net worth has changed.")}</p>
       {/* ---- Savings & cash flow ---- */}
       <Section
         title="Your monthly cash flow" persistKey="Saving & spending"
         defaultOpen
         essential
-        summary={s.avgSavingsRate === null ? undefined : `${s.avgSavingsRate.toFixed(1)}% saved`}
+        summary={s.avgSavingsRate === null ? undefined : uiText("{0}% saved", { "0": s.avgSavingsRate.toFixed(1) })}
       >
-        <p className="text-xs text-[var(--muted)] mb-4">Income minus expenses is what you kept that month. Transfers between your accounts are excluded.</p>
+        <p className="text-xs text-[var(--muted)] mb-4">{uiText("Income minus expenses is what you kept that month. Transfers between your accounts are excluded.")}</p>
         {s.flows.length === 0 ? (
-          <div className="text-sm text-[var(--muted)] py-6 text-center">
-            No income or expenses recorded yet — add transactions or import a statement.
-          </div>
+          <div className="text-sm text-[var(--muted)] py-6 text-center">{uiText("No income or expenses recorded yet — add transactions or import a statement.")}</div>
         ) : (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               <div>
-                <div className="text-xs text-[var(--muted)] mb-1">Income kept</div>
+                <div className="text-xs text-[var(--muted)] mb-1">{uiText("Income kept")}</div>
                 <div className="text-lg font-semibold">
                   {s.avgSavingsRate === null ? "—" : `${s.avgSavingsRate.toFixed(1)}%`}
                 </div>
-                <div className="text-[10px] text-[var(--muted)]">Average monthly rate across recorded months with income</div>
+                <div className="text-[10px] text-[var(--muted)]">{uiText("Average monthly rate across recorded months with income")}</div>
               </div>
-              <Stat label="Average monthly surplus" value={s.avgMonthlySaving} currency={c} note={basis} />
-              <Stat label="Average monthly spending" value={s.avgMonthlyExpenses} currency={c} note={basis} />
+              <Stat label={uiText("Average monthly surplus")} value={s.avgMonthlySaving} currency={c} note={basis} />
+              <Stat label={uiText("Average monthly spending")} value={s.avgMonthlyExpenses} currency={c} note={basis} />
               <div>
-                <div className="text-xs text-[var(--muted)] mb-1">Cash covers</div>
+                <div className="text-xs text-[var(--muted)] mb-1">{uiText("Cash covers")}</div>
                 <div className="text-lg font-semibold">
-                  {s.runwayMonths === null ? "—" : `${s.runwayMonths.toFixed(1)} months`}
+                  {s.runwayMonths === null ? "—" : uiText("{0} months", { "0": s.runwayMonths.toFixed(1) })}
                 </div>
-                <div className="text-[10px] text-[var(--muted)]">Current cash divided by average monthly spending</div>
+                <div className="text-[10px] text-[var(--muted)]">{uiText("Current cash divided by average monthly spending")}</div>
               </div>
             </div>
 
-            <details className="mt-3"><summary className="cursor-pointer text-sm py-2">Monthly breakdown ({Math.min(s.flows.length, 12)} months)</summary>
+            <details className="mt-3"><summary className="cursor-pointer text-sm py-2">{uiText("Monthly breakdown (")}{Math.min(s.flows.length, 12)}{uiText(" months)")}</summary>
             <div className="overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
                 <thead>
                   <tr>
-                    <th>Month</th>
-                    <th className="text-right">Income</th>
-                    <th className="text-right">Expenses</th>
-                    <th className="text-right">Surplus</th>
-                    <th className="text-right">Saved</th>
+                    <th>{uiText("Month")}</th>
+                    <th className="text-right">{uiText("Income")}</th>
+                    <th className="text-right">{uiText("Expenses")}</th>
+                    <th className="text-right">{uiText("Surplus")}</th>
+                    <th className="text-right">{uiText("Saved")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -109,18 +105,16 @@ export default async function StatisticsPage() {
 
       {/* ---- Returns by period ---- */}
       <Section title="Net worth changes" persistKey="How the money has moved" defaultOpen essential>
-        <p className="text-xs text-[var(--muted)] mb-4">Change in your recorded net worth over each period. Includes money added or withdrawn as well as market movements; this is not an investment return.</p>
+        <p className="text-xs text-[var(--muted)] mb-4">{uiText("Change in your recorded net worth over each period. Includes money added or withdrawn as well as market movements; this is not an investment return.")}</p>
         {s.historyPoints < 2 ? (
-          <div className="text-sm text-[var(--muted)] py-6 text-center">
-            Not enough history yet. This fills in as balances change — each update adds a point.
-          </div>
+          <div className="text-sm text-[var(--muted)] py-6 text-center">{uiText("Not enough history yet. This fills in as balances change — each update adds a point.")}</div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {s.returns.map((r) => (
               <div key={r.key}>
-                <div className="text-xs text-[var(--muted)] mb-1">{r.label}</div>
+                <div className="text-xs text-[var(--muted)] mb-1">{uiText(r.label ?? "")}</div>
                 {r.change === null ? (
-                  <div className="text-sm text-[var(--muted)]">Not enough history</div>
+                  <div className="text-sm text-[var(--muted)]">{uiText("Not enough history")}</div>
                 ) : (
                   <>
                     <div
@@ -150,33 +144,33 @@ export default async function StatisticsPage() {
         <Section
           title="Falls in net worth" persistKey="Worst fall so far"
           defaultOpen
-          summary={`${s.drawdown.maxDrawdownPercent.toFixed(1)}% from peak`}
+          summary={uiText("{0}% from peak", { "0": s.drawdown.maxDrawdownPercent.toFixed(1) })}
         >
-          <p className="text-xs text-[var(--muted)] mb-4">The largest recorded fall from a previous high. Withdrawals and account changes can also cause a fall.</p>
+          <p className="text-xs text-[var(--muted)] mb-4">{uiText("The largest recorded fall from a previous high. Withdrawals and account changes can also cause a fall.")}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Stat
-              label="Biggest drop"
+              label={uiText("Biggest drop")}
               value={s.drawdown.maxDrawdown}
               currency={c}
               className="text-[var(--red)]"
               note={`${s.drawdown.maxDrawdownPercent.toFixed(1)}% from the peak`}
             />
             <div>
-              <div className="text-xs text-[var(--muted)] mb-1">From peak</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("From peak")}</div>
               <div className="text-sm">
                 <Money value={s.drawdown.peak} currency={c} />
               </div>
               <div className="text-xs text-[var(--muted)]">{s.drawdown.peakDate}</div>
             </div>
             <div>
-              <div className="text-xs text-[var(--muted)] mb-1">Down to</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("Down to")}</div>
               <div className="text-sm">
                 <Money value={s.drawdown.trough} currency={c} />
               </div>
               <div className="text-xs text-[var(--muted)]">{s.drawdown.troughDate}</div>
             </div>
             <Stat
-              label="Below all-time high"
+              label={uiText("Below all-time high")}
               value={s.drawdown.currentDrawdown}
               currency={c}
               className={s.drawdown.currentDrawdown > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}
@@ -192,20 +186,20 @@ export default async function StatisticsPage() {
 
 
         <Section title="Investment return vs the market" persistKey="market-comparison" defaultOpen={false}>
-          <p className="text-xs text-[var(--muted)] mb-3">Compare investment performance after removing the effect of deposits and withdrawals.</p>
+          <p className="text-xs text-[var(--muted)] mb-3">{uiText("Compare investment performance after removing the effect of deposits and withdrawals.")}</p>
           <BenchmarkCard />
         </Section>
         <Section title="How your money is spread" persistKey="concentration" defaultOpen={false}>
-          <p className="text-xs text-[var(--muted)] mb-3">See how much is concentrated in one account or position.</p>
+          <p className="text-xs text-[var(--muted)] mb-3">{uiText("See how much is concentrated in one account or position.")}</p>
       {/* ---- Concentration ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ConcentrationCard
-          title="Across accounts"
+          title={uiText("Across accounts")}
           data={s.concentrationByAccount}
           what="account"
         />
         <ConcentrationCard
-          title="Across positions"
+          title={uiText("Across positions")}
           data={s.concentrationByPosition}
           what="position"
         />
@@ -214,7 +208,7 @@ export default async function StatisticsPage() {
 
         </Section>
       </>} scenarios={<>
-        <p className="text-sm text-[var(--muted)]">Explore assumptions about the future. These examples are separate from your recorded progress.</p>
+        <p className="text-sm text-[var(--muted)]">{uiText("Explore assumptions about the future. These examples are separate from your recorded progress.")}</p>
         <ProjectionScenario current={s.netWorth.total} monthlySaving={s.flows.length > 0 ? s.avgMonthlySaving : null} basis={basis} currency={c} />
         <IndependencePlan
           current={s.netWorth.total}
@@ -230,7 +224,7 @@ export default async function StatisticsPage() {
           defaultOpen
           summary={`${s.bucketProgress.length} ${s.bucketProgress.length === 1 ? "goal" : "goals"}`}
         >
-          <p className="text-xs text-[var(--muted)] mb-4">Each estimate assumes your entire average monthly surplus goes to that goal alone. These dates do not describe a plan to fund all goals at once.</p>
+          <p className="text-xs text-[var(--muted)] mb-4">{uiText("Each estimate assumes your entire average monthly surplus goes to that goal alone. These dates do not describe a plan to fund all goals at once.")}</p>
           <div className="space-y-3">
             {s.bucketProgress.map((b) => (
               <div key={b.id}>
@@ -239,11 +233,11 @@ export default async function StatisticsPage() {
                   <span className="text-[var(--muted)]">
                     <Money value={b.current} currency={c} /> / <Money value={b.target} currency={c} />
                     {b.months === 0 ? (
-                      <span className="text-[var(--green)]"> · reached</span>
+                      <span className="text-[var(--green)]">{uiText(" · reached")}</span>
                     ) : b.months === null ? (
-                      <span className="text-[var(--amber)]"> · not at the current rate</span>
+                      <span className="text-[var(--amber)]">{uiText(" · not at the current rate")}</span>
                     ) : (
-                      <span> · ~{b.months} {b.months === 1 ? "month" : "months"}</span>
+                      <span> · ~{b.months} {b.months === 1 ? uiText("month") : uiText("months")}</span>
                     )}
                   </span>
                 </div>
@@ -267,7 +261,7 @@ export default async function StatisticsPage() {
   );
 }
 
-function Stat({
+async function Stat({
   label,
   value,
   currency,
@@ -280,9 +274,10 @@ function Stat({
   className?: string;
   note?: string;
 }) {
+  const uiText = await textForRequest();
   return (
     <div>
-      <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
+      <div className="text-xs text-[var(--muted)] mb-1">{uiText(label ?? "")}</div>
       <div className={`text-lg font-semibold truncate ${className}`}>
         <Money value={value} currency={currency} />
       </div>
@@ -291,7 +286,7 @@ function Stat({
   );
 }
 
-function ConcentrationCard({
+async function ConcentrationCard({
   title,
   data,
   what,
@@ -300,12 +295,13 @@ function ConcentrationCard({
   data: { index: number; largestShare: number; largestName: string | null; effectiveCount: number };
   what: string;
 }) {
+  const uiText = await textForRequest();
   // Each instance is titled differently, so Section's default persistKey keeps
   // "Across accounts" and "Across positions" folding independently.
   if (data.largestName === null) {
     return (
-      <Section title={title} defaultOpen summary="nothing yet">
-        <div className="text-sm text-[var(--muted)] py-4 text-center">Nothing to measure yet.</div>
+      <Section title={title} defaultOpen summary={uiText("nothing yet")}>
+        <div className="text-sm text-[var(--muted)] py-4 text-center">{uiText("Nothing to measure yet.")}</div>
       </Section>
     );
   }
@@ -314,27 +310,24 @@ function ConcentrationCard({
   const risky = data.largestShare > 25;
 
   return (
-    <Section title={title} defaultOpen summary={`${data.largestShare.toFixed(1)}% largest`}>
+    <Section title={title} defaultOpen summary={uiText("{0}% largest", { "0": data.largestShare.toFixed(1) })}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <div className="text-xs text-[var(--muted)] mb-1">Biggest {what}</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("Biggest ")}{what}</div>
           <div className={`text-lg font-semibold ${risky ? "text-[var(--amber)]" : ""}`}>
             {data.largestShare.toFixed(1)}%
           </div>
           <div className="text-xs text-[var(--muted)] truncate">{data.largestName}</div>
         </div>
         <div>
-          <div className="text-xs text-[var(--muted)] mb-1">Equivalent equal-sized spread</div>
+          <div className="text-xs text-[var(--muted)] mb-1">{uiText("Equivalent equal-sized spread")}</div>
           <div className="text-lg font-semibold">{data.effectiveCount.toFixed(1)}</div>
-          <div className="text-[10px] text-[var(--muted)]">
-            behaves like this many equal {what}s
-          </div>
+          <div className="text-[10px] text-[var(--muted)]">{uiText("behaves like this many equal ")}{what}{uiText("s")}</div>
         </div>
       </div>
       {risky && (
         <div className="text-xs text-[var(--amber)] mt-3">
-          {data.largestShare.toFixed(0)}% sits in {data.largestName}. A large share of the measured total depends on this one place.
-        </div>
+          {data.largestShare.toFixed(0)}{uiText("% sits in ")}{data.largestName}{uiText(". A large share of the measured total depends on this one place.")}</div>
       )}
     </Section>
   );

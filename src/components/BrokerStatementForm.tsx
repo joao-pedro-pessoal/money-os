@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -29,6 +30,7 @@ export default function BrokerStatementForm({
   /** Wrapped by the page: a form action may not return a value. */
   action: (formData: FormData) => Promise<void>;
 }) {
+  const uiText = useText();
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
@@ -72,7 +74,7 @@ export default function BrokerStatementForm({
     try {
       setPreview(await previewBrokerStatement(content, accountId));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong reading that file.");
+      setError(e instanceof Error ? e.message : uiText("Something went wrong reading that file."));
     } finally {
       setChecking(false);
     }
@@ -101,7 +103,7 @@ export default function BrokerStatementForm({
       <input type="hidden" name="statement" value={text} />
 
       <label className="block text-xs">
-        <span className="text-[var(--muted)]">Which account is this?</span>
+        <span className="text-[var(--muted)]">{uiText("Which account is this?")}</span>
         <select
           name="accountId"
           value={accountId}
@@ -129,21 +131,19 @@ export default function BrokerStatementForm({
               borderBottom: mode === m ? "1px solid var(--accent)" : "1px solid transparent",
             }}
           >
-            {m === "file" ? "Upload a file" : "Paste the text"}
+            {m === "file" ? uiText("Upload a file") : uiText("Paste the text")}
           </button>
         ))}
       </div>
 
       {mode === "file" ? (
         <label className="block text-xs">
-          <span className="text-[var(--muted)]">The transaction export, as CSV</span>
+          <span className="text-[var(--muted)]">{uiText("The transaction export, as CSV")}</span>
           <input type="file" accept=".csv,text/csv" onChange={onFile} className="input mt-1" />
         </label>
       ) : (
         <label className="block text-xs">
-          <span className="text-[var(--muted)]">
-            Paste the rows, including the header line with the column names
-          </span>
+          <span className="text-[var(--muted)]">{uiText("Paste the rows, including the header line with the column names")}</span>
           <textarea
             value={text}
             onChange={(e) => {
@@ -156,7 +156,7 @@ export default function BrokerStatementForm({
             onBlur={(e) => check(e.target.value)}
             rows={8}
             spellCheck={false}
-            placeholder={"Date;Type;ISIN;Quantity;Amount\n2026-01-15;Buy;IE00B4L5Y983;2,5;-251,00"}
+            placeholder={uiText("Date;Type;ISIN;Quantity;Amount\n2026-01-15;Buy;IE00B4L5Y983;2,5;-251,00")}
             className="input mt-1 font-mono text-[11px]"
           />
         </label>
@@ -165,7 +165,7 @@ export default function BrokerStatementForm({
       {(fileName || (mode === "paste" && rows > 0)) && (
         <div className="text-xs text-[var(--muted)]">
           {fileName ? `${fileName} — ` : ""}
-          {rows} row{rows === 1 ? "" : "s"}.
+          {uiText(rows === 1 ? "{count} row" : "{count} rows", { count: rows })}.
           {/* The header line is not a row, and someone pasting a single record
               without it will otherwise be told there are 0 rows. */}
           {rows === 0 && " Did the header line come along with it?"}
@@ -177,35 +177,28 @@ export default function BrokerStatementForm({
             to be optional, and the very first real use was Import pressed on a
             bank statement, which threw a 500 at a page that had every piece of
             information needed to say "wrong form" politely. */}
-        <button type="submit" className="btn" disabled={preview?.ok !== true}>
-          Import statement
-        </button>
-        {checking && <span className="text-xs text-[var(--muted)]">Reading…</span>}
+        <button type="submit" className="btn" disabled={preview?.ok !== true}>{uiText("Import statement")}</button>
+        {checking && <span className="text-xs text-[var(--muted)]">{uiText("Reading…")}</span>}
         {text !== "" && !checking && preview === null && (
           <button
             type="button"
             onClick={() => check(text)}
             className="text-xs"
             style={{ color: "var(--accent)" }}
-          >
-            Check the file
-          </button>
+          >{uiText("Check the file")}</button>
         )}
       </div>
 
       {error && (
         <div className="rounded-lg border border-[var(--border)] p-3 text-xs" style={{ color: "var(--red)" }}>
-          {error}
+          {uiText(error ?? "")}
         </div>
       )}
 
       {preview && !preview.ok && <UnreadableReport inspection={preview.inspection} />}
       {preview && preview.ok && <ReadableReport preview={preview} />}
 
-      <p className="text-[10px] text-[var(--muted)]">
-        Checking writes nothing. Importing the same file twice is safe: every row carries a key, and
-        one already stored is skipped rather than added again.
-      </p>
+      <p className="text-[10px] text-[var(--muted)]">{uiText("Checking writes nothing. Importing the same file twice is safe: every row carries a key, and one already stored is skipped rather than added again.")}</p>
     </form>
   );
 }
@@ -219,30 +212,25 @@ type Inspection = Extract<Preview, { ok: false }>["inspection"];
  * this is the list of things to teach it, and the headers are the vocabulary.
  */
 function UnreadableReport({ inspection }: { inspection: Inspection }) {
+  const uiText = useText();
   // The likeliest mistake on a page with two importers, and the one worth
   // naming: nothing is wrong with the file, it is simply in the wrong form.
   if (inspection.looksLikeBankStatement) {
     return (
       <div className="rounded-lg border border-[var(--border)] p-3 space-y-2 text-xs">
-        <div style={{ color: "var(--amber)" }}>This is a bank statement, not a broker one.</div>
-        <p className="text-[var(--muted)] leading-snug">
-          It has {inspection.headers.join(", ")} — money in and out, with no instrument, quantity or
-          ISIN, so there are no holdings to rebuild from it. Use the bank import at the top of this
-          page instead; it is the right tool for this file.
-        </p>
+        <div style={{ color: "var(--amber)" }}>{uiText("This is a bank statement, not a broker one.")}</div>
+        <p className="text-[var(--muted)] leading-snug">{uiText("It has ")}{inspection.headers.join(", ")}{uiText(" — money in and out, with no instrument, quantity or ISIN, so there are no holdings to rebuild from it. Use the bank import at the top of this page instead; it is the right tool for this file.")}</p>
       </div>
     );
   }
 
   return (
     <div className="rounded-lg border border-[var(--border)] p-3 space-y-2 text-xs">
-      <div style={{ color: "var(--amber)" }}>
-        This export can&apos;t be read yet — no column for {inspection.missingRequired.join(", ")}.
+      <div style={{ color: "var(--amber)" }}>{uiText("This export can't be read yet — no column for ")}{inspection.missingRequired.join(", ")}.
       </div>
 
       <div>
-        <div className="text-[var(--muted)] mb-1">
-          Columns in the file (separated by {describeDelimiter(inspection.delimiter)}):
+        <div className="text-[var(--muted)] mb-1">{uiText("Columns in the file (separated by ")}{describeDelimiter(inspection.delimiter)}):
         </div>
         <div className="flex flex-wrap gap-1">
           {inspection.headers.map((h) => (
@@ -253,10 +241,7 @@ function UnreadableReport({ inspection }: { inspection: Inspection }) {
         </div>
       </div>
 
-      <p className="text-[var(--muted)] leading-snug">
-        Nothing is wrong with your file. The importer just doesn&apos;t know these names yet — send
-        this list and they can be added.
-      </p>
+      <p className="text-[var(--muted)] leading-snug">{uiText("Nothing is wrong with your file. The importer just doesn't know these names yet — send this list and they can be added.")}</p>
     </div>
   );
 }
@@ -264,24 +249,20 @@ function UnreadableReport({ inspection }: { inspection: Inspection }) {
 type Readable = Extract<Preview, { ok: true }>;
 
 function ReadableReport({ preview }: { preview: Readable }) {
+  const uiText = useText();
   const { inspection } = preview;
 
   return (
     <div className="rounded-lg border border-[var(--border)] p-3 space-y-3 text-xs">
-      <div style={{ color: "var(--green)" }}>
-        Read {preview.total} row{preview.total === 1 ? "" : "s"} — {preview.toImport} new,{" "}
-        {preview.duplicates} already stored.
-      </div>
+      <div style={{ color: "var(--green)" }}>{uiText("Read ")}{uiText(preview.total === 1 ? "{count} row" : "{count} rows", { count: preview.total })} — {preview.toImport}{uiText(" new,")}{" "}
+        {preview.duplicates}{uiText(" already stored.")}</div>
 
       {/* Unrecognised type words, which is what a new broker actually costs.
           The rows are still readable; these particular ones would be skipped. */}
       {inspection.unknownKinds.length > 0 && (
         <div>
           <div style={{ color: "var(--amber)" }}>
-            {inspection.unknownKinds.length} type
-            {inspection.unknownKinds.length === 1 ? "" : "s"} not recognised — those rows would be
-            skipped:
-          </div>
+            {uiText(inspection.unknownKinds.length === 1 ? "{count} type" : "{count} types", { count: inspection.unknownKinds.length })}{uiText(" not recognised — those rows would be skipped:")}</div>
           <div className="flex flex-wrap gap-1 mt-1">
             {inspection.unknownKinds.map((k) => (
               <code
@@ -298,11 +279,10 @@ function ReadableReport({ preview }: { preview: Readable }) {
 
       {preview.rejected.length > 0 && (
         <div>
-          <div style={{ color: "var(--amber)" }}>{preview.rejected.length} rows rejected:</div>
+          <div style={{ color: "var(--amber)" }}>{preview.rejected.length}{uiText(" rows rejected:")}</div>
           <ul className="mt-1 space-y-0.5 text-[var(--muted)]">
             {preview.rejected.slice(0, 4).map((r) => (
-              <li key={r.line}>
-                Line {r.line}: {r.reason}
+              <li key={r.line}>{uiText("Line ")}{r.line}: {uiText(r.reason ?? "")}
               </li>
             ))}
           </ul>
@@ -313,10 +293,8 @@ function ReadableReport({ preview }: { preview: Readable }) {
           file was read correctly; if they don't, nothing downstream can help. */}
       {preview.holdings.length > 0 && (
         <div>
-          <div className="text-[var(--muted)] mb-1">
-            What this says you hold — compare it against your broker&apos;s app:
-          </div>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="w-full">
+          <div className="text-[var(--muted)] mb-1">{uiText("What this says you hold — compare it against your broker's app:")}</div>
+          <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="w-full">
             <tbody>
               {preview.holdings.map((h) => (
                 <tr key={h.key}>
@@ -324,10 +302,9 @@ function ReadableReport({ preview }: { preview: Readable }) {
                   <td className="py-0.5 text-[var(--muted)]">{h.isin ?? "—"}</td>
                   <td className="py-0.5 text-right">{h.quantity}</td>
                   <td className="py-0.5 text-right text-[var(--muted)]">
-                    {h.costBasis.toFixed(2)} at cost
-                  </td>
+                    {h.costBasis.toFixed(2)}{uiText(" at cost")}</td>
                   <td className="py-0.5 text-right">
-                    {h.incomplete && <span style={{ color: "var(--amber)" }}>partial</span>}
+                    {h.incomplete && <span style={{ color: "var(--amber)" }}>{uiText("partial")}</span>}
                   </td>
                 </tr>
               ))}
@@ -337,11 +314,8 @@ function ReadableReport({ preview }: { preview: Readable }) {
       )}
 
       {preview.opening.needsOpeningBalance && (
-        <div className="text-[var(--muted)] leading-snug">
-          This export doesn&apos;t reach the start of the account — it spends {" "}
-          {preview.opening.impliedOpening.toFixed(2)} that was already there. Gain won&apos;t be
-          reported, because it can&apos;t be told apart from the missing history.
-        </div>
+        <div className="text-[var(--muted)] leading-snug">{uiText("This export doesn't reach the start of the account — it spends ")}{" "}
+          {preview.opening.impliedOpening.toFixed(2)}{uiText(" that was already there. Gain won't be reported, because it can't be told apart from the missing history.")}</div>
       )}
     </div>
   );

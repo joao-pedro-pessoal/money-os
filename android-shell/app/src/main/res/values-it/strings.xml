@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">Registra una spesa o un reddito</string>
+    <string name="widget_expense" formatted="false">− Spese</string>
+    <string name="widget_income" formatted="false">+ Reddito</string>
+    <string name="shortcut_expense" formatted="false">Spesa</string>
+    <string name="shortcut_expense_long" formatted="false">Registrare le spese</string>
+    <string name="shortcut_income" formatted="false">Reddito</string>
+    <string name="shortcut_income_long" formatted="false">Entrate record</string>
+    <string name="widget_dashboard_description" formatted="false">Patrimonio netto, questo mese e la linea nel tempo</string>
+    <string name="widget_net_worth_description" formatted="false">Patrimonio netto nel tempo e quanto si è spostato</string>
+    <string name="widget_where_money_description" formatted="false">Dove sono i soldi, come una ciambella con le percentuali</string>
+    <string name="widget_cash_flow_description" formatted="false">Questo mese: soldi in entrata, soldi in uscita e ciò che resta</string>
+    <string name="widget_investments_description" formatted="false">Valore del portafoglio, profitti e perdite non realizzati e ogni posizione con i relativi profitti e perdite in euro e percentuali</string>
+    <string name="widget_allocation_description" formatted="false">Il portafoglio per tipologia di asset, come una ciambella con percentuali</string>
+    <string name="widget_movers_description" formatted="false">Le posizioni migliori e peggiori in termini di rendimento dei costi</string>
+    <string name="widget_dividends_description" formatted="false">Dividendi ricevuti, quest\'anno, e prossimo pagamento previsto</string>
+    <string name="widget_open_trades_description" formatted="false">Posizioni con leva aperte: profitti e perdite non realizzati, margine e ogni operazione</string>
+    <string name="ui_registo_r_pido" formatted="false">Registro rapido</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">Patrimonio netto</string>
+    <string name="ui_where_the_money_is" formatted="false">Dove sono i soldi</string>
+    <string name="ui_cash_flow" formatted="false">Movimenti</string>
+    <string name="ui_investments" formatted="false">Investimenti</string>
+    <string name="ui_allocation" formatted="false">Assegnazione</string>
+    <string name="ui_winners_losers" formatted="false">Vincitori e perdenti</string>
+    <string name="ui_dividends" formatted="false">Dividendi</string>
+    <string name="ui_open_trades" formatted="false">Operazioni aperte</string>
+    <string name="ui_record_expense" formatted="false">Registrare le spese</string>
+    <string name="ui_refresh" formatted="false">Aggiorna</string>
+    <string name="ui_chart" formatted="false">Grafico</string>
+</resources>

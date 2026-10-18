@@ -1,3 +1,5 @@
+"use client";
+import { useText } from "@/components/useText";
 import { tagLabel, riskColor } from "@/lib/portfolio/tags";
 
 export interface HoldingTagValues {
@@ -9,6 +11,7 @@ export interface HoldingTagValues {
 
 /** Renders whichever of the four asset-allocation tags are set as small badges. */
 export default function HoldingTags({ riskLevel, expectedReturn, timeHorizon, liquidity }: HoldingTagValues) {
+  const uiText = useText();
   const items = [
     riskLevel ? { label: tagLabel(riskLevel, "risk"), color: riskColor(riskLevel) } : null,
     timeHorizon ? { label: tagLabel(timeHorizon, "timeHorizon"), color: "var(--muted)" } : null,
@@ -26,7 +29,7 @@ export default function HoldingTags({ riskLevel, expectedReturn, timeHorizon, li
           className="badge"
           style={{ border: `1px solid ${it.color}`, color: it.color }}
         >
-          {it.label}
+          {uiText(it.label ?? "")}
         </span>
       ))}
     </div>

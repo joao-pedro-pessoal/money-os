@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { checkQuoteSymbol, setQuoteSymbol } from "@/actions/quotes";
 import { suggestSymbols } from "@/lib/quotes/stooq";
@@ -33,6 +34,7 @@ export default function QuoteSymbolField({
   /** A starting point for the suggestions, usually the instrument's own name. */
   ticker: string;
 }) {
+  const uiText = useText();
   const [value, setValue] = useState(symbol ?? "");
   const [check, setCheck] = useState<Check | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,14 +57,14 @@ export default function QuoteSymbolField({
     <div className="space-y-2">
       <div className="flex gap-2 items-end flex-wrap">
         <label className="block text-[10px]">
-          <span className="text-[var(--muted)]">Price symbol (Stooq)</span>
+          <span className="text-[var(--muted)]">{uiText("Price symbol (Stooq)")}</span>
           <input
             value={value}
             onChange={(e) => {
               setValue(e.target.value);
               setCheck(null);
             }}
-            placeholder="e.g. sxr8.de"
+            placeholder={uiText("e.g. sxr8.de")}
             className="input input-narrow text-xs py-1 mt-0.5 font-mono w-32"
           />
         </label>
@@ -74,7 +76,7 @@ export default function QuoteSymbolField({
           className="btn text-xs py-1"
           style={{ background: "transparent", color: "var(--accent)" }}
         >
-          {busy ? "Checking…" : "Check"}
+          {busy ? uiText("Checking…") : uiText("Check")}
         </button>
 
         {/* Saving is only offered once a real price has come back in the right
@@ -83,9 +85,7 @@ export default function QuoteSymbolField({
           <form action={setQuoteSymbol}>
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="quoteSymbol" value={value.trim()} />
-            <button type="submit" className="btn text-xs py-1">
-              Use this
-            </button>
+            <button type="submit" className="btn text-xs py-1">{uiText("Use this")}</button>
           </form>
         )}
 
@@ -93,16 +93,14 @@ export default function QuoteSymbolField({
           <form action={setQuoteSymbol}>
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="quoteSymbol" value="" />
-            <button type="submit" className="text-[10px]" style={{ color: "var(--muted)" }}>
-              Stop pricing this
-            </button>
+            <button type="submit" className="text-[10px]" style={{ color: "var(--muted)" }}>{uiText("Stop pricing this")}</button>
           </form>
         )}
       </div>
 
       {suggestions.length > 0 && check === null && (
         <div className="flex gap-1 flex-wrap text-[10px]">
-          <span className="text-[var(--muted)]">try:</span>
+          <span className="text-[var(--muted)]">{uiText("try:")}</span>
           {suggestions.map((s) => (
             <button
               key={s}
@@ -119,7 +117,7 @@ export default function QuoteSymbolField({
 
       {check && !check.ok && (
         <div className="text-[10px]" style={{ color: "var(--amber)" }}>
-          {check.reason}
+          {uiText(check.reason ?? "")}
         </div>
       )}
 

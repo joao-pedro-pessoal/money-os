@@ -1,5 +1,6 @@
 "use client";
 
+import { directionOf } from "@/lib/i18n/languages";
 import { useLanguage } from "./LanguageContext";
 import { useNav } from "./NavContext";
 
@@ -38,7 +39,7 @@ export default function NavFrame({
       {/* Covers the page while the drawer is over it, and closes on a tap. */}
       {open && <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={onClose} aria-hidden="true" />}
 
-      <nav translate="no" lang={language}
+      <nav translate="no" lang={language} dir={directionOf(language)}
         id="app-nav"
         className={`
           app-nav border-r border-[var(--border)] p-4 flex flex-col

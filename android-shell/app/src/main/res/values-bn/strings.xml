@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">একটি খরচ বা আয় রেকর্ড</string>
+    <string name="widget_expense" formatted="false">- খরচ</string>
+    <string name="widget_income" formatted="false">+ আয়</string>
+    <string name="shortcut_expense" formatted="false">ব্যয়</string>
+    <string name="shortcut_expense_long" formatted="false">রেকর্ড ব্যয়</string>
+    <string name="shortcut_income" formatted="false">আয়</string>
+    <string name="shortcut_income_long" formatted="false">রেকর্ড আয়</string>
+    <string name="widget_dashboard_description" formatted="false">নেট মূল্য, এই মাসে এবং সময়ের সাথে সাথে লাইন</string>
+    <string name="widget_net_worth_description" formatted="false">সময়ের সাথে সাথে নেট মূল্য, এবং এটি কতদূর সরে গেছে</string>
+    <string name="widget_where_money_description" formatted="false">যেখানে টাকা আছে, শতাংশ সহ ডোনাট হিসাবে</string>
+    <string name="widget_cash_flow_description" formatted="false">এই মাসে: টাকা ইন, টাকা আউট এবং কি বাকি আছে</string>
+    <string name="widget_investments_description" formatted="false">পোর্টফোলিও মান, অবাস্তব P&amp;L এবং প্রতিটি অবস্থান যার P&amp;L ইউরো এবং শতাংশে</string>
+    <string name="widget_allocation_description" formatted="false">সম্পদের ধরন অনুসারে পোর্টফোলিও, শতাংশ সহ ডোনাট হিসাবে</string>
+    <string name="widget_movers_description" formatted="false">খরচের উপর রিটার্ন দ্বারা সেরা এবং সবচেয়ে খারাপ অবস্থান</string>
+    <string name="widget_dividends_description" formatted="false">প্রাপ্ত লভ্যাংশ, এই বছর, এবং পরবর্তী প্রত্যাশিত পেমেন্ট</string>
+    <string name="widget_open_trades_description" formatted="false">ওপেন লিভারেজড পজিশন: অবাস্তব P&amp;L, মার্জিন এবং প্রতিটি ট্রেড</string>
+    <string name="ui_registo_r_pido" formatted="false">রেজিস্টো রেপিডো</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">মোট মূল্য</string>
+    <string name="ui_where_the_money_is" formatted="false">টাকা কোথায়</string>
+    <string name="ui_cash_flow" formatted="false">লেনদেন</string>
+    <string name="ui_investments" formatted="false">বিনিয়োগ</string>
+    <string name="ui_allocation" formatted="false">বরাদ্দ</string>
+    <string name="ui_winners_losers" formatted="false">বিজয়ী এবং পরাজিত</string>
+    <string name="ui_dividends" formatted="false">লভ্যাংশ</string>
+    <string name="ui_open_trades" formatted="false">খোলা ব্যবসা</string>
+    <string name="ui_record_expense" formatted="false">রেকর্ড ব্যয়</string>
+    <string name="ui_refresh" formatted="false">রিফ্রেশ</string>
+    <string name="ui_chart" formatted="false">চার্ট</string>
+</resources>

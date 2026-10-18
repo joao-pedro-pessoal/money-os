@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import Link from "next/link";
 import { matchPlatform, type PlatformOption } from "@/lib/connectors/catalogue";
@@ -26,6 +27,7 @@ export default function ConnectablePlatforms({
   institutionInputName?: string;
   children: React.ReactNode;
 }) {
+  const uiText = useText();
   const [typed, setTyped] = useState("");
   const match = matchPlatform(typed, options);
 
@@ -48,28 +50,20 @@ export default function ConnectablePlatforms({
         >
           {match.connected ? (
             <>
-              <strong>{match.label} is already connected</strong>, feeding{" "}
-              {match.connectedTo.join(", ")}. A manual account for it as well means the same money
-              is counted twice — unless this is money that connection doesn&apos;t report.
-            </>
+              <strong>{match.label}{uiText(" is already connected")}</strong>{uiText(", feeding")}{" "}
+              {match.connectedTo.join(", ")}{uiText(". A manual account for it as well means the same money is counted twice — unless this is money that connection doesn't report.")}</>
           ) : (
             <>
-              <strong>{match.label} can be connected instead.</strong> The balance would keep itself
-              up to date rather than being typed in and going stale.{" "}
-              <Link href="/connections" className="underline">
-                Connect it →
-              </Link>
+              <strong>{match.label}{uiText(" can be connected instead.")}</strong>{uiText(" The balance would keep itself up to date rather than being typed in and going stale.")}{" "}
+              <Link href="/connections" className="underline">{uiText("Connect it →")}</Link>
             </>
           )}
         </div>
       )}
 
       <div className="card p-4 max-w-md">
-        <div className="text-sm font-medium">Or connect a platform</div>
-        <p className="text-xs text-[var(--muted)] mt-1 mb-3">
-          A connected platform reports its own balance and positions, read-only. Nothing here can
-          place an order or move money.
-        </p>
+        <div className="text-sm font-medium">{uiText("Or connect a platform")}</div>
+        <p className="text-xs text-[var(--muted)] mt-1 mb-3">{uiText("A connected platform reports its own balance and positions, read-only. Nothing here can place an order or move money.")}</p>
 
         <ul className="space-y-2">
           {options.map((o) => (
@@ -77,28 +71,23 @@ export default function ConnectablePlatforms({
               <div className="min-w-0">
                 <div className="text-xs">{o.label}</div>
                 <div className="text-[10px] text-[var(--muted)]">
-                  {o.connected ? `Feeding ${o.connectedTo.join(", ")}` : o.requirement}
+                  {o.connected ? uiText("Feeding {0}", { "0": o.connectedTo.join(", ") }) : uiText(o.requirement)}
                 </div>
               </div>
               {o.connected ? (
-                <span className="text-[10px] text-[var(--green)] whitespace-nowrap">Connected</span>
+                <span className="text-[10px] text-[var(--green)] whitespace-nowrap">{uiText("Connected")}</span>
               ) : (
                 <Link
                   href="/connections"
                   className="text-[10px] text-[var(--accent)] whitespace-nowrap"
-                >
-                  Connect →
-                </Link>
+                >{uiText("Connect →")}</Link>
               )}
             </li>
           ))}
         </ul>
 
         {unconnected.length === 0 && (
-          <p className="text-[10px] text-[var(--muted)] mt-3">
-            Everything supported is connected. Anything else — a bank, or a broker without an API —
-            belongs in the form above.
-          </p>
+          <p className="text-[10px] text-[var(--muted)] mt-3">{uiText("Everything supported is connected. Anything else — a bank, or a broker without an API — belongs in the form above.")}</p>
         )}
       </div>
     </div>

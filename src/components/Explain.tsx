@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState, useId } from "react";
 
 /**
@@ -24,6 +25,7 @@ export default function Explain({
   /** One or more paragraphs. Short: this is a footnote, not documentation. */
   body: string | string[];
 }) {
+  const uiText = useText();
   const [open, setOpen] = useState(false);
   const id = useId();
   const paragraphs = Array.isArray(body) ? body : [body];
@@ -49,7 +51,7 @@ export default function Explain({
       <div
         role="button"
         tabIndex={0}
-        aria-label={`About ${title}`}
+        aria-label={uiText("About {0}", { "0": title })}
         aria-expanded={open}
         aria-describedby={open ? id : undefined}
         onClick={() => setOpen((value) => !value)}

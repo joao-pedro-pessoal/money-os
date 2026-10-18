@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { textForRequest } from "@/actions/pageLanguage";
+import { currentLanguage } from "@/actions/language";
+import { localeOf } from "@/lib/i18n/languages";
 import { getNetWorth } from "@/actions/networth";
 import { getTotalNetWorthOverTime } from "@/actions/analytics";
 import { getAccountComposition, getMonthShape, getPortfolioItems } from "@/actions/dashboard";
@@ -25,6 +28,8 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
  * the base currency and comes from the same actions the pages render.
  */
 export async function GET() {
+  const uiText = await textForRequest();
+  const locale = localeOf(await currentLanguage());
   const [nw, series, composition, month, portfolio, dividends, open, connections, rates] =
     await Promise.all([
       getNetWorth(),
@@ -77,7 +82,7 @@ export async function GET() {
         top: topPositions(measuredItems),
         allocation: topSlices(
           groupItems(portfolio.items, "assetType").map((g) => ({
-            name: g.key === "—" ? "Untagged" : tagLabel(g.key, "assetType") ?? g.key,
+            name: uiText(g.key === "—" ? "Untagged" : tagLabel(g.key, "assetType") ?? g.key),
             value: g.value,
           })),
           4
@@ -98,7 +103,7 @@ export async function GET() {
         unrealized: trading.unrealized.total,
         margin: trading.margin.total,
         /** What the result above could not include, or null. The 0.7.0 app ignores it. */
-        leftOut: leftOut(trading.unrealized, "position"),
+        leftOut: leftOut(trading.unrealized, "position") ? uiText(leftOut(trading.unrealized, "position")!) : null,
         top: open
           .map((p) => ({ p, pnl: resultInBase(p, rates, base) }))
           // Largest move first; a result that could not be measured last.
@@ -107,7 +112,7 @@ export async function GET() {
           .map(({ p, pnl }) => ({ name: p.coin, side: p.side, leverage: p.leverage, pnl })),
       },
       month: {
-        label: now.toLocaleDateString("en-GB", { month: "long", year: "numeric" }),
+        label: now.toLocaleDateString(locale, { month: "long", year: "numeric" }),
         income: round2(income),
         expenses: round2(expenses),
         net: round2(income - expenses),

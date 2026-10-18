@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">Zarejestruj wydatek lub dochód</string>
+    <string name="widget_expense" formatted="false">− Wydatek</string>
+    <string name="widget_income" formatted="false">+ Dochód</string>
+    <string name="shortcut_expense" formatted="false">Wydatek</string>
+    <string name="shortcut_expense_long" formatted="false">Rekordowy wydatek</string>
+    <string name="shortcut_income" formatted="false">Dochód</string>
+    <string name="shortcut_income_long" formatted="false">Rekordowy dochód</string>
+    <string name="widget_dashboard_description" formatted="false">Wartość netto w tym miesiącu i linia w czasie</string>
+    <string name="widget_net_worth_description" formatted="false">Wartość netto w czasie i jak daleko się przesunęła</string>
+    <string name="widget_where_money_description" formatted="false">Gdzie są pieniądze, jak pączek z procentami</string>
+    <string name="widget_cash_flow_description" formatted="false">W tym miesiącu: wpłaty, wypłaty i to, co zostało</string>
+    <string name="widget_investments_description" formatted="false">Wartość portfela, niezrealizowane zyski i straty oraz każda pozycja z jej zyskami i stratami w euro i procentach</string>
+    <string name="widget_allocation_description" formatted="false">Portfel według rodzaju aktywów, w formie pączka z procentami</string>
+    <string name="widget_movers_description" formatted="false">Najlepsze i najgorsze pozycje pod względem zwrotu kosztów</string>
+    <string name="widget_dividends_description" formatted="false">Dywidendy otrzymane w tym roku i kolejna oczekiwana wypłata</string>
+    <string name="widget_open_trades_description" formatted="false">Otwarte pozycje lewarowane: niezrealizowane zyski i straty, marża i każda transakcja</string>
+    <string name="ui_registo_r_pido" formatted="false">Zarejestruj się szybko</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">Wartość netto</string>
+    <string name="ui_where_the_money_is" formatted="false">Gdzie są pieniądze</string>
+    <string name="ui_cash_flow" formatted="false">Transakcje</string>
+    <string name="ui_investments" formatted="false">Inwestycje</string>
+    <string name="ui_allocation" formatted="false">Przydział</string>
+    <string name="ui_winners_losers" formatted="false">Zwycięzcy i przegrani</string>
+    <string name="ui_dividends" formatted="false">Dywidendy</string>
+    <string name="ui_open_trades" formatted="false">Otwarte transakcje</string>
+    <string name="ui_record_expense" formatted="false">Rekordowy wydatek</string>
+    <string name="ui_refresh" formatted="false">Odśwież</string>
+    <string name="ui_chart" formatted="false">Wykres</string>
+</resources>

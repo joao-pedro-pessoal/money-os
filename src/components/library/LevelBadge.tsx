@@ -1,3 +1,5 @@
+"use client";
+import { useText } from "@/components/useText";
 import { levelInfo, type Level } from "@/lib/library/types";
 
 /**
@@ -34,6 +36,7 @@ export default function LevelBadge({
   level: Level;
   size?: "sm" | "md";
 }) {
+  const uiText = useText();
   const info = levelInfo(level);
   const c = COLOURS[level];
 
@@ -45,7 +48,7 @@ export default function LevelBadge({
       }`}
       style={{ color: c.fg, background: c.bg, border: `1px solid ${c.border}` }}
     >
-      {info.label}
+      {uiText(info.label ?? "")}
     </span>
   );
 }

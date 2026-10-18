@@ -67,18 +67,18 @@ final class QuickEntry {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         if (manager == null || !manager.areNotificationsEnabled()) return;
         NotificationChannel channel = new NotificationChannel(CHANNEL,
-                "Registo rápido", NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription("Botões para registar uma despesa ou uma receita.");
+                LocalText.text(context, "Quick entry"), NotificationManager.IMPORTANCE_LOW);
+        channel.setDescription(LocalText.text(context, "Buttons to record an expense or income."));
         channel.setShowBadge(false);
         manager.createNotificationChannel(channel);
 
         Notification notification = new Notification.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat_quick_entry)
-                .setContentTitle("Registar um movimento")
-                .setContentText("Toca para registar uma despesa")
+                .setContentTitle(LocalText.text(context, "Record a transaction"))
+                .setContentText(LocalText.text(context, "Tap to record an expense"))
                 .setContentIntent(open(context, EXPENSE))
-                .addAction(new Notification.Action.Builder(null, "Despesa", open(context, EXPENSE)).build())
-                .addAction(new Notification.Action.Builder(null, "Receita", open(context, INCOME)).build())
+                .addAction(new Notification.Action.Builder(null, LocalText.text(context, "Expense"), open(context, EXPENSE)).build())
+                .addAction(new Notification.Action.Builder(null, LocalText.text(context, "Income"), open(context, INCOME)).build())
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false)

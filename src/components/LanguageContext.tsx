@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { isLanguage, LANGUAGE_COOKIE, type Language } from "@/lib/i18n/languages";
 import { messagesFor, type Messages } from "@/lib/i18n/messages";
 import { pendingLanguage, type PendingLanguage } from "@/lib/i18n/pendingLanguage";
+import { sourceText, translateText, type TextCatalog, type TextValues } from "@/lib/i18n/text";
 
 export { LANGUAGES, type Language } from "@/lib/i18n/languages";
 
 type LanguageState = {
+  text: (source: string, values?: TextValues) => string;
   language: Language;
   setLanguage: (language: Language) => void;
   /** Every word, in the chosen language. */
@@ -18,6 +20,7 @@ type LanguageState = {
 };
 
 const Ctx = createContext<LanguageState>({
+  text: sourceText,
   language: "en",
   setLanguage: () => {},
   m: messagesFor("en"),
@@ -35,7 +38,7 @@ const OLD_KEY = "moneyos_language";
  * another one writes the cookie, shows it here at once, and asks the server to
  * redraw its own parts in it.
  */
-export function LanguageProvider({ language, children }: { language: Language; children: React.ReactNode }) {
+export function LanguageProvider({ language, catalog = EMPTY_CATALOG, children }: { language: Language; catalog?: TextCatalog; children: React.ReactNode }) {
   const router = useRouter();
   const [chosen, setChosen] = useState<PendingLanguage | null>(null);
   const pending = pendingLanguage(language, chosen);
@@ -54,10 +57,10 @@ export function LanguageProvider({ language, children }: { language: Language; c
   };
 
   useEffect(() => {
-    // Most pages are still English. Only translated regions declare the choice.
-    document.documentElement.lang = "en";
-    document.documentElement.translate = active !== "en";
-  }, [active]);
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    document.documentElement.translate = false;
+  }, [language]);
 
   useEffect(() => {
     const changed = (event: StorageEvent) => {
@@ -89,8 +92,11 @@ export function LanguageProvider({ language, children }: { language: Language; c
   }, []);
 
   const m = useMemo(() => messagesFor(active), [active]);
-  return <Ctx.Provider value={{ language: active, setLanguage, m, t: m.nav }}>{children}</Ctx.Provider>;
+  const text = useMemo(() => (source: string, values?: TextValues) => translateText(catalog, source, values), [catalog]);
+  return <Ctx.Provider value={{ language: active, setLanguage, m, t: m.nav, text }}>{children}</Ctx.Provider>;
 }
+
+const EMPTY_CATALOG: TextCatalog = {};
 
 export function useLanguage() {
   return useContext(Ctx);

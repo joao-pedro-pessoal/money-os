@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import { getGainAttribution } from "@/actions/dividends";
 import { Money } from "@/components/PrivacyContext";
 import { realisedShare } from "@/lib/portfolio/attribution";
@@ -11,6 +12,7 @@ import { PLATFORM_LABELS } from "@/lib/connectors/constants";
  * them and says which half is actually yours.
  */
 export default async function GainAttribution() {
+  const uiText = await textForRequest();
   const { attribution: a, silentPlatforms, currency, costUnknown, unconverted } = await getGainAttribution();
   const banked = realisedShare(a);
 
@@ -20,17 +22,12 @@ export default async function GainAttribution() {
   return (
     <div className="card p-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <div className="text-sm font-medium">Where the gains came from</div>
+        <div className="text-sm font-medium">{uiText("Where the gains came from")}</div>
         <div className="text-sm" style={{ color: colour(a.net) }}>
-          <Money value={a.net} currency={currency} /> net
-        </div>
+          <Money value={a.net} currency={currency} />{uiText(" net")}</div>
       </div>
 
-      <p className="text-xs text-[var(--muted)] mt-1 mb-4 max-w-2xl">
-        Split by source, because they aren&apos;t the same kind of money. Interest and dividends
-        have been paid and are yours; an unrealised gain is the market&apos;s current opinion of
-        what you own, and it can change its mind.
-      </p>
+      <p className="text-xs text-[var(--muted)] mt-1 mb-4 max-w-2xl">{uiText("Split by source, because they aren't the same kind of money. Interest and dividends have been paid and are yours; an unrealised gain is the market's current opinion of what you own, and it can change its mind.")}</p>
 
       <div className="space-y-2.5">
         {a.lines.map((line) => {
@@ -38,9 +35,9 @@ export default async function GainAttribution() {
           return (
             <div key={line.key} className="flex items-center gap-3 text-xs">
               <span className="w-36 shrink-0" title={line.help}>
-                {line.label}
+                {uiText(line.label ?? "")}
                 {!line.realised && (
-                  <span className="text-[10px] text-[var(--muted)] block">on paper</span>
+                  <span className="text-[10px] text-[var(--muted)] block">{uiText("on paper")}</span>
                 )}
               </span>
 
@@ -57,7 +54,7 @@ export default async function GainAttribution() {
               <span className="w-24 text-right" style={{ color: unknown ? "var(--muted)" : colour(line.amount) }}>
                 {/* "Not reported" and "€0.00" are different claims about your
                     money, so they never render the same. */}
-                {unknown ? "not reported" : <Money value={line.amount} currency={currency} />}
+                {unknown ? uiText("not reported") : <Money value={line.amount} currency={currency} />}
               </span>
               <span className="w-12 text-right text-[var(--muted)]">
                 {unknown ? "" : `${line.share}%`}
@@ -69,13 +66,13 @@ export default async function GainAttribution() {
 
       <div className="mt-4 pt-3 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
         <div>
-          <div className="text-[var(--muted)]">Realised — already yours</div>
+          <div className="text-[var(--muted)]">{uiText("Realised — already yours")}</div>
           <div className="text-sm mt-0.5" style={{ color: colour(a.realised) }}>
             <Money value={a.realised} currency={currency} />
           </div>
         </div>
         <div>
-          <div className="text-[var(--muted)]">Unrealised — still the market&apos;s to take</div>
+          <div className="text-[var(--muted)]">{uiText("Unrealised — still the market's to take")}</div>
           <div className="text-sm mt-0.5" style={{ color: colour(a.unrealised) }}>
             <Money value={a.unrealised} currency={currency} />
           </div>
@@ -83,28 +80,20 @@ export default async function GainAttribution() {
       </div>
 
       {costUnknown > 0 && (
-        <p className="text-[10px] text-[var(--muted)] mt-2">
-          Unrealised gains leave out <Money value={costUnknown} currency={currency} /> whose cost is unknown.
-        </p>
+        <p className="text-[10px] text-[var(--muted)] mt-2">{uiText("Unrealised gains leave out ")}<Money value={costUnknown} currency={currency} />{uiText(" whose cost is unknown.")}</p>
       )}
       {unconverted > 0 && (
         <p className="text-[10px] text-[var(--muted)] mt-2">
-          {unconverted} {unconverted === 1 ? "movement" : "movements"} left out of what was realised: no exchange rate.
-        </p>
+          {unconverted} {unconverted === 1 ? uiText("movement") : uiText("movements")}{uiText(" left out of what was realised: no exchange rate.")}</p>
       )}
       {banked !== null && (
         <p className="text-[10px] text-[var(--muted)] mt-3">
-          {banked}% of everything that has moved is money you actually hold.
-        </p>
+          {banked}{uiText("% of everything that has moved is money you actually hold.")}</p>
       )}
 
       {a.realisedTradesUnknown && (
-        <p className="text-[10px] text-[var(--muted)] mt-2">
-          No connected platform reports realised profit on closed trades
-          {silentPlatforms.length > 0 &&
-            ` (${silentPlatforms.map((p) => PLATFORM_LABELS[p] ?? p).join(", ")})`}
-          . No result could be measured from the available trade history either.
-        </p>
+        <p className="text-[10px] text-[var(--muted)] mt-2">{uiText("No connected platform reports realised profit on closed trades")}{silentPlatforms.length > 0 &&
+            ` (${silentPlatforms.map((p) => PLATFORM_LABELS[p] ?? p).join(", ")})`}{uiText(". No result could be measured from the available trade history either.")}</p>
       )}
     </div>
   );

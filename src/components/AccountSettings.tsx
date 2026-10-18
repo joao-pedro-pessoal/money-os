@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { deleteAccount, replaceRecoveryCode } from "@/actions/auth";
@@ -15,6 +16,7 @@ import { useLanguage } from "./LanguageContext";
  * the old code stops working the moment the new one exists.
  */
 export default function AccountSettings({ email, canDelete }: { email: string | null; canDelete: boolean }) {
+  const uiText = useText();
   const router = useRouter();
   const { m } = useLanguage();
   const w = m.account;
@@ -129,7 +131,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
 
       {problem && (
         <p role="alert" className="text-xs text-[var(--red)]">
-          {problem}
+          {uiText(problem ?? "")}
         </p>
       )}
 

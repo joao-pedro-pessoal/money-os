@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { getBucket, listBucketsWithTotals, updateBucket, deleteBucket, setAllocation } from "@/actions/buckets";
 import { listAccountsWithState } from "@/actions/accounts";
@@ -7,6 +8,7 @@ import { notFound } from "next/navigation";
 import Section from "@/components/Section";
 
 export default async function BucketDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const uiText = await textForRequest();
   const { id } = await params;
   const bucket = await getBucket(id);
   if (!bucket) notFound();
@@ -21,14 +23,14 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
         <form action={deleteBucket}>
           <input type="hidden" name="id" value={bucket.id} />
           <ConfirmSubmitButton
-            label="Delete bucket"
+            label={uiText("Delete bucket")}
             confirmMessage={`Delete "${bucket.name}"? Its allocations are removed too — that money becomes Free Cash again.`}
           />
         </form>
       </div>
 
       <div className="card p-4">
-        <div className="text-xs text-[var(--muted)] mb-1">Total allocated</div>
+        <div className="text-xs text-[var(--muted)] mb-1">{uiText("Total allocated")}</div>
         <div className="text-xl font-semibold">
           <Money value={withTotals.total} />
         </div>
@@ -40,28 +42,26 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
             <input type="hidden" name="id" value={bucket.id} />
             <input name="name" defaultValue={bucket.name} className="input" required />
             <textarea name="description" defaultValue={bucket.description ?? ""} className="input" rows={2} />
-            <input name="targetAmount" type="number" step="0.01" defaultValue={bucket.targetAmount ?? ""} placeholder="Target amount" className="input" />
+            <input name="targetAmount" type="number" step="0.01" defaultValue={bucket.targetAmount ?? ""} placeholder={uiText("Target amount")} className="input" />
             <input
               name="priority"
               type="number"
               min="0"
               defaultValue={bucket.priority}
-              placeholder="Rank — lower is more important"
+              placeholder={uiText("Rank — lower is more important")}
               className="input"
             />
             <input name="color" type="color" defaultValue={bucket.color ?? "#6366f1"} className="input h-10" />
-            <button type="submit" className="btn w-full">
-              Save
-            </button>
+            <button type="submit" className="btn w-full">{uiText("Save")}</button>
           </form>
         </Section>
 
         <Section title="Allocations by account" defaultOpen essential>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table mb-4">
+          <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table mb-4">
             <thead>
               <tr>
-                <th>Account</th>
-                <th>Amount</th>
+                <th>{uiText("Account")}</th>
+                <th>{uiText("Amount")}</th>
               </tr>
             </thead>
             <tbody>
@@ -84,10 +84,8 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
                 </option>
               ))}
             </select>
-            <input name="amount" type="number" step="0.01" placeholder="Amount (0 removes it)" className="input" required />
-            <button type="submit" className="btn w-full">
-              Set exact total
-            </button>
+            <input name="amount" type="number" step="0.01" placeholder={uiText("Amount (0 removes it)")} className="input" required />
+            <button type="submit" className="btn w-full">{uiText("Set exact total")}</button>
           </form>
         </Section>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import { refreshQuotedPrices } from "@/actions/quotes";
 
@@ -12,6 +13,7 @@ import { refreshQuotedPrices } from "@/actions/quotes";
  * whole design here is that pricing is opt-in per position.
  */
 export default function RefreshPrices() {
+  const uiText = useText();
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [failures, setFailures] = useState<{ symbol: string; note: string }[]>([]);
@@ -38,7 +40,7 @@ export default function RefreshPrices() {
   return (
     <span className="text-xs">
       <button type="button" onClick={run} disabled={busy} style={{ color: "var(--accent)" }}>
-        {busy ? "Fetching…" : "Refresh prices"}
+        {busy ? uiText("Fetching…") : uiText("Refresh prices")}
       </button>
       {summary && <span className="text-[var(--muted)] ml-2">{summary}</span>}
       {/* Each failure named: a position that kept its old price looks identical

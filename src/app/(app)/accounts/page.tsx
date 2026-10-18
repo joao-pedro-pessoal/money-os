@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listAccountsWithState,
@@ -26,6 +27,7 @@ const STATE_COLOR: Record<string, string> = {
 };
 
 export default async function AccountsPage() {
+  const uiText = await textForRequest();
   const [accounts, archived, platformTotals, removable, connections] =
     await Promise.all([
       listAccountsWithState(),
@@ -45,8 +47,8 @@ export default async function AccountsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold">Accounts</h1>
-      <p className="simple-only text-sm text-[var(--muted)]">Each account’s balance and available cash. Tap its name for details and reserved money.</p>
+      <h1 className="text-lg font-semibold">{uiText("Accounts")}</h1>
+      <p className="simple-only text-sm text-[var(--muted)]">{uiText("Each account’s balance and available cash. Tap its name for details and reserved money.")}</p>
       <PageTabs tabs={ACCOUNTS_TABS} />
 
       <TidyEmptyAccounts
@@ -58,28 +60,28 @@ export default async function AccountsPage() {
         action={removeEmptyAccounts}
       />
 
-      <Section title="Accounts" defaultOpen essential summary={`${accounts.length} active`}>
-        <div className="table-scroll mobile-records account-records" role="region" aria-label="Accounts" tabIndex={0}><ResponsiveTable className="data-table" role="table">
+      <Section title="Accounts" defaultOpen essential summary={uiText("{0} active", { "0": accounts.length })}>
+        <div className="table-scroll mobile-records account-records" role="region" aria-label={uiText("Accounts")} tabIndex={0}><ResponsiveTable className="data-table" role="table">
           <thead>
             <tr>
-              <th>Institution</th>
-              <th>Name</th>
-              <th>Balance</th>
-              <th>Allocated</th>
-              <th>Free</th>
-              <th>Status</th>
+              <th>{uiText("Institution")}</th>
+              <th>{uiText("Name")}</th>
+              <th>{uiText("Balance")}</th>
+              <th>{uiText("Allocated")}</th>
+              <th>{uiText("Free")}</th>
+              <th>{uiText("Status")}</th>
             </tr>
           </thead>
           <tbody>
             {accounts.map((a) => (
               <tr key={a.id} role="row">
-                <td role="cell" data-label="Institution"><span translate="no">{a.institution}</span></td>
-                <td role="cell" data-label="Name" className="record-name">
+                <td role="cell" data-label={uiText("Institution")}><span translate="no">{a.institution}</span></td>
+                <td role="cell" data-label={uiText("Name")} className="record-name">
                   <Link href={`/accounts/${a.id}`} className="hover:underline">
                     <span translate="no">{a.name}</span>
                   </Link>
                 </td>
-                <td role="cell" data-label="Balance">
+                <td role="cell" data-label={uiText("Balance")}>
                   {(() => {
                     const p = platformTotals.get(a.id);
                     const shown = p ? p.total : a.balance;
@@ -101,21 +103,19 @@ export default async function AccountsPage() {
                         )}
                         {p && p.spot > 0 && (
                           <div className="account-balance-detail text-[10px] text-[var(--muted)]">
-                            {p.equity.toFixed(2)} in positions + {p.spot.toFixed(2)}{" "}
-                            spot
-                          </div>
+                            {p.equity.toFixed(2)}{uiText(" in positions + ")}{p.spot.toFixed(2)}{" "}{uiText("spot")}</div>
                         )}
                       </>
                     );
                   })()}
                 </td>
-                <td role="cell" data-label="Allocated">
+                <td role="cell" data-label={uiText("Allocated")}>
                   <Money value={a.allocated} currency={a.currency} />
                 </td>
-                <td role="cell" data-label="Free">
+                <td role="cell" data-label={uiText("Free")}>
                   <Money value={a.free} currency={a.currency} />
                 </td>
-                <td role="cell" data-label="Status" className={STATE_COLOR[a.state]}>{a.state === "RECONCILED" ? "Up to date" : a.state === "STALE" ? "Needs review" : a.state === "OVERALLOCATED" ? "Overallocated" : a.state}</td>
+                <td role="cell" data-label={uiText("Status")} className={STATE_COLOR[a.state]}>{a.state === "RECONCILED" ? uiText("Up to date") : a.state === "STALE" ? uiText("Needs review") : a.state === "OVERALLOCATED" ? uiText("Overallocated") : a.state}</td>
               </tr>
             ))}
           </tbody>
@@ -127,22 +127,22 @@ export default async function AccountsPage() {
           <form action={createAccount} className="space-y-3">
             <input
               name="institution"
-              placeholder="Institution (e.g. Trade Republic)"
+              placeholder={uiText("Institution (e.g. Trade Republic)")}
               className="input"
               required
             />
             <input
               name="name"
-              placeholder="Name (e.g. TR Cash)"
+              placeholder={uiText("Name (e.g. TR Cash)")}
               className="input"
               required
             />
             <select name="accountType" className="input">
-              <option value="bank">Bank</option>
-              <option value="broker">Broker</option>
-              <option value="exchange">Exchange</option>
-              <option value="cash">Cash</option>
-              <option value="other">Other</option>
+              <option value="bank">{uiText("Bank")}</option>
+              <option value="broker">{uiText("Broker")}</option>
+              <option value="exchange">{uiText("Exchange")}</option>
+              <option value="cash">{uiText("Cash")}</option>
+              <option value="other">{uiText("Other")}</option>
             </select>
             <div className="flex gap-2">
               <select name="currency" className="input">
@@ -155,7 +155,7 @@ export default async function AccountsPage() {
                 type="number"
                 step="0.01"
                 required
-                placeholder="Balance today (0 if empty)"
+                placeholder={uiText("Balance today (0 if empty)")}
                 className="input"
               />
             </div>
@@ -164,21 +164,19 @@ export default async function AccountsPage() {
               recording the positions counts the same money twice. */}
             <BalanceMeaningField />
 
-            <button type="submit" className="btn w-full">
-              Add
-            </button>
+            <button type="submit" className="btn w-full">{uiText("Add")}</button>
           </form>
         </Section>
       </ConnectablePlatforms>
 
       {archived.length > 0 && (
-        <Section title="Archived accounts" summary={`${archived.length} archived`}>
-          <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
+        <Section title="Archived accounts" summary={uiText("{0} archived", { "0": archived.length })}>
+          <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
             <thead>
               <tr>
-                <th>Institution</th>
-                <th>Name</th>
-                <th>Balance</th>
+                <th>{uiText("Institution")}</th>
+                <th>{uiText("Name")}</th>
+                <th>{uiText("Balance")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -196,9 +194,7 @@ export default async function AccountsPage() {
                       <button
                         type="submit"
                         className="text-xs text-[var(--accent)] hover:underline"
-                      >
-                        Unarchive
-                      </button>
+                      >{uiText("Unarchive")}</button>
                     </form>
                   </td>
                 </tr>

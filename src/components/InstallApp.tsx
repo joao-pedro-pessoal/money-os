@@ -1,5 +1,6 @@
 "use client";
 
+import { directionOf } from "@/lib/i18n/languages";
 import { useState, useSyncExternalStore } from "react";
 import { installRoute, type InstallRoute } from "@/lib/ui/install";
 import { useLanguage } from "./LanguageContext";
@@ -74,7 +75,7 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
   if (route === "installed" || route === "just-installed" || route === "android-app") {
     if (compact) return null;
     return (
-      <p translate="no" lang={language} className="text-sm text-[var(--muted)]">
+      <p translate="no" lang={language} dir={directionOf(language)} className="text-sm text-[var(--muted)]">
         {route === "android-app" ? w.androidApp : route === "just-installed" ? w.justInstalled : w.installed}
       </p>
     );
@@ -104,7 +105,7 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
 
   if (route === "insecure" || route === "unsupported") {
     return (
-      <div translate="no" lang={language} className={compact ? "card p-4 space-y-2" : "space-y-2"}>
+      <div translate="no" lang={language} dir={directionOf(language)} className={compact ? "card p-4 space-y-2" : "space-y-2"}>
         <p className="text-xs text-[var(--muted)] leading-relaxed max-w-sm" role="status">
           {route === "insecure" ? w.insecureSteps : w.unsupportedSteps}
         </p>
@@ -114,7 +115,7 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div translate="no" lang={language} className={compact ? "card p-4 space-y-2" : "space-y-2"}>
+    <div translate="no" lang={language} dir={directionOf(language)} className={compact ? "card p-4 space-y-2" : "space-y-2"}>
       {compact && (
         <p className="text-sm">
           <span className="font-medium">{w.pitchTitle}</span>{" "}

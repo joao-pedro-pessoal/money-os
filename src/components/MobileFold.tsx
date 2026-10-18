@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useEffect, useId, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useMobileMode } from "./MobileMode";
@@ -69,6 +70,7 @@ export default function MobileFold({
   /** Fold only in the simple phone mode; preserve the current layout elsewhere. */
   simpleOnly?: boolean;
 }) {
+  const uiText = useText();
   const pathname = usePathname();
   const { simple } = useMobileMode();
   const bodyId = useId();
@@ -93,7 +95,7 @@ export default function MobileFold({
         aria-controls={bodyId}
         onClick={() => writeOpen(key, !open)}
       >
-        <span>{title}</span>
+        <span>{uiText(title ?? "")}</span>
         <span aria-hidden="true">{open ? "▾" : "▸"}</span>
       </button>
       <div id={bodyId} className={`mobile-fold-body ${className ?? ""}`}>

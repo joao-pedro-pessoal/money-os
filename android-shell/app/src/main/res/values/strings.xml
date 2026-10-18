@@ -1,20 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Money OS</string>
-    <string name="widget_description">Registar uma despesa ou uma receita</string>
-    <string name="widget_expense">− Despesa</string>
-    <string name="widget_income">+ Receita</string>
-    <string name="shortcut_expense">Despesa</string>
-    <string name="shortcut_expense_long">Registar despesa</string>
-    <string name="shortcut_income">Receita</string>
-    <string name="shortcut_income_long">Registar receita</string>
-    <string name="widget_dashboard_description">Net worth, this month and the line over time</string>
-    <string name="widget_net_worth_description">Net worth over time, and how far it has moved</string>
-    <string name="widget_where_money_description">Where the money is, as a donut with percentages</string>
-    <string name="widget_cash_flow_description">This month: money in, money out and what is left</string>
-    <string name="widget_investments_description">Portfolio value, unrealized P&amp;L and every position with its P&amp;L in euros and percent</string>
-    <string name="widget_allocation_description">The portfolio by asset type, as a donut with percentages</string>
-    <string name="widget_movers_description">The best and worst positions by return on cost</string>
-    <string name="widget_dividends_description">Dividends received, this year, and the next expected payment</string>
-    <string name="widget_open_trades_description">Open leveraged positions: unrealized P&amp;L, margin and each trade</string>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">Record an expense or income</string>
+    <string name="widget_expense" formatted="false">− Expense</string>
+    <string name="widget_income" formatted="false">+ Income</string>
+    <string name="shortcut_expense" formatted="false">Expense</string>
+    <string name="shortcut_expense_long" formatted="false">Record expense</string>
+    <string name="shortcut_income" formatted="false">Income</string>
+    <string name="shortcut_income_long" formatted="false">Record income</string>
+    <string name="widget_dashboard_description" formatted="false">Net worth, this month and the line over time</string>
+    <string name="widget_net_worth_description" formatted="false">Net worth over time, and how far it has moved</string>
+    <string name="widget_where_money_description" formatted="false">Where the money is, as a donut with percentages</string>
+    <string name="widget_cash_flow_description" formatted="false">This month: money in, money out and what is left</string>
+    <string name="widget_investments_description" formatted="false">Portfolio value, unrealized P&amp;L and every position with its P&amp;L in euros and percent</string>
+    <string name="widget_allocation_description" formatted="false">The portfolio by asset type, as a donut with percentages</string>
+    <string name="widget_movers_description" formatted="false">The best and worst positions by return on cost</string>
+    <string name="widget_dividends_description" formatted="false">Dividends received, this year, and the next expected payment</string>
+    <string name="widget_open_trades_description" formatted="false">Open leveraged positions: unrealized P&amp;L, margin and each trade</string>
+    <string name="ui_registo_r_pido" formatted="false">Registo rápido</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">Net worth</string>
+    <string name="ui_where_the_money_is" formatted="false">Where the money is</string>
+    <string name="ui_cash_flow" formatted="false">Cash flow</string>
+    <string name="ui_investments" formatted="false">Investments</string>
+    <string name="ui_allocation" formatted="false">Allocation</string>
+    <string name="ui_winners_losers" formatted="false">Winners &amp; losers</string>
+    <string name="ui_dividends" formatted="false">Dividends</string>
+    <string name="ui_open_trades" formatted="false">Open trades</string>
+    <string name="ui_record_expense" formatted="false">Record expense</string>
+    <string name="ui_refresh" formatted="false">Refresh</string>
+    <string name="ui_chart" formatted="false">Chart</string>
 </resources>

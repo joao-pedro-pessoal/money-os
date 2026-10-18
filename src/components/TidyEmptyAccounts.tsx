@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 
 export interface RemovableAccount {
@@ -24,6 +25,7 @@ export default function TidyEmptyAccounts({
   removable: RemovableAccount[];
   action: (formData: FormData) => void;
 }) {
+  const uiText = useText();
   const [selected, setSelected] = useState<Set<string>>(new Set(removable.map((a) => a.id)));
 
   if (removable.length === 0) return null;
@@ -38,13 +40,9 @@ export default function TidyEmptyAccounts({
   return (
     <div className="card p-4" style={{ borderColor: "var(--amber)" }}>
       <div className="text-sm font-medium mb-1">
-        {removable.length} empty account{removable.length === 1 ? "" : "s"}
+        {uiText(removable.length === 1 ? "{count} empty account" : "{count} empty accounts", { count: removable.length })}
       </div>
-      <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">
-        No balance, no transactions, no positions, no connection — nothing in the app refers to these, so
-        removing them changes no total and no chart. They usually appear when a connection fails and gets
-        retried.
-      </p>
+      <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">{uiText("No balance, no transactions, no positions, no connection — nothing in the app refers to these, so removing them changes no total and no chart. They usually appear when a connection fails and gets retried.")}</p>
 
       <form action={action} className="space-y-2">
         <ul className="text-sm space-y-1 mb-3">
@@ -75,9 +73,7 @@ export default function TidyEmptyAccounts({
           onClick={(e) => {
             if (!confirm(`Permanently remove ${selected.size} empty account(s)?`)) e.preventDefault();
           }}
-        >
-          Remove {selected.size} selected
-        </button>
+        >{uiText("Remove ")}{selected.size}{uiText(" selected")}</button>
       </form>
     </div>
   );

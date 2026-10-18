@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
@@ -52,14 +53,15 @@ function round8(n: number): number {
 }
 
 /** One labelled figure in a phone card. */
-function Fact({ label, children, className = "", detail = false }: {
+async function Fact({ label, children, className = "", detail = false }: {
   label: string; children: React.ReactNode; className?: string;
   /** Left out in the Simple phone mode. */
   detail?: boolean;
 }) {
+  const uiText = await textForRequest();
   return (
     <div className={`min-w-0${detail ? " positions-simple-hide" : ""}`}>
-      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
+      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{uiText(label ?? "")}</div>
       <div className={`text-sm tabular-nums break-words ${className}`}>{children}</div>
     </div>
   );
@@ -81,6 +83,7 @@ function SideBadge({ side }: { side: string }) {
 }
 
 export default async function PositionsPage() {
+  const uiText = await textForRequest();
   const [positions, balances, connections, playlistList, manual, rates, base] = await Promise.all([
     listAllPositions(),
     listBalances(),
@@ -144,50 +147,48 @@ export default async function PositionsPage() {
       <PageTabs tabs={INVESTMENT_TABS} />
       <div className="positions-header flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-lg font-semibold">Open positions &amp; balances</h1>
-          <p className="text-xs text-[var(--muted)] mt-1">Live from your connected platforms.</p>
+          <h1 className="text-lg font-semibold">{uiText("Open positions & balances")}</h1>
+          <p className="text-xs text-[var(--muted)] mt-1">{uiText("Live from your connected platforms.")}</p>
           {connections.length > 0 && (
             <div className="mt-1">
               <AutoSync syncAction={autoSyncAction} lastSyncAt={lastSyncAt ? lastSyncAt.toISOString() : null} />
             </div>
           )}
         </div>
-        <Link href="/connections" className="btn whitespace-nowrap">
-          Connections
-        </Link>
+        <Link href="/connections" className="btn whitespace-nowrap">{uiText("Connections")}</Link>
       </div>
 
       {connections.length > 0 && (
         <div className="positions-account-stats positions-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="card p-4">
-            <div className="text-xs text-[var(--muted)] mb-1">Perps equity</div>
+            <div className="text-xs text-[var(--muted)] mb-1">{uiText("Perps equity")}</div>
             <div className="text-xl font-semibold truncate">
               <Money value={totals.equity.total} currency={base} />
             </div>
-            <div className="text-[10px] text-[var(--muted)] mt-1">includes open position P&amp;L</div>
+            <div className="text-[10px] text-[var(--muted)] mt-1">{uiText("includes open position P&L")}</div>
             <LeftOut total={totals.equity} noun="platform" />
           </div>
           <div className="card p-4 positions-simple-hide">
-            <div className="text-xs text-[var(--muted)] mb-1">Spot balances</div>
+            <div className="text-xs text-[var(--muted)] mb-1">{uiText("Spot balances")}</div>
             <div className="text-xl font-semibold truncate">
               <Money value={totals.spot.total} currency={base} />
             </div>
             <div className="text-[10px] text-[var(--muted)] mt-1">
               {unpricedCoins.length === 0
-                ? "counted in Investments, not here"
-                : `${unpricedCoins.join(", ")} not priced, so not in this figure`}
+                ? uiText("counted in Investments, not here")
+                : uiText("{0} not priced, so not in this figure", { "0": unpricedCoins.join(", ") })}
             </div>
             <LeftOut total={totals.spot} noun="platform" />
           </div>
           <div className="card p-4">
-            <div className="text-xs text-[var(--muted)] mb-1">Free / withdrawable</div>
+            <div className="text-xs text-[var(--muted)] mb-1">{uiText("Free / withdrawable")}</div>
             <div className="text-xl font-semibold truncate text-[var(--green)]">
               <Money value={totals.free.total} currency={base} />
             </div>
             <LeftOut total={totals.free} noun="platform" />
           </div>
           <div className="card p-4 positions-simple-hide">
-            <div className="text-xs text-[var(--muted)] mb-1">Margin in use</div>
+            <div className="text-xs text-[var(--muted)] mb-1">{uiText("Margin in use")}</div>
             <div className="text-xl font-semibold truncate text-[var(--amber)]">
               <Money value={totals.margin.total} currency={base} />
             </div>
@@ -213,22 +214,22 @@ export default async function PositionsPage() {
                   <div className="min-w-0">
                     <Link href={`/investments/asset/${encodeURIComponent(g.coin)}?type=${encodeURIComponent(g.parts[0]?.assetType ?? "")}`} className="font-semibold hover:underline break-words">{g.coin}</Link>
                     <div className="text-xs text-[var(--muted)] break-words">
-                      <span translate="no">{g.parts.length === 1 ? g.parts[0].accountName : `across ${g.parts.length} accounts`}</span>
+                      <span translate="no">{g.parts.length === 1 ? g.parts[0].accountName : uiText("across {0} accounts", { "0": g.parts.length })}</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0 font-semibold">
                     {g.value === null ? (
-                      <span className="text-[var(--muted)]" title={explainMissingTotal(g) ?? undefined}>unpriced</span>
+                      <span className="text-[var(--muted)]" title={explainMissingTotal(g) ?? undefined}>{uiText("unpriced")}</span>
                     ) : (
                       <Money value={g.value} currency={g.currency ?? base} />
                     )}
                   </div>
                 </div>
                 <div className="position-facts">
-                  <Fact label="Total">{round8(g.total)}</Fact>
-                  <Fact detail label="Available">{round8(g.available)}</Fact>
+                  <Fact label={uiText("Total")}>{round8(g.total)}</Fact>
+                  <Fact detail label={uiText("Available")}>{round8(g.available)}</Fact>
                   {g.parts.length === 1 && (
-                    <Fact detail label="Price">
+                    <Fact detail label={uiText("Price")}>
                       {g.parts[0].price === null ? "—" : <Money value={g.parts[0].price} currency={g.parts[0].currency} />}
                     </Fact>
                   )}
@@ -294,16 +295,16 @@ export default async function PositionsPage() {
             ))}
           </div>
           <div className="positions-desktop-only overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
-                  <th>Coin</th>
-                  <th>Tags</th>
-                  <th>Account</th>
-                  <th className="text-right">Total</th>
-                  <th className="text-right">Available</th>
-                  <th className="text-right">Price</th>
-                  <th className="text-right">Value</th>
+                  <th>{uiText("Coin")}</th>
+                  <th>{uiText("Tags")}</th>
+                  <th>{uiText("Account")}</th>
+                  <th className="text-right">{uiText("Total")}</th>
+                  <th className="text-right">{uiText("Available")}</th>
+                  <th className="text-right">{uiText("Price")}</th>
+                  <th className="text-right">{uiText("Value")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -316,9 +317,7 @@ export default async function PositionsPage() {
                       <td className="font-medium">
                         <Link href={`/investments/asset/${encodeURIComponent(g.coin)}?type=${encodeURIComponent(g.parts[0]?.assetType ?? "")}`} className="hover:underline">{g.coin}</Link>
                         {g.parts.length > 1 && (
-                          <div className="text-[10px] text-[var(--muted)]">
-                            across {g.parts.length} accounts
-                          </div>
+                          <div className="text-[10px] text-[var(--muted)]">{uiText("across ")}{g.parts.length}{uiText(" accounts")}</div>
                         )}
                       </td>
                       <td className="whitespace-normal">
@@ -346,9 +345,7 @@ export default async function PositionsPage() {
                             entryFor="balance"
                           />
                         ) : (
-                          <span className="text-[10px] text-[var(--muted)]">
-                            tagged per account, below
-                          </span>
+                          <span className="text-[10px] text-[var(--muted)]">{uiText("tagged per account, below")}</span>
                         )}
                       </td>
                       <td className="text-[var(--muted)]">
@@ -408,12 +405,12 @@ export default async function PositionsPage() {
                           <td className="text-right">
                             {b.available}
                             {b.hold > 0 && (
-                              <div className="text-xs text-[var(--muted)]">{b.hold} on hold</div>
+                              <div className="text-xs text-[var(--muted)]">{b.hold}{uiText(" on hold")}</div>
                             )}
                           </td>
                           <td className="text-right">
                             {b.price === null ? (
-                              <span className="text-[var(--muted)]">unpriced</span>
+                              <span className="text-[var(--muted)]">{uiText("unpriced")}</span>
                             ) : (
                               <Money value={b.price} currency={b.currency} />
                             )}
@@ -451,10 +448,7 @@ export default async function PositionsPage() {
               Section header is itself a button, and nesting one inside it is
               invalid markup that swallows the click. */}
           <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-            <p className="positions-long-note text-xs text-[var(--muted)] max-w-prose">
-              Kept by you rather than by a platform. Anything rebuilt from an imported statement
-              starts here, at the price you actually paid — tag them here, no need to open each one.
-            </p>
+            <p className="positions-long-note text-xs text-[var(--muted)] max-w-prose">{uiText("Kept by you rather than by a platform. Anything rebuilt from an imported statement starts here, at the price you actually paid — tag them here, no need to open each one.")}</p>
             <RefreshPrices />
           </div>
 
@@ -471,7 +465,7 @@ export default async function PositionsPage() {
                     {h.name && h.name !== h.symbol && (
                       <div className="text-[11px] text-[var(--muted)] break-words"><span translate="no">{h.name}</span></div>
                     )}
-                    <div className="text-xs text-[var(--muted)] break-words"><span translate="no">{h.accountName ?? "No account"}</span></div>
+                    <div className="text-xs text-[var(--muted)] break-words"><span translate="no">{h.accountName ?? uiText("No account")}</span></div>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -480,14 +474,14 @@ export default async function PositionsPage() {
                       className="text-xs"
                       style={{ color: h.unrealizedPnL === 0 ? "var(--muted)" : h.unrealizedPnL > 0 ? "var(--green)" : "var(--red)" }}
                     >
-                      {h.unrealizedPnL === 0 ? "not measured yet" : <Money value={h.unrealizedPnL} currency={h.currency} />}
+                      {h.unrealizedPnL === 0 ? uiText("not measured yet") : <Money value={h.unrealizedPnL} currency={h.currency} />}
                     </div>
                   </div>
                 </div>
                 <div className="position-facts">
-                  <Fact label="Quantity">{h.quantity}</Fact>
-                  <Fact detail label="Avg cost"><Money value={h.avgEntryPrice} currency={h.currency} /></Fact>
-                  <Fact detail label="Price now">
+                  <Fact label={uiText("Quantity")}>{h.quantity}</Fact>
+                  <Fact detail label={uiText("Avg cost")}><Money value={h.avgEntryPrice} currency={h.currency} /></Fact>
+                  <Fact detail label={uiText("Price now")}>
                     <Money value={h.currentPrice} currency={h.currency} />
                     {displaySymbol(h.quoteSymbol) && (
                       <div className="text-[10px] text-[var(--muted)]">{displaySymbol(h.quoteSymbol)}</div>
@@ -508,7 +502,7 @@ export default async function PositionsPage() {
                     playlists={playlistList}
                   />
                   <details className="text-xs">
-                    <summary className="cursor-pointer text-[var(--accent)] py-2">Where the price comes from</summary>
+                    <summary className="cursor-pointer text-[var(--accent)] py-2">{uiText("Where the price comes from")}</summary>
                     <div className="pt-1">
                       <QuoteSymbolField id={h.id} symbol={h.quoteSymbol} currency={h.currency} ticker={h.symbol} />
                     </div>
@@ -518,18 +512,18 @@ export default async function PositionsPage() {
             ))}
           </div>
           <div className="positions-desktop-only overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table">
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
               <thead>
                 <tr>
-                  <th>Symbol</th>
-                  <th>Tags</th>
-                  <th>Price from</th>
-                  <th>Account</th>
-                  <th className="text-right">Quantity</th>
-                  <th className="text-right">Avg cost</th>
-                  <th className="text-right">Price now</th>
-                  <th className="text-right">Value</th>
-                  <th className="text-right">Unrealized</th>
+                  <th>{uiText("Symbol")}</th>
+                  <th>{uiText("Tags")}</th>
+                  <th>{uiText("Price from")}</th>
+                  <th>{uiText("Account")}</th>
+                  <th className="text-right">{uiText("Quantity")}</th>
+                  <th className="text-right">{uiText("Avg cost")}</th>
+                  <th className="text-right">{uiText("Price now")}</th>
+                  <th className="text-right">{uiText("Value")}</th>
+                  <th className="text-right">{uiText("Unrealized")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -614,28 +608,16 @@ export default async function PositionsPage() {
             </ResponsiveTable></div>
           </div>
 
-          <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">
-            A dash under Unrealized means the price still equals what you paid — nothing has been
-            measured yet, rather than nothing having happened. Open a position to set its current
-            price.
-          </p>
+          <p className="text-[10px] text-[var(--muted)] mt-3 leading-snug">{uiText("A dash under Unrealized means the price still equals what you paid — nothing has been measured yet, rather than nothing having happened. Open a position to set its current price.")}</p>
         </Section>
       )}
 
       <div className="positions-note positions-simple-hide">
       <MobileFold title="Why positions are not added to balances" persistKey="positions-double-count">
       <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
-        <div className="text-sm">
-          These positions are <span className="text-[var(--amber)]">already included</span> in each
-          account&apos;s balance.
-        </div>
-        <div className="text-xs text-[var(--muted)] mt-1">
-          The exchange reports account equity, which already contains the unrealized P&amp;L below, so position
-          values are never added on top — that would count the same money twice. The account balance is
-          <strong> the account&apos;s own value only</strong>; coin balances that sit outside it are a
-          separate pool and are counted in{" "}
-          <strong>Investments</strong> instead, so every euro lands in Net Worth exactly once.
-        </div>
+        <div className="text-sm">{uiText("These positions are ")}<span className="text-[var(--amber)]">{uiText("already included")}</span>{uiText(" in each account's balance.")}</div>
+        <div className="text-xs text-[var(--muted)] mt-1">{uiText("The exchange reports account equity, which already contains the unrealized P&L below, so position values are never added on top — that would count the same money twice. The account balance is")}<strong>{uiText(" the account's own value only")}</strong>{uiText("; coin balances that sit outside it are a separate pool and are counted in")}{" "}
+          <strong>{uiText("Investments")}</strong>{uiText(" instead, so every euro lands in Net Worth exactly once.")}</div>
       </div>
       </MobileFold>
       </div>
@@ -643,25 +625,25 @@ export default async function PositionsPage() {
       {positions.length === 0 ? (
         <div className="positions-open card p-8 text-center text-sm text-[var(--muted)]">
           {connections.length === 0
-            ? "No connections yet — add one first."
-            : "No open positions right now."}
+            ? uiText("No connections yet — add one first.")
+            : uiText("No open positions right now.")}
         </div>
       ) : (
         <>
           <div className="positions-open positions-open-stats positions-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="card p-4">
-              <div className="text-xs text-[var(--muted)] mb-1">Open positions</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("Open positions")}</div>
               <div className="text-xl font-semibold">{positions.length}</div>
             </div>
             <div className="card p-4 positions-simple-hide">
-              <div className="text-xs text-[var(--muted)] mb-1">Total notional</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("Total notional")}</div>
               <div className="text-xl font-semibold truncate">
                 <Money value={totals.notional.total} currency={base} />
               </div>
               <LeftOut total={totals.notional} noun="position" />
             </div>
             <div className="card p-4">
-              <div className="text-xs text-[var(--muted)] mb-1">Unrealized P&amp;L</div>
+              <div className="text-xs text-[var(--muted)] mb-1">{uiText("Unrealized P&L")}</div>
               <div
                 className={`text-xl font-semibold truncate ${
                   totals.unrealized.total >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"
@@ -679,7 +661,7 @@ export default async function PositionsPage() {
             defaultOpen
             persistKey="positions:open"
             essential
-            summary={`${positions.length} open`}
+            summary={uiText("{0} open", { "0": positions.length })}
           >
             <div className="positions-phone-only positions-cards">
               {positions.map((p) => (
@@ -691,7 +673,7 @@ export default async function PositionsPage() {
                         <SideBadge side={p.side} />
                         {p.leverage !== null && (
                           <span className="text-xs text-[var(--muted)]">
-                            {p.leverage}x{p.leverageType ? ` ${p.leverageType}` : ""}
+                            {p.leverage}{uiText("x")}{p.leverageType ? ` ${p.leverageType}` : ""}
                           </span>
                         )}
                       </div>
@@ -708,22 +690,22 @@ export default async function PositionsPage() {
                       )}
                       {describePnlSource(p.pnlSource) && (
                         <div className="text-[10px] text-[var(--muted)] positions-simple-hide">
-                          {p.pnlSource === "yours" ? "your entry" : "platform's result"}
+                          {p.pnlSource === "yours" ? uiText("your entry") : uiText("platform's result")}
                         </div>
                       )}
                     </div>
                   </div>
                   <div className="position-facts">
-                    <Fact label="Value">
+                    <Fact label={uiText("Value")}>
                       {p.positionValue === null ? "—" : <Money value={p.positionValue} currency={p.currency} />}
                     </Fact>
-                    <Fact detail label="Size">{p.size}</Fact>
-                    <Fact detail label="Entry *">
+                    <Fact detail label={uiText("Size")}>{p.size}</Fact>
+                    <Fact detail label={uiText("Entry *")}>
                       {p.entryPrice === null ? "—" : <Bare value={p.entryPrice} />}
-                      {p.entryOverridden && <span className="text-[10px] text-[var(--accent)] ml-1">yours</span>}
+                      {p.entryOverridden && <span className="text-[10px] text-[var(--accent)] ml-1">{uiText("yours")}</span>}
                     </Fact>
-                    <Fact detail label="Mark *">{p.markPrice === null ? "—" : <Bare value={p.markPrice} />}</Fact>
-                    <Fact label="Liquidation *" className="text-[var(--amber)]">
+                    <Fact detail label={uiText("Mark *")}>{p.markPrice === null ? "—" : <Bare value={p.markPrice} />}</Fact>
+                    <Fact label={uiText("Liquidation *")} className="text-[var(--amber)]">
                       {p.liquidationPrice === null ? "—" : <Bare value={p.liquidationPrice} />}
                     </Fact>
                   </div>
@@ -749,31 +731,23 @@ export default async function PositionsPage() {
                   </div>
                 </article>
               ))}
-              <p className="text-[10px] text-[var(--muted)] positions-simple-hide">
-                * Entry, mark and liquidation are in the instrument&apos;s own currency, which the platform does not state.
-              </p>
+              <p className="text-[10px] text-[var(--muted)] positions-simple-hide">{uiText("* Entry, mark and liquidation are in the instrument's own currency, which the platform does not state.")}</p>
             </div>
             <div className="positions-desktop-only overflow-x-auto">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
                 <thead>
                   <tr>
-                    <th>Coin</th>
-                    <th>Tags</th>
-                    <th>Side</th>
-                    <th>Account</th>
-                    <th className="text-right">Size</th>
-                    <th className="text-right" title="In the instrument's own currency, which the platform does not tell us">
-                      Entry *
-                    </th>
-                    <th className="text-right" title="In the instrument's own currency, which the platform does not tell us">
-                      Mark *
-                    </th>
-                    <th className="text-right">Value</th>
-                    <th className="text-right">Leverage</th>
-                    <th className="text-right" title="In the instrument's own currency, which the platform does not tell us">
-                      Liquidation *
-                    </th>
-                    <th className="text-right">Unrealized P&amp;L</th>
+                    <th>{uiText("Coin")}</th>
+                    <th>{uiText("Tags")}</th>
+                    <th>{uiText("Side")}</th>
+                    <th>{uiText("Account")}</th>
+                    <th className="text-right">{uiText("Size")}</th>
+                    <th className="text-right" title={uiText("In the instrument's own currency, which the platform does not tell us")}>{uiText("Entry *")}</th>
+                    <th className="text-right" title={uiText("In the instrument's own currency, which the platform does not tell us")}>{uiText("Mark *")}</th>
+                    <th className="text-right">{uiText("Value")}</th>
+                    <th className="text-right">{uiText("Leverage")}</th>
+                    <th className="text-right" title={uiText("In the instrument's own currency, which the platform does not tell us")}>{uiText("Liquidation *")}</th>
+                    <th className="text-right">{uiText("Unrealized P&L")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -834,12 +808,10 @@ export default async function PositionsPage() {
                             className="text-[10px] text-[var(--accent)]"
                             title={
                               p.venueEntryPrice === null
-                                ? "The platform states no entry price"
-                                : `The platform says ${p.venueEntryPrice}`
+                                ? uiText("The platform states no entry price")
+                                : uiText("The platform says {0}", { "0": p.venueEntryPrice })
                             }
-                          >
-                            yours
-                          </div>
+                          >{uiText("yours")}</div>
                         )}
                       </td>
                       <td className="text-right">
@@ -853,7 +825,7 @@ export default async function PositionsPage() {
                         )}
                       </td>
                       <td className="text-right">
-                        {p.leverage === null ? "—" : `${p.leverage}x`}
+                        {p.leverage === null ? "—" : uiText("{0}x", { "0": p.leverage })}
                         {p.leverageType && (
                           <div className="text-xs text-[var(--muted)]">{p.leverageType}</div>
                         )}
@@ -880,7 +852,7 @@ export default async function PositionsPage() {
                             className="text-[10px] text-[var(--muted)] whitespace-normal max-w-[16rem] ml-auto"
                             title={describePnlSource(p.pnlSource) ?? undefined}
                           >
-                            {p.pnlSource === "yours" ? "your entry" : "platform's result"}
+                            {p.pnlSource === "yours" ? uiText("your entry") : uiText("platform's result")}
                           </div>
                         )}
                         {p.returnOnEquity !== null && (

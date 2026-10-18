@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listBucketsWithTotals, createBucket, addToAllocation } from "@/actions/buckets";
 import { listAccountsWithState } from "@/actions/accounts";
@@ -15,6 +16,7 @@ import Link from "next/link";
 import Section from "@/components/Section";
 
 export default async function BucketsPage() {
+  const uiText = await textForRequest();
   const [buckets, accounts, withInvestments, ranked, defaultShares] = await Promise.all([
     listBucketsWithTotals(),
     listAccountsWithState(),
@@ -35,7 +37,7 @@ export default async function BucketsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-lg font-semibold">Buckets</h1>
+      <h1 className="text-lg font-semibold">{uiText("Buckets")}</h1>
 
       {/* The hierarchy, and the thing that makes it worth having. */}
       <Section title="Distribute money" defaultOpen>
@@ -48,12 +50,8 @@ export default async function BucketsPage() {
       </Section>
 
       {ranked.length > 1 && (
-        <Section title="Priority" defaultOpen essential summary={`${ranked.length} buckets`}>
-          <p className="text-xs text-[var(--muted)] mb-3">
-            Money is shared out in this order, with the higher ranks getting more. Two goals on the
-            same rank get the same share — set them to the same number to say &quot;these matter
-            equally&quot;.
-          </p>
+        <Section title="Priority" defaultOpen essential summary={uiText("{0} buckets", { "0": ranked.length })}>
+          <p className="text-xs text-[var(--muted)] mb-3">{uiText("Money is shared out in this order, with the higher ranks getting more. Two goals on the same rank get the same share — set them to the same number to say \"these matter equally\".")}</p>
           <ul className="space-y-1">
             {ranked.map((g) => {
               const short = g.target === null ? null : Math.max(0, g.target - g.current);
@@ -66,7 +64,7 @@ export default async function BucketsPage() {
                   <span
                     className="text-xs w-5"
                     style={{ color: tied ? "var(--accent)" : "var(--muted)" }}
-                    title={tied ? "Shares this rank with another goal" : undefined}
+                    title={tied ? uiText("Shares this rank with another goal") : undefined}
                   >
                     {rank}
                   </span>
@@ -78,13 +76,12 @@ export default async function BucketsPage() {
                   </span>
                   <span className="text-xs text-[var(--muted)] whitespace-nowrap">
                     {short === null ? (
-                      "no target"
+                      uiText("no target")
                     ) : short === 0 ? (
-                      <span className="text-[var(--green)]">full</span>
+                      <span className="text-[var(--green)]">{uiText("full")}</span>
                     ) : (
                       <>
-                        <Money value={short} currency={base} /> to go
-                      </>
+                        <Money value={short} currency={base} />{uiText(" to go")}</>
                     )}
                   </span>
                   {/* Direct entry as well as arrows: setting two goals to the
@@ -98,11 +95,9 @@ export default async function BucketsPage() {
                       min="0"
                       defaultValue={g.priority}
                       className="input input-narrow text-xs py-0.5 w-14"
-                      title="Rank — lower is more important. Equal numbers share equally."
+                      title={uiText("Rank — lower is more important. Equal numbers share equally.")}
                     />
-                    <button type="submit" className="text-[10px] text-[var(--accent)] hover:underline">
-                      Set
-                    </button>
+                    <button type="submit" className="text-[10px] text-[var(--accent)] hover:underline">{uiText("Set")}</button>
                   </form>
                   <div className="flex gap-1">
                     <form action={moveGoal}>
@@ -113,7 +108,7 @@ export default async function BucketsPage() {
                         disabled={g.priority === 0}
                         className="text-xs px-1 text-[var(--muted)] hover:text-[var(--foreground)]"
                         style={g.priority === 0 ? { opacity: 0.3 } : undefined}
-                        aria-label={`Move ${g.name} up`}
+                        aria-label={uiText("Move {0} up", { "0": g.name })}
                       >
                         ↑
                       </button>
@@ -124,7 +119,7 @@ export default async function BucketsPage() {
                       <button
                         type="submit"
                         className="text-xs px-1 text-[var(--muted)] hover:text-[var(--foreground)]"
-                        aria-label={`Move ${g.name} down`}
+                        aria-label={uiText("Move {0} down", { "0": g.name })}
                       >
                         ↓
                       </button>
@@ -141,24 +136,20 @@ export default async function BucketsPage() {
           because "100% funded" by an ETF and by cash are not the same claim. */}
       {withInvestments.purposes.some((p) => p.totals.invested > 0) && (
         <Section title="Including investments" defaultOpen>
-          <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">
-            Positions you&apos;ve assigned to a goal, counted at their current market value. The
-            conservative figure ignores everything exposed to the market, so you can see how much of
-            each goal survives a bad month.
-          </p>
+          <p className="text-xs text-[var(--muted)] mb-3 max-w-2xl">{uiText("Positions you've assigned to a goal, counted at their current market value. The conservative figure ignores everything exposed to the market, so you can see how much of each goal survives a bad month.")}</p>
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
-                  <th>Goal</th>
-                  <th className="text-right">Cash</th>
-                  <th className="text-right">Invested</th>
+                  <th>{uiText("Goal")}</th>
+                  <th className="text-right">{uiText("Cash")}</th>
+                  <th className="text-right">{uiText("Invested")}</th>
                   {/* `investedPnl` is the unrealised gain on the invested
                       share — profit a price move can take back, not money
                       banked towards the goal. */}
-                  <th className="text-right">Unrealized P&amp;L</th>
-                  <th className="text-right">Total</th>
-                  <th className="text-right">Progress</th>
+                  <th className="text-right">{uiText("Unrealized P&L")}</th>
+                  <th className="text-right">{uiText("Total")}</th>
+                  <th className="text-right">{uiText("Progress")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -190,13 +181,12 @@ export default async function BucketsPage() {
                       </td>
                       <td className="text-right text-xs">
                         {p.progress.percent === null ? (
-                          <span className="text-[var(--muted)]">no target</span>
+                          <span className="text-[var(--muted)]">{uiText("no target")}</span>
                         ) : (
                           <>
                             {p.progress.percent.toFixed(0)}%
                             <div className="text-[10px] text-[var(--muted)]">
-                              {p.progress.conservativePercent?.toFixed(0)}% guaranteed
-                            </div>
+                              {p.progress.conservativePercent?.toFixed(0)}{uiText("% guaranteed")}</div>
                           </>
                         )}
                       </td>
@@ -209,20 +199,17 @@ export default async function BucketsPage() {
       )}
 
       <Section title="Add money to a bucket" defaultOpen className="max-w-lg">
-        <p className="text-xs text-[var(--muted)] mb-3">
-          Move some of an account&apos;s free cash into a bucket. This doesn&apos;t move real money — it just marks it as
-          reserved for that purpose.
-        </p>
+        <p className="text-xs text-[var(--muted)] mb-3">{uiText("Move some of an account's free cash into a bucket. This doesn't move real money — it just marks it as reserved for that purpose.")}</p>
         {buckets.length === 0 || accounts.length === 0 ? (
           <p className="text-xs text-[var(--muted)]">
-            {accounts.length === 0 ? "Create an account first." : "Create a bucket below first."}
+            {accounts.length === 0 ? uiText("Create an account first.") : uiText("Create a bucket below first.")}
           </p>
         ) : (
           <form action={addToAllocation} className="space-y-3">
             <select name="accountId" className="input" required>
               {accounts.map((a) => (
                 <option translate="no" key={a.id} value={a.id}>
-                  {a.name} — free: {a.free.toFixed(2)} {a.currency}
+                  {a.name}{uiText(" — free: ")}{a.free.toFixed(2)} {a.currency}
                 </option>
               ))}
             </select>
@@ -233,10 +220,8 @@ export default async function BucketsPage() {
                 </option>
               ))}
             </select>
-            <input name="amount" type="number" step="0.01" placeholder="Amount" className="input" required />
-            <button type="submit" className="btn w-full">
-              Add to bucket
-            </button>
+            <input name="amount" type="number" step="0.01" placeholder={uiText("Amount")} className="input" required />
+            <button type="submit" className="btn w-full">{uiText("Add to bucket")}</button>
 
           </form>
         )}
@@ -257,9 +242,7 @@ export default async function BucketsPage() {
                     <span translate="no">{b.name}</span>
                   </Link>
                   {goalReached && (
-                    <span className="badge border border-[var(--green)] text-[var(--green)] shrink-0">
-                      ✓ Goal reached
-                    </span>
+                    <span className="badge border border-[var(--green)] text-[var(--green)] shrink-0">{uiText("✓ Goal reached")}</span>
                   )}
                 </div>
                 <div className="text-sm whitespace-nowrap flex items-center gap-3">
@@ -272,9 +255,7 @@ export default async function BucketsPage() {
                   <Link
                     href={`/buckets/${b.id}`}
                     className="text-xs text-[var(--accent)] hover:underline"
-                  >
-                    Edit
-                  </Link>
+                  >{uiText("Edit")}</Link>
                 </div>
               </div>
               {pct !== null && (
@@ -289,8 +270,7 @@ export default async function BucketsPage() {
                   money is; it makes no claim about where it should be. */}
               {share > 0 && (
                 <div className="text-xs text-[var(--muted)] mb-3">
-                  {share}% of all bucketed money
-                </div>
+                  {share}{uiText("% of all bucketed money")}</div>
               )}
               <div className="space-y-1">
                 {b.allocations.map((a) => (
@@ -300,7 +280,7 @@ export default async function BucketsPage() {
                   </div>
                 ))}
                 {b.allocations.length === 0 && (
-                  <div className="text-xs text-[var(--muted)]">No money allocated yet.</div>
+                  <div className="text-xs text-[var(--muted)]">{uiText("No money allocated yet.")}</div>
                 )}
               </div>
             </div>
@@ -310,16 +290,11 @@ export default async function BucketsPage() {
 
       <Section title="Create bucket" defaultOpen className="max-w-md">
         <form action={createBucket} className="space-y-3">
-          <input name="name" placeholder="Name (e.g. Emergency Fund)" className="input" required />
-          <input name="description" placeholder="Description" className="input" />
-          <input name="targetAmount" type="number" step="0.01" placeholder="Target amount (optional)" className="input" />
-          <button type="submit" className="btn w-full">
-            Create
-          </button>
-          <p className="text-xs text-[var(--muted)]">
-            No percentage to set here. How much each goal gets comes from its rank above, and you can
-            override the split when you distribute.
-          </p>
+          <input name="name" placeholder={uiText("Name (e.g. Emergency Fund)")} className="input" required />
+          <input name="description" placeholder={uiText("Description")} className="input" />
+          <input name="targetAmount" type="number" step="0.01" placeholder={uiText("Target amount (optional)")} className="input" />
+          <button type="submit" className="btn w-full">{uiText("Create")}</button>
+          <p className="text-xs text-[var(--muted)]">{uiText("No percentage to set here. How much each goal gets comes from its rank above, and you can override the split when you distribute.")}</p>
         </form>
       </Section>
     </div>

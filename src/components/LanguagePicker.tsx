@@ -1,5 +1,6 @@
 "use client";
 
+import { directionOf } from "@/lib/i18n/languages";
 import { LANGUAGES, useLanguage, type Language } from "./LanguageContext";
 
 /** The app's language: Settings, and the sign-in page for someone who has not signed in yet. */
@@ -7,14 +8,14 @@ export default function LanguagePicker({ className = "input min-w-0" }: { classN
   const { language, setLanguage, m } = useLanguage();
   return (
     <select
-      translate="no" lang={language}
+      translate="no" lang={language} dir={directionOf(language)}
       aria-label={m.language.label}
       className={className}
       value={language}
       onChange={(e) => setLanguage(e.target.value as Language)}
     >
       {LANGUAGES.map(({ code, name }) => (
-        <option key={code} value={code}>
+        <option key={code} value={code} lang={code} dir={directionOf(code)}>
           {name}
         </option>
       ))}

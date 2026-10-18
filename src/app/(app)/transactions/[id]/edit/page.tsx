@@ -1,9 +1,11 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import { getTransaction, updateTransaction, listCategories } from "@/actions/transactions";
 import { notFound, redirect } from "next/navigation";
 import PurchaseSavingsFields from '@/components/PurchaseSavingsFields';
 import Link from 'next/link';
 
 export default async function EditTransactionPage({ params }: { params: Promise<{ id: string }> }) {
+  const uiText = await textForRequest();
   const { id } = await params;
   const tx = await getTransaction(id);
   if (!tx) notFound();
@@ -14,14 +16,14 @@ export default async function EditTransactionPage({ params }: { params: Promise<
 
   return (
     <div className="space-y-6 max-w-md">
-      <h1 className="text-lg font-semibold">Edit transaction</h1>
+      <h1 className="text-lg font-semibold">{uiText("Edit transaction")}</h1>
 
       <div className="card p-4">
         <form action={updateTransaction} className="space-y-3">
           <input type="hidden" name="id" value={tx.id} />
-          <div className="text-xs text-[var(--muted)]">Type: {tx.type} (can&apos;t be changed here)</div>
+          <div className="text-xs text-[var(--muted)]">{uiText("Type: ")}{tx.type}{uiText(" (can't be changed here)")}</div>
           <select name="categoryId" defaultValue={tx.categoryId ?? ""} className="input">
-            <option value="">No category</option>
+            <option value="">{uiText("No category")}</option>
             {relevantCategories.map((c) => (
               <option translate="no" key={c.id} value={c.id}>
                 {c.name}
@@ -43,12 +45,10 @@ export default async function EditTransactionPage({ params }: { params: Promise<
             className="input"
             required
           />
-          <input name="description" defaultValue={tx.description ?? ""} placeholder="Description" className="input" />
+          <input name="description" defaultValue={tx.description ?? ""} placeholder={uiText("Description")} className="input" />
           {tx.type === 'expense' && !tx.cashbackForId && <PurchaseSavingsFields discountAmount={tx.discountAmount} cashbackExpected={tx.cashbackExpected} />}
-          <Link href={`/savings?purchase=${encodeURIComponent(tx.cashbackForId ?? tx.id)}`} className="text-sm underline">View savings and cashback</Link>
-          <button type="submit" className="btn w-full">
-            Save
-          </button>
+          <Link href={`/savings?purchase=${encodeURIComponent(tx.cashbackForId ?? tx.id)}`} className="text-sm underline">{uiText("View savings and cashback")}</Link>
+          <button type="submit" className="btn w-full">{uiText("Save")}</button>
         </form>
       </div>
     </div>

@@ -121,7 +121,7 @@ final class Alerts {
             return;
         }
 
-        createChannel(manager);
+        createChannel(context, manager);
         SharedPreferences prefs = QuickEntry.prefs(context);
         Set<String> notified = new HashSet<>(prefs.getStringSet(KEY_NOTIFIED, new HashSet<>()));
         Set<String> current = new HashSet<>();
@@ -138,10 +138,10 @@ final class Alerts {
         prefs.edit().putStringSet(KEY_NOTIFIED, current).apply();
     }
 
-    private static void createChannel(NotificationManager manager) {
-        NotificationChannel channel = new NotificationChannel(CHANNEL, "Alertas",
+    private static void createChannel(Context context, NotificationManager manager) {
+        NotificationChannel channel = new NotificationChannel(CHANNEL, LocalText.text(context, "Alerts"),
                 NotificationManager.IMPORTANCE_DEFAULT);
-        channel.setDescription("Orçamentos, cobranças, contas e ligações que precisam de atenção.");
+        channel.setDescription(LocalText.text(context, "Budgets, charges, accounts and connections that need attention."));
         manager.createNotificationChannel(channel);
     }
 
@@ -165,7 +165,7 @@ final class Alerts {
         Notification locked = new Notification.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat_quick_entry)
                 .setContentTitle("Money OS")
-                .setContentText("Something needs your attention")
+                .setContentText(LocalText.text(context, "Something needs your attention"))
                 .build();
 
         Notification.Builder builder = new Notification.Builder(context, CHANNEL)

@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useState } from "react";
 import {
   RESOURCE_TYPES,
@@ -31,6 +32,7 @@ export default function ResourceForm({
   categories: Category[];
   action: (formData: FormData) => void;
 }) {
+  const uiText = useText();
   const [type, setType] = useState<ResourceType>("BOOK");
   const [unit, setUnit] = useState(defaultUnitFor("BOOK"));
   const [chosenCategories, setChosenCategories] = useState<string[]>([]);
@@ -70,28 +72,25 @@ export default function ResourceForm({
         {RESOURCE_TYPES.find((t) => t.value === type)!.help}
       </p>
 
-      <input name="title" placeholder="Title" className="input" required />
+      <input name="title" placeholder={uiText("Title")} className="input" required />
       <input
         name="creator"
-        placeholder="Author, channel, host, professor or institution"
+        placeholder={uiText("Author, channel, host, professor or institution")}
         className="input"
         required
       />
-      <textarea name="description" placeholder="What it is" rows={3} className="input" />
+      <textarea name="description" placeholder={uiText("What it is")} rows={3} className="input" />
 
       <div>
         <input
           name="externalUrl"
           type="url"
-          placeholder={requiresUrl(type) ? "Official link (required)" : "Official link (optional)"}
+          placeholder={requiresUrl(type) ? uiText("Official link (required)") : uiText("Official link (optional)")}
           className="input"
           required={requiresUrl(type)}
         />
         {requiresUrl(type) && (
-          <p className="text-[10px] text-[var(--muted)] mt-1">
-            The app stores metadata and progress, never the media — so a {type.toLowerCase()} needs
-            somewhere to point.
-          </p>
+          <p className="text-[10px] text-[var(--muted)] mt-1">{uiText("The app stores metadata and progress, never the media — so a ")}{type.toLowerCase()}{uiText(" needs somewhere to point.")}</p>
         )}
       </div>
 
@@ -99,11 +98,11 @@ export default function ResourceForm({
         <select name="level" className="input" defaultValue="BEGINNER">
           {LEVELS.map((l) => (
             <option key={l.value} value={l.value}>
-              {l.label}
+              {uiText(l.label ?? "")}
             </option>
           ))}
         </select>
-        <input name="language" placeholder="Language (optional)" className="input" />
+        <input name="language" placeholder={uiText("Language (optional)")} className="input" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -114,8 +113,7 @@ export default function ResourceForm({
           className="input"
         >
           {PROGRESS_UNITS.map((u) => (
-            <option key={u.value} value={u.value}>
-              Track in {u.label}
+            <option key={u.value} value={u.value}>{uiText("Track in ")}{uiText(u.label ?? "")}
             </option>
           ))}
         </select>
@@ -124,7 +122,7 @@ export default function ResourceForm({
           type="number"
           step="0.01"
           min="0"
-          placeholder="Total (pages, minutes, lessons)"
+          placeholder={uiText("Total (pages, minutes, lessons)")}
           className="input"
         />
       </div>
@@ -133,32 +131,29 @@ export default function ResourceForm({
           irrelevant can be submitted. */}
       {shows("isbn13") && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input name="isbn13" placeholder="ISBN-13 (optional)" className="input" />
+          <input name="isbn13" placeholder={uiText("ISBN-13 (optional)")} className="input" />
           <input
             name="pageCount"
             type="number"
             min="0"
-            placeholder="Pages (optional)"
+            placeholder={uiText("Pages (optional)")}
             className="input"
           />
-          <input name="coverUrl" type="url" placeholder="Cover image URL" className="input" />
-          <input name="translator" placeholder="Translator (optional)" className="input" />
+          <input name="coverUrl" type="url" placeholder={uiText("Cover image URL")} className="input" />
+          <input name="translator" placeholder={uiText("Translator (optional)")} className="input" />
           {/* Your copy. Two editions of the same work differ in translation,
               publisher and page count without being different books. */}
-          <input name="translation" placeholder="Translation (optional)" className="input" />
-          <input name="edition" placeholder="Edition (optional)" className="input" />
-          <input name="publisher" placeholder="Publisher (optional)" className="input" />
+          <input name="translation" placeholder={uiText("Translation (optional)")} className="input" />
+          <input name="edition" placeholder={uiText("Edition (optional)")} className="input" />
+          <input name="publisher" placeholder={uiText("Publisher (optional)")} className="input" />
           <div className="sm:col-span-2">
             <input
               name="affiliateUrl"
               type="url"
-              placeholder="Affiliate link (optional)"
+              placeholder={uiText("Affiliate link (optional)")}
               className="input"
             />
-            <p className="text-[10px] text-[var(--muted)] mt-1">
-              Rendered with <span className="font-mono">sponsored nofollow</span>, so it declares
-              itself as a paid link.
-            </p>
+            <p className="text-[10px] text-[var(--muted)] mt-1">{uiText("Rendered with ")}<span className="font-mono">{uiText("sponsored nofollow")}</span>{uiText(", so it declares itself as a paid link.")}</p>
           </div>
         </div>
       )}
@@ -166,32 +161,32 @@ export default function ResourceForm({
       {(shows("platform") || shows("durationMinutes")) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {shows("platform") && (
-            <input name="platform" placeholder="Platform (YouTube, Spotify…)" className="input" />
+            <input name="platform" placeholder={uiText("Platform (YouTube, Spotify…)")} className="input" />
           )}
           {shows("durationMinutes") && (
             <input
               name="durationMinutes"
               type="number"
               min="0"
-              placeholder="Duration in minutes"
+              placeholder={uiText("Duration in minutes")}
               className="input"
             />
           )}
-          {shows("channelName") && <input name="channelName" placeholder="Channel" className="input" />}
-          {shows("hostName") && <input name="hostName" placeholder="Host" className="input" />}
-          {shows("guestName") && <input name="guestName" placeholder="Guest" className="input" />}
+          {shows("channelName") && <input name="channelName" placeholder={uiText("Channel")} className="input" />}
+          {shows("hostName") && <input name="hostName" placeholder={uiText("Host")} className="input" />}
+          {shows("guestName") && <input name="guestName" placeholder={uiText("Guest")} className="input" />}
         </div>
       )}
 
       {shows("institution") && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input name="institution" placeholder="University or institution" className="input" />
-          <input name="instructor" placeholder="Instructor" className="input" />
+          <input name="institution" placeholder={uiText("University or institution")} className="input" />
+          <input name="instructor" placeholder={uiText("Instructor")} className="input" />
           <input
             name="lessonCount"
             type="number"
             min="0"
-            placeholder="Lessons (optional)"
+            placeholder={uiText("Lessons (optional)")}
             className="input"
           />
           <input
@@ -199,16 +194,14 @@ export default function ResourceForm({
             type="number"
             step="0.5"
             min="0"
-            placeholder="Estimated hours"
+            placeholder={uiText("Estimated hours")}
             className="input"
           />
         </div>
       )}
 
       <div>
-        <div className="text-xs text-[var(--muted)] mb-2">
-          Categories — the same set for every type
-        </div>
+        <div className="text-xs text-[var(--muted)] mb-2">{uiText("Categories — the same set for every type")}</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1">
           {categories.map((c) => (
             <label key={c.id} className="flex items-center gap-1.5 text-xs">
@@ -250,14 +243,12 @@ export default function ResourceForm({
       <textarea
         name="whyLearn"
         rows={2}
-        placeholder="Why it's worth learning from (optional)"
+        placeholder={uiText("Why it's worth learning from (optional)")}
         className="input"
       />
-      <textarea name="lessons" rows={3} placeholder="Main lessons (optional)" className="input" />
+      <textarea name="lessons" rows={3} placeholder={uiText("Main lessons (optional)")} className="input" />
 
-      <button type="submit" className="btn w-full">
-        Add to the library
-      </button>
+      <button type="submit" className="btn w-full">{uiText("Add to the library")}</button>
     </form>
   );
 }

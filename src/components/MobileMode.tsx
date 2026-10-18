@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import { useSyncExternalStore } from "react";
 import { PHONE_QUERY } from "@/lib/ui/panels";
 
@@ -40,14 +41,15 @@ function setMode(mode: MobileMode) {
 }
 
 export default function MobileModeSwitch() {
+  const uiText = useText();
   const { mode } = useMobileMode();
   return (
-    <div className="mobile-mode-picker" role="group" aria-label="Mobile display mode">
+    <div className="mobile-mode-picker" role="group" aria-label={uiText("Mobile display mode")}>
       <button type="button" aria-pressed={mode === "simple"} onClick={() => setMode("simple")}>
-        <span>Simple</span><small>The essentials</small>
+        <span>Simple</span><small>{uiText("The essentials")}</small>
       </button>
       <button type="button" aria-pressed={mode === "complex"} onClick={() => setMode("complex")}>
-        <span>Complex</span><small>All options</small>
+        <span>Complex</span><small>{uiText("All options")}</small>
       </button>
     </div>
   );

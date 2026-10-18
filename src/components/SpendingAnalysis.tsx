@@ -1,5 +1,6 @@
 "use client";
 
+import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
@@ -63,6 +64,7 @@ export default function SpendingAnalysis({
   unconverted: string[];
   approximate: boolean;
 }) {
+  const uiText = useText();
   const [filters, setFilters] = useState<SpendingFilters>(NO_SPENDING_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [customDates, setCustomDates] = useState(false);
@@ -95,10 +97,10 @@ export default function SpendingAnalysis({
   const active = hasActiveSpendingFilters(filters);
   const describing = describeSpendingFilters(filters);
   const periods = [
-    { value: "last-month", label: "Last month" },
-    { value: "last-3-months", label: "Last 3 months" },
-    { value: "last-12-months", label: "Last 12 months" },
-    { value: "this-year", label: "This year" },
+    { value: "last-month", label: uiText("Last month") },
+    { value: "last-3-months", label: uiText("Last 3 months") },
+    { value: "last-12-months", label: uiText("Last 12 months") },
+    { value: "this-year", label: uiText("This year") },
   ] as const;
   const period = customDates ? "custom" : filters.from === null && filters.to === null ? "all" :
     periods.find((p) => {
@@ -119,16 +121,10 @@ export default function SpendingAnalysis({
   if (rows.length === 0) {
     return (
       <div className="card p-6 text-center space-y-2">
-        <div className="text-sm font-medium">No spending recorded yet</div>
-        <p className="text-xs text-[var(--muted)] max-w-lg mx-auto leading-relaxed">
-          This page fills in from your transactions — every chart on it is computed from what you
-          record, and nothing here is estimated. Add them by hand under Cash Flow, or bring in a
-          bank statement from Import and they all appear at once.
-        </p>
+        <div className="text-sm font-medium">{uiText("No spending recorded yet")}</div>
+        <p className="text-xs text-[var(--muted)] max-w-lg mx-auto leading-relaxed">{uiText("This page fills in from your transactions — every chart on it is computed from what you record, and nothing here is estimated. Add them by hand under Cash Flow, or bring in a bank statement from Import and they all appear at once.")}</p>
         {unconverted.length > 0 && (
-          <p className="text-xs" style={{ color: "var(--amber)" }}>
-            There are transactions in {unconverted.join(", ")} with no exchange rate, so they are
-            left out entirely rather than counted as {currency}.
+          <p className="text-xs" style={{ color: "var(--amber)" }}>{uiText("There are transactions in ")}{unconverted.join(", ")}{uiText(" with no exchange rate, so they are left out entirely rather than counted as ")}{currency}.
           </p>
         )}
       </div>
@@ -139,9 +135,7 @@ export default function SpendingAnalysis({
     <div className="space-y-4">
       <section className="card p-4">
         <div className="flex items-end gap-2">
-          <label className="min-w-0 flex-1 text-xs text-[var(--muted)]">
-            Period
-            <select aria-label="Spending period" className="input w-full mt-1" value={period} onChange={(event) => {
+          <label className="min-w-0 flex-1 text-xs text-[var(--muted)]">{uiText("Period")}<select aria-label={uiText("Spending period")} className="input w-full mt-1" value={period} onChange={(event) => {
               const value = event.target.value;
               setCustomDates(value === "custom");
               if (value === "custom") { setFiltersOpen(true); return; }
@@ -149,53 +143,51 @@ export default function SpendingAnalysis({
               const range = selected ? presetRange(selected.value) : { from: null, to: null };
               setFilters((f) => ({ ...f, from: range.from, to: range.to }));
             }}>
-              <option value="all">All time</option>
-              {periods.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-              <option value="custom">Custom dates</option>
+              <option value="all">{uiText("All time")}</option>
+              {periods.map((p) => <option key={p.value} value={p.value}>{uiText(p.label ?? "")}</option>)}
+              <option value="custom">{uiText("Custom dates")}</option>
             </select>
           </label>
           <button type="button" className="btn text-xs shrink-0" aria-expanded={filtersOpen} aria-controls={filtersId} onClick={() => setFiltersOpen((open) => !open)}>
-            {filtersOpen ? "Close filters" : "Filters"}{filterCount > 0 ? ` (${filterCount})` : ""}
+            {filtersOpen ? uiText("Close filters") : uiText("Filters")}{filterCount > 0 ? ` (${filterCount})` : ""}
           </button>
             {active && (
               <button
                 type="button"
                 onClick={() => { setFilters(NO_SPENDING_FILTERS); setCustomDates(false); }}
                 className="text-xs text-[var(--accent)]"
-              >
-                Clear
-              </button>
+              >{uiText("Clear")}</button>
             )}
         </div>
 
         <div id={filtersId} hidden={!filtersOpen}>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
           <Select
-            label="Category"
+            label={uiText("Category")}
             value={filters.categoryName ?? ""}
             onChange={(v) => set("categoryName", pick(v))}
             options={options.categories}
           />
           <Select
-            label="Subcategory"
+            label={uiText("Subcategory")}
             value={filters.subcategoryName ?? ""}
             onChange={(v) => set("subcategoryName", pick(v))}
             options={options.subcategories}
           />
           <Select
-            label="Merchant"
+            label={uiText("Merchant")}
             value={filters.merchant ?? ""}
             onChange={(v) => set("merchant", pick(v))}
             options={options.merchants}
           />
           <Select
-            label="Account"
+            label={uiText("Account")}
             value={filters.accountName ?? ""}
             onChange={(v) => set("accountName", pick(v))}
             options={options.accounts}
           />
           <label className="block">
-            <span className="text-[10px] text-[var(--muted)] block mb-1">From</span>
+            <span className="text-[10px] text-[var(--muted)] block mb-1">{uiText("From")}</span>
             <input
               type="date"
               className="input text-xs w-full"
@@ -204,7 +196,7 @@ export default function SpendingAnalysis({
             />
           </label>
           <label className="block">
-            <span className="text-[10px] text-[var(--muted)] block mb-1">To</span>
+            <span className="text-[10px] text-[var(--muted)] block mb-1">{uiText("To")}</span>
             <input
               type="date"
               className="input text-xs w-full"
@@ -216,7 +208,7 @@ export default function SpendingAnalysis({
 
         {(options.hasFixed || options.hasVariable) && (
           <div className="flex flex-wrap items-center gap-2 mt-3">
-            <span className="text-[10px] text-[var(--muted)]">Show</span>
+            <span className="text-[10px] text-[var(--muted)]">{uiText("Show")}</span>
             {([null, "fixed", "variable"] as const).map((c) => (
               <button
                 key={String(c)}
@@ -227,7 +219,7 @@ export default function SpendingAnalysis({
                   color: filters.committed === c ? "var(--accent)" : undefined,
                 }}
               >
-                {c === null ? "everything" : c === "fixed" ? "committed costs" : "what you chose"}
+                {c === null ? uiText("everything") : c === "fixed" ? uiText("committed costs") : uiText("what you chose")}
               </button>
             ))}
           </div>
@@ -235,49 +227,37 @@ export default function SpendingAnalysis({
         </div>
 
         {describing !== null && (
-          <p className="text-xs mt-3" style={{ color: "var(--accent)" }}>
-            Every figure below is {describing} — {filtered.length} of {rows.length} transactions.
-          </p>
+          <p className="text-xs mt-3" style={{ color: "var(--accent)" }}>{uiText("Every figure below is ")}{describing} — {filtered.length}{uiText(" of ")}{rows.length}{uiText(" transactions.")}</p>
         )}
 
         {active && filtered.length === 0 && (
-          <p className="text-xs text-[var(--muted)] mt-3">
-            Nothing matches that combination. Each filter has transactions of its own; they just
-            have none in common.
-          </p>
+          <p className="text-xs text-[var(--muted)] mt-3">{uiText("Nothing matches that combination. Each filter has transactions of its own; they just have none in common.")}</p>
         )}
 
         {/* Rows, but none of them spending — a month of only income and
             transfers. The charts are empty and that is the reason. */}
         {filtered.length > 0 && view.totals.spent === 0 && (
           <p className="text-xs text-[var(--muted)] mt-3">
-            {filtered.length} transaction{filtered.length === 1 ? "" : "s"}, none of them
-            spending — income and transfers between your own accounts do not appear in the charts
-            below.
-          </p>
+            {uiText(filtered.length === 1 ? "{count} transaction" : "{count} transactions", { count: filtered.length })}{uiText(", none of them spending — income and transfers between your own accounts do not appear in the charts below.")}</p>
         )}
 
         {unconverted.length > 0 && (
-          <p className="text-xs mt-3" style={{ color: "var(--amber)" }}>
-            No exchange rate for {unconverted.join(", ")}. Those transactions are left out of every
-            figure here rather than counted as {currency}.
+          <p className="text-xs mt-3" style={{ color: "var(--amber)" }}>{uiText("No exchange rate for ")}{unconverted.join(", ")}{uiText(". Those transactions are left out of every figure here rather than counted as ")}{currency}.
           </p>
         )}
       </section>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Tile label="Spent" value={view.totals.spent} currency={currency} tone="var(--red)" />
-        <Tile label="Received" value={view.totals.income} currency={currency} tone="var(--green)" />
+        <Tile label={uiText("Spent")} value={view.totals.spent} currency={currency} tone="var(--red)" />
+        <Tile label={uiText("Received")} value={view.totals.income} currency={currency} tone="var(--green)" />
         <Tile
-          label="Net"
+          label={uiText("Net")}
           value={view.totals.net}
           currency={currency}
           tone={view.totals.net >= 0 ? "var(--green)" : "var(--red)"}
         />
         <div className="card p-3">
-          <div className="text-[10px] text-[var(--muted)] uppercase tracking-wide">
-            Committed share
-          </div>
+          <div className="text-[10px] text-[var(--muted)] uppercase tracking-wide">{uiText("Committed share")}</div>
           {/* Null when nothing was spent: no spending means the question has no
               answer, and 0% would claim nothing was committed. */}
           <div className="text-xl font-semibold mt-1">
@@ -285,15 +265,15 @@ export default function SpendingAnalysis({
           </div>
           <div className="text-[10px] text-[var(--muted)]">
             {view.split.fixedShare === null
-              ? "nothing spent"
-              : `${fmt(view.split.variable, currency)} was yours to choose`}
+              ? uiText("nothing spent")
+              : uiText("{0} was yours to choose", { "0": fmt(view.split.variable, currency) })}
           </div>
         </div>
       </div>
 
       <section className="card p-4">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-          <div className="text-sm font-medium">Where it went</div>
+          <div className="text-sm font-medium">{uiText("Where it went")}</div>
           <div className="flex gap-1">
             {(["category", "subcategory", "merchant", "account"] as const).map((d) => (
               <button
@@ -312,9 +292,7 @@ export default function SpendingAnalysis({
         </div>
 
         {view.groups.length === 0 ? (
-          <p className="text-sm text-[var(--muted)] py-8 text-center">
-            No spending in this slice.
-          </p>
+          <p className="text-sm text-[var(--muted)] py-8 text-center">{uiText("No spending in this slice.")}</p>
         ) : (
           <div className="grid lg:grid-cols-2 gap-6">
             <DonutChart
@@ -322,14 +300,14 @@ export default function SpendingAnalysis({
               currency={currency}
             />
             <div className="overflow-auto max-h-72">
-              <div className="table-scroll" role="region" aria-label="Scrollable data table" tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs w-full">
+              <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs w-full">
                 <thead>
                   <tr>
                     <th>{depth}</th>
-                    <th className="text-right">Spent</th>
-                    <th className="text-right">Share</th>
-                    <th className="text-right">Count</th>
-                    <th className="text-right">Largest</th>
+                    <th className="text-right">{uiText("Spent")}</th>
+                    <th className="text-right">{uiText("Share")}</th>
+                    <th className="text-right">{uiText("Count")}</th>
+                    <th className="text-right">{uiText("Largest")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -366,17 +344,14 @@ export default function SpendingAnalysis({
 
         {view.totals.uncategorised > 0 && (
           <p className="text-xs mt-3" style={{ color: "var(--amber)" }}>
-            <Money value={view.totals.uncategorised} currency={currency} /> has no category on it.
-            That is the pile worth naming first — everything else on this page gets sharper once
-            it has.
-          </p>
+            <Money value={view.totals.uncategorised} currency={currency} />{uiText(" has no category on it. That is the pile worth naming first — everything else on this page gets sharper once it has.")}</p>
         )}
       </section>
 
       <section className="card p-4">
-        <div className="text-sm font-medium mb-3">Month by month</div>
+        <div className="text-sm font-medium mb-3">{uiText("Month by month")}</div>
         {view.months.length === 0 ? (
-          <p className="text-sm text-[var(--muted)] py-8 text-center">Nothing to plot.</p>
+          <p className="text-sm text-[var(--muted)] py-8 text-center">{uiText("Nothing to plot.")}</p>
         ) : (
           <div style={{ width: "100%", height: 260 }}>
             <ResponsiveContainer>
@@ -408,8 +383,8 @@ export default function SpendingAnalysis({
                   formatter={(value, name) => [fmt(Number(value), currency), name]}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="income" name="In" fill="var(--green)" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="spent" name="Out" fill="var(--red)" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="income" name={uiText("In")} fill="var(--green)" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="spent" name={uiText("Out")} fill="var(--red)" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -417,11 +392,8 @@ export default function SpendingAnalysis({
       </section>
 
       <section className="card p-4">
-        <div className="text-sm font-medium mb-1">Which day it goes</div>
-        <p className="text-xs text-[var(--muted)] mb-3">
-          Seven bars whatever the data — a quiet Tuesday is a measurement, and hiding it would
-          make the week look busier than it is.
-        </p>
+        <div className="text-sm font-medium mb-1">{uiText("Which day it goes")}</div>
+        <p className="text-xs text-[var(--muted)] mb-3">{uiText("Seven bars whatever the data — a quiet Tuesday is a measurement, and hiding it would make the week look busier than it is.")}</p>
         <div style={{ width: "100%", height: 200 }}>
           <ResponsiveContainer>
             <BarChart data={view.weekdays} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -467,10 +439,7 @@ export default function SpendingAnalysis({
       </section>
 
       {approximate && (
-        <p className="text-xs text-[var(--muted)]">
-          Amounts in another currency were converted at today&apos;s rate, so figures from earlier
-          months are approximate.
-        </p>
+        <p className="text-xs text-[var(--muted)]">{uiText("Amounts in another currency were converted at today's rate, so figures from earlier months are approximate.")}</p>
       )}
     </div>
   );
@@ -487,9 +456,10 @@ function Tile({
   currency: string;
   tone: string;
 }) {
+  const uiText = useText();
   return (
     <div className="card p-3">
-      <div className="text-[10px] text-[var(--muted)] uppercase tracking-wide">{label}</div>
+      <div className="text-[10px] text-[var(--muted)] uppercase tracking-wide">{uiText(label ?? "")}</div>
       <div className="text-xl font-semibold mt-1" style={{ color: tone }}>
         <Money value={value} currency={currency} />
       </div>
@@ -508,16 +478,17 @@ function Select({
   onChange: (value: string) => void;
   options: readonly string[];
 }) {
+  const uiText = useText();
   return (
     <label className="block">
-      <span className="text-[10px] text-[var(--muted)] block mb-1">{label}</span>
+      <span className="text-[10px] text-[var(--muted)] block mb-1">{uiText(label ?? "")}</span>
       <select
         className="input text-xs w-full"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={options.length === 0}
       >
-        <option value="">All</option>
+        <option value="">{uiText("All")}</option>
         {options.map((o) => (
           <option key={o} value={o}>
             {o}

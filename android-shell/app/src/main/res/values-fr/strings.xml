@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" formatted="false">Money OS</string>
+    <string name="widget_description" formatted="false">Enregistrer une dépense ou un revenu</string>
+    <string name="widget_expense" formatted="false">− Dépense</string>
+    <string name="widget_income" formatted="false">+ Revenu</string>
+    <string name="shortcut_expense" formatted="false">Dépense</string>
+    <string name="shortcut_expense_long" formatted="false">Enregistrer les dépenses</string>
+    <string name="shortcut_income" formatted="false">Revenu</string>
+    <string name="shortcut_income_long" formatted="false">Revenu record</string>
+    <string name="widget_dashboard_description" formatted="false">Valeur nette, ce mois-ci et évolution au fil du temps</string>
+    <string name="widget_net_worth_description" formatted="false">Valeur nette au fil du temps et jusqu\'où elle a évolué</string>
+    <string name="widget_where_money_description" formatted="false">Où est l\'argent, comme un beignet avec des pourcentages</string>
+    <string name="widget_cash_flow_description" formatted="false">Ce mois-ci : argent entrant, sortant et ce qui reste</string>
+    <string name="widget_investments_description" formatted="false">Valeur du portefeuille, P&amp;L latent et chaque position avec son P&amp;L en euros et en pourcentage</string>
+    <string name="widget_allocation_description" formatted="false">Le portefeuille par type d\'actifs, sous forme de beignet avec pourcentages</string>
+    <string name="widget_movers_description" formatted="false">Les meilleures et les pires positions par retour sur coût</string>
+    <string name="widget_dividends_description" formatted="false">Dividendes reçus cette année et prochain paiement attendu</string>
+    <string name="widget_open_trades_description" formatted="false">Positions ouvertes à effet de levier : P&amp;L non réalisés, marge et chaque transaction</string>
+    <string name="ui_registo_r_pido" formatted="false">Registre rapide</string>
+    <string name="ui_money_os" formatted="false">Money OS</string>
+    <string name="ui_net_worth" formatted="false">Valeur nette</string>
+    <string name="ui_where_the_money_is" formatted="false">Où est l\'argent</string>
+    <string name="ui_cash_flow" formatted="false">Mouvements</string>
+    <string name="ui_investments" formatted="false">Investissements</string>
+    <string name="ui_allocation" formatted="false">Allocation</string>
+    <string name="ui_winners_losers" formatted="false">Gagnants et perdants</string>
+    <string name="ui_dividends" formatted="false">Dividendes</string>
+    <string name="ui_open_trades" formatted="false">Métiers ouverts</string>
+    <string name="ui_record_expense" formatted="false">Enregistrer les dépenses</string>
+    <string name="ui_refresh" formatted="false">Actualiser</string>
+    <string name="ui_chart" formatted="false">Graphique</string>
+</resources>

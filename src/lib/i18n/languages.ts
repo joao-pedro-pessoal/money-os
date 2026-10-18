@@ -1,10 +1,8 @@
 /**
  * The languages the app is written in.
  *
- * Only the ones it is actually written in. The picker used to offer twelve,
- * and choosing any of them changed thirty words of the menu and nothing else —
- * on a phone, not even those, because the bottom bar never read the choice. A
- * language is listed here once its words exist in `messages.ts`.
+ * Every listed language covers the shared message catalog. Pages still being
+ * migrated keep their English content and translation boundaries (F18).
  *
  * The choice lives in a cookie, so the server renders in it too, and English
  * is what anyone gets until they choose.
@@ -15,11 +13,29 @@
 export const LANGUAGES = [
   { code: "en", name: "English", locale: "en-GB" },
   { code: "pt", name: "Português", locale: "pt-PT" },
+  { code: "es", name: "Español", locale: "es-ES" },
+  { code: "fr", name: "Français", locale: "fr-FR" },
+  { code: "de", name: "Deutsch", locale: "de-DE" },
+  { code: "it", name: "Italiano", locale: "it-IT" },
+  { code: "nl", name: "Nederlands", locale: "nl-NL" },
+  { code: "pl", name: "Polski", locale: "pl-PL" },
+  { code: "ru", name: "Русский", locale: "ru-RU" },
+  { code: "tr", name: "Türkçe", locale: "tr-TR" },
+  { code: "ar", name: "العربية", locale: "ar" },
+  { code: "hi", name: "हिन्दी", locale: "hi-IN" },
+  { code: "bn", name: "বাংলা", locale: "bn-BD" },
+  { code: "zh-CN", name: "简体中文", locale: "zh-CN" },
+  { code: "ja", name: "日本語", locale: "ja-JP" },
 ] as const;
 
 export type Language = (typeof LANGUAGES)[number]["code"];
 
 export const DEFAULT_LANGUAGE: Language = "en";
+
+/** Applied to translated regions, never to pages whose content is still English. */
+export function directionOf(language: Language): "ltr" | "rtl" {
+  return language === "ar" ? "rtl" : "ltr";
+}
 
 /** Where the choice is kept, for the server and the browser alike. */
 export const LANGUAGE_COOKIE = "moneyos_language";

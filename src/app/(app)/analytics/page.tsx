@@ -1,3 +1,4 @@
+import { textForRequest } from "@/actions/pageLanguage";
 import { getTotalNetWorthOverTime, getMoneyByLocation } from "@/actions/analytics";
 import { getPortfolioContribution } from "@/actions/investments";
 import { listBucketsWithTotals } from "@/actions/buckets";
@@ -16,6 +17,7 @@ import PageTabs from "@/components/PageTabs";
 import { ANALYTICS_TABS } from "@/lib/navigation";
 
 export default async function AnalyticsPage() {
+  const uiText = await textForRequest();
   const [netWorthSeries, byLocation, buckets, portfolio, budgets, netWorth, accounts, rates, baseCurrency] =
     await Promise.all([
       getTotalNetWorthOverTime(),
@@ -86,17 +88,16 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold">Analytics</h1>
+      <h1 className="text-lg font-semibold">{uiText("Analytics")}</h1>
       <PageTabs tabs={ANALYTICS_TABS} />
 
       <TimeSeriesCard
-        title="Net worth over time"
+        title={uiText("Net worth over time")}
         series={netWorthSeries.map((p) => ({ date: p.date, value: p.netWorth }))}
         currency={baseCurrency}
         action={
           portfolio.floating > 0 ? (
-            <span className="text-xs text-[var(--muted)]">
-              includes investments · not guaranteed:{" "}
+            <span className="text-xs text-[var(--muted)]">{uiText("includes investments · not guaranteed:")}{" "}
               <span className="text-[var(--amber)]">
                 {portfolio.floating.toFixed(2)} {baseCurrency}
               </span>
@@ -104,16 +105,10 @@ export default async function AnalyticsPage() {
           ) : undefined
         }
         note={
-          <>
-            Each dot is a day your balances were actually recorded; the lines between them are
-            straight because nothing was measured in between.
-            {approximatePoints > 0 && (
+          <>{uiText("Each dot is a day your balances were actually recorded; the lines between them are straight because nothing was measured in between.")}{approximatePoints > 0 && (
               <span className="text-[var(--amber)]">
                 {" "}
-                {approximatePoints} of {netWorthSeries.length} points predate exchange rates being
-                stored with each snapshot, so they use today&apos;s rate rather than the rate of
-                their own day.
-              </span>
+                {approximatePoints}{uiText(" of ")}{netWorthSeries.length}{uiText(" points predate exchange rates being stored with each snapshot, so they use today's rate rather than the rate of their own day.")}</span>
             )}
           </>
         }
@@ -121,19 +116,19 @@ export default async function AnalyticsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <CompositionCard
-          title="Money by location"
+          title={uiText("Money by location")}
           data={byLocation}
           currency={baseCurrency}
           note="Where the money sits, each account once at its full value, converted to one currency. Investments included, so this matches your net worth."
         />
         <CompositionCard
-          title="Money by purpose"
+          title={uiText("Money by purpose")}
           data={byPurpose}
           currency={baseCurrency}
           note="What the money is for — these add up to your net worth exactly. Waiting to invest is stablecoins plus the idle cash you have marked as investing money: you still have it, it just is not spending money."
         />
         <CompositionCard
-          title="Guaranteed or at risk"
+          title={uiText("Guaranteed or at risk")}
           data={bySafety}
           currency={baseCurrency}
           defaultShape="bars"
@@ -142,18 +137,14 @@ export default async function AnalyticsPage() {
 
         <div className="card p-4">
           <div className="flex items-baseline justify-between gap-2 mb-3">
-            <div className="text-sm font-medium">Budgets this period</div>
+            <div className="text-sm font-medium">{uiText("Budgets this period")}</div>
             {budgets.overCount > 0 && (
               <span className="text-[10px]" style={{ color: "var(--red)" }}>
-                {budgets.overCount} over
-              </span>
+                {budgets.overCount}{uiText(" over")}</span>
             )}
           </div>
           <BudgetBars items={budgetItems} currency={budgets.baseCurrency} />
-          <div className="text-[10px] text-[var(--muted)] mt-3 leading-snug">
-            Amber means you are inside the limit but spending faster than the period is passing —
-            on track to go over without being over yet.
-          </div>
+          <div className="text-[10px] text-[var(--muted)] mt-3 leading-snug">{uiText("Amber means you are inside the limit but spending faster than the period is passing — on track to go over without being over yet.")}</div>
         </div>
       </div>
     </div>
