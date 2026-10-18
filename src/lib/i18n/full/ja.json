@@ -3067,5 +3067,15 @@
   "{count} budgets": "予算 {count} 件",
   "{count} payment": "支払い {count} 件",
   "{count} payments": "支払い {count} 件",
-  "Sep": "9月"
+  "Sep": "9月",
+  " more is investing cash": " が追加で投資待ちの現金です",
+  "{0} account hasn't said if this is investing money": "{0} 件の口座が、投資用の資金かどうかを指定していません",
+  "{0} accounts haven't said if this is investing money": "{0} 件の口座が、投資用の資金かどうかを指定していません",
+  "All activity": "すべての取引",
+  "Account, category, amount & dates": "口座・カテゴリー・金額・日付",
+  " · Filters applied": " · フィルター適用中",
+  "No playlist": "リストなし",
+  "No tag": "タグなし",
+  "in parentheses: unrealised gain": "括弧内：含み益",
+  "in parentheses: unrealised loss": "括弧内：含み損"
 }

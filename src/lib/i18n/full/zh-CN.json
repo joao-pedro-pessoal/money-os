@@ -3067,5 +3067,15 @@
   "{count} budgets": "{count} 项预算",
   "{count} payment": "{count} 笔付款",
   "{count} payments": "{count} 笔付款",
-  "Sep": "9月"
+  "Sep": "9月",
+  " more is investing cash": " 为额外的待投资现金",
+  "{0} account hasn't said if this is investing money": "{0} 个账户未说明这是否为投资资金",
+  "{0} accounts haven't said if this is investing money": "{0} 个账户未说明这是否为投资资金",
+  "All activity": "全部记录",
+  "Account, category, amount & dates": "账户、类别、金额和日期",
+  " · Filters applied": " · 已应用筛选",
+  "No playlist": "无列表",
+  "No tag": "无标签",
+  "in parentheses: unrealised gain": "括号内：未实现收益",
+  "in parentheses: unrealised loss": "括号内：未实现亏损"
 }

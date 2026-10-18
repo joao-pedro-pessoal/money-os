@@ -3067,5 +3067,15 @@
   "{count} budgets": "{count} budgetten",
   "{count} payment": "{count} betaling",
   "{count} payments": "{count} betalingen",
-  "Sep": "sep"
+  "Sep": "sep",
+  " more is investing cash": " extra is geld om te beleggen",
+  "{0} account hasn't said if this is investing money": "{0} rekening heeft niet aangegeven of dit geld om te beleggen is",
+  "{0} accounts haven't said if this is investing money": "{0} rekeningen hebben niet aangegeven of dit geld om te beleggen is",
+  "All activity": "Alle activiteit",
+  "Account, category, amount & dates": "Rekening, categorie, bedrag en datums",
+  " · Filters applied": " · Filters toegepast",
+  "No playlist": "Zonder lijst",
+  "No tag": "Zonder label",
+  "in parentheses: unrealised gain": "tussen haakjes: ongerealiseerde winst",
+  "in parentheses: unrealised loss": "tussen haakjes: ongerealiseerd verlies"
 }

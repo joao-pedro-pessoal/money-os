@@ -3067,5 +3067,15 @@
   "{count} budgets": "Количество бюджетов: {count}",
   "{count} payment": "Количество платежей: {count}",
   "{count} payments": "Количество платежей: {count}",
-  "Sep": "сент."
+  "Sep": "сент.",
+  " more is investing cash": " — ещё деньги для инвестирования",
+  "{0} account hasn't said if this is investing money": "{0} счёт не указал, предназначены ли эти деньги для инвестиций",
+  "{0} accounts haven't said if this is investing money": "Счетов без указания, предназначены ли деньги для инвестиций: {0}",
+  "All activity": "Все операции",
+  "Account, category, amount & dates": "Счёт, категория, сумма и даты",
+  " · Filters applied": " · Фильтры применены",
+  "No playlist": "Без списка",
+  "No tag": "Без метки",
+  "in parentheses: unrealised gain": "в скобках: нереализованная прибыль",
+  "in parentheses: unrealised loss": "в скобках: нереализованный убыток"
 }

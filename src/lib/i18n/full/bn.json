@@ -3067,5 +3067,15 @@
   "{count} budgets": "{count}টি বাজেট",
   "{count} payment": "{count}টি পেমেন্ট",
   "{count} payments": "{count}টি পেমেন্ট",
-  "Sep": "সেপ্ট"
+  "Sep": "সেপ্ট",
+  " more is investing cash": " আরও বিনিয়োগের জন্য নগদ",
+  "{0} account hasn't said if this is investing money": "{0}টি অ্যাকাউন্ট জানায়নি এটি বিনিয়োগের টাকা কি না",
+  "{0} accounts haven't said if this is investing money": "{0}টি অ্যাকাউন্ট জানায়নি এটি বিনিয়োগের টাকা কি না",
+  "All activity": "সব কার্যকলাপ",
+  "Account, category, amount & dates": "অ্যাকাউন্ট, বিভাগ, পরিমাণ ও তারিখ",
+  " · Filters applied": " · ফিল্টার প্রয়োগ করা হয়েছে",
+  "No playlist": "কোনো তালিকা নেই",
+  "No tag": "কোনো ট্যাগ নেই",
+  "in parentheses: unrealised gain": "বন্ধনীতে: অবাস্তবায়িত লাভ",
+  "in parentheses: unrealised loss": "বন্ধনীতে: অবাস্তবায়িত ক্ষতি"
 }

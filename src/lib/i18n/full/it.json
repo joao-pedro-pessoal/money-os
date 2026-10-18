@@ -3067,5 +3067,15 @@
   "{count} budgets": "{count} budget",
   "{count} payment": "{count} pagamento",
   "{count} payments": "{count} pagamenti",
-  "Sep": "set"
+  "Sep": "set",
+  " more is investing cash": " in più sono liquidità da investire",
+  "{0} account hasn't said if this is investing money": "{0} conto non ha indicato se questo è denaro da investire",
+  "{0} accounts haven't said if this is investing money": "{0} conti non hanno indicato se questo è denaro da investire",
+  "All activity": "Tutti i movimenti",
+  "Account, category, amount & dates": "Conto, categoria, importo e date",
+  " · Filters applied": " · Filtri applicati",
+  "No playlist": "Senza lista",
+  "No tag": "Senza etichetta",
+  "in parentheses: unrealised gain": "tra parentesi: guadagno non realizzato",
+  "in parentheses: unrealised loss": "tra parentesi: perdita non realizzata"
 }

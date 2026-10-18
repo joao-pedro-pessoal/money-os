@@ -3067,5 +3067,15 @@
   "{count} budgets": "{count} bütçe",
   "{count} payment": "{count} ödeme",
   "{count} payments": "{count} ödeme",
-  "Sep": "Eyl"
+  "Sep": "Eyl",
+  " more is investing cash": " daha yatırım için bekleyen nakit",
+  "{0} account hasn't said if this is investing money": "{0} hesap bunun yatırım parası olup olmadığını belirtmedi",
+  "{0} accounts haven't said if this is investing money": "{0} hesap bunun yatırım parası olup olmadığını belirtmedi",
+  "All activity": "Tüm hareketler",
+  "Account, category, amount & dates": "Hesap, kategori, tutar ve tarihler",
+  " · Filters applied": " · Filtreler uygulandı",
+  "No playlist": "Listesiz",
+  "No tag": "Etiketsiz",
+  "in parentheses: unrealised gain": "parantez içinde: gerçekleşmemiş kazanç",
+  "in parentheses: unrealised loss": "parantez içinde: gerçekleşmemiş zarar"
 }

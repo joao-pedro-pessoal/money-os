@@ -3067,5 +3067,15 @@
   "{count} budgets": "{count} budgets",
   "{count} payment": "{count} payment",
   "{count} payments": "{count} payments",
-  "Sep": "Sep"
+  "Sep": "Sep",
+  " more is investing cash": " more is investing cash",
+  "{0} account hasn't said if this is investing money": "{0} account hasn't said if this is investing money",
+  "{0} accounts haven't said if this is investing money": "{0} accounts haven't said if this is investing money",
+  "All activity": "All activity",
+  "Account, category, amount & dates": "Account, category, amount & dates",
+  " · Filters applied": " · Filters applied",
+  "No playlist": "No playlist",
+  "No tag": "No tag",
+  "in parentheses: unrealised gain": "in parentheses: unrealised gain",
+  "in parentheses: unrealised loss": "in parentheses: unrealised loss"
 }

@@ -3067,5 +3067,15 @@
   "{count} budgets": "Liczba budżetów: {count}",
   "{count} payment": "Liczba płatności: {count}",
   "{count} payments": "Liczba płatności: {count}",
-  "Sep": "wrz"
+  "Sep": "wrz",
+  " more is investing cash": " więcej to gotówka do zainwestowania",
+  "{0} account hasn't said if this is investing money": "{0} konto nie określiło, czy to pieniądze do inwestowania",
+  "{0} accounts haven't said if this is investing money": "Konta ({0}) nie określiły, czy to pieniądze do inwestowania",
+  "All activity": "Cała aktywność",
+  "Account, category, amount & dates": "Konto, kategoria, kwota i daty",
+  " · Filters applied": " · Zastosowano filtry",
+  "No playlist": "Bez listy",
+  "No tag": "Bez etykiety",
+  "in parentheses: unrealised gain": "w nawiasie: niezrealizowany zysk",
+  "in parentheses: unrealised loss": "w nawiasie: niezrealizowana strata"
 }

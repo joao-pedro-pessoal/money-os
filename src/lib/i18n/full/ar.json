@@ -3067,5 +3067,15 @@
   "{count} budgets": "عدد الميزانيات: {count}",
   "{count} payment": "عدد الدفعات: {count}",
   "{count} payments": "عدد الدفعات: {count}",
-  "Sep": "سبتمبر"
+  "Sep": "سبتمبر",
+  " more is investing cash": " إضافية نقدٌ مخصّص للاستثمار",
+  "{0} account hasn't said if this is investing money": "{0} حساب لم يحدّد إن كان هذا مالًا للاستثمار",
+  "{0} accounts haven't said if this is investing money": "{0} حسابات لم تحدّد إن كان هذا مالًا للاستثمار",
+  "All activity": "كل الحركات",
+  "Account, category, amount & dates": "الحساب والفئة والمبلغ والتواريخ",
+  " · Filters applied": " · تم تطبيق عوامل التصفية",
+  "No playlist": "بلا قائمة",
+  "No tag": "بلا وسم",
+  "in parentheses: unrealised gain": "بين القوسين: ربح غير محقق",
+  "in parentheses: unrealised loss": "بين القوسين: خسارة غير محققة"
 }

@@ -129,7 +129,7 @@ export default function TransactionList({
             ))}
           </div>
         </div>
-        <MobileFold title={`Account, category, amount & dates${(filters.accounts.length || filters.categories.length || filters.types.length || filters.minAmount !== null || filters.maxAmount !== null || filters.from || filters.to) ? " · Filters applied" : ""}`} persistKey="transaction-filters">
+        <MobileFold title={`${uiText("Account, category, amount & dates")}${(filters.accounts.length || filters.categories.length || filters.types.length || filters.minAmount !== null || filters.maxAmount !== null || filters.from || filters.to) ? uiText(" · Filters applied") : ""}`} persistKey="transaction-filters">
         <div className="cash-flow-filter-fields grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
           <select aria-label={uiText("Money direction")} className="cash-flow-desktop-only input input-narrow text-xs py-1" value={filters.direction ?? ""} onChange={(e) => set("direction", pick(e.target.value) as "in" | "out" | null)}>
             <option value="">{uiText("In and out")}</option><option value="in">{uiText("Money in")}</option><option value="out">{uiText("Money out")}</option>

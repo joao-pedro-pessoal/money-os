@@ -18,7 +18,6 @@ import { portfolioSummary } from "@/lib/portfolio/positionView";
 import { listPurposes } from "@/actions/purpose";
 import { listGoalsByPriority } from "@/actions/distribute";
 import { getTotalNetWorthOverTime } from "@/actions/analytics";
-import { fmt } from "@/lib/format";
 import Link from "next/link";
 import { explainFree, splitPortfolioCash } from "@/lib/accounting/unallocated";
 import { getFavouriteCurrencies, getDashboardCurrency } from "@/actions/settings";
@@ -307,10 +306,14 @@ export default async function DashboardPage({
             costUnknown: inDisplay(totalPnl.costUnknown),
           }}
           currency={base}
+          // Through <Money>, so privacy mode hides these as it hides the figure above.
           note={
-            nw.portfolio > 0
-              ? `cash ${fmt(inDisplay(nw.cash), base)} + investments ${fmt(inDisplay(nw.portfolio), base)}`
-              : undefined
+            nw.portfolio > 0 ? (
+              <>
+                {uiText("Cash")} <Money value={inDisplay(nw.cash)} currency={base} /> + {uiText("Investments")}{" "}
+                <Money value={inDisplay(nw.portfolio)} currency={base} />
+              </>
+            ) : undefined
           }
           explain={[
             "Everything you own, added once. Bank balances, broker accounts, crypto and manually recorded holdings.",
@@ -351,11 +354,19 @@ export default async function DashboardPage({
             "If it looks low, the Accounts card below says why, account by account.",
           ]}
           note={
-            investingCash > 0
-              ? `${fmt(investingCash, base)} more is investing cash`
-              : unsetCashShare > 0
-                ? `${unsetCashShare} account${unsetCashShare === 1 ? "" : "s"} haven't said if this is investing money`
-                : undefined
+            investingCash > 0 ? (
+              <>
+                <Money value={investingCash} currency={base} />
+                {uiText(" more is investing cash")}
+              </>
+            ) : unsetCashShare > 0 ? (
+              uiText(
+                unsetCashShare === 1
+                  ? "{0} account hasn't said if this is investing money"
+                  : "{0} accounts haven't said if this is investing money",
+                { "0": unsetCashShare }
+              )
+            ) : undefined
           }
         />
         <div className="overview-secondary">
@@ -395,7 +406,7 @@ export default async function DashboardPage({
       {subs.activeCount > 0 && (
         <div className="card p-3 text-xs flex items-center justify-between gap-3 flex-wrap">
           <span className="text-[var(--muted)]">
-            <span className="text-[var(--foreground)]"><span translate="no">{fmt(inDisplay(subs.monthly), base)}</span></span>{uiText(" a month is already committed across ")}{uiText(subs.activeCount === 1 ? "{count} subscription" : "{count} subscriptions", { count: subs.activeCount })} — <span translate="no">{fmt(inDisplay(subs.yearly), base)}</span>{uiText(" a year. Not counted in the figures above; those charges arrive as normal transactions.")}</span>
+            <span className="text-[var(--foreground)]"><Money value={inDisplay(subs.monthly)} currency={base} /></span>{uiText(" a month is already committed across ")}{uiText(subs.activeCount === 1 ? "{count} subscription" : "{count} subscriptions", { count: subs.activeCount })} — <Money value={inDisplay(subs.yearly)} currency={base} />{uiText(" a year. Not counted in the figures above; those charges arrive as normal transactions.")}</span>
           <Link href="/subscriptions" className="text-[var(--accent)] whitespace-nowrap">{uiText("Review")}</Link>
         </div>
       )}
@@ -625,7 +636,7 @@ async function StatCard({
   floating?: number;
   pnl?: { value: number; costUnknown: number };
   currency?: string;
-  note?: string;
+  note?: React.ReactNode;
   /** What this figure counts, shown on hover or keyboard focus. */
   explain?: string | string[];
 }) {
@@ -656,7 +667,7 @@ async function StatCard({
         )}
       </div>
       {showPnl && (
-        <div className="text-[10px] text-[var(--muted)] mt-1">{uiText("in parentheses: unrealised ")}{up ? uiText("gain") : uiText("loss")}
+        <div className="text-[10px] text-[var(--muted)] mt-1">{uiText(up ? "in parentheses: unrealised gain" : "in parentheses: unrealised loss")}
           {pnl.costUnknown > 0 && (
             <span style={{ color: "var(--amber)" }}>
               {" "}{uiText("· partial, ")}<Money value={pnl.costUnknown} currency={currency} />{uiText(" of it has no recorded cost")}</span>

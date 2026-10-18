@@ -3067,5 +3067,15 @@
   "{count} budgets": "{count} बजट",
   "{count} payment": "{count} भुगतान",
   "{count} payments": "{count} भुगतान",
-  "Sep": "सित॰"
+  "Sep": "सित॰",
+  " more is investing cash": " और निवेश के लिए नकद है",
+  "{0} account hasn't said if this is investing money": "{0} खाते ने नहीं बताया कि यह निवेश का पैसा है या नहीं",
+  "{0} accounts haven't said if this is investing money": "{0} खातों ने नहीं बताया कि यह निवेश का पैसा है या नहीं",
+  "All activity": "सारी गतिविधि",
+  "Account, category, amount & dates": "खाता, श्रेणी, राशि और तिथियाँ",
+  " · Filters applied": " · फ़िल्टर लागू",
+  "No playlist": "कोई सूची नहीं",
+  "No tag": "कोई टैग नहीं",
+  "in parentheses: unrealised gain": "कोष्ठक में: अप्राप्त लाभ",
+  "in parentheses: unrealised loss": "कोष्ठक में: अप्राप्त हानि"
 }
