@@ -179,8 +179,17 @@ uma conta normal no site publicado (por exemplo com um Gmail novo só para isto)
 com `REGISTRATION_MODE=invite` usa o código de convite — e dá à Google esse email e
 essa palavra-passe na secção "Acesso à app". Nunca uses a tua conta verdadeira.
 
-Os dados **inventados** (contas, movimentos, algumas posições) preparo-os eu num
-ficheiro para importares nessa conta.
+Os dados **inventados** estão em [`play-store/demo-account-backup.json`](play-store/demo-account-backup.json):
+5 contas (Banco Aurora, Corretora Delta…), 158 movimentos de sete meses, 3
+orçamentos, 5 subscrições, 6 investimentos com histórico, listas e nomes de
+tickers. Nada disto é de ninguém. Para os pôr na conta de demonstração:
+**Definições → Dados → Restaurar**, escolher o ficheiro e escrever `RESTORE`.
+O restauro foi ensaiado numa conta nova, com as migrações reais e a segurança
+por linhas.
+
+As datas são relativas ao dia em que o ficheiro foi gerado (18/10/2026). Se a
+revisão da Google for muito depois, pede-me um ficheiro novo, para "este mês"
+não aparecer vazio.
 
 As capturas de ecrã da ficha da loja também têm de vir desta conta: as tuas contas
 verdadeiras ficariam públicas. Posso tirá-las eu no tamanho de telemóvel: tu entras
