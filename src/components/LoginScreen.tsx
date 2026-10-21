@@ -248,7 +248,7 @@ export default function LoginScreen({ signUps, inviteRequired = false, destinati
             {emailField}
             {passwordField(w.password, "new-password", w.newPasswordHint)}
             {/* Off screen and out of the tab order: only a robot fills it in. */}
-            <input type="text" name="website" value={website} onChange={(e) => setWebsite(e.target.value)}
+            <input type="text" name="mo_check_field" value={website} onChange={(e) => setWebsite(e.target.value)}
               tabIndex={-1} autoComplete="off" aria-hidden="true"
               style={{ position: "absolute", left: "-10000px", width: 1, height: 1, opacity: 0 }} />
             {inviteRequired && (

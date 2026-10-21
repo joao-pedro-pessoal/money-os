@@ -1,11 +1,11 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { asUser, db } from "@/db/client";
-import { categories, exchangeRates, OWNER_USER_ID, requestLimits, users } from "@/db/schema";
+import { categories, exchangeRates, OWNER_USER_ID, users } from "@/db/schema";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/db/defaultCategories";
 import { newSessionValue, ownerPassword, sessionCookieOptions, SESSION_COOKIE_NAME } from "@/lib/auth";
 import {
@@ -23,15 +23,8 @@ import type { DeleteOutcome, RecoveryOutcome, SignInOutcome, SignUpOutcome } fro
 import { currentUserId } from "./session";
 import { refreshRates } from "./fx";
 import { registrationAccess } from "@/lib/accounts/registration";
-import {
-  ATTEMPT_LIMITS,
-  ATTEMPT_RETENTION_HOURS,
-  clientAddress,
-  originOf,
-  overLimit,
-  TOO_MANY_ATTEMPTS,
-  type AttemptAction,
-} from "@/lib/accounts/attempts";
+import { TOO_MANY_ATTEMPTS } from "@/lib/accounts/attempts";
+import { admitted } from "./attemptGate";
 
 /**
  * Sign-in accounts: making one, signing into one, and getting back into one.
@@ -91,40 +84,6 @@ async function countFailure(userId: string, now: Date): Promise<Date | null> {
   const next = afterFailedLogin(counted.failedLogins - 1, now);
   if (next.lockedUntil !== null) await db.update(users).set(next).where(eq(users.id, userId));
   return next.lockedUntil;
-}
-
-/**
- * Counts this attempt against the connection it came from (lib/accounts/attempts.ts),
- * or says the connection has made too many. Runs before any slow hash.
- *
- * With no address to go by — the home copy, which has no host in front of it —
- * nothing is limited here; the per-account and site-wide limits still are.
- */
-async function admitted(action: AttemptAction): Promise<boolean> {
-  let address: string | null;
-  try {
-    address = clientAddress(await headers());
-  } catch {
-    return true;
-  }
-  if (!address) return true;
-  const origin = originOf(address, process.env.APP_SECRET || "money-os-attempts");
-  const windows = ATTEMPT_LIMITS[action];
-  const [row] = await db
-    .select(
-      Object.fromEntries(
-        windows.map((w, i) => [
-          `w${i}`,
-          sql<number>`count(*) filter (where ${requestLimits.at} > now() - make_interval(mins => ${w.minutes}))::int`,
-        ])
-      )
-    )
-    .from(requestLimits)
-    .where(and(eq(requestLimits.action, action), eq(requestLimits.origin, origin)));
-  if (overLimit(action, windows.map((_, i) => Number(row?.[`w${i}`] ?? 0)))) return false;
-  await db.insert(requestLimits).values({ action, origin });
-  await db.delete(requestLimits).where(sql`${requestLimits.at} < now() - make_interval(hours => ${ATTEMPT_RETENTION_HOURS})`);
-  return true;
 }
 
 function lockedAnswer(until: Date): { kind: "locked"; until: string } {

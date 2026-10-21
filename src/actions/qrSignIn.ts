@@ -6,6 +6,7 @@ import { and, eq, gt, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { qrSignIns, users } from "@/db/schema";
 import { endedBy, newSessionValue, readSession, SESSION_COOKIE_NAME, sessionCookieOptions } from "@/lib/auth";
+import { admitted } from "./attemptGate";
 
 const COOKIE = "moneyos_qr_request";
 const TTL = 300;
@@ -15,6 +16,9 @@ const random = () => randomBytes(32).toString("hex");
 
 /** No session capability is ever put in the QR image or its URL. */
 export async function createQrSignIn() {
+  // Anyone may ask, signed in or not, and the slots are shared: one connection
+  // asking over and over could hold all of them. It now holds at most its share.
+  if (!(await admitted("qr"))) return { kind: "busy" as const };
   const jar = await cookies();
   const previous = jar.get(COOKIE)?.value;
   const requester = random(), approval = random(), id = random();

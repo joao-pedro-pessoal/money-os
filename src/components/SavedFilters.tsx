@@ -69,7 +69,7 @@ export default function SavedFilters({
                 await reload();
                 setMessage("Saved.");
               } catch (error) {
-                setMessage(error instanceof Error ? error.message : "Could not save.");
+                setMessage(error instanceof Error ? uiText(error.message) : uiText("Could not save."));
               }
             });
           }}

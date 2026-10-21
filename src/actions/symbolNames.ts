@@ -1,7 +1,7 @@
 "use server";
 
 import { cache } from "react";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { symbolNames, watchlistItems } from "@/db/schema";
@@ -29,6 +29,9 @@ export async function setSymbolName(formData: FormData): Promise<void> {
   if (name === null) {
     await db.delete(symbolNames).where(eq(symbolNames.symbol, symbol));
   } else {
+    // A bound on what one account can store: more names than anyone holds instruments.
+    const [count] = await db.select({ n: sql<number>`count(*)::int` }).from(symbolNames);
+    if ((count?.n ?? 0) >= 500) throw new Error("You can name up to 500 tickers.");
     await db
       .insert(symbolNames)
       .values({ symbol, name })

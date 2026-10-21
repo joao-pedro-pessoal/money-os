@@ -35,6 +35,7 @@ vi.mock("@/lib/accounts/password", () => ({
   verifyPassword: async (key: string, stored: string) => { isolated.verified++; return stored === `hashed:${key}`; },
 }));
 import { recoverAccount, signIn, signUp } from "../auth";
+import { createQrSignIn } from "../qrSignIn";
 
 const KEY = "a".repeat(64);
 const SECRET = "attempts-test-secret";
@@ -105,6 +106,22 @@ describe("attempts per connection, in PostgreSQL with the real migrations", () =
     expect(outcome.kind).toBe("refused");
     expect((await engine.query("select 1 from users where email = 'robot@example.test'")).rows).toEqual([]);
     expect(await rows()).toEqual([]);
+  });
+
+  it("a burst of simultaneous sign-ins lets no more than the limit through", async () => {
+    from("203.0.113.7");
+    const outcomes = await Promise.all(Array.from({ length: 40 }, () => signIn({ email: "nobody@example.test", signInKey: KEY })));
+    expect(outcomes.filter((o) => o.kind === "refused").length).toBe(10);
+    expect(isolated.verified).toBe(30);
+    expect((await rows()).length).toBe(30);
+  });
+
+  it("one connection cannot take every QR slot", async () => {
+    await tried("203.0.113.7", "qr", 20);
+    from("203.0.113.7");
+    expect((await createQrSignIn()).kind).toBe("busy");
+    from("198.51.100.2");
+    expect((await createQrSignIn()).kind).toBe("created");
   });
 
   it("with no address to go by, nothing is limited per connection", async () => {

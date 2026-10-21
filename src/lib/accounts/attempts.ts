@@ -17,6 +17,8 @@ export const ATTEMPT_LIMITS = {
     { minutes: 24 * 60, max: 10 },
   ],
   recover: [{ minutes: 60, max: 10 }],
+  // Each QR request holds one of a fixed number of slots for five minutes.
+  qr: [{ minutes: 10, max: 20 }],
 } as const;
 
 export type AttemptAction = keyof typeof ATTEMPT_LIMITS;

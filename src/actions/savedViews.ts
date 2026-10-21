@@ -2,7 +2,7 @@
 
 import { db } from "@/db/client";
 import { savedViews } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   serialiseView,
@@ -121,8 +121,14 @@ export async function saveFilters(scope: string, rawName: string, config: string
     .select()
     .from(savedViews)
     .where(and(eq(savedViews.scope, where), eq(savedViews.name, name)));
-  if (existing) await db.update(savedViews).set({ config }).where(eq(savedViews.id, existing.id));
-  else await db.insert(savedViews).values({ name, scope: where, config });
+  if (existing) {
+    await db.update(savedViews).set({ config }).where(eq(savedViews.id, existing.id));
+    return;
+  }
+  // A bound on what one account can store; far more than a screen's chips can show.
+  const [count] = await db.select({ n: sql<number>`count(*)::int` }).from(savedViews).where(eq(savedViews.scope, where));
+  if ((count?.n ?? 0) >= 30) throw new Error("You can keep up to 30 saved filter sets here. Delete one first.");
+  await db.insert(savedViews).values({ name, scope: where, config });
 }
 
 export async function deleteSavedFilters(id: string): Promise<void> {
