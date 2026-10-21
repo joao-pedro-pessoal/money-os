@@ -68,14 +68,14 @@ async function Entry({
 }: {
   id: string;
   title: string;
-  where: React.ReactNode;
+  where: string;
   children: React.ReactNode;
 }) {
   const uiText = await textForRequest();
   return (
     <section id={id} className="scroll-mt-6">
       <h3 className="text-sm font-medium mb-1">{uiText(title ?? "")}</h3>
-      <Where>{where}</Where>
+      <Where>{uiText(where)}</Where>
       <div className="text-sm text-[var(--muted)] space-y-3">{children}</div>
     </section>
   );
