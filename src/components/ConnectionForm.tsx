@@ -76,7 +76,7 @@ export default function ConnectionForm({
                 : { background: "transparent", color: "var(--muted)", border: "1px solid var(--border)" }
             }
           >
-            {labels[p] ?? p}
+            {uiText(labels[p] ?? p)}
           </button>
         ))}
       </div>
@@ -85,14 +85,14 @@ export default function ConnectionForm({
           selected one so the panel never goes blank. */}
       <div className="card p-3 text-xs space-y-2" style={{ background: "var(--surface-2)" }}>
         <div className="font-medium text-[var(--foreground)]">
-          {labels[shown] ?? shown}{uiText(" — what you need to do")}</div>
+          {uiText(labels[shown] ?? shown)}{uiText(" — what you need to do")}</div>
         <ol className="space-y-1 list-decimal list-inside text-[var(--muted)]">
           {shownConfig.steps.map((s, i) => (
-            <li key={i}>{s}</li>
+            <li key={i}>{uiText(s)}</li>
           ))}
         </ol>
         {shownConfig.warning && (
-          <div className="text-[var(--amber)] pt-1">{shownConfig.warning}</div>
+          <div className="text-[var(--amber)] pt-1">{uiText(shownConfig.warning)}</div>
         )}
       </div>
 
@@ -133,7 +133,7 @@ export default function ConnectionForm({
         placeholder={
           platform === "ibkr"
             ? uiText("Account id — leave empty to detect it automatically")
-            : `${config.identifierLabel} (${config.identifierHint})`
+            : `${uiText(config.identifierLabel)} (${uiText(config.identifierHint)})`
         }
         className="input font-mono"
         required={platform !== "ibkr"}
