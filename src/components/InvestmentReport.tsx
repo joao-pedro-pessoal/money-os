@@ -65,7 +65,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
                 <Signed value={report.value.change} currency={currency} />)
               </>
             ) : (
-              "no valuation inside this period"
+              uiText("no valuation inside this period")
             )
           }
         >
@@ -79,10 +79,10 @@ export default function InvestmentReportSection({ report, currency }: { report: 
                 <>
                   <Money value={report.flows.withdrawn} currency={currency} />{uiText(" withdrawn")}</>
               ) : (
-                uiText("{0} {1} in or out", { "0": report.flows.count, "1": report.flows.count === 1 ? "movement" : "movements" })
+                uiText(report.flows.count === 1 ? "{0} movement in or out" : "{0} movements in or out", { 0: report.flows.count })
               )}
               {/* A zero here may be a deposit nobody recorded; say so rather than let it read as none. */}
-              {!report.flows.complete && " · only what platforms report"}
+              {!report.flows.complete && uiText(" · only what platforms report")}
             </>
           }
         >
@@ -92,7 +92,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
           label={uiText("Change beyond deposits")}
           note={
             report.unexplainedWithheld ??
-            (report.value ? `what markets did, between ${report.value.startDate} and ${report.value.endDate}` : undefined)
+            (report.value ? uiText("what markets did, between {0} and {1}", { 0: report.value.startDate, 1: report.value.endDate }) : undefined)
           }
         >
           {report.unexplained === null ? "—" : <Signed value={report.unexplained} currency={currency} />}
@@ -112,15 +112,15 @@ export default function InvestmentReportSection({ report, currency }: { report: 
       </div>
 
       <div className="report-cards grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card label={uiText("Bought")} note={`${report.trades.buys} ${report.trades.buys === 1 ? "buy" : "buys"}`}>
+        <Card label={uiText("Bought")} note={uiText(report.trades.buys === 1 ? "{0} buy" : "{0} buys", { 0: report.trades.buys })}>
           <Money value={report.trades.bought} currency={currency} />
         </Card>
-        <Card label={uiText("Sold")} note={`${report.trades.sells} ${report.trades.sells === 1 ? "sale" : "sales"}`}>
+        <Card label={uiText("Sold")} note={uiText(report.trades.sells === 1 ? "{0} sale" : "{0} sales", { 0: report.trades.sells })}>
           <Money value={report.trades.sold} currency={currency} />
         </Card>
         <Card
           label={uiText("Realised from trades")}
-          note={`${report.trades.closed} closing ${report.trades.closed === 1 ? "fill" : "fills"}, as the venues state it`}
+          note={uiText(report.trades.closed === 1 ? "{0} closing fill, as the venues state it" : "{0} closing fills, as the venues state it", { 0: report.trades.closed })}
         >
           <Signed value={report.trades.realised} currency={currency} />
         </Card>
@@ -160,7 +160,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
               {index && (
                 // Your return minus the index's, so it reveals yours: hidden like it.
                 <div className={`text-[11px] ${tone(index.differencePoints)}`}>
-                  <Percent value={index.differencePoints} digits={2} signed suffix=" points" />{" "}
+                  <Percent value={index.differencePoints} digits={2} signed suffix={uiText(" points")} />{" "}
                   {index.differencePoints >= 0 ? uiText("ahead") : uiText("behind")}
                 </div>
               )}
@@ -168,17 +168,17 @@ export default function InvestmentReportSection({ report, currency }: { report: 
           )}
         </div>
         {[report.returns.timeWeightedWithheld, report.returns.moneyWeightedWithheld].map(
-          (reason, i) => reason && <p key={i} className="text-[11px] text-[var(--muted)]">{reason}</p>
+          (reason, i) => reason && <p key={i} className="text-[11px] text-[var(--muted)]">{uiText(reason)}</p>
         )}
         {report.benchmark !== null && "unavailable" in report.benchmark && twr !== null && (
-          <p className="text-[11px] text-[var(--muted)]">{report.benchmark.unavailable}</p>
+          <p className="text-[11px] text-[var(--muted)]">{uiText(report.benchmark.unavailable)}</p>
         )}
         {index && report.returns.curve.length >= 2 && (
           <ReportChart
             kind="line"
             title={uiText("Growth of 100, against {0}", { "0": index.name })}
             series={[
-              { name: "Your portfolio (time-weighted)", color: "accent", points: report.returns.curve },
+              { name: uiText("Your portfolio (time-weighted)"), color: "accent", points: report.returns.curve },
               { name: index.name, color: "muted", points: index.curve },
             ]}
             range={{ from: report.from, to: report.to }}
@@ -259,7 +259,7 @@ export default function InvestmentReportSection({ report, currency }: { report: 
             {report.composition.byType.map((t) => (
               <div key={t.name}>
                 <div className="flex justify-between text-xs gap-3">
-                  <span><span translate="no">{t.name}</span></span>
+                  <span><span>{uiText(t.name)}</span></span>
                   <span className="text-[var(--muted)]">
                     <Money value={t.value} currency={currency} /> · <Percent value={t.percent} />
                   </span>
@@ -304,10 +304,10 @@ export default function InvestmentReportSection({ report, currency }: { report: 
               .
             </p>
           )}
-          {report.compositionNote && <p className="text-[11px] text-[var(--muted)]">{report.compositionNote}</p>}
+          {report.compositionNote && <p className="text-[11px] text-[var(--muted)]">{uiText(report.compositionNote)}</p>}
         </div>
       ) : (
-        report.compositionNote && <p className="text-xs text-[var(--muted)]">{report.compositionNote}</p>
+        report.compositionNote && <p className="text-xs text-[var(--muted)]">{uiText(report.compositionNote)}</p>
       )}
     </div>
   );

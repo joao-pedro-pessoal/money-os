@@ -1,5 +1,6 @@
 "use client";
 
+import { translatedDate } from "@/lib/reports/translatedDate";
 import { useText } from "@/components/useText";
 import { useCallback, useState } from "react";
 import { usePrivacy } from "./PrivacyContext";
@@ -56,7 +57,7 @@ export default function ReportChart(props: ReportChartProps) {
     <figure className="space-y-2" aria-label={props.title}>
       <figcaption className="flex justify-between gap-3 text-sm">
         <span className="font-medium">{uiText(props.title ?? "")}</span>
-        <span className="text-xs text-[var(--muted)]">{props.unit}</span>
+        <span className="text-xs text-[var(--muted)]">{uiText(props.unit)}</span>
       </figcaption>
       <div ref={measure} className="w-full">
         <svg width={width} height={HEIGHT} role="img" aria-label={props.title} className="block max-w-full">
@@ -68,7 +69,7 @@ export default function ReportChart(props: ReportChartProps) {
           {legend.map((l) => (
             <span key={l.name} className="inline-flex items-center gap-1.5">
               <span className="inline-block w-3 h-1 rounded" style={{ background: `var(--${l.color})` }} />
-              <span translate="no">{l.name}</span>
+              <span>{uiText(l.name)}</span>
             </span>
           ))}
         </div>
@@ -102,6 +103,7 @@ function Lines({
   area,
   hidden,
 }: Extract<ReportChartProps, { kind: "line" }> & { area: Area; hidden: boolean }) {
+  const uiText = useText();
   const chart = lineChart(series, area, range);
   return (
     <>
@@ -118,7 +120,7 @@ function Lines({
           fill="var(--muted)"
           textAnchor={i === 0 ? "start" : i === chart.xLabels.length - 1 ? "end" : "middle"}
         >
-          {shortDate(l.date)}
+          {translatedDate(shortDate(l.date), uiText)}
         </text>
       ))}
       {chart.lines.map((line, i) =>
@@ -157,7 +159,7 @@ function Columns({
           )}
           {i % every === 0 && (
             <text x={g.x + g.width / 2} y={area.height - 5} fontSize={10} fill="var(--muted)" textAnchor="middle">
-              {uiText(g.label ?? "")}
+              {translatedDate(g.label, uiText)}
             </text>
           )}
         </g>

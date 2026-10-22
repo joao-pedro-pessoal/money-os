@@ -345,7 +345,7 @@ export default async function PortfolioAnalysisPage({
             dividends: realised.dividends,
             interest: realised.interest,
             unconverted: realised.unconverted,
-          })}. The same figure as Investments; no percentage, since the cost of closed positions is not in this summary.`}
+          }, uiText)}. ${uiText("The same figure as Investments; no percentage, since the cost of closed positions is not in this summary.")}`}
           className={realised.total >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}
         />
       </div>
@@ -711,7 +711,7 @@ async function Stat({ label, value, percent, note, className = "", currency }: {
         <Money value={value} currency={currency} />
       </div>
       {percent !== undefined && <div className={`text-sm mt-1 ${className}`}>{percent === null ? uiText("Percentage unavailable") : `${percent.toFixed(2)}%`}</div>}
-      {note && <p className="text-xs text-[var(--muted)] mt-1">{note}</p>}
+      {note && <p className="text-xs text-[var(--muted)] mt-1">{uiText(note)}</p>}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { sourceText, type TextTranslator } from "@/lib/i18n/text";
 /**
  * Two things the trade history was getting wrong on a real IBKR account.
  *
@@ -232,19 +233,19 @@ export function realisedNote(parts: {
   interest: number;
   /** Movements and totals left out because nothing could convert them. */
   unconverted?: number;
-}): string {
+}, uiText: TextTranslator = sourceText): string {
   const missing = parts.unconverted
-    ? ` · ${parts.unconverted} ${parts.unconverted === 1 ? "movement" : "movements"} left out: no exchange rate`
+    ? uiText(parts.unconverted === 1 ? " · {0} movement left out: no exchange rate" : " · {0} movements left out: no exchange rate", { 0: parts.unconverted })
     : "";
   return (
     [
-      parts.tradesKnown && parts.tradesReported !== 0 ? `${parts.tradesReported.toFixed(2)} trades as platforms state` : null,
-      parts.tradesDerived !== 0 ? `${parts.tradesDerived.toFixed(2)} trades worked out from buys and sells` : null,
-      parts.manualSales !== 0 ? `${parts.manualSales.toFixed(2)} manual sales` : null,
-      parts.dividends !== 0 ? `${parts.dividends.toFixed(2)} dividends` : null,
-      parts.interest !== 0 ? `${parts.interest.toFixed(2)} interest` : null,
+      parts.tradesKnown && parts.tradesReported !== 0 ? uiText("{0} trades as platforms state", { 0: parts.tradesReported.toFixed(2) }) : null,
+      parts.tradesDerived !== 0 ? uiText("{0} trades worked out from buys and sells", { 0: parts.tradesDerived.toFixed(2) }) : null,
+      parts.manualSales !== 0 ? uiText("{0} manual sales", { 0: parts.manualSales.toFixed(2) }) : null,
+      parts.dividends !== 0 ? uiText("{0} dividends", { 0: parts.dividends.toFixed(2) }) : null,
+      parts.interest !== 0 ? uiText("{0} interest", { 0: parts.interest.toFixed(2) }) : null,
     ]
       .filter(Boolean)
-      .join(" + ") || (parts.tradesKnown ? "nothing realised yet" : "no platform reports closed trades yet")
+      .join(" + ") || uiText(parts.tradesKnown ? "nothing realised yet" : "no platform reports closed trades yet")
   ) + missing;
 }

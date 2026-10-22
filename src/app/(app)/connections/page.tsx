@@ -104,7 +104,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium">{PLATFORM_LABELS[c.platform] ?? c.platform}</span>
+                    <span className="font-medium">{uiText(PLATFORM_LABELS[c.platform] ?? c.platform)}</span>
                     {c.region && (
                       <span className="text-xs text-[var(--muted)]">
                         {c.region === "eu" ? uiText("bybit.eu") : uiText("bybit.com")}

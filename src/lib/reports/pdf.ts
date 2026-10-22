@@ -28,6 +28,7 @@ import { barShares, columnChart, compactAmount, labelEvery, lineChart, shortDate
 import type { InvestmentReport } from "./investments";
 import type { PeriodReport } from "./monthly";
 import { monthTick, spansYears } from "./periods";
+import { periodCopy } from "./copy";
 import { translatedDate } from "./translatedDate";
 
 export type Tone = "good" | "bad" | null;
@@ -99,7 +100,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
   const blocks: Block[] = [
     {
       type: "title",
-      text: `${input.title} · ${translatedDate(input.label, uiText)}`,
+      text: `${uiText(input.title)} · ${translatedDate(input.label, uiText)}`,
       subtitle: `${shortDate(input.from)} to ${shortDate(input.to)} · amounts in ${input.currency} · made on ${shortDate(input.generatedOn)}`,
     },
   ];
@@ -107,7 +108,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
 
   const m = input.money;
   if (m !== null) {
-    const noun = m.kind === "custom" ? "period" : m.kind;
+    const kind = m.kind;
     const before = m.previous;
     blocks.push({ type: "heading", text: "Day-to-day money" });
     if (m.totals.transactions === 0) {
@@ -116,13 +117,13 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
       blocks.push({
         type: "stats",
         items: [
-          { label: "Income", value: money(m.totals.income), note: versus(m.totals.income, before?.totals.income ?? null, before?.label ?? ""), tone: "good" },
-          { label: "Spent", value: money(m.totals.spent), note: versus(m.totals.spent, before?.totals.spent ?? null, before?.label ?? ""), tone: "bad" },
+          { label: "Income", value: money(m.totals.income), note: versus(m.totals.income, before?.totals.income ?? null, before ? translatedDate(before.label, uiText) : ""), tone: "good" },
+          { label: "Spent", value: money(m.totals.spent), note: versus(m.totals.spent, before?.totals.spent ?? null, before ? translatedDate(before.label, uiText) : ""), tone: "bad" },
           { label: "Net", value: money(m.totals.net), note: m.invested > 0 ? `${money(m.invested)} moved into investments` : undefined, tone: toneOf(m.totals.net) },
           {
             label: "Savings rate",
             value: m.savingsRate === null ? "—" : percent(m.savingsRate),
-            note: m.savingsRate === null ? `no income recorded this ${noun}` : "of income kept",
+            note: m.savingsRate === null ? periodCopy(kind, "noIncome", uiText) : "of income kept",
             tone: m.savingsRate === null ? null : toneOf(m.savingsRate),
           },
         ],
@@ -137,7 +138,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
                 note: `${money(m.netWorth.start)} -> ${money(m.netWorth.end)}, markets included`,
                 tone: toneOf(m.netWorth.change),
               }
-            : { label: "Net worth", value: "—", note: `no snapshot inside this ${noun}` },
+            : { label: "Net worth", value: "—", note: periodCopy(kind, "noSnapshot", uiText) },
           {
             label: "Fixed spending",
             value: money(m.split.fixed),
@@ -145,7 +146,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
           },
           { label: "Variable spending", value: money(m.split.variable), note: "what a decision could still move" },
           ...(m.averageSpent
-            ? [{ label: "Average spent before", value: money(m.averageSpent.amount), note: `over ${m.averageSpent.periods} earlier ${m.averageSpent.periods === 1 ? noun : `${noun}s`}` }]
+            ? [{ label: "Average spent before", value: money(m.averageSpent.amount), note: periodCopy(kind, m.averageSpent.periods === 1 ? "averageOne" : "averageMany", uiText, { 0: m.averageSpent.periods }) }]
             : []),
         ],
       });
@@ -192,7 +193,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
             { title: "Category", align: "left", width: 0.34 },
             { title: "Spent", align: "right", width: 0.17 },
             { title: "Share", align: "right", width: 0.12 },
-            { title: `${noun[0].toUpperCase()}${noun.slice(1)} before`, align: "right", width: 0.21 },
+            { title: periodCopy(kind, "before", uiText), align: "right", width: 0.21 },
             { title: "Change", align: "right", width: 0.16 },
           ],
           rows: m.categories.map((c) => [
@@ -262,8 +263,8 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
             label: "Deposited",
             value: money(inv.flows.deposited),
             note: [
-              inv.flows.withdrawn > 0 ? `${money(inv.flows.withdrawn)} withdrawn` : null,
-              inv.flows.complete ? null : "only what platforms report",
+              inv.flows.withdrawn > 0 ? uiText("{0} withdrawn", { 0: money(inv.flows.withdrawn) }) : null,
+              inv.flows.complete ? null : uiText("only what platforms report"),
             ]
               .filter(Boolean)
               .join(" · ") || undefined,
@@ -272,22 +273,22 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
             label: "Change beyond deposits",
             value: inv.unexplained === null ? "—" : signedMoney(inv.unexplained),
             note: inv.value
-              ? `what markets did, ${shortDate(inv.value.startDate)} to ${shortDate(inv.value.endDate)}`
+              ? uiText("what markets did, between {0} and {1}", { 0: shortDate(inv.value.startDate), 1: shortDate(inv.value.endDate) })
               : undefined,
             tone: inv.unexplained === null ? null : toneOf(inv.unexplained),
           },
-          { label: "Dividends and interest", value: money(inv.income.total), note: `${money(inv.income.dividends)} dividends, ${money(inv.income.interest)} interest` },
+          { label: "Dividends and interest", value: money(inv.income.total), note: uiText("{0} dividends, {1} interest", { 0: money(inv.income.dividends), 1: money(inv.income.interest) }) },
         ],
       });
       blocks.push({
         type: "stats",
         items: [
-          { label: "Bought", value: money(inv.trades.bought), note: `${inv.trades.buys} ${inv.trades.buys === 1 ? "buy" : "buys"}` },
-          { label: "Sold", value: money(inv.trades.sold), note: `${inv.trades.sells} ${inv.trades.sells === 1 ? "sale" : "sales"}` },
+          { label: "Bought", value: money(inv.trades.bought), note: uiText(inv.trades.buys === 1 ? "{0} buy" : "{0} buys", { 0: inv.trades.buys }) },
+          { label: "Sold", value: money(inv.trades.sold), note: uiText(inv.trades.sells === 1 ? "{0} sale" : "{0} sales", { 0: inv.trades.sells }) },
           {
             label: "Realised from trades",
             value: signedMoney(inv.trades.realised),
-            note: `${inv.trades.closed} closing ${inv.trades.closed === 1 ? "fill" : "fills"}, as the venues state it`,
+            note: uiText(inv.trades.closed === 1 ? "{0} closing fill, as the venues state it" : "{0} closing fills, as the venues state it", { 0: inv.trades.closed }),
             tone: toneOf(inv.trades.realised),
           },
           { label: "Trading fees", value: money(inv.trades.fees), note: `net of fees ${signedMoney(inv.trades.net)}` },
@@ -301,7 +302,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
           {
             label: "Time-weighted return",
             value: twr === null ? "—" : rate(twr.total),
-            note: twr === null ? "not measurable here" : `${shortDate(twr.from)} to ${shortDate(twr.to)}; how the choices did`,
+            note: twr === null ? "not measurable here" : uiText("{0} to {1}; how the choices did", { 0: shortDate(twr.from), 1: shortDate(twr.to) }),
             tone: twr === null ? null : toneOf(twr.total),
           },
           {
@@ -317,7 +318,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
                   ? {
                       label: inv.benchmark.name,
                       value: rate(index.indexReturn),
-                      note: `${index.differencePoints > 0 ? "+" : ""}${index.differencePoints.toFixed(2)} points ${index.differencePoints >= 0 ? "ahead" : "behind"}`,
+                      note: uiText(index.differencePoints >= 0 ? "{0} points ahead" : "{0} points behind", { 0: `${index.differencePoints > 0 ? "+" : ""}${index.differencePoints.toFixed(2)}` }),
                       tone: toneOf(index.differencePoints),
                     }
                   : { label: inv.benchmark.name, value: "—", note: "no comparison" },

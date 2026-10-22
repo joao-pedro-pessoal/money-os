@@ -8,6 +8,8 @@
  * Not a server action: nothing in the browser calls it. The report page and
  * the PDF route import it directly, which is why there is no "use server" here.
  */
+import { textForRequest } from "./pageLanguage";
+import { periodCopy } from "@/lib/reports/copy";
 import { db } from "@/db/client";
 import { benchmarkPrices } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -115,17 +117,17 @@ export async function loadReport(params: ReportParams): Promise<LoadedReport> {
 
   // Any report is the same days, whichever parts it holds.
   const window = money ?? reportWindow(kind, key);
-  const noun = kind === "custom" ? "period" : kind;
+  const uiText = await textForRequest();
   const notes: string[] = [];
   if (spending?.approximate) {
-    notes.push(`Amounts in other currencies use today's rates, so an earlier ${noun} is approximate.`);
+    notes.push(periodCopy(kind, "approximate", uiText));
   }
   if (spending !== null && spending.unconverted.length > 0) {
-    notes.push(`Left out, no exchange rate: ${spending.unconverted.join(", ")}.`);
+    notes.push(uiText("Left out, no exchange rate: {0}.", { 0: spending.unconverted.join(", ") }));
   }
   if (investments !== null && investments.unconverted > 0) {
     notes.push(
-      `${investments.unconverted} investment ${investments.unconverted === 1 ? "figure is" : "figures are"} in a currency with no rate yet, and left out.`
+      uiText(investments.unconverted === 1 ? "{0} investment figure is in a currency with no rate yet, and left out." : "{0} investment figures are in a currency with no rate yet, and left out.", { 0: investments.unconverted })
     );
   }
 

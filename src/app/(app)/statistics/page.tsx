@@ -15,8 +15,8 @@ export default async function StatisticsPage() {
   const s = await getStatistics();
   const c = s.baseCurrency;
   const recent = s.flows.slice(-3);
-  const basis = recent.length === 1 ? 'recorded transactions in ' + recent[0].month :
-    recent.length > 1 ? 'the last ' + recent.length + ' recorded months (' + recent[0].month + ' to ' + recent.at(-1)!.month + ')' : 'no recorded months';
+  const basis = recent.length === 1 ? uiText("recorded transactions in {0}", { 0: recent[0].month }) :
+    recent.length > 1 ? uiText("the last {0} recorded months ({1} to {2})", { 0: recent.length, 1: recent[0].month, 2: recent.at(-1)!.month }) : uiText("no recorded months");
 
   return (
     <div className="space-y-6">
@@ -153,7 +153,7 @@ export default async function StatisticsPage() {
               value={s.drawdown.maxDrawdown}
               currency={c}
               className="text-[var(--red)]"
-              note={`${s.drawdown.maxDrawdownPercent.toFixed(1)}% from the peak`}
+              note={uiText("{0}% from the peak", { 0: s.drawdown.maxDrawdownPercent.toFixed(1) })}
             />
             <div>
               <div className="text-xs text-[var(--muted)] mb-1">{uiText("From peak")}</div>

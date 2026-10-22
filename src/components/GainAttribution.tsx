@@ -93,7 +93,7 @@ export default async function GainAttribution() {
 
       {a.realisedTradesUnknown && (
         <p className="text-[10px] text-[var(--muted)] mt-2">{uiText("No connected platform reports realised profit on closed trades")}{silentPlatforms.length > 0 &&
-            ` (${silentPlatforms.map((p) => PLATFORM_LABELS[p] ?? p).join(", ")})`}{uiText(". No result could be measured from the available trade history either.")}</p>
+            ` (${silentPlatforms.map((p) => uiText(PLATFORM_LABELS[p] ?? p)).join(", ")})`}{uiText(". No result could be measured from the available trade history either.")}</p>
       )}
     </div>
   );

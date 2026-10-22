@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageContext";
+import { localeOf } from "@/lib/i18n/languages";
 import { useText } from "@/components/useText";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -48,6 +50,7 @@ export default function IndependencePlan({
   currency: string;
 }) {
   const uiText = useText();
+  const { language } = useLanguage();
   const { hidden } = usePrivacy();
   const [start, setStart] = useState(String(Math.round(current)));
   const [saving, setSaving] = useState(monthlySaving === null ? "" : String(Math.round(monthlySaving)));
@@ -71,7 +74,7 @@ export default function IndependencePlan({
   const ageNow = number(age);
   const when =
     plan?.months != null && plan.months > 0
-      ? new Date(new Date().getFullYear(), new Date().getMonth() + plan.months, 1).toLocaleDateString("en-GB", {
+      ? new Date(new Date().getFullYear(), new Date().getMonth() + plan.months, 1).toLocaleDateString(localeOf(language), {
           month: "long",
           year: "numeric",
         })

@@ -10,6 +10,8 @@ import FilterSelect from "@/components/FilterSelect";
 import { Money } from "@/components/PrivacyContext";
 import { ANALYTICS_TABS } from "@/lib/navigation";
 import { periodNoun } from "@/lib/reports/monthly";
+import { periodCopy } from "@/lib/reports/copy";
+import { translatedDate } from "@/lib/reports/translatedDate";
 import { monthTick, periodLabel, REPORT_KINDS, spansYears, type ReportKind } from "@/lib/reports/periods";
 import { REPORT_SCOPES, REPORT_TITLE, reportCsv, reportFileName, type ReportScope } from "@/lib/reports/document";
 import FilterLink from "@/components/FilterLink";
@@ -50,7 +52,7 @@ export default async function ReportPage({
   const report = loaded.money;
 
   const noun = periodNoun(kind);
-  const Noun = noun[0].toUpperCase() + noun.slice(1);
+  const Noun = uiText(noun[0].toUpperCase() + noun.slice(1));
   /** The report's address with some of its choices changed, keeping the rest. */
   const href = (changes: { period?: ReportKind; at?: string; scope?: ReportScope; from?: string; to?: string }) => {
     const period = changes.period ?? kind;
@@ -79,17 +81,17 @@ export default async function ReportPage({
 
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-semibold">{uiText(REPORT_TITLE[kind])} · {uiText(loaded.label ?? "")}</h2>
+          <h2 className="text-xl font-semibold">{uiText(REPORT_TITLE[kind])} · {translatedDate(loaded.label, uiText)}</h2>
           <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">
             {kind === "custom"
               ? loaded.to === loaded.today
                 ? uiText("Up to today — the figures change until the day closes.")
                 : uiText("A range of days, as recorded.")
               : key === current
-                ? uiText("This {0} so far — the figures change until it closes.", { "0": noun })
-                : uiText("A closed {0}, as recorded.", { "0": noun })}{" "}
+                ? periodCopy(kind, "open", uiText)
+                : periodCopy(kind, "closed", uiText)}{" "}
             {scope !== "investments" &&
-              "Transfers between your own accounts and money moved into investments are not spending."}
+              uiText("Transfers between your own accounts and money moved into investments are not spending.")}
           </p>
         </div>
         {/* One row of equal choices on a wide screen, one under another on a phone. */}
@@ -98,21 +100,21 @@ export default async function ReportPage({
             label={uiText("Report")}
             value={kind}
             className="input"
-            options={REPORT_KINDS.map((p) => ({ value: p.value, label: p.label, href: href({ period: p.value }) }))}
+            options={REPORT_KINDS.map((p) => ({ value: p.value, label: uiText(p.label), href: href({ period: p.value }) }))}
           />
           {kind !== "custom" && (
             <FilterSelect
               label={Noun}
               value={key}
               className="input"
-              options={loaded.available.map((k) => ({ value: k, label: periodLabel(kind, k), href: href({ at: k }) }))}
+              options={loaded.available.map((k) => ({ value: k, label: translatedDate(periodLabel(kind, k), uiText), href: href({ at: k }) }))}
             />
           )}
           <FilterSelect
             label={uiText("What the report covers")}
             value={scope}
             className="input"
-            options={REPORT_SCOPES.map((s) => ({ value: s.value, label: s.label, href: href({ scope: s.value }) }))}
+            options={REPORT_SCOPES.map((s) => ({ value: s.value, label: uiText(s.label), href: href({ scope: s.value }) }))}
           />
         </div>
       </div>
@@ -134,7 +136,7 @@ export default async function ReportPage({
       />
 
       {loaded.notes.length > 0 && (
-        <p className="text-xs text-[var(--muted)]">{loaded.notes.join(" ")}</p>
+        <p className="text-xs text-[var(--muted)]">{loaded.notes.map((note) => uiText(note)).join(" ")}</p>
       )}
 
       {report !== null && loaded.investments !== null && (
@@ -142,7 +144,7 @@ export default async function ReportPage({
       )}
 
       {report === null ? null : !hasAnything ? (
-        <div className="card p-8 text-center text-sm text-[var(--muted)]">{uiText("Nothing recorded in ")}{uiText(report.label ?? "")}.{" "}
+        <div className="card p-8 text-center text-sm text-[var(--muted)]">{uiText("Nothing recorded in ")}{translatedDate(report.label, uiText)}.{" "}
           <Link href="/transactions" className="text-[var(--accent)]">{uiText("Record a movement")}</Link>{uiText(" or")}{" "}
           <Link href="/import" className="text-[var(--accent)]">{uiText("import a statement")}</Link>.
         </div>
@@ -152,19 +154,18 @@ export default async function ReportPage({
             <div className="card p-4">
               <div className="text-xs text-[var(--muted)]">{uiText("Income")}</div>
               <div className="text-xl font-semibold mt-1 text-[var(--green)]"><Money value={report.totals.income} currency={base} /></div>
-              <div className="text-[11px] text-[var(--muted)] mt-1">{uiText("vs ")}{report.previous?.label ?? uiText("{0} before", { "0": noun })}{" "}
+              <div className="text-[11px] text-[var(--muted)] mt-1">{report.previous ? uiText("vs {0}", { 0: translatedDate(report.previous.label, uiText) }) : periodCopy(kind, "versus", uiText)}{" "}
                 {report.previous ? <Change now={report.totals.income} before={report.previous.totals.income} /> : "—"}
               </div>
             </div>
             <div className="card p-4">
               <div className="text-xs text-[var(--muted)]">{uiText("Spent")}</div>
               <div className="text-xl font-semibold mt-1 text-[var(--red)]"><Money value={report.totals.spent} currency={base} /></div>
-              <div className="text-[11px] text-[var(--muted)] mt-1">{uiText("vs ")}{noun}{uiText(" before")}{" "}
+              <div className="text-[11px] text-[var(--muted)] mt-1">{periodCopy(kind, "versus", uiText)}{" "}
                 {report.previous ? <Change now={report.totals.spent} before={report.previous.totals.spent} lowerIsBetter /> : "—"}
               </div>
               {report.averageSpent && (
-                <div className="text-[11px] text-[var(--muted)]">{uiText("average of ")}{report.averageSpent.periods}{uiText(" earlier")}{" "}
-                  {report.averageSpent.periods === 1 ? noun : uiText("{0}s", { "0": noun })}{" "}
+                <div className="text-[11px] text-[var(--muted)]">{periodCopy(kind, report.averageSpent.periods === 1 ? "averageOne" : "averageMany", uiText, { 0: report.averageSpent.periods })}{" "}
                   <Money value={report.averageSpent.amount} currency={base} />
                 </div>
               )}
@@ -183,7 +184,7 @@ export default async function ReportPage({
                 {report.savingsRate === null ? "—" : `${report.savingsRate.toFixed(1)}%`}
               </div>
               <div className="text-[11px] text-[var(--muted)] mt-1">
-                {report.savingsRate === null ? uiText("no income recorded this {0}", { "0": noun }) : uiText("of income kept")}
+                {report.savingsRate === null ? periodCopy(kind, "noIncome", uiText) : uiText("of income kept")}
               </div>
             </div>
           </div>
@@ -201,16 +202,16 @@ export default async function ReportPage({
                     <Money value={report.netWorth.start} currency={base} /> →{" "}
                     <Money value={report.netWorth.end} currency={base} />
                   </div>
-                  <p className="text-[11px] text-[var(--muted)] mt-2">{uiText("Includes what markets did, so it can differ from the ")}{noun}{uiText("'s net.")}</p>
+                  <p className="text-[11px] text-[var(--muted)] mt-2">{periodCopy(kind, "net", uiText)}</p>
                 </>
               ) : (
-                <p className="text-xs text-[var(--muted)] mt-2">{uiText("No net worth snapshot inside this ")}{noun}.</p>
+                <p className="text-xs text-[var(--muted)] mt-2">{periodCopy(kind, "noSnapshot", uiText)}</p>
               )}
             </div>
             <div className="card p-4">
               <div className="text-sm font-medium">{uiText("Fixed and variable")}</div>
               {report.split.fixedShare === null ? (
-                <p className="text-xs text-[var(--muted)] mt-2">{uiText("No spending this ")}{noun}.</p>
+                <p className="text-xs text-[var(--muted)] mt-2">{periodCopy(kind, "noSpending", uiText)}</p>
               ) : (
                 <>
                   <div className="h-3 rounded-full bg-[var(--surface-2)] overflow-hidden flex mt-3" aria-hidden="true">
@@ -246,7 +247,7 @@ export default async function ReportPage({
                   kind="columns"
                   title={uiText("Income and spending")}
                   groups={report.months.map((m) => ({
-                    label: monthTick(m.key, spansYears(report.months!.map((x) => x.key))) + (m.partial ? "*" : ""),
+                    label: translatedDate(monthTick(m.key, spansYears(report.months!.map((x) => x.key))), uiText) + (m.partial ? "*" : ""),
                     values: m.totals === null ? [null, null] : [m.totals.income, m.totals.spent],
                   }))}
                   legend={[
@@ -270,7 +271,7 @@ export default async function ReportPage({
                     {report.months.map((m) => (
                       <tr key={m.key}>
                         <td>
-                          <FilterLink href={href({ period: "month", at: m.key })} className="hover:underline">{uiText(m.label)}</FilterLink>
+                          <FilterLink href={href({ period: "month", at: m.key })} className="hover:underline">{translatedDate(m.label, uiText)}</FilterLink>
                           {m.partial && <span className="text-[10px] text-[var(--muted)]">{uiText(" · part of the month")}</span>}
                         </td>
                         {m.totals === null ? (
@@ -301,7 +302,7 @@ export default async function ReportPage({
                       <th>{uiText("Category")}</th>
                       <th className="text-right">{uiText("Spent")}</th>
                       <th className="text-right">{uiText("Share")}</th>
-                      <th className="text-right">{Noun}{uiText(" before")}</th>
+                      <th className="text-right">{periodCopy(kind, "before", uiText)}</th>
                       <th className="text-right">{uiText("Change")}</th>
                     </tr>
                   </thead>
@@ -342,7 +343,7 @@ export default async function ReportPage({
 
           {report.budgets.length > 0 && (
             <div className="card p-4">
-              <div className="text-sm font-medium mb-3">{kind === "week" ? uiText("Weekly") : kind === "month" ? uiText("Monthly") : uiText("Yearly")}{uiText(" budgets")}</div>
+              <div className="text-sm font-medium mb-3">{uiText(kind === "week" ? "Weekly budgets" : kind === "month" ? "Monthly budgets" : "Yearly budgets")}</div>
               <div className="space-y-3">
                 {report.budgets.map((b) => (
                   <div key={b.name}>

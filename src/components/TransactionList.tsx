@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageContext";
+import { localeOf } from "@/lib/i18n/languages";
 import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
@@ -50,6 +52,7 @@ export default function TransactionList({
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const uiText = useText();
+  const { language } = useLanguage();
   const [filters, setFilters] = useState<TransactionFilters>(NO_TRANSACTION_FILTERS);
 
   const filtered = useMemo(() => applyTransactionFilters(rows, filters), [rows, filters]);
@@ -220,7 +223,7 @@ export default function TransactionList({
                 const out = directionOf(t) === "out";
                 return (
                   <tr key={t.id} role="row">
-                    <td role="cell" data-label={uiText("Date")}><span className="cash-flow-phone-only">{new Date(t.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span><span className="cash-flow-desktop-only">{new Date(t.date).toLocaleDateString("pt-PT")}</span></td>
+                    <td role="cell" data-label={uiText("Date")}><span className="cash-flow-phone-only">{new Date(t.date).toLocaleDateString(localeOf(language), { day: "numeric", month: "short", year: "numeric" })}</span><span className="cash-flow-desktop-only">{new Date(t.date).toLocaleDateString(localeOf(language))}</span></td>
                     <td role="cell" data-label={uiText("Account")}><span translate="no">{t.accountName ?? "—"}</span></td>
                     <td role="cell" data-label={uiText("Category")}>
                       <span translate="no">{t.categoryName ?? "—"}</span>

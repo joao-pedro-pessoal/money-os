@@ -51,7 +51,7 @@ export default function MultiSelect({
             </label>
           ))}
           {selected.length > 0 && (
-            <button type="button" className="text-xs text-[var(--accent)] pt-1" onClick={() => onChange([])}>{uiText("Clear ")}{uiText(label.toLowerCase() ?? "")}
+            <button type="button" className="text-xs text-[var(--accent)] pt-1" onClick={() => onChange([])}>{uiText("Clear {0}", { 0: uiText(label) })}
             </button>
           )}
         </div>

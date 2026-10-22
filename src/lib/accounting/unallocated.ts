@@ -22,6 +22,8 @@
  * Pure — no DB, no network.
  */
 
+import { fmt } from "@/lib/format";
+import { sourceText, type TextTranslator } from "@/lib/i18n/text";
 import { eligibleCash, type AccountLike } from "./index";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -173,21 +175,21 @@ export function accountFreeCash(
  * Only what actually applies: a cash account with no margin and no buckets
  * shouldn't be handed a list of caveats that are all zero.
  */
-export function explainFree(view: UnallocatedView, currency: string): string[] {
+export function explainFree(view: UnallocatedView, currency: string, uiText: TextTranslator = sourceText): string[] {
   const parts: string[] = [];
-  const money = (n: number) => `${n.toFixed(2)} ${currency}`;
+  const money = (n: number) => fmt(n, currency);
 
   if (view.lockedAsMargin > 0) {
-    parts.push(`${money(view.lockedAsMargin)} is backing open trades and can't be spent`);
+    parts.push(uiText("{0} is backing open trades and can't be spent", { 0: money(view.lockedAsMargin) }));
   }
   if (view.reservedForBuckets > 0) {
-    parts.push(`${money(view.reservedForBuckets)} is assigned to buckets`);
+    parts.push(uiText("{0} is assigned to buckets", { 0: money(view.reservedForBuckets) }));
   }
   if (view.inSeparatePool > 0) {
-    parts.push(`${money(view.inSeparatePool)} sits in a separate pool on the platform`);
+    parts.push(uiText("{0} sits in a separate pool on the platform", { 0: money(view.inSeparatePool) }));
   }
   if (view.overAllocated) {
-    parts.push("buckets promise more than this account can currently spend");
+    parts.push(uiText("buckets promise more than this account can currently spend"));
   }
   return parts;
 }

@@ -50,11 +50,11 @@ export default function ConnectablePlatforms({
         >
           {match.connected ? (
             <>
-              <strong>{match.label}{uiText(" is already connected")}</strong>{uiText(", feeding")}{" "}
+              <strong>{uiText(match.label)}{uiText(" is already connected")}</strong>{uiText(", feeding")}{" "}
               {match.connectedTo.join(", ")}{uiText(". A manual account for it as well means the same money is counted twice — unless this is money that connection doesn't report.")}</>
           ) : (
             <>
-              <strong>{match.label}{uiText(" can be connected instead.")}</strong>{uiText(" The balance would keep itself up to date rather than being typed in and going stale.")}{" "}
+              <strong>{uiText(match.label)}{uiText(" can be connected instead.")}</strong>{uiText(" The balance would keep itself up to date rather than being typed in and going stale.")}{" "}
               <Link href="/connections" className="underline">{uiText("Connect it →")}</Link>
             </>
           )}
@@ -69,7 +69,7 @@ export default function ConnectablePlatforms({
           {options.map((o) => (
             <li key={o.platform} className="flex items-baseline justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-xs">{o.label}</div>
+                <div className="text-xs">{uiText(o.label)}</div>
                 <div className="text-[10px] text-[var(--muted)]">
                   {o.connected ? uiText("Feeding {0}", { "0": o.connectedTo.join(", ") }) : uiText(o.requirement)}
                 </div>

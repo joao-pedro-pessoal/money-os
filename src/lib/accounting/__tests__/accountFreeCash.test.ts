@@ -70,7 +70,7 @@ describe("free cash on a manual account", () => {
   it("explains the same figure it reports", () => {
     const v = accountFreeCash({ id: "tr", balance: 451.41, investedValue: 450.83 }, 300);
     expect(v.free).toBe(-299.42);
-    expect(explainFree(v, "EUR")).toContain("0.58 EUR is assigned to buckets");
+    expect(explainFree(v, "EUR")).toContain("0,58 € is assigned to buckets");
     expect(explainFree(v, "EUR")).toContain(
       "buckets promise more than this account can currently spend"
     );

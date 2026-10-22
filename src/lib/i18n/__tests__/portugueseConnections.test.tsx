@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { PLATFORM_SETUP, PLATFORM_LABELS } from "@/lib/connectors/constants";
 import { translateText } from "../text";
 import pt from "../full/pt.json";
+import ConnectablePlatforms from "@/components/ConnectablePlatforms";
 import ConnectionForm from "@/components/ConnectionForm";
 
 vi.mock("@/components/useText", () => ({ useText: () => (source: string) => translateText(pt, source) }));
@@ -21,4 +22,12 @@ describe("Portuguese connection instructions", () => {
     expect(html).toContain("Endereço da carteira");
     expect(html).not.toContain("Nothing to install");
   });
+});
+
+it("translates the platform description in the accounts picker", () => {
+  const html = renderToStaticMarkup(<ConnectablePlatforms options={[{
+    platform: "snaptrade", label: PLATFORM_LABELS.snaptrade, requirement: "", connected: false, connectedTo: [],
+  }]}>{null}</ConnectablePlatforms>);
+  expect(html).toContain("SnapTrade Personal (a tua conta)");
+  expect(html).not.toContain("your own account");
 });

@@ -93,7 +93,7 @@ export default async function InvestmentsPage() {
     dividends: realised.dividends,
     interest: realised.interest,
     unconverted: realised.unconverted,
-  });
+  }, uiText);
 
   return (
     <div className="holdings-page space-y-8">

@@ -1,13 +1,15 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageContext";
+import { localeOf } from "@/lib/i18n/languages";
 import { useText } from "@/components/useText";
 import { useState } from "react";
 import Link from "next/link";
 import { answerSubscriptionCharge, recordSubscriptionCharge, type DueCharge } from "@/actions/subscriptionCharges";
 import { Money } from "./PrivacyContext";
 
-const dayLabel = (day: string) =>
-  new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const dayLabel = (day: string, locale: string) =>
+  new Date(`${day}T12:00:00Z`).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 
 /**
  * Subscription charges that have fallen due, each waiting for an answer.
@@ -52,6 +54,7 @@ export default function DueSubscriptionCharges({
 
 function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: string; name: string; currency: string }[] }) {
   const uiText = useText();
+  const { language } = useLanguage();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
@@ -100,7 +103,7 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-medium break-words"><span translate="no">{charge.name}</span></div>
-          <div className="text-xs text-[var(--muted)]">{uiText("due ")}{uiText(dayLabel(charge.dueOn) ?? "")}
+          <div className="text-xs text-[var(--muted)]">{uiText("due ")}{uiText(dayLabel(charge.dueOn, localeOf(language)) ?? "")}
             <span translate="no">{charge.categoryName && ` · ${charge.categoryName}`}</span>
           </div>
         </div>
@@ -112,7 +115,7 @@ function ChargeRow({ charge, accounts }: { charge: DueCharge; accounts: { id: st
       {charge.match && (
         <p className="text-xs">
           <span className="text-[var(--amber)]">{uiText("Looks already recorded:")}</span> {charge.match.label},{" "}
-          {uiText(dayLabel(charge.match.date) ?? "")}, <Money value={charge.match.amount} currency={charge.match.currency} /> ·{" "}
+          {uiText(dayLabel(charge.match.date, localeOf(language)) ?? "")}, <Money value={charge.match.amount} currency={charge.match.currency} /> ·{" "}
           <span translate="no">{charge.match.accountName}</span>
         </p>
       )}

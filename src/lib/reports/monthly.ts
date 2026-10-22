@@ -1,3 +1,5 @@
+import { periodCopy } from "./copy";
+import { translatedDate } from "./translatedDate";
 import { sourceText, type TextTranslator } from "@/lib/i18n/text";
 /**
  * The weekly, monthly, annual and custom report: one stretch of days, read
@@ -375,7 +377,7 @@ export function csvHeader(
   currency: string, uiText: TextTranslator = sourceText
 ): CsvLine[] {
   return [
-    [uiText("Money OS {0} report", {0: uiText(reportName(kind))}), label],
+    [uiText(kind === "week" ? "Money OS weekly report" : kind === "month" ? "Money OS monthly report" : kind === "year" ? "Money OS annual report" : "Money OS custom report"), label],
     [uiText("From"), window.from, uiText("To"), window.to],
     [uiText("Currency"), currency],
   ];
@@ -396,9 +398,9 @@ export function reportToCsv(report: PeriodReport, currency: string): string {
 
 /** The day-to-day money part of the CSV, one section after another. */
 export function moneyCsvLines(report: PeriodReport, uiText: TextTranslator = sourceText): CsvLine[] {
-  const noun = uiText(periodNoun(report.kind));
+  const before = periodCopy(report.kind, "before", uiText);
   const lines: CsvLine[] = [
-    [uiText("Summary"), uiText("This {0}", {0: noun}), report.previous ? uiText(report.previous.label) : uiText("The {0} before", {0: noun})],
+    [uiText("Summary"), periodCopy(report.kind, "this", uiText), report.previous ? translatedDate(report.previous.label, uiText) : before],
     [uiText("Income"), report.totals.income, report.previous?.totals.income ?? null],
     [uiText("Spent"), report.totals.spent, report.previous?.totals.spent ?? null],
     [uiText("Net"), report.totals.net, report.previous?.totals.net ?? null],
@@ -418,11 +420,11 @@ export function moneyCsvLines(report: PeriodReport, uiText: TextTranslator = sou
   if (report.months) {
     lines.push([], [uiText("Month"), uiText("Income"), uiText("Spent"), uiText("Net")]);
     for (const m of report.months) {
-      const label = m.partial ? uiText("{0} (part)", {0: uiText(m.label)}) : uiText(m.label);
+      const label = m.partial ? uiText("{0} (part)", {0: translatedDate(m.label, uiText)}) : translatedDate(m.label, uiText);
       lines.push([label, m.totals?.income ?? null, m.totals?.spent ?? null, m.totals?.net ?? null]);
     }
   }
-  lines.push([], [uiText("Category"), uiText("Spent"), uiText("Share %"), uiText("Transactions"), uiText("The {0} before", {0: noun}), uiText("Change %")]);
+  lines.push([], [uiText("Category"), uiText("Spent"), uiText("Share %"), uiText("Transactions"), before, uiText("Change %")]);
   for (const c of report.categories) {
     lines.push([c.name, c.spent, c.share, c.count, c.previous, c.changePercent]);
   }

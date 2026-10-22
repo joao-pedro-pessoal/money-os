@@ -169,7 +169,7 @@ export default async function DashboardPage({
       // the dashboard's free-cash figure must not include.
       portfolioCashPercent: a.portfolioCashPercent === null ? null : Number(a.portfolioCashPercent),
       free: a.free,
-      freeExplained: explainFree(a.freeView, a.currency),
+      freeExplained: explainFree(a.freeView, a.currency, uiText),
       marginUsed: p?.marginUsed ?? 0,
       /**
        * Everything converted once, here, so the card never mixes currencies.

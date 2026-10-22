@@ -11,7 +11,7 @@ import Section from "@/components/Section";
 import BrokerStatementForm from "@/components/BrokerStatementForm";
 import { importBrokerStatement, getImportedStatements } from "@/actions/brokerImport";
 
-async async function Step({
+async function Step({
   n,
   title,
   subtitle,

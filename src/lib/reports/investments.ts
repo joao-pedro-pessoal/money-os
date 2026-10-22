@@ -487,7 +487,7 @@ export function investmentCsvLines(report: InvestmentReport, uiText: TextTransla
     [uiText("Value change"), report.value?.change ?? null],
     [uiText("Deposited"), report.flows.deposited],
     [uiText("Withdrawn"), report.flows.withdrawn],
-    [uiText("Change not explained by deposits"), report.unexplained, report.unexplainedWithheld],
+    [uiText("Change not explained by deposits"), report.unexplained, report.unexplainedWithheld ? uiText(report.unexplainedWithheld) : null],
     [uiText("Bought"), report.trades.bought],
     [uiText("Sold"), report.trades.sold],
     [uiText("Realised from trades"), report.trades.realised],

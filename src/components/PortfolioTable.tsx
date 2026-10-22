@@ -290,7 +290,7 @@ export default function PortfolioTable({
    * where `long` really does mean "gains when it rises".
    */
   const groupAxis: TagAxis | undefined =
-    group === "assetType" ? "assetType" : group === "riskLevel" ? "riskLevel" : group === "side" ? "direction" : undefined;
+    group === "assetType" ? "assetType" : group === "riskLevel" ? "risk" : group === "side" ? "direction" : undefined;
 
   const label = (value: string) =>
     value === UNTAGGED ? uiText("Untagged") : groupAxis ? uiText(tagLabel(value, groupAxis) ?? value) : value;
@@ -533,7 +533,7 @@ export default function PortfolioTable({
                             return (
                               <td key={c.key} className="text-xs text-[var(--muted)]">
                                 {i.assetType ? (
-                                  tagLabel(i.assetType, "assetType") ?? i.assetType
+                                  uiText(tagLabel(i.assetType, "assetType") ?? i.assetType)
                                 ) : (
                                   <Link
                                     href="/positions"

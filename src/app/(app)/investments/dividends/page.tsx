@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { localeOf } from "@/lib/i18n/languages";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { getDividendOverview } from "@/actions/dividends";
@@ -8,11 +10,6 @@ import ProfileLookup from "@/components/ProfileLookup";
 
 // No PageTabs here: everything under /investments already gets them from
 // investments/layout.tsx, and rendering them again drew the bar twice.
-
-const dateLabel = (d: Date) =>
-  d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-
-const monthLabel = (d: Date) => d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 
 const CONFIDENCE_NOTE: Record<string, string> = {
   good: "from four or more payments",
@@ -35,6 +32,10 @@ const rhythmLabel = (r: { cadence: string | null; medianGapDays: number | null }
 
 export default async function DividendsPage() {
   const uiText = await textForRequest();
+  const locale = localeOf(await currentLanguage());
+  const dateLabel = (d: Date) =>
+    d.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
+  const monthLabel = (d: Date) => d.toLocaleDateString(locale, { month: "long", year: "numeric" });
   const o = await getDividendOverview();
 
   return (
