@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { buckets, bucketAllocations, accounts, auditLog } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { manualBalance } from "@/lib/money/manualEntry";
 import { bucketTotal } from "@/lib/accounting";
 
 export async function listBucketsWithTotals() {
@@ -112,71 +113,41 @@ export async function deleteBucket(formData: FormData) {
  * used on the account/bucket detail pages where the current amount is visible.
  */
 export async function addToAllocation(formData: FormData) {
-  const accountId = String(formData.get("accountId"));
-  const bucketId = String(formData.get("bucketId"));
-  const delta = Number(formData.get("amount") ?? "0");
-
-  const [existing] = await db
-    .select()
-    .from(bucketAllocations)
-    .where(and(eq(bucketAllocations.accountId, accountId), eq(bucketAllocations.bucketId, bucketId)));
-
-  const newTotal = Math.round(((existing ? Number(existing.amount) : 0) + delta + Number.EPSILON) * 100) / 100;
-
-  if (newTotal <= 0 && existing) {
-    await db.delete(bucketAllocations).where(eq(bucketAllocations.id, existing.id));
-  } else if (existing) {
-    await db.update(bucketAllocations).set({ amount: String(newTotal), updatedAt: new Date() }).where(eq(bucketAllocations.id, existing.id));
-  } else if (newTotal > 0) {
-    await db.insert(bucketAllocations).values({ accountId, bucketId, amount: String(newTotal) });
-  }
-
-  await db.insert(auditLog).values({
-    entityType: "bucket_allocation",
-    entityId: bucketId,
-    action: "allocation_added",
-    details: JSON.stringify({ accountId, bucketId, delta, newTotal }),
-  });
-
-  revalidatePath("/buckets");
-  revalidatePath(`/buckets/${bucketId}`);
-  revalidatePath("/money-map");
-  revalidatePath("/accounts");
-  revalidatePath(`/accounts/${accountId}`);
+  await saveAllocation(formData, true);
 }
 
-/** Upsert an allocation of `amount` from `accountId` into `bucketId`. Amount 0 removes it. */
+/** Sets an exact total; zero releases the allocation without moving money. */
 export async function setAllocation(formData: FormData) {
+  await saveAllocation(formData, false);
+}
+
+async function saveAllocation(formData: FormData, additive: boolean) {
   const accountId = String(formData.get("accountId"));
   const bucketId = String(formData.get("bucketId"));
-  const amount = String(formData.get("amount") ?? "0");
-
-  const [existing] = await db
-    .select()
-    .from(bucketAllocations)
-    .where(and(eq(bucketAllocations.accountId, accountId), eq(bucketAllocations.bucketId, bucketId)));
-
-  if (Number(amount) === 0 && existing) {
-    await db.delete(bucketAllocations).where(eq(bucketAllocations.id, existing.id));
-  } else if (existing) {
-    await db
-      .update(bucketAllocations)
-      .set({ amount, updatedAt: new Date() })
-      .where(eq(bucketAllocations.id, existing.id));
-  } else if (Number(amount) !== 0) {
-    await db.insert(bucketAllocations).values({ accountId, bucketId, amount });
-  }
-
-  await db.insert(auditLog).values({
-    entityType: "bucket_allocation",
-    entityId: bucketId,
-    action: "allocation_set",
-    details: JSON.stringify({ accountId, bucketId, amount }),
+  const amount = Number(manualBalance(String(formData.get("amount") ?? "")));
+  if (!additive && amount < 0) throw new Error("An allocation cannot be negative.");
+  await db.transaction(async store => {
+    // There may not be a pair to lock yet. Lock its account before reading it.
+    const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
+    const [bucket] = await store.select().from(buckets).where(eq(buckets.id, bucketId)).for("update");
+    if (!account?.active || !bucket) throw new Error("Choose an active account and an existing bucket.");
+    const pair = and(eq(bucketAllocations.accountId, accountId), eq(bucketAllocations.bucketId, bucketId));
+    const existing = await store.select().from(bucketAllocations).where(pair);
+    const total = Math.round((amount + (additive ? existing.reduce((sum, row) => sum + Number(row.amount), 0) : 0)) * 100) / 100;
+    if (total < 0) throw new Error("An allocation cannot be negative.");
+    // Replacing the pair also preserves the summed value of legacy duplicates.
+    await store.delete(bucketAllocations).where(pair);
+    if (total > 0) await store.insert(bucketAllocations).values({ accountId, bucketId, amount: total.toFixed(2) });
+    await store.insert(auditLog).values({
+      entityType: "bucket_allocation", entityId: bucketId,
+      action: additive ? "allocation_added" : "allocation_set",
+      details: JSON.stringify({ accountId, bucketId, amount, newTotal: total }),
+    });
   });
-
   revalidatePath("/buckets");
   revalidatePath(`/buckets/${bucketId}`);
   revalidatePath("/money-map");
   revalidatePath("/accounts");
   revalidatePath(`/accounts/${accountId}`);
+  revalidatePath("/");
 }

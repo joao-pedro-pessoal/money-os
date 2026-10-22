@@ -4,6 +4,8 @@ import { db } from "@/db/client";
 import { subscriptions, accounts, categories, auditLog } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { manualAmount, manualDate } from "@/lib/money/manualEntry";
+import { isCurrencyCode } from "@/lib/fx";
 import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
@@ -87,64 +89,41 @@ export async function getSubscriptionTotals() {
 }
 
 export async function createSubscription(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  const amount = Number(formData.get("amount"));
-  const cadence = String(formData.get("cadence") ?? "monthly");
-  const currency = String(formData.get("currency") ?? "EUR");
-  const accountId = String(formData.get("accountId") ?? "") || null;
-  const categoryId = String(formData.get("categoryId") ?? "") || null;
-  const nextChargeRaw = String(formData.get("nextChargeAt") ?? "");
-  const notes = String(formData.get("notes") ?? "").trim() || null;
-
-  if (!name) throw new Error("A subscription needs a name.");
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error("Enter what it costs each time it is charged.");
-  }
-  if (!isCadence(cadence)) throw new Error(`Unknown billing period: ${cadence}`);
-
-  const nextChargeAt = nextChargeRaw ? new Date(nextChargeRaw) : null;
-
-  await db.insert(subscriptions).values({
-    name,
-    amount: String(amount),
-    currency,
-    cadence,
-    accountId,
-    categoryId,
-    nextChargeAt: nextChargeAt && !Number.isNaN(nextChargeAt.getTime()) ? nextChargeAt : null,
-    notes,
-  });
-
-  revalidatePath("/subscriptions");
-  revalidatePath("/");
+  await saveSubscription(formData);
 }
 
 export async function updateSubscription(formData: FormData) {
-  const id = String(formData.get("id"));
-  const amount = Number(formData.get("amount"));
+  await saveSubscription(formData, String(formData.get("id")));
+}
+
+async function saveSubscription(formData: FormData, id?: string) {
+  const name = String(formData.get("name") ?? "").trim();
+  const amount = manualAmount(String(formData.get("amount") ?? ""));
   const cadence = String(formData.get("cadence") ?? "monthly");
-
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter a positive amount.");
+  const currency = String(formData.get("currency") ?? "EUR").trim().toUpperCase();
+  const accountId = String(formData.get("accountId") ?? "") || null;
+  const categoryId = String(formData.get("categoryId") ?? "") || null;
+  const date = String(formData.get("nextChargeAt") ?? "");
+  if (!name) throw new Error("A subscription needs a name.");
   if (!isCadence(cadence)) throw new Error(`Unknown billing period: ${cadence}`);
-
-  const nextChargeRaw = String(formData.get("nextChargeAt") ?? "");
-  const nextChargeAt = nextChargeRaw ? new Date(nextChargeRaw) : null;
-
-  await db
-    .update(subscriptions)
-    .set({
-      name: String(formData.get("name") ?? "").trim(),
-      amount: String(amount),
-      currency: String(formData.get("currency") ?? "EUR"),
-      cadence,
-      accountId: String(formData.get("accountId") ?? "") || null,
-      categoryId: String(formData.get("categoryId") ?? "") || null,
-      nextChargeAt: nextChargeAt && !Number.isNaN(nextChargeAt.getTime()) ? nextChargeAt : null,
-      notes: String(formData.get("notes") ?? "").trim() || null,
-      updatedAt: new Date(),
-    })
-    .where(eq(subscriptions.id, id));
-
+  if (!isCurrencyCode(currency)) throw new Error("Choose a valid currency.");
+  const values = { name, amount, cadence, currency, accountId, categoryId,
+    nextChargeAt: date ? manualDate(date) : null,
+    notes: String(formData.get("notes") ?? "").trim() || null };
+  await db.transaction(async store => {
+    if (accountId) {
+      const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId));
+      if (!account?.active) throw new Error("Choose an active account.");
+    }
+    if (categoryId) {
+      const [category] = await store.select().from(categories).where(eq(categories.id, categoryId));
+      if (category?.kind !== "expense") throw new Error("Choose an expense category.");
+    }
+    if (id) {
+      const [updated] = await store.update(subscriptions).set({ ...values, updatedAt: new Date() }).where(eq(subscriptions.id, id)).returning();
+      if (!updated) throw new Error("Subscription not found");
+    } else await store.insert(subscriptions).values(values);
+  });
   revalidatePath("/subscriptions");
   revalidatePath("/");
 }
@@ -158,19 +137,19 @@ export async function updateSubscription(formData: FormData) {
  */
 export async function toggleSubscription(formData: FormData) {
   const id = String(formData.get("id"));
-  const [row] = await db.select().from(subscriptions).where(eq(subscriptions.id, id));
-  if (!row) throw new Error("Subscription not found");
-
-  await db
-    .update(subscriptions)
-    .set({ active: !row.active, updatedAt: new Date() })
-    .where(eq(subscriptions.id, id));
-
-  await db.insert(auditLog).values({
-    entityType: "subscription",
-    entityId: id,
-    action: row.active ? "subscription_cancelled" : "subscription_resumed",
-    details: JSON.stringify({ name: row.name, amount: row.amount, cadence: row.cadence }),
+  const desired = String(formData.get("active"));
+  if (desired !== "true" && desired !== "false") throw new Error("Choose whether to cancel or resume the subscription.");
+  const active = desired === "true";
+  await db.transaction(async store => {
+    const [row] = await store.select().from(subscriptions).where(eq(subscriptions.id, id)).for("update");
+    if (!row) throw new Error("Subscription not found");
+    if (row.active === active) return;
+    await store.update(subscriptions).set({ active, updatedAt: new Date() }).where(eq(subscriptions.id, id));
+    await store.insert(auditLog).values({
+      entityType: "subscription", entityId: id,
+      action: active ? "subscription_resumed" : "subscription_cancelled",
+      details: JSON.stringify({ name: row.name, amount: row.amount, cadence: row.cadence }),
+    });
   });
 
   revalidatePath("/subscriptions");

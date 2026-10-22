@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db/client";
-import { transactions, transfers, accounts, categories, interestPayments } from "@/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { transactions, transfers, accounts, categories, interestPayments, auditLog } from "@/db/schema";
+import { eq, desc, sql, inArray, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
@@ -207,49 +207,80 @@ export async function undoQuickTransaction(id: string) {
 
 /**
  * Internal transfer between two of the user's own accounts.
- * Never counts as income/expense, never changes Net Worth
+ * Does not count as income/expense. Cross-currency legs retain actual amounts.
  * (PRODUCT_VISION.md §9 / MVP_SPEC.md §4).
  */
 export async function createTransfer(formData: FormData) {
+  await requireSession();
   const fromAccountId = String(formData.get("fromAccountId"));
   const toAccountId = String(formData.get("toAccountId"));
-  const amount = Math.abs(Number(formData.get("amount")));
-  const date = new Date(String(formData.get("date")));
-  const description = String(formData.get("description") ?? "Internal transfer");
-
+  const amount = manualAmount(String(formData.get("amount") ?? ""));
+  const date = manualDate(String(formData.get("date") ?? ""));
+  const description = String(formData.get("description") ?? "").trim() || "Internal transfer";
+  const requestId = String(formData.get("requestId") ?? "");
+  if (!isQuickEntryId(requestId)) throw new Error("Refresh this page before recording a transfer.");
   if (fromAccountId === toAccountId) throw new Error("Cannot transfer to the same account");
 
-  /**
-   * Each leg in its own account's currency.
-   *
-   * Both rows were stamped with the column's EUR default, so a transfer out of
-   * a dollar account was recorded as euros leaving it. The amount typed is in
-   * the currency of the account it is typed against, which is the only reading
-   * the form supports — and the two legs of a cross-currency transfer are
-   * genuinely different amounts, which is exactly why each needs its own label.
-   */
-  const [from] = await db.select().from(accounts).where(eq(accounts.id, fromAccountId));
-  const [to] = await db.select().from(accounts).where(eq(accounts.id, toAccountId));
-  if (!from || !to) throw new Error("Account not found");
-
-  const [fromTx] = await db
-    .insert(transactions)
-    .values({ accountId: fromAccountId, type: "transfer", amount: String(-amount), currency: from.currency, date, description, source: "manual" })
-    .returning();
-
-  const [toTx] = await db
-    .insert(transactions)
-    .values({ accountId: toAccountId, type: "transfer", amount: String(amount), currency: to.currency, date, description, source: "manual" })
-    .returning();
-
-  await db.insert(transfers).values({ fromTransactionId: fromTx.id, toTransactionId: toTx.id });
-
-  await db.update(accounts).set({ balance: sql`${accounts.balance} - ${amount}`, updatedAt: new Date() }).where(eq(accounts.id, fromAccountId));
-  await db.update(accounts).set({ balance: sql`${accounts.balance} + ${amount}`, updatedAt: new Date() }).where(eq(accounts.id, toAccountId));
-
+  await db.transaction(async (store) => {
+    // Stable account ordering serialises retries and opposite-direction transfers.
+    const locked = await store.select().from(accounts)
+      .where(inArray(accounts.id, [fromAccountId, toAccountId])).orderBy(asc(accounts.id)).for("update");
+    const from = locked.find(a => a.id === fromAccountId);
+    const to = locked.find(a => a.id === toAccountId);
+    if (!from?.active || !to?.active) throw new Error("Choose two active accounts.");
+    const receivedRaw = String(formData.get("receivedAmount") ?? "").trim();
+    if (from.currency !== to.currency && !receivedRaw) throw new Error("Enter the amount received in the destination currency.");
+    const received = receivedRaw ? manualAmount(receivedRaw) : amount;
+    if (from.currency === to.currency && received !== amount) throw new Error("Amounts must match when both accounts use the same currency.");
+    const outgoing = { id: requestId, accountId: from.id, type: "transfer", amount: String(-Number(amount)), currency: from.currency, date, description, source: "manual" } as const;
+    const incoming = { id: `${requestId}-to`, accountId: to.id, type: "transfer", amount: received, currency: to.currency, date, description, source: "manual" } as const;
+    const receiptId = `${requestId}-transfer`;
+    const details = JSON.stringify({ fromAccountId, toAccountId, amount, received, date: date.toISOString(), description, fromCurrency: from.currency, toCurrency: to.currency });
+    const [receipt] = await store.insert(auditLog).values({ id: receiptId, entityType: "transfer", entityId: requestId, action: "transfer_created", details })
+      .onConflictDoNothing({ target: auditLog.id }).returning();
+    if (!receipt) {
+      const [previous] = await store.select().from(auditLog).where(eq(auditLog.id, receiptId));
+      if (previous?.details !== details) throw new Error("This transfer request was already used with different details.");
+      const [link] = await store.select().from(transfers).where(eq(transfers.fromTransactionId, requestId));
+      if (!link) throw new Error("This transfer has already been deleted.");
+      return;
+    }
+    const [inserted] = await store.insert(transactions).values(outgoing).onConflictDoNothing({ target: transactions.id }).returning();
+    if (!inserted) {
+      const previous = await store.select().from(transactions).where(inArray(transactions.id, [outgoing.id, incoming.id]));
+      const [link] = await store.select().from(transfers).where(eq(transfers.fromTransactionId, outgoing.id));
+      const matches = [outgoing, incoming].every(expected => previous.some(row =>
+        row.id === expected.id && row.accountId === expected.accountId && row.type === "transfer" &&
+        Number(row.amount) === Number(expected.amount) && row.currency === expected.currency &&
+        row.date.getTime() === expected.date.getTime() && row.description === expected.description));
+      if (!matches || link?.toTransactionId !== incoming.id) throw new Error("This transfer request was already used with different details.");
+      return;
+    }
+    await store.insert(transactions).values(incoming);
+    await store.insert(transfers).values({ fromTransactionId: outgoing.id, toTransactionId: incoming.id });
+    await store.update(accounts).set({ balance: sql`${accounts.balance} - ${amount}`, updatedAt: new Date() }).where(eq(accounts.id, from.id));
+    await store.update(accounts).set({ balance: sql`${accounts.balance} + ${received}`, updatedAt: new Date() }).where(eq(accounts.id, to.id));
+  });
   revalidatePath("/transactions");
   revalidatePath("/accounts");
   revalidatePath("/");
+}
+
+/** Expected form failures are returned so production can show translated guidance. */
+export async function submitTransfer(formData: FormData) {
+  try { await createTransfer(formData); return { saved: true }; }
+  catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const expected = [
+      "Your session has expired. Sign in again.", "Refresh this page before recording a transfer.",
+      "Cannot transfer to the same account", "Choose two active accounts.",
+      "Enter a positive amount with at most two decimal places.", "Choose a valid date.",
+      "Enter the amount received in the destination currency.",
+      "Amounts must match when both accounts use the same currency.",
+      "This transfer request was already used with different details.", "This transfer has already been deleted.",
+    ];
+    return { error: expected.includes(message) ? message : "Could not save. Retry with the same details." };
+  }
 }
 
 /** Interest counts as income, and updates the account balance (MVP_SPEC.md §3/§6). */
@@ -363,43 +394,28 @@ export async function updateTransaction(formData: FormData) {
 export async function deleteTransaction(formData: FormData) {
   await requireSession();
   const id = String(formData.get("id"));
-  const [tx] = await db.select().from(transactions).where(eq(transactions.id, id));
-  if (!tx) return;
-
-  const [transferLink] = await db
-    .select()
-    .from(transfers)
-    .where(sql`${transfers.fromTransactionId} = ${id} OR ${transfers.toTransactionId} = ${id}`);
-
-  if (transferLink) {
-    const [fromTx] = await db.select().from(transactions).where(eq(transactions.id, transferLink.fromTransactionId));
-    const [toTx] = await db.select().from(transactions).where(eq(transactions.id, transferLink.toTransactionId));
-
-    if (fromTx) {
-      await db
-        .update(accounts)
-        .set({ balance: sql`${accounts.balance} - ${Number(fromTx.amount)}`, updatedAt: new Date() })
-        .where(eq(accounts.id, fromTx.accountId));
-    }
-    if (toTx) {
-      await db
-        .update(accounts)
-        .set({ balance: sql`${accounts.balance} - ${Number(toTx.amount)}`, updatedAt: new Date() })
-        .where(eq(accounts.id, toTx.accountId));
-    }
-
-    await db.delete(transfers).where(eq(transfers.id, transferLink.id));
-    await db.delete(transactions).where(eq(transactions.id, transferLink.fromTransactionId));
-    await db.delete(transactions).where(eq(transactions.id, transferLink.toTransactionId));
-  } else {
-    await db.transaction(async (store) => {
-      // Only the request that actually removes the row may reverse its balance.
+  await db.transaction(async (store) => {
+    // Claim the pair before touching either balance. A second delete waits here
+    // and then sees no link or movement left to reverse.
+    const [link] = await store.select().from(transfers)
+      .where(sql`${transfers.fromTransactionId} = ${id} OR ${transfers.toTransactionId} = ${id}`).for("update");
+    if (link) {
+      const legs = await store.select().from(transactions)
+        .where(inArray(transactions.id, [link.fromTransactionId, link.toTransactionId]));
+      const accountIds = [...new Set(legs.map(leg => leg.accountId))];
+      if (accountIds.length) await store.select({ id: accounts.id }).from(accounts)
+        .where(inArray(accounts.id, accountIds)).orderBy(asc(accounts.id)).for("update");
+      for (const leg of legs) await store.update(accounts)
+        .set({ balance: sql`${accounts.balance} - ${leg.amount}`, updatedAt: new Date() }).where(eq(accounts.id, leg.accountId));
+      await store.delete(transfers).where(eq(transfers.id, link.id));
+      await store.delete(transactions).where(inArray(transactions.id, [link.fromTransactionId, link.toTransactionId]));
+    } else {
       const [removed] = await store.delete(transactions).where(eq(transactions.id, id)).returning();
       if (removed) await store.update(accounts)
         .set({ balance: sql`${accounts.balance} - ${removed.amount}`, updatedAt: new Date() })
         .where(eq(accounts.id, removed.accountId));
-    });
-  }
+    }
+  });
 
   revalidatePath("/transactions");
   revalidatePath("/savings");

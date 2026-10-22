@@ -499,6 +499,36 @@ and retain their existing choices until an explicit save. Account-hidden panels
 are not rendered. Never clear a mismatching local choice from an outdated tab:
 it may have been written against newer account settings by another tab.
 
+## Transfers and reservations must survive a repeated request
+
+`actions/transactions.ts` records both transfer legs, their link and account
+balance deltas in one transaction, locking accounts in stable ID order. A
+cross-currency transfer requires the actual receiving amount; current FX rates
+are for reporting, not a substitute for what arrived. Deletion locks the pair
+before reversing either balance, so opposite-leg requests cannot reverse twice.
+
+Each attempt has one client request ID. Its `audit_log` receipt (`transfer_created`)
+is part of the same transaction and survives deleting the transfer; do not prune
+these receipts as disposable logs. A lost response can be retried with the same
+details, while an old request cannot recreate a deleted transfer. `TransferForm`
+prevents React's automatic form reset on action completion, including caught
+failures: otherwise select controls return to the original accounts while their
+React state and visible currency labels still describe the submitted accounts.
+Only the explicit "Record another transfer" starts a new attempt.
+
+Allocation writes lock the account before reading a possibly absent account/bucket
+pair, validate both owned parents and commit the audit with the allocation. They
+never change account balances. Subscription cancellation sends the desired active
+state, rather than toggling the current state on every replay. Related IDs must be
+checked through owned-row reads: RLS on the child does not make its foreign-key
+target belong to the same person.
+
+Budget expenses are converted once to the chosen reporting currency before
+`envelopeState` calculates anything. Missing-rate expenses remain explicitly
+unconverted; the page, dashboard reserve and month-ahead forecast carry that
+limitation. The financial regression suite uses in-memory PostgreSQL and real
+migrations/RLS in `actions/__tests__/money-flows-postgres.test.ts`, with no `.env`.
+
 ## A forecast proposes; it never writes the ledger
 
 Subscriptions (and Expected money) are forecasts. On a subscription's charge day

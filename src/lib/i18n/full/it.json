@@ -3273,5 +3273,21 @@
   "Weekly report": "Weekly report",
   "Monthly report": "Monthly report",
   "Annual report": "Annual report",
-  "account": "account"
+  "account": "account",
+  "Between your own accounts. Does not count as income or spending. For different currencies, enter the two actual amounts.": "Between your own accounts. Does not count as income or spending. For different currencies, enter the two actual amounts.",
+  "Amount sent": "Amount sent",
+  "Amount received": "Amount received",
+  "Transfer saved.": "Transfer saved.",
+  "Record another transfer": "Record another transfer",
+  "Connection interrupted. Retry with the same details; a saved transfer will not be duplicated.": "Connection interrupted. Retry with the same details; a saved transfer will not be duplicated.",
+  "Refresh this page before recording a transfer.": "Refresh this page before recording a transfer.",
+  "Choose two active accounts.": "Choose two active accounts.",
+  "Enter the amount received in the destination currency.": "Enter the amount received in the destination currency.",
+  "Amounts must match when both accounts use the same currency.": "Amounts must match when both accounts use the same currency.",
+  "This transfer request was already used with different details.": "This transfer request was already used with different details.",
+  "Could not save. Retry with the same details.": "Could not save. Retry with the same details.",
+  "Budget spending is incomplete because an exchange rate is missing. Free cash is an estimate. Refresh rates in Settings.": "Budget spending is incomplete because an exchange rate is missing. Free cash is an estimate. Refresh rates in Settings.",
+  "Spending totals are incomplete because an exchange rate is missing. Refresh rates in Settings.": "Spending totals are incomplete because an exchange rate is missing. Refresh rates in Settings.",
+  "Incomplete total — missing exchange rates.": "Incomplete total — missing exchange rates.",
+  "This transfer has already been deleted.": "This transfer has already been deleted."
 }

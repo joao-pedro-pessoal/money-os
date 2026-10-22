@@ -3273,5 +3273,21 @@
   "Weekly report": "Relatório semanal",
   "Monthly report": "Relatório mensal",
   "Annual report": "Relatório anual",
-  "account": "conta"
+  "account": "conta",
+  "Between your own accounts. Does not count as income or spending. For different currencies, enter the two actual amounts.": "Entre as tuas contas. Não conta como receita nem despesa. Para moedas diferentes, indica os dois valores reais.",
+  "Amount sent": "Valor enviado",
+  "Amount received": "Valor recebido",
+  "Transfer saved.": "Transferência guardada.",
+  "Record another transfer": "Registar outra transferência",
+  "Connection interrupted. Retry with the same details; a saved transfer will not be duplicated.": "Ligação interrompida. Tenta novamente com os mesmos dados; uma transferência já guardada não será duplicada.",
+  "Refresh this page before recording a transfer.": "Atualiza esta página antes de registar uma transferência.",
+  "Choose two active accounts.": "Escolhe duas contas ativas.",
+  "Enter the amount received in the destination currency.": "Indica o valor recebido na moeda da conta de destino.",
+  "Amounts must match when both accounts use the same currency.": "Os valores têm de ser iguais quando as duas contas usam a mesma moeda.",
+  "This transfer request was already used with different details.": "Este pedido de transferência já foi usado com dados diferentes.",
+  "Could not save. Retry with the same details.": "Não foi possível guardar. Tenta novamente com os mesmos dados.",
+  "Budget spending is incomplete because an exchange rate is missing. Free cash is an estimate. Refresh rates in Settings.": "As despesas dos orçamentos estão incompletas porque falta uma taxa de câmbio. O dinheiro livre é uma estimativa. Atualiza as taxas nas Definições.",
+  "Spending totals are incomplete because an exchange rate is missing. Refresh rates in Settings.": "Os totais de despesas estão incompletos porque falta uma taxa de câmbio. Atualiza as taxas nas Definições.",
+  "Incomplete total — missing exchange rates.": "Total incompleto — faltam taxas de câmbio.",
+  "This transfer has already been deleted.": "Esta transferência já foi apagada."
 }

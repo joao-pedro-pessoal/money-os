@@ -222,7 +222,8 @@ export default async function DashboardPage({
    * the shopping has happened yet. It is counted with the reserved money
    * instead, below.
    */
-  const keptForBudgets = inDisplay(await getKeptForBudgets());
+  const budgetReserve = await getKeptForBudgets();
+  const keptForBudgets = inDisplay(budgetReserve.total);
   const freeToSpend = Math.max(0, Math.round((totalFree - keptForBudgets) * 100) / 100);
 
   /** The rest of the month — what is due to leave and to arrive — in the currency shown. */
@@ -411,6 +412,7 @@ export default async function DashboardPage({
         </div>
       )}
 
+      {budgetReserve.unconverted > 0 && <p role="status" className="card p-3 text-xs text-[var(--amber)]">{uiText("Budget spending is incomplete because an exchange rate is missing. Free cash is an estimate. Refresh rates in Settings.")}</p>}
       {unconverted.length > 0 && (
         <div className="card p-4 border-l-2" style={{ borderLeftColor: "var(--amber)" }}>
           <div className="text-sm">{uiText("Some amounts could not be converted to EUR")}</div>

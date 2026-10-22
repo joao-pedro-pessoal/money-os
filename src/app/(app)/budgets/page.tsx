@@ -57,6 +57,7 @@ export default async function BudgetsPage({
         </div>
       </div>
 
+      {(data.items.some(b => b.unconverted > 0) || unbudgeted.unconverted.length > 0) && <p role="status" className="card p-3 text-xs text-[var(--amber)]">{uiText("Spending totals are incomplete because an exchange rate is missing. Refresh rates in Settings.")}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card p-4">
           <div className="text-xs text-[var(--muted)]">{uiText("Budgeted per month")}</div>
@@ -86,6 +87,7 @@ export default async function BudgetsPage({
         <div className="space-y-4">
           {data.items.map((b) => (
             <div key={b.id} className="card p-4">
+              {b.unconverted > 0 && <p className="text-xs text-[var(--amber)] mb-2">{uiText("Incomplete total — missing exchange rates.")}</p>}
               <div className="flex justify-between items-baseline gap-3 flex-wrap mb-2">
                 <div>
                   <span className="text-sm font-medium"><span translate="no">{b.name}</span></span>

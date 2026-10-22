@@ -1,6 +1,7 @@
 import { textForRequest } from "@/actions/pageLanguage";
-import { listTransactions, createTransaction, createTransfer, listCategories, deleteTransaction } from "@/actions/transactions";
+import { listTransactions, createTransaction, listCategories, deleteTransaction } from "@/actions/transactions";
 import { listAccountsWithState } from "@/actions/accounts";
+import TransferForm from "@/components/TransferForm";
 import TransactionList from "@/components/TransactionList";
 import Link from "next/link";
 import { getDefaultAccountId } from "@/actions/settings";
@@ -85,38 +86,7 @@ export default async function TransactionsPage() {
           </form>
         </div>
 
-        <div className="card p-4">
-          <div className="text-sm font-medium mb-3">{uiText("Internal transfer")}</div>
-          <p className="text-xs text-[var(--muted)] mb-3">{uiText("Between your own accounts. Never counts as income/expense, never changes Net Worth.")}</p>
-          <form action={createTransfer} className="space-y-3">
-            <select name="fromAccountId" aria-label={uiText("From account")} className="input" required>
-              {accounts.map((a) => (
-                <option translate="no" key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-            <select name="toAccountId" aria-label={uiText("To account")} className="input" required>
-              {accounts.map((a) => (
-                <option translate="no" key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-            <label className="block text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">{uiText("Amount")}</span>
-              <input name="amount" aria-label={uiText("Amount")} type="number" step="0.01" placeholder={uiText("Amount")} className="input" required />
-            </label>
-            <label className="block text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">{uiText("Date")}</span>
-              <input name="date" aria-label={uiText("Date")} type="date" defaultValue={today} className="input" required />
-            </label>
-            <label className="block text-xs text-[var(--muted)]"><span className="cash-flow-phone-only">{uiText("Description (optional)")}</span>
-              <input name="description" aria-label={uiText("Description (optional)")} placeholder={uiText("Description (optional)")} className="input" />
-            </label>
-            <button type="submit" className="btn w-full">
-              <span className="cash-flow-phone-only">{uiText("Save transfer")}</span><span className="cash-flow-desktop-only">{uiText("Transfer")}</span>
-            </button>
-          </form>
-        </div>
+        <TransferForm accounts={accounts.filter(a => a.active)} today={today} />
       </div>
       </MobileFold>
 

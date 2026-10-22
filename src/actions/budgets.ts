@@ -2,8 +2,11 @@
 
 import { db } from "@/db/client";
 import { budgets, budgetCategories, categories, transactions } from "@/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, eq, gte, lt, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { getRates } from "./fx";
+import { toBase } from "@/lib/fx";
+import { manualAmount, manualDate } from "@/lib/money/manualEntry";
 import { getBaseCurrency } from "./settings";
 import {
   envelopeState,
@@ -20,13 +23,18 @@ import {
 } from "@/lib/accounting/envelopes";
 
 /** Expenses only. Income arriving does not "refund" a budget. */
-async function loadSpending(): Promise<Spend[]> {
-  const rows = await db.select().from(transactions).where(eq(transactions.type, "expense"));
-  return rows.map((t) => ({
-    date: new Date(t.date),
-    amount: Number(t.amount),
-    categoryId: t.categoryId,
-  }));
+async function loadSpending() {
+  const [rows, rates, base] = await Promise.all([
+    db.select().from(transactions).where(eq(transactions.type, "expense")), getRates(), getBaseCurrency(),
+  ]);
+  const spending: Spend[] = [];
+  const missing: { date: Date; categoryId: string | null; currency: string }[] = [];
+  for (const row of rows) {
+    const amount = toBase(Number(row.amount), row.currency, rates, base);
+    if (amount === null) missing.push({ date: row.date, categoryId: row.categoryId, currency: row.currency });
+    else spending.push({ date: row.date, amount, categoryId: row.categoryId });
+  }
+  return { spending, missing };
 }
 
 async function loadEnvelopes(): Promise<Envelope[]> {
@@ -70,11 +78,13 @@ export async function listBudgets(offset = 0) {
     let bounds = periodBounds(e.period, e.anchor, today);
     if (offset !== 0) bounds = shiftPeriod(e.period, bounds, offset);
 
-    const state = envelopeState(e, spending, today, bounds);
+    const state = envelopeState(e, spending.spending, today, bounds);
     const progress = offset === 0 ? periodProgress(bounds, today) : 1;
 
     return {
       ...state,
+      unconverted: spending.missing.filter(row => row.categoryId && e.categoryIds.includes(row.categoryId) &&
+        row.date < bounds.end && row.date >= (e.rollover ? periodBounds(e.period, e.anchor, e.anchor).start : bounds.start)).length,
       rollover: e.rollover,
       progress,
       pacingOver: offset === 0 && isPacingOver(state, progress),
@@ -101,54 +111,51 @@ export async function listBudgets(offset = 0) {
  * the base currency: money that is spoken for though not spent yet, which the
  * dashboard takes out of Free Cash (see `keptForBudgets`).
  */
-export async function getKeptForBudgets(): Promise<number> {
-  const today = new Date();
-  const [envelopes, spending] = await Promise.all([loadEnvelopes(), loadSpending()]);
-  return keptForBudgets(envelopes.map((e) => envelopeState(e, spending, today)));
+export async function getKeptForBudgets() {
+  const { total, unconverted } = await getBudgetsLeft();
+  return { total, unconverted };
 }
 
-/** What the budgets still have to spend this period, and how many still have something left. */
-export async function getBudgetsLeft(): Promise<{ total: number; count: number }> {
+/** What budgets still have to spend; missing FX makes these estimates explicit. */
+export async function getBudgetsLeft() {
   const today = new Date();
   const [envelopes, spending] = await Promise.all([loadEnvelopes(), loadSpending()]);
-  const states = envelopes.map((e) => envelopeState(e, spending, today));
-  return { total: keptForBudgets(states), count: states.filter((s) => s.remaining > 0).length };
+  const states = envelopes.map(e => envelopeState(e, spending.spending, today));
+  const unconverted = spending.missing.filter(row => envelopes.some(e => {
+    const bounds = periodBounds(e.period, e.anchor, today);
+    const start = e.rollover ? periodBounds(e.period, e.anchor, e.anchor).start : bounds.start;
+    return row.categoryId && e.categoryIds.includes(row.categoryId) && row.date >= start && row.date < bounds.end;
+  })).length;
+  return { total: keptForBudgets(states), count: states.filter(s => s.remaining > 0).length, unconverted };
 }
 
 export async function createBudget(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const period = String(formData.get("period") ?? "monthly");
-  const limit = Number(formData.get("limitAmount"));
-  const categoryIds = formData.getAll("categoryIds").map(String).filter(Boolean);
+  const limit = manualAmount(String(formData.get("limitAmount") ?? ""));
+  const categoryIds = [...new Set(formData.getAll("categoryIds").map(String).filter(Boolean))];
   const anchorRaw = String(formData.get("anchorDate") ?? "");
   const rollover = formData.get("rollover") === "on";
 
   if (!name) throw new Error("Give the budget a name.");
   if (!isPeriod(period)) throw new Error(`Unknown period: ${period}`);
-  if (!Number.isFinite(limit) || limit <= 0) throw new Error("Enter a limit above zero.");
   if (categoryIds.length === 0) {
     // A budget watching nothing would sit at 0% forever and look healthy.
     throw new Error("Pick at least one category for the budget to watch.");
   }
 
-  const anchor = anchorRaw ? new Date(anchorRaw) : new Date();
-
-  const [created] = await db
-    .insert(budgets)
-    .values({
-      name,
-      period,
-      limitAmount: String(limit),
-      anchorDate: Number.isNaN(anchor.getTime()) ? new Date() : anchor,
-      rollover,
+  const anchor = anchorRaw ? manualDate(anchorRaw) : new Date();
+  await db.transaction(async store => {
+    const validCategories = await store.select().from(categories).where(inArray(categories.id, categoryIds));
+    if (validCategories.length !== categoryIds.length || validCategories.some(c => c.kind !== "expense")) {
+      throw new Error("Choose existing expense categories.");
+    }
+    const [created] = await store.insert(budgets).values({
+      name, period, limitAmount: limit, anchorDate: anchor, rollover,
       notes: String(formData.get("notes") ?? "").trim() || null,
-    })
-    .returning();
-
-  await db
-    .insert(budgetCategories)
-    .values(categoryIds.map((categoryId) => ({ budgetId: created.id, categoryId })))
-    .onConflictDoNothing();
+    }).returning();
+    await store.insert(budgetCategories).values(categoryIds.map(categoryId => ({ budgetId: created.id, categoryId })));
+  });
 
   revalidatePath("/budgets");
   revalidatePath("/");
@@ -156,8 +163,7 @@ export async function createBudget(formData: FormData) {
 
 export async function updateBudget(formData: FormData) {
   const id = String(formData.get("id"));
-  const limit = Number(formData.get("limitAmount"));
-  if (!Number.isFinite(limit) || limit <= 0) throw new Error("Enter a limit above zero.");
+  const limit = manualAmount(String(formData.get("limitAmount") ?? ""));
 
   await db
     .update(budgets)
@@ -173,13 +179,17 @@ export async function toggleBudgetCategory(formData: FormData) {
   const categoryId = String(formData.get("categoryId"));
   const on = String(formData.get("on")) === "true";
 
-  if (on) {
-    await db.insert(budgetCategories).values({ budgetId, categoryId }).onConflictDoNothing();
-  } else {
-    await db
-      .delete(budgetCategories)
-      .where(and(eq(budgetCategories.budgetId, budgetId), eq(budgetCategories.categoryId, categoryId)));
-  }
+  await db.transaction(async store => {
+    const [budget] = await store.select().from(budgets).where(eq(budgets.id, budgetId)).for("update");
+    const [category] = await store.select().from(categories).where(eq(categories.id, categoryId));
+    if (!budget || category?.kind !== "expense") throw new Error("Choose an existing budget and expense category.");
+    if (on) await store.insert(budgetCategories).values({ budgetId, categoryId }).onConflictDoNothing();
+    else {
+      const links = await store.select().from(budgetCategories).where(eq(budgetCategories.budgetId, budgetId));
+      if (links.length === 1 && links[0].categoryId === categoryId) throw new Error("Pick at least one category for the budget to watch.");
+      await store.delete(budgetCategories).where(and(eq(budgetCategories.budgetId, budgetId), eq(budgetCategories.categoryId, categoryId)));
+    }
+  });
 
   revalidatePath("/budgets");
 }
@@ -204,7 +214,7 @@ export async function getUnbudgetedSpending() {
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const [rows, links, categoryRows, base] = await Promise.all([
+  const [rows, links, categoryRows, base, rates] = await Promise.all([
     db
       .select()
       .from(transactions)
@@ -214,16 +224,20 @@ export async function getUnbudgetedSpending() {
     db.select().from(budgetCategories),
     db.select().from(categories),
     getBaseCurrency(),
+    getRates(),
   ]);
 
   const watched = new Set(links.map((l) => l.categoryId));
   const name = new Map(categoryRows.map((c) => [c.id, c.name]));
 
+  const unconverted: { amount: number; currency: string }[] = [];
   let uncategorised = 0;
   const byCategory = new Map<string, number>();
 
   for (const t of rows) {
-    const amount = Math.abs(Number(t.amount));
+    if (t.categoryId && watched.has(t.categoryId)) continue;
+    const amount = toBase(Math.abs(Number(t.amount)), t.currency, rates, base);
+    if (amount === null) { unconverted.push({ amount: Math.abs(Number(t.amount)), currency: t.currency }); continue; }
     if (!t.categoryId) uncategorised += amount;
     else if (!watched.has(t.categoryId)) {
       byCategory.set(t.categoryId, (byCategory.get(t.categoryId) ?? 0) + amount);
@@ -232,6 +246,7 @@ export async function getUnbudgetedSpending() {
 
   return {
     baseCurrency: base,
+    unconverted,
     uncategorised: Math.round(uncategorised * 100) / 100,
     categories: [...byCategory.entries()]
       .map(([id, amount]) => ({ id, name: name.get(id) ?? "?", amount: Math.round(amount * 100) / 100 }))

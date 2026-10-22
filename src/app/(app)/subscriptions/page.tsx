@@ -134,6 +134,7 @@ export default async function SubscriptionsPage() {
                     <td className="text-right">
                       <form action={toggleSubscription}>
                         <input type="hidden" name="id" value={s.id} />
+                        <input type="hidden" name="active" value="false" />
                         <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Cancelled it")}</button>
                       </form>
                     </td>
@@ -158,6 +159,7 @@ export default async function SubscriptionsPage() {
                   <td className="text-right">
                     <form action={toggleSubscription}>
                       <input type="hidden" name="id" value={s.id} />
+                        <input type="hidden" name="active" value="true" />
                       <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Resume")}</button>
                     </form>
                   </td>

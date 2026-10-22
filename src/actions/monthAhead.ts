@@ -49,6 +49,6 @@ export async function getMonthAhead(): Promise<MonthAhead> {
     subscriptions: { total: out.total, count: charges.length },
     budgets: budgets,
     comingIn: { total: coming.total, count: arriving.length },
-    unconverted: out.unconverted.length + coming.unconverted.length,
+    unconverted: out.unconverted.length + coming.unconverted.length + budgets.unconverted,
   });
 }
