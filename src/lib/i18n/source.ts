@@ -252,7 +252,7 @@ export const en = {
     appearanceText: "Each theme has a light and a dark variant.",
     windowsTitle: "Analysis windows",
     windowsText:
-      "Choose which analysis detail appears, and whether it starts open or minimized. Other app sections with a header can also be minimized by clicking that header.",
+      "Choose which analysis details appear. Saving applies these starting states to all your devices. Opening or minimizing a panel afterwards is remembered only in this browser, separately for Simple and Complex. On a phone, non-essential panels start minimized.",
     accountTitle: "Your account",
     accountText:
       "The recovery code is how you set a new password if you forget this one. Make a new one if you have lost it, or if someone may have seen it.",
@@ -655,7 +655,7 @@ export const pt: Messages = {
     appearanceText: "Cada tema tem uma versão clara e uma escura.",
     windowsTitle: "Janelas de análise",
     windowsText:
-      "Escolhe que detalhes de análise aparecem e se começam abertos ou minimizados. As outras secções com cabeçalho também se minimizam clicando no cabeçalho.",
+      "Escolhe que detalhes de análise aparecem. Ao guardar, repões estes estados iniciais em todos os teus aparelhos. Abrir ou minimizar um painel depois fica guardado apenas neste navegador, separadamente para Simple e Complex. No telemóvel, os painéis não essenciais começam minimizados.",
     accountTitle: "A tua conta",
     accountText:
       "O código de recuperação serve para escolheres uma palavra-passe nova se esqueceres esta. Cria um novo se o perdeste ou se alguém o pode ter visto.",

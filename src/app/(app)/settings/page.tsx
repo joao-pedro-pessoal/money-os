@@ -39,7 +39,7 @@ export default async function SettingsGeneralPage() {
     getDefaultAccountId(),
     listAccountsWithState(),
   ]);
-  const dashboardWindows = await getDashboardWindowPreferences();
+  const { preferences: dashboardWindows } = await getDashboardWindowPreferences();
   const userId = await currentUserId();
   const sessionsEndedAt = userId ? await sessionsNotBefore(userId) : null;
   const email = await accountEmail();

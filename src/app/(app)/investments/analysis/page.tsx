@@ -89,7 +89,7 @@ export default async function PortfolioAnalysisPage({
   const currency = a.currency;
   const realised = await getRealisedTotal();
   const returns = await getPortfolioReturns();
-  const windowPreferences = await getDashboardWindowPreferences();
+  const { preferences: windowPreferences, version: windowPreferenceVersion } = await getDashboardWindowPreferences();
   /**
    * The look-through table lists the largest companies unless asked for all of
    * them: a fund's published file names every position, and a small-cap fund
@@ -555,7 +555,7 @@ export default async function PortfolioAnalysisPage({
         <InvestmentCosts costs={exposure.costs} fees={fees.years} unconvertible={fees.unconvertible} currency={fees.currency} />
       </Section>
 
-      {windowPreferences["portfolio-returns"] !== "hidden" && <Section title="Investment returns" essential defaultOpen={windowPreferences["portfolio-returns"] === "visible"}>
+      {windowPreferences["portfolio-returns"] !== "hidden" && <Section title="Investment returns" essential defaultOpen={windowPreferences["portfolio-returns"] === "visible"} preferenceVersion={windowPreferenceVersion}>
       <PortfolioReturns
         timeWeighted={returns.timeWeighted}
         moneyWeighted={returns.moneyWeighted}
@@ -567,8 +567,8 @@ export default async function PortfolioAnalysisPage({
       />
       </Section>}
 
-      {windowPreferences["gain-attribution"] !== "hidden" && <Section title="Where the gains came from" defaultOpen={windowPreferences["gain-attribution"] === "visible"}><GainAttribution /></Section>}
-      {windowPreferences.contributions !== "hidden" && <Section title="Money added versus money made" defaultOpen={windowPreferences.contributions === "visible"}><ContributionBreakdown /></Section>}
+      {windowPreferences["gain-attribution"] !== "hidden" && <Section title="Where the gains came from" defaultOpen={windowPreferences["gain-attribution"] === "visible"} preferenceVersion={windowPreferenceVersion}><GainAttribution /></Section>}
+      {windowPreferences.contributions !== "hidden" && <Section title="Money added versus money made" defaultOpen={windowPreferences.contributions === "visible"} preferenceVersion={windowPreferenceVersion}><ContributionBreakdown /></Section>}
 
       {/* ---- Staking / yield ---- */}
       {(a.staking.stakedValue > 0 || a.staking.rewardsEarned > 0) && (

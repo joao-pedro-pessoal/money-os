@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { db } from "@/db/client";
 import { accounts, appSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -8,9 +9,10 @@ import { DEFAULT_BASE_CURRENCY, SUPPORTED_CURRENCIES } from "@/lib/fx";
 import { parseFavourites, serialiseFavourites } from "@/lib/fx/favourites";
 import {
   DEFAULT_DASHBOARD_WINDOW_PREFERENCES,
+  dashboardWindowConfiguration,
   normalizeDashboardWindowPreferences,
   type DashboardWindowId,
-  type DashboardWindowPreferences,
+  type DashboardWindowConfiguration,
   type DashboardWindowState,
 } from "@/lib/dashboard/windows";
 
@@ -134,13 +136,13 @@ const DEFAULT_ACCOUNT_KEY = "defaultAccountId";
 
 const DASHBOARD_WINDOWS_KEY = "dashboard_windows";
 
-export async function getDashboardWindowPreferences(): Promise<DashboardWindowPreferences> {
+export async function getDashboardWindowPreferences(): Promise<DashboardWindowConfiguration> {
   const [row] = await db.select().from(appSettings).where(eq(appSettings.key, DASHBOARD_WINDOWS_KEY));
-  if (!row?.value) return DEFAULT_DASHBOARD_WINDOW_PREFERENCES;
+  if (!row?.value) return dashboardWindowConfiguration(null);
   try {
-    return normalizeDashboardWindowPreferences(JSON.parse(row.value));
+    return dashboardWindowConfiguration(JSON.parse(row.value));
   } catch {
-    return DEFAULT_DASHBOARD_WINDOW_PREFERENCES;
+    return dashboardWindowConfiguration(null);
   }
 }
 
@@ -150,13 +152,14 @@ export async function setDashboardWindowPreferences(formData: FormData) {
     const state = String(formData.get(`dashboardWindow_${id}`) ?? "");
     values[id] = state === "visible" || state === "minimized" || state === "hidden" ? state : DEFAULT_DASHBOARD_WINDOW_PREFERENCES[id];
   }
-  const value = JSON.stringify(normalizeDashboardWindowPreferences(values));
+  const value = JSON.stringify({ ...normalizeDashboardWindowPreferences(values), _panelVersion: randomUUID() });
   await db.insert(appSettings).values({ key: DASHBOARD_WINDOWS_KEY, value, updatedAt: new Date() }).onConflictDoUpdate({
     target: [appSettings.userId, appSettings.key],
     set: { value, updatedAt: new Date() },
   });
   revalidatePath("/");
   revalidatePath("/settings");
+  revalidatePath("/investments/analysis");
 }
 
 /**

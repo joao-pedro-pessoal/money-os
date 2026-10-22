@@ -1,106 +1,48 @@
 "use client";
 
 import { useText } from "@/components/useText";
-import { useEffect, useId, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { foldStorageKey, PHONE_QUERY } from "@/lib/ui/panels";
 import { useMobileMode } from "./MobileMode";
+import { usePanelChoice, writePanelChoice } from "./panelChoices";
 
-const listeners = new Set<() => void>();
-/** Survives a browser that refuses storage, for as long as the page is open. */
-const memory = new Map<string, boolean>();
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === null) memory.clear();
-    else if (event.key.startsWith("money-os:fold:")) memory.delete(event.key);
-    else return;
-    listener();
-  };
-  window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", onStorage);
-  };
-}
-
-function readOpen(key: string): boolean {
-  const remembered = memory.get(key);
-  if (remembered !== undefined) return remembered;
-  try {
-    return localStorage.getItem(key) === "open";
-  } catch {
-    return false;
-  }
-}
-
-function writeOpen(key: string, open: boolean) {
-  memory.set(key, open);
-  try {
-    localStorage.setItem(key, open ? "open" : "closed");
-  } catch {
-    // Storage is optional; the choice lasts until the page closes.
-  }
-  listeners.forEach((listener) => listener());
-}
-
-/**
- * A block that is part of the page on a computer and folded away on a phone.
- *
- * For what is not a panel of its own — a chart, an audit, a cross-check, a form
- * the + button already covers — and that a phone should show only when asked.
- * On a wide screen the toggle is hidden and the wrapper is a plain block, so the
- * computer layout is what it was. A fold with nothing inside is not shown at all.
- *
- * Opening one is remembered on this device, and the page's "Minimize panels" and
- * "Expand panels" reach these too.
- */
-export default function MobileFold({
-  title,
-  persistKey,
-  className,
-  children,
-  simpleOnly = false,
-}: {
+/** A normal block on a computer, with an explicit local choice on a phone. */
+export default function MobileFold({ title, persistKey, className, children, simpleOnly = false }: {
   title: string;
   persistKey: string;
-  /** Classes for the wrapper around the children, e.g. spacing between several. */
   className?: string;
   children: ReactNode;
-  /** Fold only in the simple phone mode; preserve the current layout elsewhere. */
+  /** Fold only in the simple phone mode; preserve the layout elsewhere. */
   simpleOnly?: boolean;
 }) {
   const uiText = useText();
   const pathname = usePathname();
-  const { simple } = useMobileMode();
+  const { simple, phone } = useMobileMode();
   const bodyId = useId();
-  const key = `money-os:fold:${pathname}:${persistKey}${simple ? ':simple' : ''}`;
-  const open = useSyncExternalStore(subscribe, () => readOpen(key), () => false);
+  const key = foldStorageKey(pathname, persistKey, simple);
+  const open = usePanelChoice(key) === "open";
 
   useEffect(() => {
+    if (!phone || (simpleOnly && !simple)) return;
     const handle = (event: Event) => {
+      // CSS changes width before React's media-query subscription commits.
+      if (!window.matchMedia(PHONE_QUERY).matches) return;
       const collapsed = (event as CustomEvent<boolean>).detail;
-      if (typeof collapsed === "boolean") writeOpen(key, !collapsed);
+      if (typeof collapsed === "boolean") writePanelChoice(key, collapsed ? "closed" : "open");
     };
     window.addEventListener("money-os:panels", handle);
     return () => window.removeEventListener("money-os:panels", handle);
-  }, [key]);
+  }, [key, phone, simple, simpleOnly]);
 
   return (
     <div className="mobile-fold" data-open={open} data-simple-only={simpleOnly || undefined}>
-      <button
-        type="button"
-        className="mobile-fold-toggle card"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={() => writeOpen(key, !open)}
-      >
+      <button type="button" className="mobile-fold-toggle card" aria-expanded={open} aria-controls={bodyId}
+        onClick={() => writePanelChoice(key, open ? "closed" : "open")}>
         <span>{uiText(title ?? "")}</span>
         <span aria-hidden="true">{open ? "▾" : "▸"}</span>
       </button>
-      <div id={bodyId} className={`mobile-fold-body ${className ?? ""}`}>
-        {children}
-      </div>
+      <div id={bodyId} className={`mobile-fold-body ${className ?? ""}`}>{children}</div>
     </div>
   );
 }

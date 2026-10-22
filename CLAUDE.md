@@ -471,9 +471,9 @@ buttons all did.
 ## On a phone a page opens with only what it is for
 
 Below 768px `PanelFrame` and `Section` open only panels marked `essential`; the
-rest start closed, one tap away (`startsCollapsed` in `src/lib/ui/panels.ts`). A
-saved choice on the device always wins, and `essential` never opens what a page
-keeps closed on a computer. So a new panel is **closed on a phone unless you mark
+rest start closed, one tap away (`startsCollapsed` in `src/lib/ui/panels.ts`). An
+explicit local choice wins while the account's analysis-window configuration is
+unchanged; `essential` never opens what a page keeps closed on a computer. So a new panel is **closed on a phone unless you mark
 it** — decide, don't leave it to the default. Blocks that are not panels (a chart,
 an audit, a form the + button covers) fold with `MobileFold`, which draws nothing of
 its own on a computer.
@@ -484,6 +484,20 @@ before paint. Simple panel/fold choices append `:simple` to the existing storage
 keys; desktop and complex mode keep the original keys. `MobileFold simpleOnly`
 must show its body in complex mode and on desktop even when its saved state is
 closed. Mode changes change visibility, never financial values or stored data.
+
+Only explicit open/close actions are saved; visiting a page or resizing it is
+not a choice. `components/panelChoices.ts` shares storage, change notifications
+and the no-storage session fallback between `PanelFrame` and `MobileFold`.
+Panel keys use `persistKey` plus `@panel`, not the displayed title. A single old
+title-based choice is migrated; several old candidates are never guessed at.
+
+Saving the three analysis windows in Settings gives the existing
+`dashboard_windows` JSON a new `_panelVersion` (no schema migration). That
+version supersedes earlier choices in both modes on every device's next load,
+even when the selected states are unchanged. Old configurations have no version
+and retain their existing choices until an explicit save. Account-hidden panels
+are not rendered. Never clear a mismatching local choice from an outdated tab:
+it may have been written against newer account settings by another tab.
 
 ## A forecast proposes; it never writes the ledger
 

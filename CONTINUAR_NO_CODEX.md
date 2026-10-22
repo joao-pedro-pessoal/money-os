@@ -3,7 +3,7 @@
 Atualizado a **7 de outubro de 2026**. Substitui a versão de 5 de outubro, que
 pedia a correção de B01–B09 — já feita e publicada.
 
-**Trabalho atual (21/10/2026): português completo — seguir [docs/CODEX_PORTUGUES.md](docs/CODEX_PORTUGUES.md).**
+**Trabalho atual: consultar [TAREFAS.md](TAREFAS.md), a única lista de estados e prioridades. O procedimento de português de 21/10 permanece em [docs/CODEX_PORTUGUES.md](docs/CODEX_PORTUGUES.md) como referência técnica.**
 
 Ler primeiro, por esta ordem: [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md) (as
 regras do código — tudo o que lá está já correu mal pelo menos uma vez) e
