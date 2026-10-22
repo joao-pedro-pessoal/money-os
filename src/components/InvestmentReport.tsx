@@ -30,7 +30,7 @@ function Card({ label, children, note }: { label: string; children: React.ReactN
     <div className="card p-4">
       <div className="text-xs text-[var(--muted)]">{uiText(label ?? "")}</div>
       <div className="text-xl font-semibold mt-1">{children}</div>
-      {note && <div className="text-[11px] text-[var(--muted)] mt-1">{note}</div>}
+      {note && <div className="text-[11px] text-[var(--muted)] mt-1">{typeof note === "string" ? uiText(note) : note}</div>}
     </div>
   );
 }

@@ -101,7 +101,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
               <option value="">{uiText("All types")}</option>
               {options.types.map((t) => (
                 <option key={t} value={t}>
-                  {TYPE_LABELS[t] ?? t}
+                  {uiText(TYPE_LABELS[t] ?? t)}
                 </option>
               ))}
             </select>
@@ -191,7 +191,7 @@ export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
                   <div className="text-[10px] text-[var(--muted)] truncate">
                     <span translate="no">{a.institution}</span>
                     {" · "}
-                    {TYPE_LABELS[a.accountType] ?? a.accountType}
+                    {uiText(TYPE_LABELS[a.accountType] ?? a.accountType)}
                     {a.connected && <span style={{ color: "var(--green)" }}>{uiText(" · synced")}</span>}
                   </div>
                 </div>

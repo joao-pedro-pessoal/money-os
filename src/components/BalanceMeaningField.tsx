@@ -49,7 +49,7 @@ export default function BalanceMeaningField({
         </select>
       </label>
 
-      <p className="text-xs text-[var(--muted)] leading-snug">{help}</p>
+      <p className="text-xs text-[var(--muted)] leading-snug">{uiText(help)}</p>
 
       {meaning === "bank_and_broker" && (
         <label className="block">

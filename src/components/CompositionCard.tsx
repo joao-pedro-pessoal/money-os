@@ -141,7 +141,7 @@ export default function CompositionCard({
         </ResponsiveTable></div>
       )}
 
-      {note && <div className="text-[10px] text-[var(--muted)] mt-3 leading-snug">{note}</div>}
+      {note && <div className="text-[10px] text-[var(--muted)] mt-3 leading-snug">{typeof note === "string" ? uiText(note) : note}</div>}
     </div>
   );
 }

@@ -11,7 +11,7 @@ import Section from "@/components/Section";
 import BrokerStatementForm from "@/components/BrokerStatementForm";
 import { importBrokerStatement, getImportedStatements } from "@/actions/brokerImport";
 
-function Step({
+async async function Step({
   n,
   title,
   subtitle,
@@ -22,6 +22,7 @@ function Step({
   subtitle?: string;
   children: React.ReactNode;
 }) {
+  const uiText = await textForRequest();
   return (
     <section className="flex gap-4">
       <div className="shrink-0 flex flex-col items-center">
@@ -36,8 +37,8 @@ function Step({
         <div className="w-px flex-1 mt-2" style={{ background: "var(--border)" }} />
       </div>
       <div className="flex-1 pb-8 min-w-0">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {subtitle && <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{subtitle}</p>}
+        <h2 className="text-sm font-semibold">{uiText(title)}</h2>
+        {subtitle && <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{uiText(subtitle)}</p>}
         <div className="mt-3">{children}</div>
       </div>
     </section>

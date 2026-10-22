@@ -132,7 +132,7 @@ export default function TimeSeriesCard({
         />
       )}
 
-      {note && <div className="text-xs text-[var(--muted)] mt-2">{note}</div>}
+      {note && <div className="text-xs text-[var(--muted)] mt-2">{typeof note === "string" ? uiText(note) : note}</div>}
     </div>
   );
 }

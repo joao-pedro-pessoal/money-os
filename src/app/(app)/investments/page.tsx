@@ -320,7 +320,7 @@ async function Stat({
       <div className={`text-xl font-semibold truncate ${className}`}>
         <Money value={value} currency={currency} />
       </div>
-      {note && <div className="text-[10px] text-[var(--muted)] mt-1 truncate">{note}</div>}
+      {note && <div className="text-[10px] text-[var(--muted)] mt-1 truncate">{uiText(note)}</div>}
     </div>
   );
 }

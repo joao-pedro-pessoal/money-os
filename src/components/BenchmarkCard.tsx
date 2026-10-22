@@ -50,7 +50,7 @@ export default async function BenchmarkCard() {
       {/* The proxy is named, because a wrong entry in the table is not a failed
           lookup — it is a silently wrong comparison, and the only defence is
           that the symbol priced is visible enough to be checked. */}
-      <p className="text-xs text-[var(--muted)] mb-4">{uiText("Priced as ")}<span translate="no">{data.benchmark.symbol}</span> — {data.benchmark.note}
+      <p className="text-xs text-[var(--muted)] mb-4">{uiText("Priced as ")}<span translate="no">{data.benchmark.symbol}</span> — {uiText(data.benchmark.note)}
       </p>
 
       {data.comparison === null ? (

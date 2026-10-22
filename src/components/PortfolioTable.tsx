@@ -290,7 +290,7 @@ export default function PortfolioTable({
    * where `long` really does mean "gains when it rises".
    */
   const groupAxis: TagAxis | undefined =
-    group === "assetType" ? "assetType" : group === "side" ? "direction" : undefined;
+    group === "assetType" ? "assetType" : group === "riskLevel" ? "riskLevel" : group === "side" ? "direction" : undefined;
 
   const label = (value: string) =>
     value === UNTAGGED ? uiText("Untagged") : groupAxis ? uiText(tagLabel(value, groupAxis) ?? value) : value;
@@ -677,7 +677,7 @@ export default function PortfolioTable({
             <div className="text-xs text-[var(--muted)] py-8 text-center">{uiText("Nothing to show.")}</div>
           ) : (
             <>
-              <DonutChart data={allocation} currency={currency} />
+              <DonutChart data={allocation.map((row) => ({ ...row, name: group === "none" ? uiText(tagLabel(row.name, "assetType") ?? row.name) : label(row.name) }))} currency={currency} />
               <p className="text-[10px] text-[var(--muted)] mt-3">
                 {group === "none"
                   ? uiText("By asset type")

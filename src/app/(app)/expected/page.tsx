@@ -139,7 +139,7 @@ export default async function ExpectedPage({
                       )}
                     </td>
                     <td className="text-[var(--muted)]">
-                      {ARRIVALS.find((a) => a.value === r.arrival)?.label ?? r.arrival}
+                      {uiText(ARRIVALS.find((a) => a.value === r.arrival)?.label ?? r.arrival)}
                     </td>
                     <td className={r.overdue ? "text-[var(--red)]" : undefined}>
                       {/* No date is a real answer for a debt with no agreed

@@ -36,7 +36,7 @@ function Figure({
   return (
     <div className="card p-4">
       <div className="text-sm font-medium">{uiText(label ?? "")}</div>
-      <div className="text-[10px] text-[var(--muted)] mb-3">{question}</div>
+      <div className="text-[10px] text-[var(--muted)] mb-3">{uiText(question)}</div>
 
       {withheld ? (
         <>
@@ -45,7 +45,7 @@ function Figure({
             dash alone reads as zero, and zero is a measurement.
           */}
           <div className="text-lg font-semibold text-[var(--muted)]">{uiText("Not measurable yet")}</div>
-          <p className="text-[11px] text-[var(--muted)] mt-2">{withheld}</p>
+          <p className="text-[11px] text-[var(--muted)] mt-2">{uiText(withheld)}</p>
         </>
       ) : (
         <>
@@ -54,9 +54,9 @@ function Figure({
             style={{ color: (value ?? 0) >= 0 ? "var(--green)" : "var(--red)" }}
           >
             {value === null ? "—" : `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`}
-            {suffix && <span className="text-xs font-normal text-[var(--muted)] ml-1">{suffix}</span>}
+            {suffix && <span className="text-xs font-normal text-[var(--muted)] ml-1">{uiText(suffix)}</span>}
           </div>
-          {note && <p className="text-[11px] text-[var(--muted)] mt-2">{note}</p>}
+          {note && <p className="text-[11px] text-[var(--muted)] mt-2">{uiText(note)}</p>}
         </>
       )}
     </div>

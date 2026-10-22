@@ -107,7 +107,7 @@ export default async function SubscriptionsPage() {
                       <Money value={s.amount} currency={s.currency} />
                     </td>
                     <td className="text-xs text-[var(--muted)]">
-                      {CADENCES.find((c) => c.value === s.cadence)?.label ?? s.cadence}
+                      {uiText(CADENCES.find((c) => c.value === s.cadence)?.label ?? s.cadence)}
                     </td>
                     <td className="text-right">
                       <Money value={s.yearly} currency={s.currency} />

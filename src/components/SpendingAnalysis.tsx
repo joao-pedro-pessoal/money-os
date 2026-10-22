@@ -277,7 +277,7 @@ export default function SpendingAnalysis({
           <div className="flex gap-1">
             {(["category", "subcategory", "merchant", "account"] as const).map((d) => (
               <button
-                key={d}
+                key={uiText(d)}
                 onClick={() => setDepth(d)}
                 className="text-xs px-2 py-1 rounded border"
                 style={{
@@ -285,7 +285,7 @@ export default function SpendingAnalysis({
                   color: depth === d ? "var(--accent)" : undefined,
                 }}
               >
-                {d}
+                {uiText(d)}
               </button>
             ))}
           </div>
@@ -303,7 +303,7 @@ export default function SpendingAnalysis({
               <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs w-full">
                 <thead>
                   <tr>
-                    <th>{depth}</th>
+                    <th>{uiText(depth)}</th>
                     <th className="text-right">{uiText("Spent")}</th>
                     <th className="text-right">{uiText("Share")}</th>
                     <th className="text-right">{uiText("Count")}</th>
