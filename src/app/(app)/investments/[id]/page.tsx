@@ -5,7 +5,6 @@ import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   getHolding,
   getHoldingSnapshots,
-  updateHolding,
   updateHoldingPrice,
   deleteHolding,
   listAccountsForHoldings,
@@ -17,6 +16,7 @@ import HoldingTags from "@/components/HoldingTags";
 import HoldingPurposes from "@/components/HoldingPurposes";
 import Section from "@/components/Section";
 import { tagLabel } from "@/lib/portfolio/tags";
+import HoldingEditForm from "@/components/HoldingEditForm";
 import HoldingFormFields from "@/components/HoldingFormFields";
 import { listPlaylists } from "@/actions/playlists";
 import { marketValue, costBasis, unrealizedPnL, unrealizedPnLPercent } from "@/lib/portfolio";
@@ -259,7 +259,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
       </Section>
 
       <Section title="Edit position" defaultOpen persistKey="holding:edit" className="max-w-lg">
-        <form action={updateHolding} className="space-y-3">
+        <HoldingEditForm>
           <input type="hidden" name="id" value={holding.id} />
           <input name="symbol" defaultValue={holding.symbol} className="input" required />
           <input name="name" defaultValue={holding.name ?? ""} placeholder={uiText("Name")} className="input" />
@@ -298,10 +298,9 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             required
           />
 
-          <input type="hidden" name="rewardsEarned" value={String(holding.rewardsEarned ?? 0)} />
 
           <button type="submit" className="btn w-full">{uiText("Save changes")}</button>
-        </form>
+        </HoldingEditForm>
       </Section>
     </div>
   );

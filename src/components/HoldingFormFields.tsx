@@ -101,6 +101,7 @@ export default function HoldingFormFields({
       {!isStable && (
         <>
           {showPriceFields && (
+            <>
             <div className="flex gap-2">
               <input
                 name="avgEntryPrice"
@@ -118,6 +119,8 @@ export default function HoldingFormFields({
                 className="input"
               />
             </div>
+            <p className="text-xs text-[var(--muted)]">{uiText("Leave the current price blank to use the entry price as an estimate until you add a valuation.")}</p>
+            </>
           )}
           {showPriceFields && handValued && (
             <p className="text-xs text-[var(--muted)]">{uiText("No market prices this, so its value is what you enter, dated today. For one flat, painting, watch or car, use quantity 1 and whole amounts; for startup shares, the number of shares and the price per share of the last round. The app will ask you to look at the value again when it gets old.")}</p>

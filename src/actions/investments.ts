@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db/client";
-import { manualPositionQuantity, manualPositionPrice } from "@/lib/portfolio/manual";
-import { manualAmount } from "@/lib/money/manualEntry";
+import { HoldingInputError, manualPositionQuantity, manualPositionPrice, manualPositionRate } from "@/lib/portfolio/manual";
+import { manualAmount, manualBalance } from "@/lib/money/manualEntry";
 import { buildPortfolioSeries, positionsAt, trimLeadingZeros } from "@/lib/portfolio/series";
 import {
   holdings,
@@ -39,7 +39,8 @@ import {
   axisCoverage,
 } from "@/lib/portfolio/untagged";
 import { STABLE_ASSET_TYPES } from "@/lib/portfolio/tags";
-import { toBase } from "@/lib/fx";
+import { toBase, isCurrencyCode } from "@/lib/fx";
+import { hasSession } from "./session";
 import { displaySymbol } from "@/lib/quotes/symbolSource";
 import {
   timeWeightedReturn,
@@ -177,15 +178,19 @@ export async function createHolding(formData: FormData) {
   const symbol = String(formData.get("symbol") ?? "").trim().toUpperCase();
   const name = String(formData.get("name") ?? "").trim();
   const accountId = tagValue(formData, "accountId");
-  const quantity = String(formData.get("quantity") ?? "0");
-  const avgEntryPrice = String(formData.get("avgEntryPrice") ?? "0");
-  const currentPrice = String(formData.get("currentPrice") ?? formData.get("avgEntryPrice") ?? "0");
-  const currency = String(formData.get("currency") ?? "EUR");
+  const quantity = String(manualPositionQuantity(String(formData.get("quantity") ?? ""), false));
+  const avgEntryPrice = String(manualPositionPrice(String(formData.get("avgEntryPrice") ?? "")));
+  const rawCurrentPrice = String(formData.get("currentPrice") ?? "").trim();
+  const currentPrice = rawCurrentPrice === "" ? avgEntryPrice : String(manualPositionPrice(rawCurrentPrice));
+  const currency = String(formData.get("currency") ?? "EUR").trim().toUpperCase();
+  if (!isCurrencyCode(currency)) throw new HoldingInputError("Choose a valid currency.");
   const assetType = tagValue(formData, "assetType");
   const direction = tagValue(formData, "direction") ?? "long";
+  if (direction !== "long" && direction !== "short") throw new HoldingInputError("Choose a valid position direction.");
   const playlistIds = await chosenPlaylists(formData);
-  const apr = numericValue(formData, "apr");
-  const rewardsEarned = numericValue(formData, "rewardsEarned") ?? "0";
+  const apr = manualPositionRate(String(formData.get("apr") ?? ""));
+  const rewardsEarned = manualBalance(String(formData.get("rewardsEarned") ?? "").trim() || "0");
+  if (Number(rewardsEarned) < 0) throw new HoldingInputError("Enter zero or a positive amount.");
   const riskLevel = tagValue(formData, "riskLevel");
   const expectedReturn = tagValue(formData, "expectedReturn");
   const timeHorizon = tagValue(formData, "timeHorizon");
@@ -228,7 +233,7 @@ export async function createHolding(formData: FormData) {
         expectedReturn: d.expectedReturn,
         timeHorizon,
         liquidity: d.liquidity,
-        lastPriceUpdate: new Date(),
+        lastPriceUpdate: rawCurrentPrice !== "" || d.assetType === "stablecoin" || d.assetType === "cash" ? new Date() : null,
       })
       .returning();
 
@@ -298,13 +303,15 @@ export async function updateHolding(formData: FormData) {
   const symbol = String(formData.get("symbol") ?? "").trim().toUpperCase();
   const name = String(formData.get("name") ?? "").trim();
   const accountId = tagValue(formData, "accountId");
-  const quantity = String(formData.get("quantity") ?? "0");
-  const avgEntryPrice = String(formData.get("avgEntryPrice") ?? "0");
-  const currency = String(formData.get("currency") ?? "EUR");
+  const quantity = String(manualPositionQuantity(String(formData.get("quantity") ?? ""), true));
+  const avgEntryPrice = String(manualPositionPrice(String(formData.get("avgEntryPrice") ?? "")));
+  const currency = String(formData.get("currency") ?? "EUR").trim().toUpperCase();
+  if (!isCurrencyCode(currency)) throw new HoldingInputError("Choose a valid currency.");
   const assetType = tagValue(formData, "assetType");
   const direction = tagValue(formData, "direction") ?? "long";
+  if (direction !== "long" && direction !== "short") throw new HoldingInputError("Choose a valid position direction.");
   const playlistIds = await chosenPlaylists(formData);
-  const apr = numericValue(formData, "apr");
+  const apr = manualPositionRate(String(formData.get("apr") ?? ""));
   const riskLevel = tagValue(formData, "riskLevel");
   const expectedReturn = tagValue(formData, "expectedReturn");
   const timeHorizon = tagValue(formData, "timeHorizon");
@@ -342,18 +349,7 @@ export async function updateHolding(formData: FormData) {
         direction,
         ...(playlistIds === undefined ? {} : { playlistIds }),
         apr,
-        /**
-         * Only when the form sent it.
-         *
-         * Rewards accumulate — recorded as they arrive, never recomputed.
-         * Defaulting a missing field to "0" meant any form that didn't carry it
-         * would erase months of staking income on save, with no error and no way
-         * to get the figure back. The edit page does carry it in a hidden input,
-         * so this never fired; it was a trap set for the second form.
-         */
-        ...(formData.has("rewardsEarned")
-          ? { rewardsEarned: numericValue(formData, "rewardsEarned") ?? "0" }
-          : {}),
+        // Rewards have their own cumulative action. A stale edit must never replace them.
         riskLevel: d.riskLevel,
         expectedReturn: d.expectedReturn,
         timeHorizon,
@@ -365,6 +361,23 @@ export async function updateHolding(formData: FormData) {
 
   revalidatePath("/investments");
   revalidatePath(`/investments/${id}`);
+}
+
+export type HoldingEditResult = { saved?: boolean; error?: string };
+
+/** User-facing editing outcome; database and infrastructure details never leave the server. */
+export async function submitHoldingEdit(_previous: HoldingEditResult, formData: FormData): Promise<HoldingEditResult> {
+  if (!(await hasSession())) return { error: "Sign in again." };
+  try {
+    await updateHolding(formData);
+    return { saved: true };
+  } catch (error) {
+    const safe = ["Symbol is required", "Pick the account that holds this position", "Account not found", "Holding not found"];
+    if (error instanceof HoldingInputError || (error instanceof Error && safe.includes(error.message))) {
+      return { error: error.message };
+    }
+    return { error: "Could not confirm the save. Reload to check the position before retrying." };
+  }
 }
 
 /** Updates the current price, recording a snapshot so the value-over-time chart has a point. */

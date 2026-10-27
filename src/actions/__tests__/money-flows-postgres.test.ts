@@ -17,7 +17,7 @@ import { createTransaction, createQuickTransaction, undoQuickTransaction, update
 import { createBucket, updateBucket, deleteBucket, addToAllocation, setAllocation, listBucketsWithTotals } from "../buckets";
 import { createBudget, updateBudget, deleteBudget, listBudgets, getUnbudgetedSpending, getBudgetsLeft, getKeptForBudgets, toggleBudgetCategory } from "../budgets";
 import { createSubscription, updateSubscription, toggleSubscription, deleteSubscription } from "../subscriptions";
-import { createHolding, updateHolding, updateHoldingPrice, reinforceHolding, sellHolding, addRewards } from "../investments";
+import { createHolding, updateHolding, submitHoldingEdit, updateHoldingPrice, reinforceHolding, sellHolding, addRewards } from "../investments";
 import { setHoldingAllocation } from "../purpose";
 import { createLiability, updateLiability } from "../liabilities";
 import { createExpected } from "../expected";
@@ -71,6 +71,7 @@ afterEach(async () => {
     DROP TRIGGER IF EXISTS fail_transaction_delete ON transactions;
     DROP TRIGGER IF EXISTS fail_money_audit ON audit_log;
     DROP TRIGGER IF EXISTS fail_money_insert ON transactions;
+    DROP TRIGGER IF EXISTS fail_money_insert ON holdings;
     DROP TRIGGER IF EXISTS fail_money_allocation ON bucket_allocations;
     DROP FUNCTION IF EXISTS synthetic_money_failure();
     SET ROLE money_flows_test;`);
@@ -576,5 +577,65 @@ describe("manual investment operation safety", () => {
     await addRewards(form({id:"operation-holding",amount:"0,25"}));
     expect(Number((await read()).rewardsEarned)).toBe(5.25);
     expect(await isolated.db.select().from(schema.holdingSnapshots)).toHaveLength(1);
+  });
+});
+
+describe("manual holding detail validation", () => {
+  const draft = { symbol:"DETAIL.TEST", quantity:"2", avgEntryPrice:"10", currentPrice:"12", currency:"EUR", accountId:"eur-a" };
+  const read = async () => (await isolated.db.select().from(schema.holdings))[0];
+  const invalid: Record<string, string>[] = [
+    {quantity:"-1"}, {quantity:"NaN"}, {quantity:"0.000000001"},
+    {avgEntryPrice:"-1"}, {avgEntryPrice:"NaN"}, {avgEntryPrice:"1.00001"},
+    {currency:"BTC"}, {direction:"sideways"}, {apr:"NaN"},
+  ];
+  it.each(invalid)("refuses invalid creation details %j without leaving rows", async values => {
+    await expect(createHolding(form({...draft,...values}))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.holdings)).toEqual([]);
+    expect(await isolated.db.select().from(schema.holdingSnapshots)).toEqual([]);
+  });
+  it.each(invalid)("refuses invalid edit details %j and preserves the holding", async values => {
+    await createHolding(form(draft));const before=await read();
+    await expect(updateHolding(form({...draft,id:before.id,...values}))).rejects.toThrow();
+    expect(await read()).toEqual(before);
+  });
+  it("uses the entered cost when the optional current price is blank", async () => {
+    await createHolding(form({...draft,currentPrice:""}));
+    expect(Number((await read()).currentPrice)).toBe(10);
+    expect((await read()).lastPriceUpdate).toBeNull();
+    expect(Number((await isolated.db.select().from(schema.holdingSnapshots))[0].value)).toBe(20);
+  });
+  it("accepts comma decimals and a lower-case currency in creation and editing", async () => {
+    await createHolding(form({...draft,quantity:"2,5",avgEntryPrice:"10,25",currentPrice:"11,50",currency:"eur"}));
+    let row=await read();expect(Number(row.quantity)).toBe(2.5);expect(Number(row.avgEntryPrice)).toBe(10.25);expect(row.currency).toBe("EUR");
+    await updateHolding(form({...draft,id:row.id,quantity:"3,5",avgEntryPrice:"12,25",currency:"usd"}));
+    row=await read();expect(Number(row.quantity)).toBe(3.5);expect(Number(row.avgEntryPrice)).toBe(12.25);expect(row.currency).toBe("USD");expect(Number(row.currentPrice)).toBe(11.5);
+  });
+  it("an edit cannot overwrite rewards received after the form was opened", async () => {
+    await createHolding(form({...draft,rewardsEarned:"5"}));const row=await read();
+    await addRewards(form({id:row.id,amount:"2"}));
+    await updateHolding(form({...draft,id:row.id,name:"Renamed",rewardsEarned:"5"}));
+    expect(Number((await read()).rewardsEarned)).toBe(7);
+  });
+  it("returns safe validation feedback for editing, then saves corrected values", async () => {
+    await createHolding(form(draft));const row=await read();
+    const refused=await submitHoldingEdit({},form({...draft,id:row.id,quantity:"-2"}));
+    expect(refused.error).toContain("quantity");expect(refused.saved).toBeUndefined();
+    expect(Number((await read()).quantity)).toBe(2);
+    expect(await submitHoldingEdit(refused,form({...draft,id:row.id,name:"Corrected"}))).toEqual({saved:true});
+    expect((await read()).name).toBe("Corrected");
+  });
+  it("does not send database diagnostics to the editing form", async () => {
+    await createHolding(form(draft));const row=await read();
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic internal SQL diagnostic'; END $$;
+      CREATE TRIGGER fail_money_insert BEFORE UPDATE ON holdings FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    const result=await submitHoldingEdit({},form({...draft,id:row.id,name:"Must roll back"}));
+    expect(result).toEqual({error:"Could not confirm the save. Reload to check the position before retrying."});
+    expect(JSON.stringify(result)).not.toContain("SQL");expect((await read()).name).toBe(row.name);
+  });
+  it("permits editing a closed position with zero quantity but refuses a zero-size new position", async () => {
+    await expect(createHolding(form({...draft,quantity:"0"}))).rejects.toThrow();
+    await createHolding(form(draft));const row=await read();
+    await updateHolding(form({...draft,id:row.id,quantity:"0"}));
+    expect(Number((await read()).quantity)).toBe(0);
   });
 });

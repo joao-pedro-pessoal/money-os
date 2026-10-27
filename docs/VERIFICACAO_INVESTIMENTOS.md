@@ -1,6 +1,6 @@
 # Verificação dos investimentos — 27/10/2026
 
-Esta passagem verifica B50–B55. O estado e as prioridades permanecem exclusivamente
+Esta passagem verifica B50–B58. O estado e as prioridades permanecem exclusivamente
 em [TAREFAS.md](../TAREFAS.md).
 
 ## Problema reproduzido e correção
@@ -18,7 +18,7 @@ O preço atual continua a ser atualizado no seu formulário próprio.
 
 ## Verificação automática
 
-- 3168 testes aprovados em 214 ficheiros.
+- 3192 testes aprovados em 214 ficheiros.
 - Cinco testes novos de renderização verificam o formulário completo para ações,
   staking, dinheiro e stablecoins e os preços 1:1 na criação de stablecoins.
 - TypeScript e compilação de produção aprovados.
@@ -50,6 +50,42 @@ O teste de browser confirma preço médio, quantidade, ganho realizado e snapsho
 diretamente na base temporária depois de submeter os formulários reais. A posição
 fica com quatro snapshots: criação, reforço, venda e atualização de preço.
 
+## Criação e edição de posições
+
+A bateria B56–B58 acrescentou 24 casos. Os 22 iniciais falharam antes da correção:
+entradas inválidas podiam ser guardadas, casas adicionais eram arredondadas,
+preço atual vazio impedia criar e uma edição antiga substituía recompensas
+recebidas depois de o formulário abrir. Dois casos adicionais confirmam a
+resposta de erro/sucesso da ação e a exclusão de diagnósticos da base.
+
+Criação e edição reutilizam validação de quantidades e preços. Quantidade zero
+continua válida na edição de posições encerradas; não numa posição nova.
+A moeda é normalizada e validada; a direção só aceita long/short. O rendimento
+anual opcional mantém sinal e até quatro casas; vazio continua desconhecido.
+Preços e quantidades aceitam vírgula decimal. Preço atual vazio usa o custo como
+estimativa, explicado no formulário, sem afirmar uma avaliação atual:
+`lastPriceUpdate` fica nulo, exceto ativos de preço fixo já tratados pela app.
+
+A edição estática já não envia nem substitui `rewardsEarned`. Uma conta com 5
+de recompensas que recebe mais 2 conserva 7 ao guardar um formulário antigo.
+
+O formulário client mostra gravação pendente, sucesso e erros acessíveis com
+roles de status/alert. Usa useActionState e impede o reset dos campos. Uma
+validação recusada preserva nome, quantidade e select de risco; corrigir os
+dados guarda normalmente. Abortar o POST antes de chegar ao servidor mostra
+mensagem traduzida, mantém os campos e permite guardar após restabelecer rede.
+Isto não é uma promessa de idempotência para criar/reforçar/vender posições.
+
+O endpoint de edição confirma sessão e apenas expõe mensagens de validação
+conhecidas. Exceções de SQL/infraestrutura dão uma mensagem genérica, verificada
+com um trigger fictício de falha. A primeira submissão inválida mantém a página
+e não provoca erros de execução no browser.
+
+Mensagens novas revistas em português e inglês. Os outros 13 idiomas têm
+fallback inglês nestas novas chaves, com a mesma cobertura e variáveis.
+Revisão React: sem efeitos novos, sem estado pessoal global, validação no
+servidor e feedback sem expor diagnósticos internos.
+
 ## Percurso completo no navegador
 
 Compilação de produção local em `127.0.0.1:3017`, ligada exclusivamente a PGlite
@@ -58,12 +94,16 @@ papel sem BYPASSRLS. O browser só pode contactar o servidor local; pedidos
 externos do servidor usam um proxy inativo. Não há conta, palavra-passe ou chave
 real nos dados do ensaio. O servidor e a base temporária foram encerrados no fim.
 
-Passaram 22 verificações:
+Passaram 30 verificações:
 
 | Percurso | Computador EN 1440×950 | Telemóvel PT 390×844 |
 | --- | --- | --- |
 | Criar posição e confirmar um snapshot inicial na base | Aprovado | Aprovado |
 | Editar e confirmar nome, classificação e preços persistidos | Aprovado | Aprovado |
+| Preço atual vazio usa o custo, sem data de avaliação inventada | Aprovado | Aprovado |
+| Erro de validação no formulário preserva texto, número e classificação | Aprovado | Aprovado |
+| Corrigir dados e guardar apresenta confirmação de sucesso | Aprovado | Aprovado |
+| Interromper POST antes do servidor e repetir edição preserva os campos | Aprovado | Aprovado |
 | Afetar 25,5%, recarregar e alterar para 40%, mantendo uma linha | Aprovado | Aprovado |
 | Recusar vazio, negativo e percentagem superior a 100 no formulário | Aprovado | Aprovado |
 | Remover com zero explícito, conservando o saldo da conta | Aprovado | Aprovado |

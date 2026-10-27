@@ -3313,5 +3313,12 @@
   "Choose a valid currency.": "Escolhe uma moeda válida.",
   "Choose a valid debt type.": "Escolhe um tipo de dívida válido.",
   "Choose a valid arrival period.": "Escolhe uma periodicidade de recebimento válida.",
-  "Choose an income category.": "Escolhe uma categoria de receita."
+  "Choose an income category.": "Escolhe uma categoria de receita.",
+  "Enter a positive quantity with at most eight decimal places.": "Indica uma quantidade positiva com até oito casas decimais.",
+  "Enter zero or a positive quantity with at most eight decimal places.": "Indica zero ou uma quantidade positiva com até oito casas decimais.",
+  "Enter zero or a positive price with at most four decimal places.": "Indica zero ou um preço positivo com até quatro casas decimais.",
+  "Choose a valid position direction.": "Escolhe uma direção válida para a posição.",
+  "Could not confirm the save. Reload to check the position before retrying.": "Não foi possível confirmar a gravação. Atualiza a página para verificar a posição antes de tentar novamente.",
+  "Position saved.": "Posição guardada.",
+  "Leave the current price blank to use the entry price as an estimate until you add a valuation.": "Deixa o preço atual em branco para usar o preço de entrada como estimativa até indicares uma avaliação."
 }

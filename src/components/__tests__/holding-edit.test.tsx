@@ -11,7 +11,7 @@ const fixture = vi.hoisted(() => ({ holding: {
 vi.mock("@/actions/investments", () => ({
   getHolding: async () => fixture.holding, getHoldingSnapshots: async () => [],
   listAccountsForHoldings: async () => [{ id: "synthetic-account", name: "Synthetic broker" }],
-  updateHolding: async () => {}, updateHoldingPrice: async () => {}, deleteHolding: async () => {},
+  submitHoldingEdit: async () => ({ saved: true }), updateHolding: async () => {}, updateHoldingPrice: async () => {}, deleteHolding: async () => {},
   addRewards: async () => {}, reinforceHolding: async () => {}, sellHolding: async () => {},
 }));
 vi.mock("@/actions/playlists", () => ({ listPlaylists: async () => [] }));
