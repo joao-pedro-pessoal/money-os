@@ -1,3 +1,5 @@
+import { getRates } from "@/actions/fx";
+import { sumInBase } from "@/lib/fx";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listBucketsWithTotals, createBucket, addToAllocation } from "@/actions/buckets";
@@ -6,7 +8,7 @@ import { listPurposes } from "@/actions/purpose";
 import {
   listGoalsByPriority,
   moveGoal,
-  applyDistribution,
+  submitDistribution,
   getDefaultShares,
   setPriority,
 } from "@/actions/distribute";
@@ -33,19 +35,20 @@ export default async function BucketsPage() {
 
   // Free cash only: the rest is already promised to other goals, and offering
   // to distribute it would allocate the same money twice.
-  const distributable = accounts.reduce((s, a) => s + Math.max(0, a.free), 0);
+  const distributable = sumInBase(accounts.map(a => ({ amount: Math.max(0, a.free), currency: a.currency })), await getRates(), base);
 
   return (
     <div className="space-y-8">
       <h1 className="text-lg font-semibold">{uiText("Buckets")}</h1>
 
+      {(distributable.unconverted.length > 0 || buckets.some(b => b.unconverted.length > 0)) && <p role="status" className="card p-3 text-xs text-[var(--amber)]">{uiText("Goal totals are incomplete because an exchange rate is missing. Refresh rates in Settings.")}</p>}
       {/* The hierarchy, and the thing that makes it worth having. */}
       <Section title="Distribute money" defaultOpen>
         <Distributor
-          available={distributable}
+          available={distributable.total}
           currency={base}
           defaultShares={defaultShares}
-          applyAction={applyDistribution}
+          applyAction={submitDistribution}
         />
       </Section>
 
@@ -247,8 +250,8 @@ export default async function BucketsPage() {
                 </div>
                 <div className="text-sm whitespace-nowrap flex items-center gap-3">
                   <span>
-                    <Money value={b.total} />
-                    {target ? <span className="text-[var(--muted)]"> / <Money value={target} /></span> : null}
+                    <Money value={b.total} currency={b.baseCurrency} />
+                    {target ? <span className="text-[var(--muted)]"> / <Money value={target} currency={b.baseCurrency} /></span> : null}
                   </span>
                   {/* The name was already a link, but a name doesn't look like
                       one — so editing a bucket was effectively hidden. */}
@@ -272,11 +275,12 @@ export default async function BucketsPage() {
                 <div className="text-xs text-[var(--muted)] mb-3">
                   {share}{uiText("% of all bucketed money")}</div>
               )}
+              {b.unconverted.length > 0 && <p className="text-xs text-[var(--amber)]">{uiText("Incomplete total — missing exchange rates.")}</p>}
               <div className="space-y-1">
                 {b.allocations.map((a) => (
                   <div key={a.id} className="flex justify-between text-xs text-[var(--muted)]">
                     <span><span translate="no">{a.accountName}</span></span>
-                    <Money value={a.amount} />
+                    <Money value={a.amount} currency={a.currency} />
                   </div>
                 ))}
                 {b.allocations.length === 0 && (

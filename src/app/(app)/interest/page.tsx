@@ -3,7 +3,7 @@ import ResponsiveTable from "@/components/ResponsiveTable";
 import { db } from "@/db/client";
 import { interestPayments, accounts } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { createInterestPayment } from "@/actions/transactions";
+import { submitInterestPayment } from "@/actions/transactions";
 import { listAccountsWithState } from "@/actions/accounts";
 import { getInterestOutlook, setAccountRate } from "@/actions/interest";
 import { Money } from "@/components/PrivacyContext";
@@ -184,7 +184,7 @@ export default async function InterestPage() {
         <Section title="Record interest payment" defaultOpen>
           <InterestForm
             accounts={rateAccounts}
-            action={createInterestPayment}
+            action={submitInterestPayment}
             today={today}
           />
         </Section>

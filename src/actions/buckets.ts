@@ -5,33 +5,22 @@ import { buckets, bucketAllocations, accounts, auditLog } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { manualBalance } from "@/lib/money/manualEntry";
-import { bucketTotal } from "@/lib/accounting";
+import { sumInBase } from "@/lib/fx";
+import { getRates } from "./fx";
+import { getBaseCurrency } from "./settings";
 
 export async function listBucketsWithTotals() {
-  const allBuckets = await db.select().from(buckets);
-  const allAllocations = await db.select().from(bucketAllocations);
-  const allAccounts = await db.select().from(accounts);
-
-  return allBuckets.map((b) => {
-    const allocs = allAllocations
-      .filter((a) => a.bucketId === b.id)
-      .map((a) => ({
-        ...a,
-        amount: Number(a.amount),
-        accountName: allAccounts.find((acc) => acc.id === a.accountId)?.name ?? "?",
-      }));
-    return {
-      ...b,
-      total: bucketTotal(
-        b.id,
-        allAllocations.map((a) => ({
-          accountId: a.accountId,
-          bucketId: a.bucketId,
-          amount: Number(a.amount),
-        }))
-      ),
-      allocations: allocs,
-    };
+  const [allBuckets, allAllocations, allAccounts, rates, baseCurrency] = await Promise.all([
+    db.select().from(buckets), db.select().from(bucketAllocations), db.select().from(accounts), getRates(), getBaseCurrency(),
+  ]);
+  const accountById = new Map(allAccounts.map(a => [a.id, a]));
+  return allBuckets.map(b => {
+    const allocations = allAllocations.filter(a => a.bucketId === b.id).map(a => ({
+      ...a, amount: Number(a.amount), accountName: accountById.get(a.accountId)?.name ?? "?",
+      currency: accountById.get(a.accountId)?.currency ?? "Unknown",
+    }));
+    const converted = sumInBase(allocations.map(a => ({ amount: a.amount, currency: a.currency })), rates, baseCurrency);
+    return { ...b, total: converted.total, baseCurrency, unconverted: converted.unconverted, allocations };
   });
 }
 

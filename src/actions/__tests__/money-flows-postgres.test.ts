@@ -7,17 +7,22 @@ import * as schema from "@/db/schema";
 
 // Real PostgreSQL rules and migrations, entirely in memory. No production
 // client, .env, broker calls or persisted personal data in this suite.
-const isolated = vi.hoisted(() => ({ db: null as unknown as PgliteDatabase<typeof schema> }));
+const isolated = vi.hoisted(() => ({ base: "EUR", db: null as unknown as PgliteDatabase<typeof schema> }));
 vi.mock("@/db/client", () => ({ get db() { return isolated.db; } }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
 vi.mock("@/actions/fx", () => ({ getRates: async () => ({ EUR: 1, USD: 1.25 }) }));
-vi.mock("@/actions/settings", () => ({ getBaseCurrency: async () => "EUR", getDefaultAccountId: async () => null }));
-import { createTransaction, createQuickTransaction, undoQuickTransaction, updateTransaction, deleteTransaction, createTransfer } from "../transactions";
-import { createBucket, updateBucket, deleteBucket, addToAllocation, setAllocation } from "../buckets";
+vi.mock("@/actions/settings", () => ({ getBaseCurrency: async () => isolated.base, getDefaultAccountId: async () => null }));
+import { createTransaction, createQuickTransaction, undoQuickTransaction, updateTransaction, deleteTransaction, createTransfer, createInterestPayment } from "../transactions";
+import { createBucket, updateBucket, deleteBucket, addToAllocation, setAllocation, listBucketsWithTotals } from "../buckets";
 import { createBudget, updateBudget, deleteBudget, listBudgets, getUnbudgetedSpending, getBudgetsLeft, getKeptForBudgets, toggleBudgetCategory } from "../budgets";
 import { createSubscription, updateSubscription, toggleSubscription, deleteSubscription } from "../subscriptions";
-import { recordSubscriptionCharge } from "../subscriptionCharges";
+import { createHolding, updateHolding, updateHoldingPrice, reinforceHolding, sellHolding, addRewards } from "../investments";
+import { setHoldingAllocation } from "../purpose";
+import { createLiability, updateLiability } from "../liabilities";
+import { createExpected } from "../expected";
+import { planDistribution, applyDistribution } from "../distribute";
+import { answerSubscriptionCharge, recordSubscriptionCharge } from "../subscriptionCharges";
 
 let engine: PGlite;
 let sequence = 0;
@@ -44,6 +49,7 @@ beforeAll(async () => {
     GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO money_flows_test;`);
 }, 60_000);
 beforeEach(async () => {
+  isolated.base = "EUR";
   await engine.exec(`RESET ROLE; DELETE FROM users;
     INSERT INTO users(id) VALUES ('flow-a'), ('flow-b');
     SET ROLE money_flows_test;
@@ -64,6 +70,8 @@ afterEach(async () => {
     DROP TRIGGER IF EXISTS fail_transfer_write ON transfers;
     DROP TRIGGER IF EXISTS fail_transaction_delete ON transactions;
     DROP TRIGGER IF EXISTS fail_money_audit ON audit_log;
+    DROP TRIGGER IF EXISTS fail_money_insert ON transactions;
+    DROP TRIGGER IF EXISTS fail_money_allocation ON bucket_allocations;
     DROP FUNCTION IF EXISTS synthetic_money_failure();
     SET ROLE money_flows_test;`);
 });
@@ -296,5 +304,277 @@ describe("financial failure and retry boundaries", () => {
   it("rejects a foreign subscription category", async () => {
     await expect(createSubscription(sub({ categoryId: "foreign-category" }))).rejects.toThrow();
     expect(await isolated.db.select().from(schema.subscriptions)).toEqual([]);
+  });
+});
+
+describe("general audit: debts, expected income, interest and goals", () => {
+  const debt = (extra: Record<string, string> = {}) => form({ name: "Synthetic debt", balance: "500", currency: "EUR", kind: "personal_loan", ...extra });
+  it.each(["", "NaN", "not a number"])("does not turn an invalid debt balance (%s) into zero", async balance => {
+    await expect(createLiability(debt({ balance }))).rejects.toThrow(); expect(await isolated.db.select().from(schema.liabilities)).toEqual([]);
+  });
+  it("an invalid debt edit preserves what is owed", async () => {
+    await createLiability(debt()); const [row] = await isolated.db.select().from(schema.liabilities);
+    await expect(updateLiability(debt({ id: row.id, balance: "invalid" }))).rejects.toThrow();
+    expect(Number((await isolated.db.select().from(schema.liabilities))[0].balance)).toBe(500);
+  });
+  it("a debt cannot point at another person's account", async () => {
+    await expect(createLiability(debt({ accountId: "foreign" }))).rejects.toThrow(); expect(await isolated.db.select().from(schema.liabilities)).toEqual([]);
+  });
+  it("rejects a negative optional monthly debt payment", async () => {
+    await expect(createLiability(debt({ monthlyPayment: "-20" }))).rejects.toThrow();
+  });
+  it("does not attach expected income to a foreign account or category", async () => {
+    for (const extra of [{ accountId: "foreign" }, { categoryId: "foreign-category" }] as Record<string, string>[]) {
+      await expect(createExpected(form({ name: "Synthetic expectation", amount: "20", ...extra }))).rejects.toThrow();
+    }
+    expect(await isolated.db.select().from(schema.expectedMoney)).toEqual([]);
+  });
+  it("an impossible expected-income date is rejected rather than silently becoming undated", async () => {
+    await expect(createExpected(form({ name: "Synthetic expectation", amount: "20", expectedAt: "2026-02-30", arrival: "once" }))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.expectedMoney)).toEqual([]);
+  });
+  it("an interest payment rolls back if the ledger cannot be written", async () => {
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic failure'; END $$;
+      CREATE TRIGGER fail_money_insert BEFORE INSERT ON transactions FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    await expect(createInterestPayment(form({ requestId: request(), accountId: "eur-a", amount: "5", date: today() }))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.interestPayments)).toEqual([]); expect(await balance("eur-a")).toBe(1000);
+  });
+  it("repeating an interest payment records one receipt and one income", async () => {
+    const data=form({ requestId: request(), accountId: "usd-a", amount: "5", date: today() });
+    await createInterestPayment(data); await createInterestPayment(data);
+    expect(await isolated.db.select().from(schema.interestPayments)).toHaveLength(1); expect(await txs()).toHaveLength(1); expect(await balance("usd-a")).toBe(305);
+  });
+  it("refuses negative interest instead of changing its sign", async () => {
+    await expect(createInterestPayment(form({ requestId: request(), accountId: "eur-a", amount: "-5", date: today() }))).rejects.toThrow(); expect(await txs()).toEqual([]);
+  });
+  it("refuses an interest receipt on someone else's account", async () => {
+    await expect(createInterestPayment(form({ requestId: request(), accountId: "foreign", amount: "5", date: today() }))).rejects.toThrow(); expect(await isolated.db.select().from(schema.interestPayments)).toEqual([]);
+  });
+  it("one existing expense cannot answer two different subscription charges", async () => {
+    await createSubscription(sub({ name: "First service" })); await createSubscription(sub({ name: "Second service" }));
+    const [a,b] = await isolated.db.select().from(schema.subscriptions);
+    await createTransaction(form({ accountId: "eur-a", type: "expense", amount: "10", date: today(), categoryId: "food" })); const [expense]=await txs();
+    expect(await answerSubscriptionCharge(form({ subscriptionId: a.id, dueOn: today(), answer: "matched", transactionId: expense.id }))).toEqual({ ok: true });
+    expect(await answerSubscriptionCharge(form({ subscriptionId: b.id, dueOn: today(), answer: "matched", transactionId: expense.id }))).toHaveProperty("error");
+    expect(await isolated.db.select().from(schema.subscriptionCharges)).toHaveLength(1);
+  });
+  it("a stale proposal cannot record a charge for a cancelled subscription", async () => {
+    await createSubscription(sub()); const [row]=await isolated.db.select().from(schema.subscriptions);
+    await toggleSubscription(form({ id: row.id, active: "false" }));
+    expect(await recordSubscriptionCharge(form({ subscriptionId: row.id, dueOn: today(), accountId: "eur-a", amount: "10", date: today() }))).toHaveProperty("error"); expect(await txs()).toEqual([]);
+  });
+  it("goal totals convert cash without mislabelling individual allocations", async () => {
+    await createBucket(form({ name: "Mixed goal" })); const [goal]=await isolated.db.select().from(schema.buckets);
+    await setAllocation(form({ accountId: "eur-a", bucketId: goal.id, amount: "100" })); await setAllocation(form({ accountId: "usd-a", bucketId: goal.id, amount: "125" }));
+    const [view]=await listBucketsWithTotals(); expect(view.total).toBe(200); expect(view).toHaveProperty("baseCurrency","EUR");
+    expect(view.allocations.find(a=>a.accountId==="usd-a")).toMatchObject({ amount: 125, currency: "USD" });
+    isolated.base="USD"; expect((await listBucketsWithTotals())[0].total).toBe(250);
+  });
+  it("unknown goal currencies are reported instead of summed as the base currency", async () => {
+    await createBucket(form({ name: "Missing FX goal" })); const [goal]=await isolated.db.select().from(schema.buckets);
+    await isolated.db.update(schema.accounts).set({ currency: "JPY" }).where(eq(schema.accounts.id,"usd-a"));
+    await setAllocation(form({ accountId: "usd-a", bucketId: goal.id, amount: "125" }));
+    const [view]=await listBucketsWithTotals(); expect(view.total).toBe(0); expect(view).toHaveProperty("unconverted",[{amount:125,currency:"JPY"}]);
+  });
+  it("a distribution plans in the base currency and writes account-currency allocations", async () => {
+    await isolated.db.update(schema.accounts).set({ balance: "0" }).where(eq(schema.accounts.id,"eur-a")); await isolated.db.update(schema.accounts).set({ balance: "0" }).where(eq(schema.accounts.id,"eur-b"));
+    await createBucket(form({ name: "Distribution goal" }));
+    const plan=await planDistribution(100); expect(plan.available).toBe(240);
+    await applyDistribution(form({ amount: "100", strategy: "priority", requestId: request() }));
+    const [allocation]=await isolated.db.select().from(schema.bucketAllocations); expect(Number(allocation.amount)).toBe(125); expect(allocation.accountId).toBe("usd-a");
+  });
+});
+
+describe("audit: recovery and distribution boundaries", () => {
+  it("deleting newly recorded interest removes both the income and receipt, without recreating it on replay", async () => {
+    const data=form({ requestId: request(), accountId: "eur-a", amount: "5", date: today() });
+    await createInterestPayment(data); const [income]=await txs(); await deleteTransaction(form({id:income.id}));
+    expect(await isolated.db.select().from(schema.interestPayments)).toEqual([]); expect(await balance("eur-a")).toBe(1000);
+    await expect(createInterestPayment(data)).rejects.toThrow(); expect(await txs()).toEqual([]);
+  });
+  it("a distribution replay does not reserve twice", async () => {
+    await createBucket(form({name:"Replay goal"})); const data=form({amount:"50",strategy:"priority",requestId:request()});
+    await applyDistribution(data); await applyDistribution(data);
+    expect((await isolated.db.select().from(schema.bucketAllocations)).reduce((sum,a)=>sum+Number(a.amount),0)).toBe(50);
+  });
+  it("a distribution rolls back all goals and its receipt on failure", async () => {
+    await createBucket(form({name:"Rollback goal"}));
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic failure'; END $$;
+      CREATE TRIGGER fail_money_allocation BEFORE INSERT ON bucket_allocations FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    await expect(applyDistribution(form({amount:"50",strategy:"priority",requestId:request()}))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.bucketAllocations)).toEqual([]);
+    expect((await isolated.db.select().from(schema.auditLog)).filter(a=>a.action==="money_distributed")).toEqual([]);
+  });
+  it("a distribution never advertises more reserved money than it can fund", async () => {
+    await createBucket(form({name:"Capacity goal"})); const plan=await planDistribution(2000);
+    expect(plan.distributed).toBe(1440); expect(plan.sourcedMoves.reduce((sum,m)=>sum+m.amount,0)).toBe(1440);
+  });
+  it("a rounded conversion never allocates more than the native cents available", async () => {
+    await isolated.db.update(schema.accounts).set({balance:"0"}).where(eq(schema.accounts.id,"eur-a"));
+    await isolated.db.update(schema.accounts).set({balance:"0"}).where(eq(schema.accounts.id,"eur-b"));
+    await isolated.db.update(schema.accounts).set({balance:"0.02"}).where(eq(schema.accounts.id,"usd-a"));
+    await createBucket(form({name:"Rounding goal"}));
+    await applyDistribution(form({amount:"0.02",strategy:"priority",requestId:request()}));
+    expect((await isolated.db.select().from(schema.bucketAllocations)).reduce((sum,a)=>sum+Number(a.amount),0)).toBeLessThanOrEqual(0.02);
+  });
+  it("two subscription matches cannot claim the same expense concurrently", async () => {
+    await createSubscription(sub({ name: "Concurrent A" })); await createSubscription(sub({ name: "Concurrent B" })); const subs=await isolated.db.select().from(schema.subscriptions);
+    await createTransaction(form({accountId:"eur-a",type:"expense",amount:"10",date:today(),categoryId:"food"})); const [expense]=await txs();
+    const results=await Promise.all(subs.map(s=>answerSubscriptionCharge(form({subscriptionId:s.id,dueOn:today(),answer:"matched",transactionId:expense.id}))));
+    expect(results.filter(r=>"ok" in r)).toHaveLength(1); expect(await isolated.db.select().from(schema.subscriptionCharges)).toHaveLength(1);
+  });
+});
+
+describe("audit: investment relationship ownership", () => {
+  const holding = { symbol: "AUDIT.TEST", quantity: "1", avgEntryPrice: "10", currentPrice: "10", accountId: "eur-a", currency: "EUR" };
+  it("a manual holding cannot refer to another person's account", async () => {
+    await expect(createHolding(form({ ...holding, accountId: "foreign" }))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.holdings)).toEqual([]);
+  });
+  it("a holding edit cannot move the position into another person's account", async () => {
+    await isolated.db.insert(schema.holdings).values({ id: "audit-holding", ...holding });
+    await expect(updateHolding(form({ ...holding, id: "audit-holding", accountId: "foreign" }))).rejects.toThrow();
+    expect((await isolated.db.select().from(schema.holdings))[0].accountId).toBe("eur-a");
+  });
+  it("a position cannot be allocated to another person's goal", async () => {
+    await isolated.db.insert(schema.holdings).values({ id: "audit-holding", ...holding });
+    await expect(setHoldingAllocation(form({ holdingId: "audit-holding", bucketId: "foreign-bucket", percent: "50" }))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.holdingAllocations)).toEqual([]);
+  });
+  it.each(["", "-10", "101", "NaN"])("invalid allocation percentage %s leaves a position alone", async percent => {
+    await isolated.db.insert(schema.holdings).values({ id: "audit-holding", ...holding });
+    await createBucket(form({name:"Investment goal"})); const [goal]=await isolated.db.select().from(schema.buckets);
+    await expect(setHoldingAllocation(form({holdingId:"audit-holding",bucketId:goal.id,percent}))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.holdingAllocations)).toEqual([]);
+  });
+  it("rejects a position belonging to another person", async () => {
+    await engine.exec(`SELECT set_config('app.user_id','flow-b',false)`);
+    await isolated.db.insert(schema.holdings).values({ id: "foreign-holding", ...holding, accountId: "foreign" });
+    await engine.exec(`SELECT set_config('app.user_id','flow-a',false)`);
+    await expect(setHoldingAllocation(form({holdingId:"foreign-holding",bucketId:"foreign-bucket",percent:"50"}))).rejects.toThrow("Holding not found");
+    expect(await isolated.db.select().from(schema.holdingAllocations)).toEqual([]);
+  });
+  it("invalid input preserves an existing share rather than deleting or changing it", async () => {
+    await isolated.db.insert(schema.holdings).values({ id: "audit-holding", ...holding });
+    await createBucket(form({name:"Investment goal"})); const [goal] = await isolated.db.select().from(schema.buckets);
+    await setHoldingAllocation(form({holdingId:"audit-holding",bucketId:goal.id,percent:"25,50"}));
+    for (const percent of ["", "-10", "101", "NaN", "Infinity", "1.001"]) {
+      await expect(setHoldingAllocation(form({holdingId:"audit-holding",bucketId:goal.id,percent}))).rejects.toThrow();
+      expect(Number((await isolated.db.select().from(schema.holdingAllocations))[0].percent)).toBe(25.5);
+    }
+    await setHoldingAllocation(form({holdingId:"audit-holding",bucketId:goal.id,percent:"0"}));
+    expect(await isolated.db.select().from(schema.holdingAllocations)).toEqual([]);
+  });
+  it("creates a valid holding with its snapshot and rolls all of it back if audit fails", async () => {
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit failure'; END $$;
+      CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    await expect(createHolding(form(holding))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.holdings)).toEqual([]);
+    expect(await isolated.db.select().from(schema.holdingSnapshots)).toEqual([]);
+    await engine.exec(`RESET ROLE; DROP TRIGGER fail_money_audit ON audit_log; SET ROLE money_flows_test;`);
+    await createHolding(form(holding));
+    expect(await isolated.db.select().from(schema.holdings)).toHaveLength(1);
+    expect(await isolated.db.select().from(schema.holdingSnapshots)).toHaveLength(1);
+  });
+  it("rolls an allocation back when its audit cannot be saved", async () => {
+    await isolated.db.insert(schema.holdings).values({ id: "audit-holding", ...holding });
+    await createBucket(form({name:"Investment goal"})); const [goal] = await isolated.db.select().from(schema.buckets);
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit failure'; END $$;
+      CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    await expect(setHoldingAllocation(form({holdingId:"audit-holding",bucketId:goal.id,percent:"50"}))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.holdingAllocations)).toEqual([]);
+  });
+  it("allocating the same position/goal pair twice updates the one share", async () => {
+    await isolated.db.insert(schema.holdings).values({ id: "audit-holding", ...holding });
+    await createBucket(form({name:"Investment goal"})); const [goal]=await isolated.db.select().from(schema.buckets);
+    const data=form({holdingId:"audit-holding",bucketId:goal.id,percent:"50"});await setHoldingAllocation(data);await setHoldingAllocation(data);
+    const rows=await isolated.db.select().from(schema.holdingAllocations);expect(rows).toHaveLength(1);expect(Number(rows[0].percent)).toBe(50);
+  });
+});
+
+describe("manual investment operation safety", () => {
+  const seed = async () => isolated.db.insert(schema.holdings).values({
+    id: "operation-holding", symbol: "TEST.OPERATION", accountId: "eur-a", quantity: "10",
+    avgEntryPrice: "10", currentPrice: "12", realizedPnl: "0", rewardsEarned: "5", currency: "EUR",
+  });
+  const read = async () => (await isolated.db.select().from(schema.holdings).where(eq(schema.holdings.id, "operation-holding")))[0];
+  const operations = [
+    ["price", updateHoldingPrice, {currentPrice:"15"}],
+    ["reinforce", reinforceHolding, {quantity:"2",price:"15"}],
+    ["sell", sellHolding, {quantity:"2",price:"15"}],
+    ["rewards", addRewards, {amount:"2"}],
+  ] as const;
+  it.each(operations)("rolls back %s entirely when audit fails", async (_name, action, values) => {
+    await seed(); const before = await read();
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit failure'; END $$;
+      CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    await expect(action(form({id:"operation-holding",...values}))).rejects.toThrow();
+    expect(await read()).toEqual(before);
+    expect(await isolated.db.select().from(schema.holdingSnapshots)).toEqual([]);
+  });
+  it.each(operations)("refuses %s for another person's position", async (_name, action, values) => {
+    await seed();
+    await engine.exec(`SELECT set_config('app.user_id','flow-b',false)`);
+    await expect(action(form({id:"operation-holding",...values}))).rejects.toThrow("Holding not found");
+    await engine.exec(`SELECT set_config('app.user_id','flow-a',false)`);
+    expect(Number((await read()).quantity)).toBe(10);
+    expect(await isolated.db.select().from(schema.holdingSnapshots)).toEqual([]);
+  });
+  it.each(["", "-1", "NaN", "Infinity", "0x10", "1.00001"])("refuses invalid price %s without touching the position", async value => {
+    await seed(); const before = await read();
+    await expect(updateHoldingPrice(form({id:"operation-holding",currentPrice:value}))).rejects.toThrow();
+    expect(await read()).toEqual(before);
+  });
+  it.each([reinforceHolding, sellHolding])("refuses invalid quantities and prices in a trade", async action => {
+    await seed(); const before = await read();
+    for (const quantity of ["", "0", "-1", "NaN", "Infinity", "0.000000001"]) {
+      await expect(action(form({id:"operation-holding",quantity,price:"12"}))).rejects.toThrow();
+      expect(await read()).toEqual(before);
+    }
+    for (const price of ["", "-1", "NaN", "Infinity", "1.00001"]) {
+      await expect(action(form({id:"operation-holding",quantity:"1",price}))).rejects.toThrow();
+      expect(await read()).toEqual(before);
+    }
+  });
+  it.each(["", "0", "-1", "NaN", "Infinity", "1.001"])("refuses invalid received rewards %s", async amount => {
+    await seed(); const before = await read();
+    await expect(addRewards(form({id:"operation-holding",amount}))).rejects.toThrow();
+    expect(await read()).toEqual(before);
+  });
+  it("refuses a sale larger than the registered position", async () => {
+    await seed(); const before = await read();
+    await expect(sellHolding(form({id:"operation-holding",quantity:"11",price:"12"}))).rejects.toThrow();
+    expect(await read()).toEqual(before);
+    expect(await isolated.db.select().from(schema.holdingSnapshots)).toEqual([]);
+  });
+  it("keeps both simultaneous reinforcements", async () => {
+    await seed();
+    await Promise.all([reinforceHolding(form({id:"operation-holding",quantity:"2",price:"15"})),reinforceHolding(form({id:"operation-holding",quantity:"2",price:"15"}))]);
+    const row = await read(); expect(Number(row.quantity)).toBe(14); expect(Number(row.avgEntryPrice)).toBeCloseTo(160/14, 3);
+    expect(await isolated.db.select().from(schema.holdingSnapshots)).toHaveLength(2);
+  });
+  it("keeps both simultaneous sales and their realised gain", async () => {
+    await seed();
+    await Promise.all([sellHolding(form({id:"operation-holding",quantity:"2",price:"12"})),sellHolding(form({id:"operation-holding",quantity:"2",price:"12"}))]);
+    const row = await read(); expect(Number(row.quantity)).toBe(6); expect(Number(row.realizedPnl)).toBe(8);
+  });
+  it("keeps both simultaneous reward receipts", async () => {
+    await seed();
+    await Promise.all([addRewards(form({id:"operation-holding",amount:"2"})),addRewards(form({id:"operation-holding",amount:"3"}))]);
+    expect(Number((await read()).rewardsEarned)).toBe(10);
+  });
+  it("records a zero-price full sale and keeps cash balances separate", async () => {
+    await seed();
+    await sellHolding(form({id:"operation-holding",quantity:"10",price:"0"}));
+    const row = await read(); expect(Number(row.quantity)).toBe(0); expect(Number(row.realizedPnl)).toBe(-100);
+    expect(Number(row.avgEntryPrice)).toBe(10); expect(await balance("eur-a")).toBe(1000);
+  });
+  it("accepts comma decimals, updates price history and accumulates rewards", async () => {
+    await seed();
+    await updateHoldingPrice(form({id:"operation-holding",currentPrice:"12,3456"}));
+    expect(Number((await read()).currentPrice)).toBe(12.3456);
+    await addRewards(form({id:"operation-holding",amount:"0,25"}));
+    expect(Number((await read()).rewardsEarned)).toBe(5.25);
+    expect(await isolated.db.select().from(schema.holdingSnapshots)).toHaveLength(1);
   });
 });

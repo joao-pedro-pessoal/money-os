@@ -13,7 +13,6 @@ import {
   purposeTotals,
   goalProgress,
   sharesOfTotal,
-  clampPercent,
   allocatedPercent,
   unallocatedPercent,
   isOverAllocated,
@@ -172,33 +171,42 @@ export async function getHoldingAllocations(holdingId: string) {
  * through repeated clicks.
  */
 export async function setHoldingAllocation(formData: FormData) {
-  const holdingId = String(formData.get("holdingId"));
-  const bucketId = String(formData.get("bucketId"));
-  const percent = clampPercent(Number(formData.get("percent")));
+  const holdingId = String(formData.get("holdingId") ?? "").trim();
+  const bucketId = String(formData.get("bucketId") ?? "").trim();
+  const rawPercent = String(formData.get("percent") ?? "").trim().replace(",", ".");
+  const percent = Number(rawPercent);
 
   if (!holdingId || !bucketId) throw new Error("Pick a position and a goal.");
-
-  if (percent === 0) {
-    await db
-      .delete(holdingAllocations)
-      .where(
-        and(eq(holdingAllocations.holdingId, holdingId), eq(holdingAllocations.bucketId, bucketId))
-      );
-  } else {
-    await db
-      .insert(holdingAllocations)
-      .values({ holdingId, bucketId, percent: String(percent) })
-      .onConflictDoUpdate({
-        target: [holdingAllocations.holdingId, holdingAllocations.bucketId],
-        set: { percent: String(percent), updatedAt: new Date() },
-      });
+  if (!/^\d+(?:\.\d{1,2})?$/.test(rawPercent) || !Number.isFinite(percent) || percent < 0 || percent > 100) {
+    throw new Error("Enter a percentage from 0 to 100 with at most two decimal places.");
   }
 
-  await db.insert(auditLog).values({
-    entityType: "holding_allocation",
-    entityId: holdingId,
-    action: "holding_allocated",
-    details: JSON.stringify({ bucketId, percent }),
+  await db.transaction(async (tx) => {
+    // Check both ends through RLS before inserting, changing or removing a share.
+    const [holding] = await tx.select({ id: holdings.id }).from(holdings).where(eq(holdings.id, holdingId)).for("update");
+    if (!holding) throw new Error("Holding not found");
+    const [bucket] = await tx.select({ id: buckets.id }).from(buckets).where(eq(buckets.id, bucketId)).for("share");
+    if (!bucket) throw new Error("Goal not found");
+
+    if (percent === 0) {
+      await tx.delete(holdingAllocations).where(
+        and(eq(holdingAllocations.holdingId, holdingId), eq(holdingAllocations.bucketId, bucketId))
+      );
+    } else {
+      await tx.insert(holdingAllocations)
+        .values({ holdingId, bucketId, percent: String(percent) })
+        .onConflictDoUpdate({
+          target: [holdingAllocations.holdingId, holdingAllocations.bucketId],
+          set: { percent: String(percent), updatedAt: new Date() },
+        });
+    }
+
+    await tx.insert(auditLog).values({
+      entityType: "holding_allocation",
+      entityId: holdingId,
+      action: "holding_allocated",
+      details: JSON.stringify({ bucketId, percent }),
+    });
   });
 
   revalidatePath(`/investments/${holdingId}`);

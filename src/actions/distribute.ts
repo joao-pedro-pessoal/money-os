@@ -1,11 +1,14 @@
 "use server";
 
 import { db } from "@/db/client";
-import { buckets, bucketAllocations, auditLog } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { buckets, bucketAllocations, accounts, auditLog } from "@/db/schema";
+import { eq, and, inArray, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { listAccountsWithState } from "./accounts";
 import { listPurposes } from "./purpose";
+import { getRates } from "./fx";
+import { toBase, fromBase } from "@/lib/fx";
+import { manualAmount, isQuickEntryId } from "@/lib/money/manualEntry";
 import { getBaseCurrency } from "./settings";
 import {
   assignSources,
@@ -93,15 +96,16 @@ export async function getDefaultShares(): Promise<Share[]> {
   return weightsFromPriority(goals);
 }
 
-export async function planDistribution(
+async function buildDistribution(
   amount: number,
   strategy: Strategy = "priority",
   overrideShares?: Share[]
 ) {
-  const [goals, accountList, base] = await Promise.all([
+  const [goals, accountList, base, rates] = await Promise.all([
     listGoalsByPriority(),
     listAccountsWithState(),
     getBaseCurrency(),
+    getRates(),
   ]);
 
   const targets: DistributableBucket[] = goals.map((g) => ({
@@ -112,11 +116,13 @@ export async function planDistribution(
     target: g.target,
   }));
 
-  const sources: Source[] = accountList
-    // Free cash, not the balance: the rest is already promised to other goals,
-    // and moving it twice is how a bucket ends up holding money that isn't there.
-    .filter((a) => a.free > 0)
-    .map((a) => ({ accountId: a.id, accountName: a.name, free: a.free }));
+  const unconverted: { amount: number; currency: string }[] = [];
+  const sources: Source[] = accountList.flatMap(a => {
+    if (a.free <= 0) return [];
+    const free = toBase(a.free, a.currency, rates, base);
+    if (free === null) { unconverted.push({ amount: a.free, currency: a.currency }); return []; }
+    return [{ accountId: a.id, accountName: a.name, free }];
+  });
 
   // Hand-edited shares are normalised back to 100 rather than rejected. Someone
   // typing 30/30 means "equal", not "distribute 60% of it".
@@ -125,9 +131,11 @@ export async function planDistribution(
       ? normaliseShares(overrideShares)
       : weightsFromPriority(goals);
 
-  const plan = planWith(strategy, amount, targets, shares);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter a positive amount with at most two decimal places.");
+  const plan = planWith(strategy, Math.min(amount, totalFree(sources)), targets, shares);
   const sourced = assignSources(plan.moves, sources);
 
+  const nativeLeft = new Map(accountList.map(a => [a.id, Math.max(0,a.free)]));
   return {
     baseCurrency: base,
     available: totalFree(sources),
@@ -136,7 +144,26 @@ export async function planDistribution(
     ...plan,
     sourcedMoves: sourced.moves,
     unfunded: sourced.unfunded,
+    unconverted,
+    // Private server input for optimistic validation under account row locks.
+    accountState: accountList.map(a => ({ id: a.id, currency: a.currency, balance: a.balance, allocated: a.allocated,
+      investedValue: a.investedValue, balanceMeaning: a.balanceMeaning })),
+    nativeMoves: sourced.moves.map(move => {
+      const account = accountList.find(a => a.id === move.accountId)!;
+      const nativeAmount = fromBase(move.amount, account.currency, rates, base);
+      if (nativeAmount === null) throw new Error("Refresh exchange rates before distributing money.");
+      const capped = Math.round(Math.min(nativeAmount, nativeLeft.get(account.id) ?? 0) * 100) / 100;
+      nativeLeft.set(account.id, Math.round(((nativeLeft.get(account.id) ?? 0) - capped) * 100) / 100);
+      return { ...move, nativeAmount: capped, currency: account.currency };
+    }),
   };
+}
+
+export async function planDistribution(amount: number, strategy: Strategy = "priority", overrideShares?: Share[]) {
+  const plan = await buildDistribution(amount, strategy, overrideShares);
+  const { accountState: _accountState, nativeMoves: _nativeMoves, ...view } = plan;
+  void _accountState; void _nativeMoves;
+  return view;
 }
 
 /**
@@ -147,8 +174,9 @@ export async function planDistribution(
  * would allocate money that has already gone somewhere else.
  */
 export async function applyDistribution(formData: FormData) {
-  const amount = Number(formData.get("amount"));
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter an amount to distribute.");
+  const amount = Number(manualAmount(String(formData.get("amount") ?? "")));
+  const requestId = String(formData.get("requestId") ?? "");
+  if (!isQuickEntryId(requestId)) throw new Error("Preview the distribution again before applying it.");
 
   const rawStrategy = String(formData.get("strategy") ?? "priority");
   const strategy: Strategy = isStrategy(rawStrategy) ? rawStrategy : "priority";
@@ -162,46 +190,57 @@ export async function applyDistribution(formData: FormData) {
     shares = undefined;
   }
 
-  const plan = await planDistribution(amount, strategy, shares);
+  const plan = await buildDistribution(amount, strategy, shares);
 
-  for (const move of plan.sourcedMoves) {
-    const [existing] = await db
-      .select()
-      .from(bucketAllocations)
-      .where(
-        and(
-          eq(bucketAllocations.accountId, move.accountId),
-          eq(bucketAllocations.bucketId, move.bucketId)
-        )
-      );
-
-    if (existing) {
-      await db
-        .update(bucketAllocations)
-        .set({ amount: String(Number(existing.amount) + move.amount), updatedAt: new Date() })
-        .where(eq(bucketAllocations.id, existing.id));
-    } else {
-      await db.insert(bucketAllocations).values({
-        accountId: move.accountId,
-        bucketId: move.bucketId,
-        amount: String(move.amount),
-      });
+  const details = JSON.stringify({ amount, strategy, shares: plan.shares });
+  await db.transaction(async store => {
+    // A receipt survives later changes to goals and makes a lost response safe
+    // to retry. Unique insertion serialises copies from different devices.
+    const receiptId = `${requestId}-distribution`;
+    const [receipt] = await store.insert(auditLog).values({ id: receiptId, entityType: "bucket", entityId: "distribution", action: "money_distributed", details })
+      .onConflictDoNothing({ target: auditLog.id }).returning();
+    if (!receipt) {
+      const [previous] = await store.select().from(auditLog).where(eq(auditLog.id, receiptId));
+      if (previous?.details !== details) throw new Error("This distribution request was already used with different details.");
+      return;
     }
-  }
-
-  await db.insert(auditLog).values({
-    entityType: "bucket",
-    entityId: "distribution",
-    action: "money_distributed",
-    details: JSON.stringify({
-      amount,
-      strategy,
-      distributed: plan.distributed,
-      moves: plan.sourcedMoves.map((m) => `${m.amount} ${m.accountName} → ${m.bucketName}`),
-    }),
+    const accountIds = [...new Set(plan.nativeMoves.map(m => m.accountId))];
+    const goalIds = [...new Set(plan.nativeMoves.map(m => m.bucketId))];
+    if (!accountIds.length) throw new Error("No available money can be distributed. Preview again.");
+    const locked = await store.select().from(accounts).where(inArray(accounts.id, accountIds)).orderBy(asc(accounts.id)).for("update");
+    const goals = await store.select().from(buckets).where(inArray(buckets.id, goalIds)).orderBy(asc(buckets.id)).for("update");
+    if (locked.length !== accountIds.length || goals.length !== goalIds.length) throw new Error("Balances or goals changed. Preview the distribution again.");
+    const allocations = await store.select().from(bucketAllocations).where(inArray(bucketAllocations.accountId, accountIds));
+    for (const account of locked) {
+      const before = plan.accountState.find(a => a.id === account.id)!;
+      const allocated = Math.round(allocations.filter(a => a.accountId === account.id).reduce((sum, a) => sum + Number(a.amount), 0) * 100) / 100;
+      if (!account.active || account.currency !== before.currency || Number(account.balance) !== before.balance || allocated !== before.allocated ||
+        account.investedValue !== before.investedValue || account.balanceMeaning !== before.balanceMeaning) {
+        throw new Error("Balances or goals changed. Preview the distribution again.");
+      }
+    }
+    for (const move of plan.nativeMoves) {
+      if (move.nativeAmount <= 0) continue;
+      const pair = and(eq(bucketAllocations.accountId, move.accountId), eq(bucketAllocations.bucketId, move.bucketId));
+      const previous = allocations.filter(a => a.accountId === move.accountId && a.bucketId === move.bucketId);
+      const total = previous.reduce((sum,a) => sum + Number(a.amount),0) + move.nativeAmount;
+      await store.delete(bucketAllocations).where(pair);
+      await store.insert(bucketAllocations).values({ accountId: move.accountId, bucketId: move.bucketId, amount: total.toFixed(2) });
+    }
   });
 
   revalidatePath("/buckets");
   revalidatePath("/accounts");
   revalidatePath("/");
+}
+
+export async function submitDistribution(formData: FormData) {
+  try { await applyDistribution(formData); return { saved: true }; }
+  catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const expected = ["Enter a positive amount with at most two decimal places.", "Preview the distribution again before applying it.",
+      "Balances or goals changed. Preview the distribution again.", "No available money can be distributed. Preview again.",
+      "This distribution request was already used with different details.", "Refresh exchange rates before distributing money."];
+    return { error: expected.includes(message) ? message : "Could not save. Retry with the same details." };
+  }
 }

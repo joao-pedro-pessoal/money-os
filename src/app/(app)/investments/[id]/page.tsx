@@ -16,7 +16,7 @@ import {
 import HoldingTags from "@/components/HoldingTags";
 import HoldingPurposes from "@/components/HoldingPurposes";
 import Section from "@/components/Section";
-import { RISK_LEVELS, EXPECTED_RETURNS, TIME_HORIZONS, LIQUIDITY_LEVELS, tagLabel } from "@/lib/portfolio/tags";
+import { tagLabel } from "@/lib/portfolio/tags";
 import HoldingFormFields from "@/components/HoldingFormFields";
 import { listPlaylists } from "@/actions/playlists";
 import { marketValue, costBasis, unrealizedPnL, unrealizedPnLPercent } from "@/lib/portfolio";
@@ -276,6 +276,11 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             defaultAssetType={holding.assetType ?? ""}
             defaultDirection={holding.direction ?? "long"}
             defaultApr={holding.apr ? String(holding.apr) : ""}
+            defaultRisk={holding.riskLevel ?? ""}
+            defaultTimeHorizon={holding.timeHorizon ?? ""}
+            defaultExpectedReturn={holding.expectedReturn ?? ""}
+            defaultLiquidity={holding.liquidity ?? ""}
+            showPriceFields={false}
           />
           <div className="flex gap-2">
             <input name="quantity" type="number" step="0.00000001" defaultValue={holding.quantity} className="input" required />
@@ -294,42 +299,6 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           />
 
           <input type="hidden" name="rewardsEarned" value={String(holding.rewardsEarned ?? 0)} />
-
-          <div className="pt-1 text-xs text-[var(--muted)]">{uiText("Asset allocation tags")}</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <select name="riskLevel" className="input" defaultValue={holding.riskLevel ?? ""}>
-              <option value="">{uiText("Risk — unset")}</option>
-              {RISK_LEVELS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {uiText(r.label ?? "")}
-                </option>
-              ))}
-            </select>
-            <select name="timeHorizon" className="input" defaultValue={holding.timeHorizon ?? ""}>
-              <option value="">{uiText("Time horizon — unset")}</option>
-              {TIME_HORIZONS.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {uiText(t.label)}
-                </option>
-              ))}
-            </select>
-            <select name="expectedReturn" className="input" defaultValue={holding.expectedReturn ?? ""}>
-              <option value="">{uiText("Expected return — unset")}</option>
-              {EXPECTED_RETURNS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {uiText(r.label ?? "")}
-                </option>
-              ))}
-            </select>
-            <select name="liquidity" className="input" defaultValue={holding.liquidity ?? ""}>
-              <option value="">{uiText("Liquidity — unset")}</option>
-              {LIQUIDITY_LEVELS.map((l) => (
-                <option key={l.value} value={l.value}>
-                  {uiText(l.label ?? "")}
-                </option>
-              ))}
-            </select>
-          </div>
 
           <button type="submit" className="btn w-full">{uiText("Save changes")}</button>
         </form>

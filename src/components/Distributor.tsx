@@ -4,9 +4,10 @@ import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
-import { useState, useTransition } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import { planDistribution } from "@/actions/distribute";
 import { STRATEGIES, type Strategy, type Share } from "@/lib/accounting/distribute";
+import { newQuickEntryId } from "@/lib/money/quickEntryId";
 import { fmt } from "@/lib/format";
 
 type Plan = Awaited<ReturnType<typeof planDistribution>>;
@@ -32,9 +33,17 @@ export default function Distributor({
   available: number;
   currency: string;
   defaultShares: Share[];
-  applyAction: (formData: FormData) => void;
+  applyAction: (formData: FormData) => Promise<{ saved?: boolean; error?: string }>;
 }) {
   const uiText = useText();
+  const request = useRef("");
+  const [applied, apply, applying] = useActionState<{ saved?: boolean; error?: string }, FormData>(async (_, form) => {
+    request.current ||= newQuickEntryId();
+    form.set("requestId", request.current);
+    try { return await applyAction(form); }
+    catch { return { error: "Connection interrupted. Retry with the same details; a saved distribution will not be duplicated." }; }
+  }, {});
+  const [previewError, setPreviewError] = useState("");
   const [amount, setAmount] = useState("");
   const [strategy, setStrategy] = useState<Strategy>("priority");
   const [shares, setShares] = useState<Share[]>(defaultShares);
@@ -48,7 +57,9 @@ export default function Distributor({
   function preview() {
     if (!valid) return;
     startTransition(async () => {
-      setPlan(await planDistribution(value, strategy, strategy === "manual" ? shares : undefined));
+      setPreviewError("");
+      try { setPlan(await planDistribution(value, strategy, strategy === "manual" ? shares : undefined)); }
+      catch { setPreviewError("Could not load the distribution. Try again."); }
     });
   }
 
@@ -62,6 +73,7 @@ export default function Distributor({
 
   return (
     <div className="space-y-3">
+      <fieldset disabled={applying || applied.saved} className="space-y-3">
       <div className="flex gap-1 flex-wrap">
         {STRATEGIES.map((s) => (
           <button
@@ -160,6 +172,8 @@ export default function Distributor({
         </div>
       )}
 
+      {previewError && <p role="alert" className="text-xs text-[var(--red)]">{uiText(previewError)}</p>}
+      {plan?.unconverted.length ? <p className="text-xs text-[var(--amber)]">{uiText("Goal totals are incomplete because an exchange rate is missing. Refresh rates in Settings.")}</p> : null}
       {plan && (
         <div className="space-y-3">
           {plan.sourcedMoves.length === 0 ? (
@@ -218,7 +232,7 @@ export default function Distributor({
           )}
 
           {plan.sourcedMoves.length > 0 && (
-            <form action={applyAction}>
+            <form action={apply} onReset={event => event.preventDefault()}>
               <input type="hidden" name="amount" value={value} />
               <input type="hidden" name="strategy" value={strategy} />
               <input type="hidden" name="shares" value={JSON.stringify(plan.shares)} />
@@ -233,12 +247,15 @@ export default function Distributor({
                   )
                     e.preventDefault();
                 }}
-              >{uiText("Apply these moves")}</button>
+              >{applying ? uiText("Saving…") : uiText("Apply these moves")}</button>
               <p className="text-xs text-[var(--muted)] mt-2">{uiText("This marks the money as reserved inside the accounts it already sits in. No real transfer happens — do that at your bank if the goal lives elsewhere.")}</p>
             </form>
           )}
         </div>
       )}
+      </fieldset>
+      {applied.error && <p role="alert" className="text-xs text-[var(--red)]">{uiText(applied.error)}</p>}
+      {applied.saved && <><p role="status" className="text-xs">{uiText("Distribution saved.")}</p><button type="button" className="btn" onClick={() => window.location.reload()}>{uiText("Start another distribution")}</button></>}
     </div>
   );
 }

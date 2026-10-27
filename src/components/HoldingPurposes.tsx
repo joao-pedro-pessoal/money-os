@@ -38,6 +38,7 @@ export default async function HoldingPurposes({ holdingId }: { holdingId: string
                   max="100"
                   step="0.01"
                   defaultValue={a.percent}
+                  required
                   className="input input-narrow text-xs py-1 w-20"
                 />
                 <span className="text-xs text-[var(--muted)]">%</span>

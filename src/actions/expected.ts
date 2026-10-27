@@ -4,6 +4,8 @@ import { db } from "@/db/client";
 import { accounts, categories, expectedMoney } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { manualAmount, manualDate } from "@/lib/money/manualEntry";
+import { isCurrencyCode } from "@/lib/fx";
 import { sumInBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
@@ -107,7 +109,7 @@ export async function listExpectedOptions() {
 export async function createExpected(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const raw = String(formData.get("amount") ?? "").trim().replace(",", ".");
-  const amount = Number(raw);
+  const amount = Number(manualAmount(raw));
 
   if (!name) throw new Error("Give it a name, so the list says what is coming");
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -115,7 +117,8 @@ export async function createExpected(formData: FormData) {
   }
 
   const raw2 = String(formData.get("arrival") ?? "once");
-  const arrival = isArrival(raw2) ? raw2 : "once";
+  if (!isArrival(raw2)) throw new Error("Choose a valid arrival period.");
+  const arrival = raw2;
   const value = (key: string) => {
     const v = String(formData.get(key) ?? "").trim();
     return v === "" ? null : v;
@@ -135,6 +138,14 @@ export async function createExpected(formData: FormData) {
    * would have to pick anyway. `anchorFrom` fills the rest in from today,
    * forwards, so nothing lands in the past the moment it is set up.
    */
+  const currency = String(formData.get("currency") ?? "EUR").trim().toUpperCase();
+  if (!isCurrencyCode(currency)) throw new Error("Choose a valid currency.");
+  const dateInput = value("expectedAt");
+  if (dateInput) manualDate(dateInput);
+  for (const [field, max] of [["dayOfMonth", 31], ["weekday", 6]] as const) {
+    const input = value(field);
+    if (input !== null && (!Number.isInteger(Number(input)) || Number(input) < (field === "dayOfMonth" ? 1 : 0) || Number(input) > max)) throw new Error("Choose a valid date.");
+  }
   const expectedAt = anchorFrom(
     arrival,
     {
@@ -145,10 +156,21 @@ export async function createExpected(formData: FormData) {
     new Date()
   );
 
-  await db.insert(expectedMoney).values({
+  const accountId = value("accountId");
+  const categoryId = value("categoryId");
+  await db.transaction(async store => {
+    if (accountId) {
+      const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId));
+      if (!account?.active) throw new Error("Choose an active account.");
+    }
+    if (categoryId) {
+      const [category] = await store.select().from(categories).where(eq(categories.id, categoryId));
+      if (category?.kind !== "income") throw new Error("Choose an income category.");
+    }
+    await store.insert(expectedMoney).values({
     name,
     amount: amount.toFixed(2),
-    currency: String(formData.get("currency") ?? "EUR").toUpperCase(),
+    currency,
     arrival,
     /**
      * No date is allowed and means "no agreed day". A debt someone owes still
@@ -156,9 +178,10 @@ export async function createExpected(formData: FormData) {
      * it out rather than guessing at one.
      */
     expectedAt,
-    accountId: value("accountId"),
-    categoryId: value("categoryId"),
+    accountId,
+    categoryId,
     notes: value("notes"),
+  });
   });
 
   revalidatePath("/expected");

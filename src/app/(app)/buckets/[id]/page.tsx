@@ -29,10 +29,11 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
         </form>
       </div>
 
+      {withTotals.unconverted.length > 0 && <p role="status" className="card p-3 text-xs text-[var(--amber)]">{uiText("Goal totals are incomplete because an exchange rate is missing. Refresh rates in Settings.")}</p>}
       <div className="card p-4">
         <div className="text-xs text-[var(--muted)] mb-1">{uiText("Total allocated")}</div>
         <div className="text-xl font-semibold">
-          <Money value={withTotals.total} />
+          <Money value={withTotals.total} currency={withTotals.baseCurrency} />
         </div>
       </div>
 
@@ -69,7 +70,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
                 <tr key={a.id}>
                   <td><span translate="no">{a.accountName}</span></td>
                   <td>
-                    <Money value={a.amount} />
+                    <Money value={a.amount} currency={a.currency} />
                   </td>
                 </tr>
               ))}
@@ -80,7 +81,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
             <select name="accountId" className="input" required>
               {accounts.map((a) => (
                 <option translate="no" key={a.id} value={a.id}>
-                  {a.name}
+                  {a.name} ({a.currency})
                 </option>
               ))}
             </select>

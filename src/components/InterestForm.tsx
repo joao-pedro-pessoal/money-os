@@ -1,7 +1,8 @@
 "use client";
 
 import { useText } from "@/components/useText";
-import { useState } from "react";
+import { useActionState, useRef, useState } from "react";
+import { newQuickEntryId } from "@/lib/money/quickEntryId";
 import { accrue, daysBetween, compare, type DayCount } from "@/lib/accounting/interest";
 
 export interface RateAccount {
@@ -24,16 +25,25 @@ export interface RateAccount {
  * to disagree with the bank — which you can't do if the app just produces a
  * figure and asks you to trust it.
  */
-export default function InterestForm({
+function InterestAttempt({
   accounts,
   action,
   today,
+  restart,
 }: {
   accounts: RateAccount[];
-  action: (formData: FormData) => void;
+  action: (formData: FormData) => Promise<{ saved?: boolean; error?: string }>;
+  restart: () => void;
   today: string;
 }) {
   const uiText = useText();
+  const request = useRef("");
+  const [result, submit, pending] = useActionState<{ saved?: boolean; error?: string }, FormData>(async (_, form) => {
+    request.current ||= newQuickEntryId();
+    form.set("requestId", request.current);
+    try { return await action(form); }
+    catch { return { error: "Connection interrupted. Retry with the same details; saved interest will not be duplicated." }; }
+  }, {});
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const account = accounts.find((a) => a.id === accountId);
 
@@ -70,7 +80,8 @@ export default function InterestForm({
   }
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={submit} onReset={event => event.preventDefault()} className="space-y-3">
+      <fieldset disabled={pending || result.saved} className="space-y-3">
       <select
         name="accountId"
         className="input"
@@ -167,8 +178,16 @@ export default function InterestForm({
 
       <input type="hidden" name="computedAmount" value={computed?.net ?? ""} />
 
-      <button type="submit" className="btn w-full" disabled={days < 0}>{uiText("Record ")}{amount > 0 ? `${amount.toFixed(2)} ${account?.currency ?? ""}` : uiText("interest")}
+      <button type="submit" className="btn w-full" disabled={days < 0 || !account || amount <= 0}>{pending ? uiText("Saving…") : uiText("Record ")}{!pending && amount > 0 ? `${amount.toFixed(2)} ${account?.currency ?? ""}` : !pending ? uiText("interest") : ""}
       </button>
+      </fieldset>
+      {result.error && <p role="alert" className="text-xs text-[var(--red)]">{uiText(result.error)}</p>}
+      {result.saved && <><p role="status" className="text-xs">{uiText("Interest saved.")}</p><button type="button" className="btn" onClick={restart}>{uiText("Record another interest payment")}</button></>}
     </form>
   );
+}
+
+export default function InterestForm(props: { accounts: RateAccount[]; today: string; action: (form: FormData) => Promise<{ saved?: boolean; error?: string }> }) {
+  const [attempt, setAttempt] = useState(0);
+  return <InterestAttempt key={attempt} {...props} restart={() => setAttempt(n => n + 1)} />;
 }

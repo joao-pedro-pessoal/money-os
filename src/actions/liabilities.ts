@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
+import { manualBalance } from "@/lib/money/manualEntry";
+import { isCurrencyCode } from "@/lib/fx";
 import { toBase } from "@/lib/fx";
 import { LIABILITY_KINDS, monthlyInterest, payoffMonths } from "@/lib/accounting/liabilities";
 
@@ -79,11 +81,17 @@ export async function listLiabilities() {
   };
 }
 
-function optionalNumber(formData: FormData, field: string): string | null {
+function nonNegative(formData: FormData, field: string, optional = false): string | null {
   const raw = String(formData.get(field) ?? "").trim();
-  if (raw === "") return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? String(n) : null;
+  if (optional && raw === "") return null;
+  if (field === "apr") {
+    const normalized = raw.replace(",", ".");
+    if (!/^\d{1,4}(\.\d{1,4})?$/.test(normalized)) throw new Error("Enter a valid annual interest rate.");
+    return normalized;
+  }
+  const value = manualBalance(raw);
+  if (Number(value) < 0) throw new Error("Enter zero or a positive amount.");
+  return value;
 }
 
 function revalidate() {
@@ -98,7 +106,7 @@ export async function createLiability(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Give it a name — you'll want to recognise it later.");
 
-  const balance = optionalNumber(formData, "balance") ?? "0";
+  const balance = nonNegative(formData, "balance")!;
   if (Number(balance) < 0) {
     // A negative debt is an asset, and letting one in would add money to net
     // worth through the field that exists to take it away.
@@ -107,15 +115,25 @@ export async function createLiability(formData: FormData) {
 
   const accountId = String(formData.get("accountId") ?? "").trim();
 
-  await db.insert(liabilities).values({
+  const currency = String(formData.get("currency") ?? "EUR").trim().toUpperCase();
+  const kind = String(formData.get("kind") ?? "other");
+  if (!isCurrencyCode(currency)) throw new Error("Choose a valid currency.");
+  if (!LIABILITY_KINDS.some(k => k.value === kind)) throw new Error("Choose a valid debt type.");
+  await db.transaction(async store => {
+    if (accountId) {
+      const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId));
+      if (!account?.active) throw new Error("Choose an active account.");
+    }
+    await store.insert(liabilities).values({
     name,
-    kind: String(formData.get("kind") ?? "other"),
+    kind,
     balance,
-    currency: String(formData.get("currency") ?? "EUR").toUpperCase(),
-    apr: optionalNumber(formData, "apr"),
-    monthlyPayment: optionalNumber(formData, "monthlyPayment"),
+    currency,
+    apr: nonNegative(formData, "apr", true),
+    monthlyPayment: nonNegative(formData, "monthlyPayment", true),
     accountId: accountId === "" ? null : accountId,
     notes: String(formData.get("notes") ?? "").trim() || null,
+  });
   });
 
   revalidate();
@@ -125,23 +143,28 @@ export async function updateLiability(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Which debt?");
 
-  const balance = optionalNumber(formData, "balance") ?? "0";
+  const balance = nonNegative(formData, "balance")!;
   if (Number(balance) < 0) {
     throw new Error("A balance owed cannot be negative. Enter what you still owe.");
   }
 
   const accountId = String(formData.get("accountId") ?? "").trim();
 
-  await db
-    .update(liabilities)
+  await db.transaction(async store => {
+    if (accountId) {
+      const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId));
+      if (!account?.active) throw new Error("Choose an active account.");
+    }
+    await store.update(liabilities)
     .set({
       balance,
-      apr: optionalNumber(formData, "apr"),
-      monthlyPayment: optionalNumber(formData, "monthlyPayment"),
+      apr: nonNegative(formData, "apr", true),
+      monthlyPayment: nonNegative(formData, "monthlyPayment", true),
       accountId: accountId === "" ? null : accountId,
       updatedAt: new Date(),
     })
     .where(eq(liabilities.id, id));
+  });
 
   revalidate();
 }

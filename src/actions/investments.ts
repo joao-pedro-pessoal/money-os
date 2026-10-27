@@ -1,6 +1,8 @@
 "use server";
 
 import { db } from "@/db/client";
+import { manualPositionQuantity, manualPositionPrice } from "@/lib/portfolio/manual";
+import { manualAmount } from "@/lib/money/manualEntry";
 import { buildPortfolioSeries, positionsAt, trimLeadingZeros } from "@/lib/portfolio/series";
 import {
   holdings,
@@ -202,41 +204,47 @@ export async function createHolding(formData: FormData) {
     currentPrice,
   });
 
-  const [h] = await db
-    .insert(holdings)
-    .values({
-      symbol,
-      name,
-      accountId,
-      quantity,
-      avgEntryPrice: d.avgEntryPrice,
-      currentPrice: d.currentPrice ?? currentPrice,
-      currency,
-      assetType: d.assetType,
-      direction,
-      ...(playlistIds === undefined ? {} : { playlistIds }),
-      apr,
-      rewardsEarned,
-      riskLevel: d.riskLevel,
-      expectedReturn: d.expectedReturn,
-      timeHorizon,
-      liquidity: d.liquidity,
-      lastPriceUpdate: new Date(),
-    })
-    .returning();
+  await db.transaction(async (tx) => {
+    // RLS exposes only this person's accounts; a foreign key alone does not.
+    const [account] = await tx.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)).for("share");
+    if (!account) throw new Error("Account not found");
 
-  const openingPrice = d.currentPrice ?? currentPrice;
-  await db.insert(holdingSnapshots).values({
-    holdingId: h.id,
-    price: openingPrice,
-    value: String(Number(quantity) * Number(openingPrice)),
-  });
+    const [h] = await tx
+      .insert(holdings)
+      .values({
+        symbol,
+        name,
+        accountId,
+        quantity,
+        avgEntryPrice: d.avgEntryPrice,
+        currentPrice: d.currentPrice ?? currentPrice,
+        currency,
+        assetType: d.assetType,
+        direction,
+        ...(playlistIds === undefined ? {} : { playlistIds }),
+        apr,
+        rewardsEarned,
+        riskLevel: d.riskLevel,
+        expectedReturn: d.expectedReturn,
+        timeHorizon,
+        liquidity: d.liquidity,
+        lastPriceUpdate: new Date(),
+      })
+      .returning();
 
-  await db.insert(auditLog).values({
-    entityType: "holding",
-    entityId: h.id,
-    action: "holding_created",
-    details: JSON.stringify({ symbol, accountId, quantity, avgEntryPrice, assetType }),
+    const openingPrice = d.currentPrice ?? currentPrice;
+    await tx.insert(holdingSnapshots).values({
+      holdingId: h.id,
+      price: openingPrice,
+      value: String(Number(quantity) * Number(openingPrice)),
+    });
+
+    await tx.insert(auditLog).values({
+      entityType: "holding",
+      entityId: h.id,
+      action: "holding_created",
+      details: JSON.stringify({ symbol, accountId, quantity, avgEntryPrice, assetType }),
+    });
   });
 
   revalidatePath("/investments");
@@ -314,38 +322,46 @@ export async function updateHolding(formData: FormData) {
     avgEntryPrice,
   });
 
-  await db
-    .update(holdings)
-    .set({
-      symbol,
-      name,
-      accountId,
-      quantity,
-      avgEntryPrice: d.avgEntryPrice,
-      currency,
-      assetType: d.assetType,
-      direction,
-      ...(playlistIds === undefined ? {} : { playlistIds }),
-      apr,
-      /**
-       * Only when the form sent it.
-       *
-       * Rewards accumulate — recorded as they arrive, never recomputed.
-       * Defaulting a missing field to "0" meant any form that didn't carry it
-       * would erase months of staking income on save, with no error and no way
-       * to get the figure back. The edit page does carry it in a hidden input,
-       * so this never fired; it was a trap set for the second form.
-       */
-      ...(formData.has("rewardsEarned")
-        ? { rewardsEarned: numericValue(formData, "rewardsEarned") ?? "0" }
-        : {}),
-      riskLevel: d.riskLevel,
-      expectedReturn: d.expectedReturn,
-      timeHorizon,
-      liquidity: d.liquidity,
-      updatedAt: new Date(),
-    })
-    .where(eq(holdings.id, id));
+  await db.transaction(async (tx) => {
+    // RLS exposes only this person's accounts; a foreign key alone does not.
+    const [account] = await tx.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)).for("share");
+    if (!account) throw new Error("Account not found");
+    const [holding] = await tx.select({ id: holdings.id }).from(holdings).where(eq(holdings.id, id)).for("update");
+    if (!holding) throw new Error("Holding not found");
+
+    await tx
+      .update(holdings)
+      .set({
+        symbol,
+        name,
+        accountId,
+        quantity,
+        avgEntryPrice: d.avgEntryPrice,
+        currency,
+        assetType: d.assetType,
+        direction,
+        ...(playlistIds === undefined ? {} : { playlistIds }),
+        apr,
+        /**
+         * Only when the form sent it.
+         *
+         * Rewards accumulate — recorded as they arrive, never recomputed.
+         * Defaulting a missing field to "0" meant any form that didn't carry it
+         * would erase months of staking income on save, with no error and no way
+         * to get the figure back. The edit page does carry it in a hidden input,
+         * so this never fired; it was a trap set for the second form.
+         */
+        ...(formData.has("rewardsEarned")
+          ? { rewardsEarned: numericValue(formData, "rewardsEarned") ?? "0" }
+          : {}),
+        riskLevel: d.riskLevel,
+        expectedReturn: d.expectedReturn,
+        timeHorizon,
+        liquidity: d.liquidity,
+        updatedAt: new Date(),
+      })
+      .where(eq(holdings.id, id));
+  });
 
   revalidatePath("/investments");
   revalidatePath(`/investments/${id}`);
@@ -353,28 +369,30 @@ export async function updateHolding(formData: FormData) {
 
 /** Updates the current price, recording a snapshot so the value-over-time chart has a point. */
 export async function updateHoldingPrice(formData: FormData) {
-  const id = String(formData.get("id"));
-  const currentPrice = String(formData.get("currentPrice") ?? "0");
+  const id = String(formData.get("id") ?? "").trim();
+  const currentPrice = String(manualPositionPrice(String(formData.get("currentPrice") ?? "")));
 
-  const [h] = await db.select().from(holdings).where(eq(holdings.id, id));
-  if (!h) throw new Error("Holding not found");
+  await db.transaction(async (tx) => {
+    const [h] = await tx.select().from(holdings).where(eq(holdings.id, id)).for("update");
+    if (!h) throw new Error("Holding not found");
 
-  await db
-    .update(holdings)
-    .set({ currentPrice, lastPriceUpdate: new Date(), updatedAt: new Date() })
-    .where(eq(holdings.id, id));
+    await tx
+      .update(holdings)
+      .set({ currentPrice, lastPriceUpdate: new Date(), updatedAt: new Date() })
+      .where(eq(holdings.id, id));
 
-  await db.insert(holdingSnapshots).values({
-    holdingId: id,
-    price: currentPrice,
-    value: String(Number(h.quantity) * Number(currentPrice)),
-  });
+    await tx.insert(holdingSnapshots).values({
+      holdingId: id,
+      price: currentPrice,
+      value: String(Number(h.quantity) * Number(currentPrice)),
+    });
 
-  await db.insert(auditLog).values({
-    entityType: "holding",
-    entityId: id,
-    action: "price_updated",
-    details: JSON.stringify({ oldPrice: h.currentPrice, newPrice: currentPrice }),
+    await tx.insert(auditLog).values({
+      entityType: "holding",
+      entityId: id,
+      action: "price_updated",
+      details: JSON.stringify({ oldPrice: h.currentPrice, newPrice: currentPrice }),
+    });
   });
 
   revalidatePath("/investments");
@@ -618,23 +636,25 @@ export async function listAccountsForHoldings() {
 
 /** Records rewards received on a staked position, adding to the running total. */
 export async function addRewards(formData: FormData) {
-  const id = String(formData.get("id"));
-  const amount = Number(formData.get("amount") ?? "0");
+  const id = String(formData.get("id") ?? "").trim();
+  const amount = Number(manualAmount(String(formData.get("amount") ?? "")));
 
-  const [h] = await db.select().from(holdings).where(eq(holdings.id, id));
-  if (!h) throw new Error("Holding not found");
+  await db.transaction(async (tx) => {
+    const [h] = await tx.select().from(holdings).where(eq(holdings.id, id)).for("update");
+    if (!h) throw new Error("Holding not found");
 
-  const newTotal = Math.round((Number(h.rewardsEarned ?? 0) + amount + Number.EPSILON) * 100) / 100;
-  await db
-    .update(holdings)
-    .set({ rewardsEarned: String(newTotal), updatedAt: new Date() })
-    .where(eq(holdings.id, id));
+    const newTotal = Math.round((Number(h.rewardsEarned ?? 0) + amount + Number.EPSILON) * 100) / 100;
+    await tx
+      .update(holdings)
+      .set({ rewardsEarned: String(newTotal), updatedAt: new Date() })
+      .where(eq(holdings.id, id));
 
-  await db.insert(auditLog).values({
-    entityType: "holding",
-    entityId: id,
-    action: "rewards_added",
-    details: JSON.stringify({ amount, newTotal }),
+    await tx.insert(auditLog).values({
+      entityType: "holding",
+      entityId: id,
+      action: "rewards_added",
+      details: JSON.stringify({ amount, newTotal }),
+    });
   });
 
   revalidatePath("/investments");
@@ -935,42 +955,42 @@ function round2(n: number): number {
  * recorded at the new price so the value chart stays continuous.
  */
 export async function reinforceHolding(formData: FormData) {
-  const id = String(formData.get("id"));
-  const addQuantity = Number(formData.get("quantity") ?? "0");
-  const price = Number(formData.get("price") ?? "0");
+  const id = String(formData.get("id") ?? "").trim();
+  const addQuantity = manualPositionQuantity(String(formData.get("quantity") ?? ""));
+  const price = manualPositionPrice(String(formData.get("price") ?? ""));
 
-  if (addQuantity <= 0) throw new Error("Quantity must be greater than zero");
+  await db.transaction(async (tx) => {
+    const [h] = await tx.select().from(holdings).where(eq(holdings.id, id)).for("update");
+    if (!h) throw new Error("Holding not found");
 
-  const [h] = await db.select().from(holdings).where(eq(holdings.id, id));
-  if (!h) throw new Error("Holding not found");
+    const next = reinforcePosition(
+      { quantity: Number(h.quantity), avgEntryPrice: Number(h.avgEntryPrice) },
+      { quantity: addQuantity, price }
+    );
 
-  const next = reinforcePosition(
-    { quantity: Number(h.quantity), avgEntryPrice: Number(h.avgEntryPrice) },
-    { quantity: addQuantity, price }
-  );
+    await tx
+      .update(holdings)
+      .set({
+        quantity: String(next.quantity),
+        avgEntryPrice: String(next.avgEntryPrice),
+        currentPrice: String(price),
+        lastPriceUpdate: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(holdings.id, id));
 
-  await db
-    .update(holdings)
-    .set({
-      quantity: String(next.quantity),
-      avgEntryPrice: String(next.avgEntryPrice),
-      currentPrice: String(price),
-      lastPriceUpdate: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(holdings.id, id));
+    await tx.insert(holdingSnapshots).values({
+      holdingId: id,
+      price: String(price),
+      value: String(next.quantity * price),
+    });
 
-  await db.insert(holdingSnapshots).values({
-    holdingId: id,
-    price: String(price),
-    value: String(next.quantity * price),
-  });
-
-  await db.insert(auditLog).values({
-    entityType: "holding",
-    entityId: id,
-    action: "position_reinforced",
-    details: JSON.stringify({ addQuantity, price, newQuantity: next.quantity, newAvg: next.avgEntryPrice }),
+    await tx.insert(auditLog).values({
+      entityType: "holding",
+      entityId: id,
+      action: "position_reinforced",
+      details: JSON.stringify({ addQuantity, price, newQuantity: next.quantity, newAvg: next.avgEntryPrice }),
+    });
   });
 
   revalidatePath("/investments");
@@ -984,50 +1004,51 @@ export async function reinforceHolding(formData: FormData) {
  * realizedPnl, so realised money is never mixed with paper gains.
  */
 export async function sellHolding(formData: FormData) {
-  const id = String(formData.get("id"));
-  const sellQuantity = Number(formData.get("quantity") ?? "0");
-  const price = Number(formData.get("price") ?? "0");
+  const id = String(formData.get("id") ?? "").trim();
+  const sellQuantity = manualPositionQuantity(String(formData.get("quantity") ?? ""));
+  const price = manualPositionPrice(String(formData.get("price") ?? ""));
 
-  if (sellQuantity <= 0) throw new Error("Quantity must be greater than zero");
+  await db.transaction(async (tx) => {
+    const [h] = await tx.select().from(holdings).where(eq(holdings.id, id)).for("update");
+    if (!h) throw new Error("Holding not found");
+    if (sellQuantity > Number(h.quantity)) throw new Error("Quantity sold cannot exceed the registered position.");
 
-  const [h] = await db.select().from(holdings).where(eq(holdings.id, id));
-  if (!h) throw new Error("Holding not found");
+    const next = reducePosition(
+      { quantity: Number(h.quantity), avgEntryPrice: Number(h.avgEntryPrice), direction: h.direction },
+      { quantity: sellQuantity, price }
+    );
 
-  const next = reducePosition(
-    { quantity: Number(h.quantity), avgEntryPrice: Number(h.avgEntryPrice), direction: h.direction },
-    { quantity: sellQuantity, price }
-  );
+    const newRealized =
+      Math.round((Number(h.realizedPnl ?? 0) + next.realized + Number.EPSILON) * 100) / 100;
 
-  const newRealized =
-    Math.round((Number(h.realizedPnl ?? 0) + next.realized + Number.EPSILON) * 100) / 100;
+    await tx
+      .update(holdings)
+      .set({
+        quantity: String(next.quantity),
+        currentPrice: String(price),
+        realizedPnl: String(newRealized),
+        lastPriceUpdate: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(holdings.id, id));
 
-  await db
-    .update(holdings)
-    .set({
-      quantity: String(next.quantity),
-      currentPrice: String(price),
-      realizedPnl: String(newRealized),
-      lastPriceUpdate: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(holdings.id, id));
+    await tx.insert(holdingSnapshots).values({
+      holdingId: id,
+      price: String(price),
+      value: String(next.quantity * price),
+    });
 
-  await db.insert(holdingSnapshots).values({
-    holdingId: id,
-    price: String(price),
-    value: String(next.quantity * price),
-  });
-
-  await db.insert(auditLog).values({
-    entityType: "holding",
-    entityId: id,
-    action: "position_sold",
-    details: JSON.stringify({
-      sellQuantity,
-      price,
-      realized: next.realized,
-      remainingQuantity: next.quantity,
-    }),
+    await tx.insert(auditLog).values({
+      entityType: "holding",
+      entityId: id,
+      action: "position_sold",
+      details: JSON.stringify({
+        sellQuantity,
+        price,
+        realized: next.realized,
+        remainingQuantity: next.quantity,
+      }),
+    });
   });
 
   revalidatePath("/investments");

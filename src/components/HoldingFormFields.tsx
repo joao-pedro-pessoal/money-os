@@ -86,8 +86,11 @@ export default function HoldingFormFields({
         <>
           {/* 1:1 by definition — no entry price to ask for. */}
           <input type="hidden" name="direction" value="long" />
-          <input type="hidden" name="avgEntryPrice" value="1" />
-          <input type="hidden" name="currentPrice" value="1" />
+          {showPriceFields && <>
+            <input type="hidden" name="avgEntryPrice" value="1" />
+            <input type="hidden" name="currentPrice" value="1" />
+          </>}
+          <input type="hidden" name="timeHorizon" value={defaultTimeHorizon} />
           <input type="hidden" name="riskLevel" value="low" />
           <input type="hidden" name="liquidity" value="high" />
           <input type="hidden" name="expectedReturn" value="conservative" />

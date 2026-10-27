@@ -285,42 +285,45 @@ export async function submitTransfer(formData: FormData) {
 
 /** Interest counts as income, and updates the account balance (MVP_SPEC.md §3/§6). */
 export async function createInterestPayment(formData: FormData) {
+  await requireSession();
   const accountId = String(formData.get("accountId"));
-  // The typed amount wins; the computed one is the fallback when the field was
-  // left blank, so the common case is "accept what the rate says".
   const typed = String(formData.get("amount") ?? "").trim();
-  const computed = String(formData.get("computedAmount") ?? "").trim();
-  const amount = Math.abs(Number(typed !== "" ? typed : computed));
-  const date = new Date(String(formData.get("date")));
-
-  if (!Number.isFinite(amount) || amount === 0) {
-    throw new Error("Enter an amount, or set a rate on the account so it can be worked out.");
-  }
-
-  await db.insert(interestPayments).values({ accountId, amount: String(amount), date });
-
-  const [interestCategory] = await db.select().from(categories).where(eq(categories.name, "Interest"));
-
-  /** In the account's currency, not the column's default. */
-  const [earning] = await db.select().from(accounts).where(eq(accounts.id, accountId));
-
-  await db.insert(transactions).values({
-    accountId,
-    type: "income",
-    amount: String(amount),
-    currency: earning?.currency ?? "EUR",
-    date,
-    categoryId: interestCategory?.id ?? null,
-    description: "Interest",
-    source: "manual",
+  const amount = manualAmount(typed || String(formData.get("computedAmount") ?? ""));
+  const date = manualDate(String(formData.get("date") ?? ""));
+  const requestId = String(formData.get("requestId") ?? "");
+  if (!isQuickEntryId(requestId)) throw new Error("Refresh this page before recording interest.");
+  await db.transaction(async store => {
+    const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
+    if (!account?.active) throw new Error("Choose an active account.");
+    const details = JSON.stringify({ accountId, amount, date: date.toISOString(), currency: account.currency });
+    const receiptId = `${requestId}-interest`;
+    const [receipt] = await store.insert(auditLog).values({ id: receiptId, entityType: "interest", entityId: requestId, action: "interest_recorded", details })
+      .onConflictDoNothing({ target: auditLog.id }).returning();
+    if (!receipt) {
+      const [previous] = await store.select().from(auditLog).where(eq(auditLog.id, receiptId));
+      if (previous?.details !== details) throw new Error("This interest request was already used with different details.");
+      const [payment] = await store.select({ id: interestPayments.id }).from(interestPayments).where(eq(interestPayments.id, requestId));
+      if (!payment) throw new Error("This interest payment has already been deleted.");
+      return;
+    }
+    // Shared ID makes a manually recorded payment removable with its income.
+    await store.insert(interestPayments).values({ id: requestId, accountId, amount, date });
+    const [interestCategory] = await store.select().from(categories).where(sql`${categories.name} = 'Interest' AND ${categories.kind} = 'income'`);
+    await store.insert(transactions).values({ id: requestId, accountId, type: "income", amount, currency: account.currency, date,
+      categoryId: interestCategory?.id ?? null, description: "Interest", source: "manual" });
+    await store.update(accounts).set({ balance: sql`${accounts.balance} + ${amount}`, updatedAt: new Date() }).where(eq(accounts.id, accountId));
   });
+  revalidatePath("/interest"); revalidatePath("/transactions"); revalidatePath("/accounts"); revalidatePath(`/accounts/${accountId}`); revalidatePath("/");
+}
 
-  await db.update(accounts).set({ balance: sql`${accounts.balance} + ${amount}`, updatedAt: new Date() }).where(eq(accounts.id, accountId));
-
-  revalidatePath("/interest");
-  revalidatePath("/transactions");
-  revalidatePath("/accounts");
-  revalidatePath("/");
+export async function submitInterestPayment(formData: FormData) {
+  try { await createInterestPayment(formData); return { saved: true }; }
+  catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const expected = ["Your session has expired. Sign in again.", "Choose an active account.", "Enter a positive amount with at most two decimal places.", "Choose a valid date.",
+      "Refresh this page before recording interest.", "This interest request was already used with different details.", "This interest payment has already been deleted."];
+    return { error: expected.includes(message) ? message : "Could not save. Retry with the same details." };
+  }
 }
 
 export async function getTransaction(id: string) {
@@ -411,6 +414,9 @@ export async function deleteTransaction(formData: FormData) {
       await store.delete(transactions).where(inArray(transactions.id, [link.fromTransactionId, link.toTransactionId]));
     } else {
       const [removed] = await store.delete(transactions).where(eq(transactions.id, id)).returning();
+      if (removed && isQuickEntryId(removed.id)) {
+        await store.delete(interestPayments).where(eq(interestPayments.id, removed.id));
+      }
       if (removed) await store.update(accounts)
         .set({ balance: sql`${accounts.balance} - ${removed.amount}`, updatedAt: new Date() })
         .where(eq(accounts.id, removed.accountId));
@@ -418,6 +424,7 @@ export async function deleteTransaction(formData: FormData) {
   });
 
   revalidatePath("/transactions");
+  revalidatePath("/interest");
   revalidatePath("/savings");
   revalidatePath("/accounts");
   revalidatePath("/");

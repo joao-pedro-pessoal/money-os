@@ -28,7 +28,7 @@ const POSITIONS = {
 const EMPTY = { retCode: 0, result: { list: [], nextPageCursor: "" } };
 
 function connectorWith(responder: (url: string) => unknown) {
-  const httpGet = vi.fn(async (url: string, _headers: Record<string, string>) => responder(url));
+  const httpGet = vi.fn<(url: string, headers: Record<string, string>) => Promise<unknown>>(async (url) => responder(url));
   return {
     connector: createBybitConnector({ apiKey: "TESTKEY123456789", apiSecret: "TESTSECRET" }, httpGet),
     httpGet,
@@ -119,14 +119,14 @@ describe("BybitConnector", () => {
 
 describe("Bybit regions", () => {
   it("defaults to the global host, the only one that can authenticate", async () => {
-    const httpGet = vi.fn(async (url: string, _h: Record<string, string>) => route(url));
+    const httpGet = vi.fn(async (url: string) => route(url));
     const connector = createBybitConnector({ apiKey: "K1234567890", apiSecret: "S" }, httpGet);
     await connector.getAccountState("");
     expect(httpGet.mock.calls[0][0]).toContain("https://api.bybit.com");
   });
 
   it("uses the global host when told to", async () => {
-    const httpGet = vi.fn(async (url: string, _h: Record<string, string>) => route(url));
+    const httpGet = vi.fn(async (url: string) => route(url));
     const connector = createBybitConnector(
       { apiKey: "K1234567890", apiSecret: "S" },
       httpGet,

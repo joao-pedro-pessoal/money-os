@@ -156,8 +156,9 @@ export async function recordSubscriptionCharge(formData: FormData): Promise<Resu
 
   try {
     await db.transaction(async (store) => {
-      const [sub] = await store.select().from(subscriptions).where(eq(subscriptions.id, subscriptionId));
+      const [sub] = await store.select().from(subscriptions).where(eq(subscriptions.id, subscriptionId)).for("update");
       if (!sub) throw new Error("Subscription not found.");
+      if (!sub.active) throw new Error("This subscription was cancelled. Reload before recording a charge.");
       const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
       if (!account?.active) throw new Error("Choose an active account.");
 
@@ -230,15 +231,18 @@ export async function answerSubscriptionCharge(formData: FormData): Promise<Resu
 
   try {
     await db.transaction(async (store) => {
-      const [sub] = await store.select({ id: subscriptions.id }).from(subscriptions).where(eq(subscriptions.id, subscriptionId));
+      const [sub] = await store.select().from(subscriptions).where(eq(subscriptions.id, subscriptionId)).for("update");
       if (!sub) throw new Error("Subscription not found.");
+      if (!sub.active) throw new Error("This subscription was cancelled. Reload before recording a charge.");
       if (answer === "matched") {
         // The expense may have been deleted since the page was drawn.
         const [expense] = await store
           .select({ id: transactions.id })
           .from(transactions)
-          .where(and(eq(transactions.id, transactionId!), eq(transactions.type, "expense")));
+          .where(and(eq(transactions.id, transactionId!), eq(transactions.type, "expense"))).for("update");
         if (!expense) throw new Error("That expense is no longer there. Reload and choose again.");
+        const [claimed] = await store.select({ id: subscriptionCharges.id }).from(subscriptionCharges).where(eq(subscriptionCharges.transactionId, expense.id));
+        if (claimed) throw new Error("That expense already answers another subscription charge. Reload and choose again.");
       }
       const [row] = await store
         .insert(subscriptionCharges)
