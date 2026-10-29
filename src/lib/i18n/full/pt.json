@@ -3327,5 +3327,8 @@
   "Connection interrupted. Retry with the same details; a recorded operation will not be duplicated.": "Ligação interrompida. Tenta novamente com os mesmos dados; uma operação já registada não será duplicada.",
   "Operation recorded.": "Operação registada.",
   "Record another operation": "Registar outra operação",
-  "Quantity sold cannot exceed the registered position.": "A quantidade vendida não pode exceder a posição registada."
+  "Quantity sold cannot exceed the registered position.": "A quantidade vendida não pode exceder a posição registada.",
+  "Could not verify this registration. Reload the page and try again.": "Não foi possível verificar este registo. Atualiza a página e tenta novamente.",
+  "Registration is temporarily unavailable. Try again later.": "O registo está temporariamente indisponível. Tenta novamente mais tarde.",
+  "Could not read this registration. Reload the page and try again.": "Não foi possível ler este registo. Atualiza a página e tenta novamente."
 }

@@ -75,6 +75,14 @@ describe("what the pages claim", () => {
   // docs/LEGAL_SECURITY_CHECKLIST.md: never claim these.
   const NEVER = [/completely safe/i, /fraud-proof/i, /real-time/i, /fully accurate/i, /100 ?%/, /totalmente segur/i, /à prova de fraude/i, /tempo real/i];
 
+  it("discloses registration bot checks and technical security cookies in every language", () => {
+    for (const { code } of LANGUAGES) {
+      expect(all(legalDocument("privacy", code, someone))).toContain("BotID");
+    }
+    expect(all(legalDocument("privacy", "en", someone))).toContain("necessary security cookies");
+    expect(all(legalDocument("privacy", "pt", someone))).toContain("cookies de segurança necessários");
+  });
+
   it("never promise what no service can", () => {
     for (const { code } of LANGUAGES) {
       for (const kind of LEGAL_KINDS) {

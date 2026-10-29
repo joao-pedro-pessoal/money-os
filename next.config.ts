@@ -29,6 +29,8 @@ export const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Expose only the activation boolean; server checks the trusted host marker independently.
+  env: { NEXT_PUBLIC_REGISTRATION_BOT_PROTECTION: process.env.VERCEL === "1" ? "1" : "0" },
   outputFileTracingIncludes: { "/api/report/pdf": ["./assets/fonts/**/*"] },
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];

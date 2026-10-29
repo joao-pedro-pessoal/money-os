@@ -25,6 +25,7 @@ import { refreshRates } from "./fx";
 import { registrationAccess } from "@/lib/accounts/registration";
 import { TOO_MANY_ATTEMPTS } from "@/lib/accounts/attempts";
 import { admitted } from "./attemptGate";
+import { registrationBotRefusal } from "./registrationBot";
 
 /**
  * Sign-in accounts: making one, signing into one, and getting back into one.
@@ -276,6 +277,8 @@ export async function signUp(raw: unknown): Promise<SignUpOutcome> {
   const access = registrationAccess(process.env, parsed.data.inviteCode);
   if (access) return { kind: "refused", reason: access };
   if (!(await admitted("sign-up"))) return { kind: "refused", reason: TOO_MANY_ATTEMPTS };
+  const botRefusal = await registrationBotRefusal();
+  if (botRefusal) return { kind: "refused", reason: botRefusal };
 
   // Checked before the slow hash: a closed site spends nothing on a refusal.
   const refused = registrationRefusal(await registrationCounts(), maxAccounts(process.env));

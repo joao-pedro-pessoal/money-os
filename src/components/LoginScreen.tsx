@@ -3,7 +3,7 @@
 import { useText } from "@/components/useText";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { recoverAccount, signIn, signUp } from "@/actions/auth";
+import { recoverAccount, signIn } from "@/actions/auth";
 import { signInKeyFor } from "@/lib/accounts/credentials";
 import { passwordProblem } from "@/lib/accounts/password";
 import { localeOf } from "@/lib/i18n/languages";
@@ -11,6 +11,9 @@ import { serverMessageIn } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageContext";
 import { safeReturnPath } from "@/lib/accounts/returnPath";
 import { LEGAL_PATHS } from "@/lib/legal/paths";
+
+import { REGISTRATION_PATH } from "@/lib/accounts/botProtection";
+import type { SignUpOutcome } from "@/lib/accounts/outcomes";
 
 type Step = "sign-in" | "sign-up" | "recover" | "code";
 
@@ -106,12 +109,23 @@ export default function LoginScreen({ signUps, inviteRequired = false, destinati
       if (!email.trim()) throw new Error(w.writeEmail);
       const weak = passwordProblem(password);
       if (weak) throw new Error(said(weak));
-      const outcome = await signUp({
+      const data = {
         email,
         signInKey: await signInKeyFor(email, password),
         ...(inviteRequired ? { inviteCode } : {}),
         ...(website ? { website } : {}),
-      });
+      };
+      let outcome: SignUpOutcome;
+      try {
+        const response = await fetch(REGISTRATION_PATH, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          credentials: "same-origin", cache: "no-store", body: JSON.stringify(data),
+        });
+        const result = await response.json();
+        if ((result?.kind === "ok" && typeof result.recoveryCode === "string" && response.ok)
+          || (result?.kind === "refused" && typeof result.reason === "string")) outcome = result;
+        else throw new Error();
+      } catch { throw new Error(w.unreachable); }
       if (outcome.kind === "refused") throw new Error(said(outcome.reason));
       showCode(outcome.recoveryCode);
     });

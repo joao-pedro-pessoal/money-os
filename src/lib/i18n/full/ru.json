@@ -3327,5 +3327,8 @@
   "Connection interrupted. Retry with the same details; a recorded operation will not be duplicated.": "Connection interrupted. Retry with the same details; a recorded operation will not be duplicated.",
   "Operation recorded.": "Operation recorded.",
   "Record another operation": "Record another operation",
-  "Quantity sold cannot exceed the registered position.": "Quantity sold cannot exceed the registered position."
+  "Quantity sold cannot exceed the registered position.": "Quantity sold cannot exceed the registered position.",
+  "Could not verify this registration. Reload the page and try again.": "Could not verify this registration. Reload the page and try again.",
+  "Registration is temporarily unavailable. Try again later.": "Registration is temporarily unavailable. Try again later.",
+  "Could not read this registration. Reload the page and try again.": "Could not read this registration. Reload the page and try again."
 }

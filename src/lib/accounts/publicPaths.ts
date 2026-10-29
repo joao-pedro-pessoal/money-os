@@ -1,3 +1,4 @@
+import { REGISTRATION_PATH } from "./botProtection";
 import { LEGAL_PATHS } from "@/lib/legal/paths";
 
 const LEGAL = new Set(Object.values(LEGAL_PATHS));
@@ -6,6 +7,8 @@ const LEGAL = new Set(Object.values(LEGAL_PATHS));
  * What is reachable without a session, and why each one has to be.
  *
  * /login is where an account is made or signed into, so it cannot need one.
+ *
+ * /api/register accepts only same-origin JSON and validates BotID, invitation and limits itself.
  *
  * /api/sync is called by a scheduler rather than a browser and enforces its
  * own shared-secret check.
@@ -26,6 +29,7 @@ const LEGAL = new Set(Object.values(LEGAL_PATHS));
  */
 export function isPublicPath(pathname: string): boolean {
   return (
+    pathname === REGISTRATION_PATH ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/public") ||

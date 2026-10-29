@@ -19,6 +19,11 @@ describe("what opens without a session", () => {
     }
   });
 
+  it("opens only the exact registration endpoint", () => {
+    expect(isPublicPath("/api/register")).toBe(true);
+    for (const path of ["/api/register/admin", "/api/register-extra", "/api/registers"]) expect(isPublicPath(path)).toBe(false);
+  });
+
   it("keeps every page with a figure on it behind the sign-in", () => {
     for (const path of ["/", "/settings", "/transactions", "/api/widget", "/api/alerts", "/api/report/pdf", "/analytics/report"]) {
       expect(isPublicPath(path)).toBe(false);

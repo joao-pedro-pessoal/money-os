@@ -22,7 +22,7 @@ import type { LegalKind } from "./paths";
 export { LEGAL_KINDS, LEGAL_PATHS, type LegalKind } from "./paths";
 
 /** The day the text last changed in substance. */
-export const LEGAL_UPDATED = "2026-10-18";
+export const LEGAL_UPDATED = "2026-10-29";
 
 /** Who runs this copy of Money OS, and how to reach them. Either may be unset. */
 export interface Operator {
@@ -125,13 +125,14 @@ function en(op: Operator): Record<LegalKind, LegalDocument> {
             "**Android widgets:** the last financial figures read are kept on the phone, with their reading time, to display while offline. That copy is removed when a refresh finds the session is no longer accepted or no site is configured. Financial alert notifications are also removed when their refresh finds this; simply losing the connection does not erase them.",
             "**Technical records:** like every website, the hosting provider records requests — IP address, time, page asked for — and keeps them for a short time to run and protect the service.",
             "**Attempts to sign in:** to stop one connection from guessing passwords or making accounts in bulk, the service counts sign-in, sign-up and recovery attempts per connection. It keeps a one-way fingerprint of the connection's address — not the address itself — with the time, and deletes it after a day.",
+            "**Automated registration protection:** on the site hosted by Vercel, BotID uses technical browser and request signals and may use necessary security cookies to check new-account requests. Money OS does not add registration fields or financial records to its BotID verification call.",
             "**Server failure events:** Money OS also writes the time, a generic error category, the HTTP method and the kind of operation to the hosting logs. These additional events exclude request contents, addresses, account identifiers, financial values, passwords and error messages. No additional reporting provider receives them.",
           ],
         },
         {
           heading: "What is not done with it",
           paragraphs: [
-            "No advertising, no analytics or tracking services, no selling or sharing for marketing, no profiling, and no use of your records to train AI. Money OS does not move money and does not give investment advice.",
+            "No advertising, no audience analytics, no selling or sharing for marketing, no advertising profiles, and no use of your records to train AI. Money OS does not move money and does not give investment advice.",
           ],
         },
         {
@@ -305,13 +306,14 @@ function pt(op: Operator): Record<LegalKind, LegalDocument> {
             "**Widgets Android:** os últimos valores financeiros lidos ficam guardados no telemóvel, com a hora da leitura, para aparecerem sem ligação. Essa cópia é removida quando uma atualização deteta que a sessão já não é aceite ou que não há site configurado. As notificações de alertas financeiros também são retiradas quando a sua atualização deteta isto; perder apenas a ligação não as apaga.",
             "**Registos técnicos:** como em qualquer site, o fornecedor de alojamento regista os pedidos — endereço IP, hora, página pedida — e guarda-os pouco tempo, para manter e proteger o serviço.",
             "**Tentativas de entrada:** para impedir que uma ligação adivinhe palavras-passe ou crie contas em massa, o serviço conta as tentativas de entrar, de criar conta e de recuperar o acesso, por ligação. Guarda uma impressão digital irreversível do endereço da ligação — não o próprio endereço — com a hora, e apaga-a ao fim de um dia.",
+            "**Proteção contra registos automáticos:** no site alojado na Vercel, o BotID usa sinais técnicos do navegador e dos pedidos e pode usar cookies de segurança necessários para verificar pedidos de criação de conta. A Money OS não acrescenta campos do registo nem dados financeiros à sua chamada de verificação do BotID.",
             "**Falhas do servidor:** a Money OS também escreve nos registos do alojamento a hora, uma categoria genérica de erro, o método HTTP e o tipo de operação. Estes eventos adicionais excluem conteúdo dos pedidos, endereços, identificadores de contas, valores financeiros, palavras-passe e mensagens de erro. Não são enviados a outro fornecedor de relatórios.",
           ],
         },
         {
           heading: "O que não é feito com eles",
           paragraphs: [
-            "Sem publicidade, sem serviços de estatísticas ou de rastreio, sem venda nem partilha para marketing, sem perfis, e sem usar os teus registos para treinar IA. A Money OS não movimenta dinheiro nem dá conselhos de investimento.",
+            "Sem publicidade, sem análise de audiências, sem venda nem partilha para marketing, sem perfis publicitários, e sem usar os teus registos para treinar IA. A Money OS não movimenta dinheiro nem dá conselhos de investimento.",
           ],
         },
         {

@@ -24,6 +24,31 @@ registos; não termina sessões nem remove contas existentes. Não comprova o em
 não substitui limites por origem e não é um serviço anti-robô. Não há convites
 enviados automaticamente nem um fornecedor adicional.
 
+## Proteção do registo na Vercel
+
+O código de 29/10 usa BotID Basic, limitado a `POST /api/register`. O browser
+envia um desafio e a ação `signUp` verifica o resultado no servidor. A proteção
+usa o marcador de alojamento `VERCEL=1`; a cópia do PC não chama o serviço.
+Não é necessária uma chave de outro fornecedor. Não ativar Deep Analysis por
+este procedimento; o código pede explicitamente Basic.
+
+Manter OIDC ativo no projeto Vercel. Após publicação autorizada, testar a criação
+de uma conta fictícia pelo formulário e a recusa de um pedido sem prova válida.
+Falha do serviço, OIDC indisponível ou desafio ausente recusam novas contas;
+entradas e recuperação continuam nos endpoints anteriores, fora deste desafio.
+Não usar `developmentOptions.bypass` na publicação.
+
+O sinal público que inicializa o cliente é gerado em `next.config.ts` durante a
+compilação. Uma compilação prévia para Vercel tem de ser feita no ambiente Vercel,
+com esse marcador disponível; não enviar uma compilação da cópia de casa como
+se tivesse proteção do browser inicializada. O servidor verifica o seu marcador
+independentemente e não aceita o sinal público como autorização.
+
+O comando `release:check` não valida BotID nem OIDC. As verificações locais e
+os testes com respostas simuladas não substituem o ensaio real no alojamento.
+Detalhes: [VERIFICACAO_REGISTO.md](VERIFICACAO_REGISTO.md) e
+[documentação oficial do BotID](https://vercel.com/docs/botid/get-started).
+
 ## Verificação local da configuração
 
 ```cmd
