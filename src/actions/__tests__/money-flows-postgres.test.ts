@@ -14,8 +14,8 @@ vi.mock("@/actions/session", () => ({ hasSession: async () => isolated.signedIn 
 vi.mock("@/actions/fx", () => ({ getRates: async () => ({ EUR: 1, USD: 1.25 }) }));
 vi.mock("@/actions/settings", () => ({ getBaseCurrency: async () => isolated.base, getDefaultAccountId: async () => null }));
 import { createTransaction, createQuickTransaction, undoQuickTransaction, updateTransaction, deleteTransaction, createTransfer, createInterestPayment } from "../transactions";
-import { createBucket, submitBucketCreation, submitAllocationAddition, updateBucket, deleteBucket, addToAllocation, setAllocation, listBucketsWithTotals } from "../buckets";
-import { createBudget, submitBudgetCreation, updateBudget, deleteBudget, listBudgets, getUnbudgetedSpending, getBudgetsLeft, getKeptForBudgets, toggleBudgetCategory } from "../budgets";
+import { createBucket, submitBucketCreation, submitAllocationAddition, submitBucketEdit, submitExactAllocation, updateBucket, deleteBucket, addToAllocation, setAllocation, listBucketsWithTotals } from "../buckets";
+import { createBudget, submitBudgetCreation, submitBudgetLimit, updateBudget, deleteBudget, listBudgets, getUnbudgetedSpending, getBudgetsLeft, getKeptForBudgets, toggleBudgetCategory } from "../budgets";
 import { createSubscription, submitSubscriptionCreation, updateSubscription, toggleSubscription, deleteSubscription } from "../subscriptions";
 import { createHolding, updateHolding, submitHoldingEdit, submitHoldingOperation, updateHoldingPrice, reinforceHolding, sellHolding, addRewards } from "../investments";
 import { setHoldingAllocation } from "../purpose";
@@ -925,4 +925,101 @@ it("creation receipts do not retain private notes from the original form",async(
   const receipts=(await isolated.db.select().from(schema.auditLog)).filter(row=>row.entityType==="manual_request");
   expect(receipts).toHaveLength(1);expect(JSON.stringify(receipts)).not.toContain("synthetic-private-note-for-receipt-test");
   expect((await isolated.db.select().from(schema.subscriptions))[0].notes).toBe("synthetic-private-note-for-receipt-test");
+});
+
+
+describe("reliable goal, budget and exact-allocation edits",()=>{
+  const seedGoal=async()=>{await createBucket(form({name:"Edit retry goal",targetAmount:"500"}));return (await isolated.db.select().from(schema.buckets))[0];};
+  const cases=[
+    {name:"goal",prepare:async()=>{const goal=await seedGoal();return{action:updateBucket,data:form({id:goal.id,name:"Edited goal",targetAmount:"600",priority:"1"}),changed:{targetAmount:"700"}};}},
+    {name:"budget",prepare:async()=>{await createBudget(budget());const [row]=await isolated.db.select().from(schema.budgets);return{action:updateBudget,data:form({id:row.id,limitAmount:"300"}),changed:{limitAmount:"400"}};}},
+    {name:"allocation",prepare:async()=>{const goal=await seedGoal();await setAllocation(form({accountId:"eur-a",bucketId:goal.id,amount:"10"}));return{action:setAllocation,data:form({accountId:"eur-a",bucketId:goal.id,amount:"20"}),changed:{amount:"30"}};}},
+  ];
+  const state=async()=>({
+    goals:await isolated.db.select().from(schema.buckets),budgets:await isolated.db.select().from(schema.budgets),
+    allocations:await isolated.db.select().from(schema.bucketAllocations),audit:await isolated.db.select().from(schema.auditLog),
+  });
+  it.each(cases)("replaying a saved $name edit performs no further write",async({prepare})=>{
+    const {action,data}=await prepare();await action(data);const saved=await state();await new Promise(resolve=>setTimeout(resolve,5));await action(data);
+    expect(await state()).toEqual(saved);
+  });
+  it.each(cases)("an old $name retry does not undo a newer edit",async({prepare})=>{
+    const {action,data,changed}=await prepare();await action(data);const newer=new FormData();for(const[key,value]of data.entries())newer.append(key,value);
+    newer.set("requestId",request());for(const[key,value]of Object.entries(changed))newer.set(key,value);
+    await action(newer);const saved=await state();await action(data);expect(await state()).toEqual(saved);
+  });
+  it.each(cases)("refuses changed details for a used $name edit request",async({prepare})=>{
+    const {action,data,changed}=await prepare();await action(data);const saved=await state();for(const[key,value]of Object.entries(changed))data.set(key,value);
+    await expect(action(data)).rejects.toThrow();expect(await state()).toEqual(saved);
+  });
+  it.each(cases)("requires an identifier for a $name edit",async({prepare})=>{
+    const {action,data}=await prepare();data.set("requestId","");const before=await state();await expect(action(data)).rejects.toThrow();expect(await state()).toEqual(before);
+  });
+  it.each(cases)("refuses an expired session for a $name edit",async({prepare})=>{
+    const {action,data}=await prepare();isolated.signedIn=false;const before=await state();await expect(action(data)).rejects.toThrow("Sign in again.");expect(await state()).toEqual(before);
+  });
+  it.each(cases)("refuses another person's $name edit",async({prepare})=>{
+    const {action,data}=await prepare();await engine.exec(`SELECT set_config('app.user_id','flow-b',false)`);const before=await state();
+    await expect(action(data)).rejects.toThrow();expect(await state()).toEqual(before);
+  });
+  it.each(["-1","1.5","NaN","Infinity","1e2"])("refuses invalid goal priority %s",async priority=>{
+    const goal=await seedGoal();const before=await state();await expect(updateBucket(form({id:goal.id,name:goal.name,targetAmount:"500",priority}))).rejects.toThrow();expect(await state()).toEqual(before);
+  });
+  it.each([undefined,""])("preserves a goal priority omitted from an edit (%s)",async priority=>{
+    const goal=await seedGoal();await isolated.db.update(schema.buckets).set({priority:"5"}).where(eq(schema.buckets.id,goal.id));
+    await updateBucket(form({id:goal.id,name:"Edited without a rank",targetAmount:"500",...(priority===undefined?{}:{priority})}));
+    expect(Number((await isolated.db.select().from(schema.buckets))[0].priority)).toBe(5);
+  });
+  it("rolls a budget limit and its edit receipt back if the descriptive audit fails",async()=>{
+    await createBudget(budget());const [row]=await isolated.db.select().from(schema.budgets);const data=form({id:row.id,limitAmount:"300"});const before=await state();
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic edit audit failure'; END $$;
+      CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW WHEN (NEW.entity_type <> 'manual_request') EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    await expect(updateBudget(data)).rejects.toThrow();expect(await state()).toEqual(before);
+    await engine.exec(`RESET ROLE; DROP TRIGGER fail_money_audit ON audit_log; SET ROLE money_flows_test;`);
+    await updateBudget(data);await updateBudget(data);expect(Number((await isolated.db.select().from(schema.budgets))[0].limitAmount)).toBe(300);
+  });
+});
+
+
+describe("editing outcomes",()=>{
+  it.each<{ name: string; action: typeof submitBucketEdit; data: Record<string, string>; error: string }>([
+    {name:"goal",action:submitBucketEdit,data:{id:"unused",name:"Valid name",priority:"-1"},error:"Enter a whole-number priority from 0 to 9999."},
+    {name:"budget",action:submitBudgetLimit,data:{id:"unused",limitAmount:"-1"},error:"Enter a positive amount with at most two decimal places."},
+    {name:"allocation",action:submitExactAllocation,data:{accountId:"eur-a",bucketId:"unused",amount:"-1"},error:"An allocation cannot be negative."},
+  ])("returns an expected $name validation error without writing",async({action,data,error})=>{
+    expect(await action(form(data))).toEqual({error});expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
+  });
+  it("confirms a goal edit, its retry, and a distinct later edit",async()=>{
+    await createBucket(form({name:"Goal edit outcome"}));const [goal]=await isolated.db.select().from(schema.buckets);
+    const data=form({id:goal.id,name:"Saved goal",priority:"2"});expect(await submitBucketEdit(data)).toEqual({saved:true});expect(await submitBucketEdit(data)).toEqual({saved:true});
+    data.set("requestId",request());data.set("name","Saved again");expect(await submitBucketEdit(data)).toEqual({saved:true});
+    expect((await isolated.db.select().from(schema.buckets))[0].name).toBe("Saved again");
+  });
+  it("confirms a budget limit edit and retry",async()=>{
+    await createBudget(budget());const [row]=await isolated.db.select().from(schema.budgets);const data=form({id:row.id,limitAmount:"300"});
+    expect(await submitBudgetLimit(data)).toEqual({saved:true});expect(await submitBudgetLimit(data)).toEqual({saved:true});
+    expect(Number((await isolated.db.select().from(schema.budgets))[0].limitAmount)).toBe(300);
+  });
+  it("confirms an exact allocation and retry",async()=>{
+    await createBucket(form({name:"Exact outcome"}));const [goal]=await isolated.db.select().from(schema.buckets);const data=form({accountId:"eur-a",bucketId:goal.id,amount:"30"});
+    expect(await submitExactAllocation(data)).toEqual({saved:true});expect(await submitExactAllocation(data)).toEqual({saved:true});
+    expect(Number((await isolated.db.select().from(schema.bucketAllocations))[0].amount)).toBe(30);
+  });
+  it("hides infrastructure diagnostics when an edit cannot be confirmed",async()=>{
+    await createBucket(form({name:"Diagnostic goal"}));const [goal]=await isolated.db.select().from(schema.buckets);
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'private-edit-diagnostic'; END $$;
+      CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    expect(await submitBucketEdit(form({id:goal.id,name:"Edited"}))).toEqual({error:"Connection interrupted. Retry with the same details; a saved edit will not be applied again."});
+  });
+  it("retrying an old release does not remove money assigned later",async()=>{
+    await createBucket(form({name:"Release retry"}));const [goal]=await isolated.db.select().from(schema.buckets);
+    await setAllocation(form({accountId:"eur-a",bucketId:goal.id,amount:"10"}));const release=form({accountId:"eur-a",bucketId:goal.id,amount:"0"});await setAllocation(release);
+    await addToAllocation(form({accountId:"eur-a",bucketId:goal.id,amount:"25"}));await setAllocation(release);
+    expect(Number((await isolated.db.select().from(schema.bucketAllocations))[0].amount)).toBe(25);
+  });
+  it("refuses a priority above the stored precision",async()=>{
+    await createBucket(form({name:"Rank range"}));const [goal]=await isolated.db.select().from(schema.buckets);
+    expect(await submitBucketEdit(form({id:goal.id,name:goal.name,priority:"10000"}))).toEqual({error:"Enter a whole-number priority from 0 to 9999."});
+    expect(Number((await isolated.db.select().from(schema.buckets))[0].priority)).toBe(0);
+  });
 });

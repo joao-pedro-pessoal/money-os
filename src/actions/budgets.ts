@@ -8,6 +8,7 @@ import { getRates } from "./fx";
 import { toBase } from "@/lib/fx";
 import { ManualEntryError, manualAmount, manualDate } from "@/lib/money/manualEntry";
 import { getBaseCurrency } from "./settings";
+import { MANUAL_EDIT_RETRY_MESSAGE } from "@/lib/money/manualRequest";
 import { claimManualRequest, manualEntryResult, manualRequestId } from "./manualRequest";
 import {
   envelopeState,
@@ -175,15 +176,23 @@ export async function submitBudgetCreation(formData: FormData) {
 }
 
 export async function updateBudget(formData: FormData) {
+  const requestId = await manualRequestId(formData);
   const id = String(formData.get("id"));
-  const limit = manualAmount(String(formData.get("limitAmount") ?? ""));
-
-  await db
-    .update(budgets)
-    .set({ limitAmount: String(limit), updatedAt: new Date() })
-    .where(eq(budgets.id, id));
-
+  const limitAmount = manualAmount(String(formData.get("limitAmount") ?? ""));
+  await db.transaction(async store => {
+    const [existing] = await store.select({id:budgets.id}).from(budgets).where(eq(budgets.id,id)).for("update");
+    if (!existing) throw new ManualEntryError("Budget not found");
+    if (!(await claimManualRequest(store,requestId,"budget:limit",id,JSON.stringify({limitAmount})))) return;
+    await store.update(budgets).set({limitAmount,updatedAt:new Date()}).where(eq(budgets.id,id));
+    await store.insert(auditLog).values({entityType:"budget",entityId:id,action:"budget_edited",details:JSON.stringify({limitAmount})});
+  });
   revalidatePath("/budgets");
+  // Dashboard reserves read the current budget limit too.
+  revalidatePath("/");
+}
+
+export async function submitBudgetLimit(formData: FormData) {
+  return manualEntryResult(() => updateBudget(formData), MANUAL_EDIT_RETRY_MESSAGE);
 }
 
 /** Adds or removes a category from a budget without rebuilding the whole thing. */

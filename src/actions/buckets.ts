@@ -9,6 +9,7 @@ import { sumInBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 
+import { MANUAL_EDIT_RETRY_MESSAGE } from "@/lib/money/manualRequest";
 import { claimManualRequest, manualEntryResult, manualRequestId } from "./manualRequest";
 
 export async function listBucketsWithTotals() {
@@ -61,18 +62,27 @@ export async function submitBucketCreation(formData: FormData) {
 }
 
 export async function updateBucket(formData: FormData) {
+  const requestId = await manualRequestId(formData);
   const id = String(formData.get("id"));
   const values = bucketDetails(formData);
-  const rawPriority = Number(formData.get("priority"));
-  const priority = Number.isFinite(rawPriority) ? String(Math.max(0, Math.round(rawPriority))) : undefined;
+  const rawPriority = String(formData.get("priority") ?? "").trim();
+  if (rawPriority && !/^\d{1,4}$/.test(rawPriority)) throw new ManualEntryError("Enter a whole-number priority from 0 to 9999.");
+  const priority = rawPriority ? String(Number(rawPriority)) : undefined;
+  const details = JSON.stringify({...values,priority:priority ?? null});
   await db.transaction(async store => {
-    const [updated] = await store.update(buckets).set({...values,...(priority !== undefined ? {priority} : {})}).where(eq(buckets.id,id)).returning({id:buckets.id});
-    if (!updated) throw new ManualEntryError("Bucket not found");
+    const [existing] = await store.select({id:buckets.id}).from(buckets).where(eq(buckets.id,id)).for("update");
+    if (!existing) throw new ManualEntryError("Bucket not found");
+    if (!(await claimManualRequest(store,requestId,"bucket:edit",id,details))) return;
+    await store.update(buckets).set({...values,...(priority !== undefined ? {priority} : {})}).where(eq(buckets.id,id));
     await store.insert(auditLog).values({entityType:"bucket",entityId:id,action:"bucket_edited",details:JSON.stringify({name:values.name})});
   });
   revalidatePath("/buckets");
   revalidatePath(`/buckets/${id}`);
   revalidatePath("/money-map");
+}
+
+export async function submitBucketEdit(formData: FormData) {
+  return manualEntryResult(() => updateBucket(formData), MANUAL_EDIT_RETRY_MESSAGE);
 }
 
 /** Deletes the bucket and all its allocations (cascade) — freed money goes back to Free Cash. */
@@ -106,10 +116,15 @@ export async function submitAllocationAddition(formData: FormData) {
 
 /** Sets an exact total; zero releases the allocation without moving money. */
 export async function setAllocation(formData: FormData) {
-  await saveAllocation(formData, false);
+  const requestId = await manualRequestId(formData);
+  await saveAllocation(formData, false, requestId);
 }
 
-async function saveAllocation(formData: FormData, additive: boolean, requestId?: string) {
+export async function submitExactAllocation(formData: FormData) {
+  return manualEntryResult(() => setAllocation(formData), MANUAL_EDIT_RETRY_MESSAGE);
+}
+
+async function saveAllocation(formData: FormData, additive: boolean, requestId: string) {
   const accountId = String(formData.get("accountId"));
   const bucketId = String(formData.get("bucketId"));
   const amount = Number(manualBalance(String(formData.get("amount") ?? ""),"Enter an allocation amount with at most two decimal places."));
@@ -119,7 +134,7 @@ async function saveAllocation(formData: FormData, additive: boolean, requestId?:
     const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
     const [bucket] = await store.select().from(buckets).where(eq(buckets.id, bucketId)).for("update");
     if (!account?.active || !bucket) throw new ManualEntryError("Choose an active account and an existing bucket.");
-    if (requestId && !(await claimManualRequest(store,requestId,"allocation:add",bucketId,JSON.stringify({accountId,bucketId,amount})))) return;
+    if (!(await claimManualRequest(store,requestId,additive ? "allocation:add" : "allocation:set",bucketId,JSON.stringify({accountId,bucketId,amount})))) return;
     const pair = and(eq(bucketAllocations.accountId, accountId), eq(bucketAllocations.bucketId, bucketId));
     const existing = await store.select().from(bucketAllocations).where(pair);
     const total = Math.round((amount + (additive ? existing.reduce((sum, row) => sum + Number(row.amount), 0) : 0)) * 100) / 100;

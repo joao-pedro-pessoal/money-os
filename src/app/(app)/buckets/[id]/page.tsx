@@ -1,6 +1,7 @@
+import EditForm from "@/components/EditForm";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
-import { getBucket, listBucketsWithTotals, updateBucket, deleteBucket, setAllocation } from "@/actions/buckets";
+import { getBucket, listBucketsWithTotals, submitBucketEdit, deleteBucket, submitExactAllocation } from "@/actions/buckets";
 import { listAccountsWithState } from "@/actions/accounts";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
@@ -39,7 +40,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section title="Edit bucket" defaultOpen>
-          <form action={updateBucket} className="space-y-3">
+          <EditForm action={submitBucketEdit} submitLabel="Save">
             <input type="hidden" name="id" value={bucket.id} />
             <input name="name" defaultValue={bucket.name} className="input" required />
             <textarea name="description" defaultValue={bucket.description ?? ""} className="input" rows={2} />
@@ -53,8 +54,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
               className="input"
             />
             <input name="color" type="color" defaultValue={bucket.color ?? "#6366f1"} className="input h-10" />
-            <button type="submit" className="btn w-full">{uiText("Save")}</button>
-          </form>
+          </EditForm>
         </Section>
 
         <Section title="Allocations by account" defaultOpen essential>
@@ -76,7 +76,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
               ))}
             </tbody>
           </ResponsiveTable></div>
-          <form action={setAllocation} className="space-y-3">
+          <EditForm action={submitExactAllocation} submitLabel="Set exact total">
             <input type="hidden" name="bucketId" value={bucket.id} />
             <select name="accountId" className="input" required>
               {accounts.map((a) => (
@@ -86,8 +86,7 @@ export default async function BucketDetailPage({ params }: { params: Promise<{ i
               ))}
             </select>
             <input name="amount" type="number" step="0.01" placeholder={uiText("Amount (0 removes it)")} className="input" required />
-            <button type="submit" className="btn w-full">{uiText("Set exact total")}</button>
-          </form>
+          </EditForm>
         </Section>
       </div>
     </div>

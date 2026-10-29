@@ -1,7 +1,8 @@
+import EditForm from "@/components/EditForm";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { getAccount, getAccountSnapshots, updateAccountBalance, updateAccount, archiveAccount } from "@/actions/accounts";
-import { listBucketsWithTotals, setAllocation } from "@/actions/buckets";
+import { listBucketsWithTotals, submitExactAllocation } from "@/actions/buckets";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import NetWorthChart from "@/components/NetWorthChart";
@@ -269,7 +270,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               ))}
             </tbody>
           </ResponsiveTable></div>
-          <form action={setAllocation} className="space-y-3">
+          <EditForm action={submitExactAllocation} submitLabel="Set exact total">
             <input type="hidden" name="accountId" value={account.id} />
             <select name="bucketId" className="input" required>
               {buckets.map((b) => (
@@ -279,8 +280,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               ))}
             </select>
             <input name="amount" type="number" step="0.01" placeholder={uiText("Amount (0 removes it)")} className="input" required />
-            <button type="submit" className="btn w-full">{uiText("Set exact total")}</button>
-          </form>
+          </EditForm>
         </Section>
       </div>
 

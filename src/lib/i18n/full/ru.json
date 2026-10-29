@@ -3346,5 +3346,9 @@
   "Choose existing expense categories.": "Choose existing expense categories.",
   "Choose an expense category.": "Choose an expense category.",
   "Choose an active account and an existing bucket.": "Choose an active account and an existing bucket.",
-  "An allocation cannot be negative.": "An allocation cannot be negative."
+  "An allocation cannot be negative.": "An allocation cannot be negative.",
+  "Changes saved.": "Changes saved.",
+  "Connection interrupted. Retry with the same details; a saved edit will not be applied again.": "Connection interrupted. Retry with the same details; a saved edit will not be applied again.",
+  "Enter a whole-number priority from 0 to 9999.": "Enter a whole-number priority from 0 to 9999.",
+  "Budget not found": "Budget not found"
 }

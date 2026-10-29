@@ -137,9 +137,9 @@
   "Target amount (optional)": "Valor desejado (opcional)",
   "Create": "Criar",
   "No percentage to set here. How much each goal gets comes from its rank above, and you can override the split when you distribute.": "Não há percentagem para definir aqui. O que cada objetivo recebe vem da posição dele acima, e podes alterar a divisão quando distribuis.",
-  "Delete bucket": "Eliminar intervalo",
+  "Delete bucket": "Eliminar objetivo",
   "Total allocated": "Total alocado",
-  "Edit bucket": "Editar intervalo",
+  "Edit bucket": "Editar objetivo",
   "Target amount": "Valor desejado",
   "Rank — lower is more important": "Classificação – menor é mais importante",
   "Save": "Guardar",
@@ -3346,5 +3346,9 @@
   "Choose existing expense categories.": "Escolhe categorias de despesas existentes.",
   "Choose an expense category.": "Escolhe uma categoria de despesas.",
   "Choose an active account and an existing bucket.": "Escolhe uma conta ativa e um objetivo existente.",
-  "An allocation cannot be negative.": "Uma afetação não pode ser negativa."
+  "An allocation cannot be negative.": "Uma afetação não pode ser negativa.",
+  "Changes saved.": "Alterações guardadas.",
+  "Connection interrupted. Retry with the same details; a saved edit will not be applied again.": "Ligação interrompida. Tenta novamente com os mesmos dados; uma edição já guardada não será aplicada outra vez.",
+  "Enter a whole-number priority from 0 to 9999.": "Indica uma prioridade inteira entre 0 e 9999.",
+  "Budget not found": "Orçamento não encontrado."
 }

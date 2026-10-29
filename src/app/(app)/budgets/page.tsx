@@ -1,9 +1,10 @@
+import EditForm from "@/components/EditForm";
 import RetryableForm from "@/components/RetryableForm";
 import { textForRequest } from "@/actions/pageLanguage";
 import {
   listBudgets,
   submitBudgetCreation,
-  updateBudget,
+  submitBudgetLimit,
   deleteBudget,
   setBudgetRollover,
   getUnbudgetedSpending,
@@ -164,7 +165,7 @@ export default async function BudgetsPage({
                     </button>
                   </form>
 
-                  <form action={updateBudget} className="flex gap-1 items-center">
+                  <EditForm action={submitBudgetLimit} submitLabel="Save" fieldsClassName="flex gap-1 items-center" submitClassName="text-xs text-[var(--accent)] hover:underline">
                     <input type="hidden" name="id" value={b.id} />
                     <input
                       name="limitAmount"
@@ -175,8 +176,7 @@ export default async function BudgetsPage({
                       className="input input-narrow budget-limit text-xs py-1"
                       aria-label={uiText("Limit for {0}", { "0": b.name })}
                     />
-                    <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Save")}</button>
-                  </form>
+                  </EditForm>
 
                   <form action={deleteBudget}>
                     <input type="hidden" name="id" value={b.id} />
