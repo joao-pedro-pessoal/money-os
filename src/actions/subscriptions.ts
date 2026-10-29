@@ -4,11 +4,12 @@ import { db } from "@/db/client";
 import { subscriptions, accounts, categories, auditLog } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { manualAmount, manualDate } from "@/lib/money/manualEntry";
+import { ManualEntryError, manualAmount, manualDate } from "@/lib/money/manualEntry";
 import { isCurrencyCode } from "@/lib/fx";
 import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
+import { claimManualRequest, manualEntryResult, manualRequestId } from "./manualRequest";
 import {
   totals,
   nextCharge,
@@ -92,11 +93,16 @@ export async function createSubscription(formData: FormData) {
   await saveSubscription(formData);
 }
 
+export async function submitSubscriptionCreation(formData: FormData) {
+  return manualEntryResult(() => createSubscription(formData));
+}
+
 export async function updateSubscription(formData: FormData) {
   await saveSubscription(formData, String(formData.get("id")));
 }
 
 async function saveSubscription(formData: FormData, id?: string) {
+  const requestId = id ? null : await manualRequestId(formData);
   const name = String(formData.get("name") ?? "").trim();
   const amount = manualAmount(String(formData.get("amount") ?? ""));
   const cadence = String(formData.get("cadence") ?? "monthly");
@@ -104,25 +110,33 @@ async function saveSubscription(formData: FormData, id?: string) {
   const accountId = String(formData.get("accountId") ?? "") || null;
   const categoryId = String(formData.get("categoryId") ?? "") || null;
   const date = String(formData.get("nextChargeAt") ?? "");
-  if (!name) throw new Error("A subscription needs a name.");
-  if (!isCadence(cadence)) throw new Error(`Unknown billing period: ${cadence}`);
-  if (!isCurrencyCode(currency)) throw new Error("Choose a valid currency.");
+  if (!name) throw new ManualEntryError("A subscription needs a name.");
+  if (!isCadence(cadence)) throw new ManualEntryError("Choose a valid billing period.");
+  if (!isCurrencyCode(currency)) throw new ManualEntryError("Choose a valid currency.");
   const values = { name, amount, cadence, currency, accountId, categoryId,
     nextChargeAt: date ? manualDate(date) : null,
     notes: String(formData.get("notes") ?? "").trim() || null };
   await db.transaction(async store => {
+    if (requestId && !(await claimManualRequest(store,requestId,"subscription:create",requestId,JSON.stringify(values)))) {
+      const [existing] = await store.select({id:subscriptions.id}).from(subscriptions).where(eq(subscriptions.id,requestId));
+      if (!existing) throw new ManualEntryError("This entry has already been deleted.");
+      return;
+    }
     if (accountId) {
       const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId));
-      if (!account?.active) throw new Error("Choose an active account.");
+      if (!account?.active) throw new ManualEntryError("Choose an active account.");
     }
     if (categoryId) {
       const [category] = await store.select().from(categories).where(eq(categories.id, categoryId));
-      if (category?.kind !== "expense") throw new Error("Choose an expense category.");
+      if (category?.kind !== "expense") throw new ManualEntryError("Choose an expense category.");
     }
     if (id) {
       const [updated] = await store.update(subscriptions).set({ ...values, updatedAt: new Date() }).where(eq(subscriptions.id, id)).returning();
-      if (!updated) throw new Error("Subscription not found");
-    } else await store.insert(subscriptions).values(values);
+      if (!updated) throw new ManualEntryError("Subscription not found");
+    } else {
+      await store.insert(subscriptions).values({id:requestId!,...values});
+      await store.insert(auditLog).values({entityType:"subscription",entityId:requestId!,action:"subscription_created",details:JSON.stringify({name})});
+    }
   });
   revalidatePath("/subscriptions");
   revalidatePath("/");

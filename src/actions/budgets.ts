@@ -1,13 +1,14 @@
 "use server";
 
 import { db } from "@/db/client";
-import { budgets, budgetCategories, categories, transactions } from "@/db/schema";
+import { budgets, budgetCategories, categories, transactions, auditLog } from "@/db/schema";
 import { and, eq, gte, lt, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getRates } from "./fx";
 import { toBase } from "@/lib/fx";
-import { manualAmount, manualDate } from "@/lib/money/manualEntry";
+import { ManualEntryError, manualAmount, manualDate } from "@/lib/money/manualEntry";
 import { getBaseCurrency } from "./settings";
+import { claimManualRequest, manualEntryResult, manualRequestId } from "./manualRequest";
 import {
   envelopeState,
   periodBounds,
@@ -130,35 +131,47 @@ export async function getBudgetsLeft() {
 }
 
 export async function createBudget(formData: FormData) {
+  const id = await manualRequestId(formData);
   const name = String(formData.get("name") ?? "").trim();
   const period = String(formData.get("period") ?? "monthly");
   const limit = manualAmount(String(formData.get("limitAmount") ?? ""));
-  const categoryIds = [...new Set(formData.getAll("categoryIds").map(String).filter(Boolean))];
+  const categoryIds = [...new Set(formData.getAll("categoryIds").map(String).filter(Boolean))].sort();
   const anchorRaw = String(formData.get("anchorDate") ?? "");
   const rollover = formData.get("rollover") === "on";
 
-  if (!name) throw new Error("Give the budget a name.");
-  if (!isPeriod(period)) throw new Error(`Unknown period: ${period}`);
+  if (!name) throw new ManualEntryError("Give the budget a name.");
+  if (!isPeriod(period)) throw new ManualEntryError("Choose a valid budget period.");
   if (categoryIds.length === 0) {
     // A budget watching nothing would sit at 0% forever and look healthy.
-    throw new Error("Pick at least one category for the budget to watch.");
+    throw new ManualEntryError("Pick at least one category for the budget to watch.");
   }
 
-  const anchor = anchorRaw ? manualDate(anchorRaw) : new Date();
+  const anchor = anchorRaw ? manualDate(anchorRaw) : null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const details = JSON.stringify({name,period,limit,categoryIds,anchor:anchor?.toISOString() ?? null,rollover,notes});
   await db.transaction(async store => {
+    if (!(await claimManualRequest(store,id,"budget:create",id,details))) {
+      const [existing] = await store.select({id:budgets.id}).from(budgets).where(eq(budgets.id,id));
+      if (!existing) throw new ManualEntryError("This entry has already been deleted.");
+      return;
+    }
     const validCategories = await store.select().from(categories).where(inArray(categories.id, categoryIds));
     if (validCategories.length !== categoryIds.length || validCategories.some(c => c.kind !== "expense")) {
-      throw new Error("Choose existing expense categories.");
+      throw new ManualEntryError("Choose existing expense categories.");
     }
     const [created] = await store.insert(budgets).values({
-      name, period, limitAmount: limit, anchorDate: anchor, rollover,
-      notes: String(formData.get("notes") ?? "").trim() || null,
+      id, name, period, limitAmount: limit, anchorDate: anchor ?? new Date(), rollover, notes,
     }).returning();
     await store.insert(budgetCategories).values(categoryIds.map(categoryId => ({ budgetId: created.id, categoryId })));
+    await store.insert(auditLog).values({entityType:"budget",entityId:id,action:"budget_created",details:JSON.stringify({name})});
   });
 
   revalidatePath("/budgets");
   revalidatePath("/");
+}
+
+export async function submitBudgetCreation(formData: FormData) {
+  return manualEntryResult(() => createBudget(formData));
 }
 
 export async function updateBudget(formData: FormData) {

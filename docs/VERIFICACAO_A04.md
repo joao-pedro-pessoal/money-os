@@ -3,6 +3,9 @@
 Esta passagem valida as correções B43–B49; o estado e o trabalho restante da A04
 ficam exclusivamente em [TAREFAS.md](../TAREFAS.md).
 
+A passagem de 29/10 acrescenta B63–B67; resultados e reprodução em
+[VERIFICACAO_CRIACAO_REGISTOS.md](VERIFICACAO_CRIACAO_REGISTOS.md).
+
 ## Dados e isolamento
 
 Os 40 testes novos de `src/actions/__tests__/money-flows-postgres.test.ts` usam

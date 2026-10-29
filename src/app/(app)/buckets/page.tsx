@@ -1,8 +1,9 @@
+import RetryableForm from "@/components/RetryableForm";
 import { getRates } from "@/actions/fx";
 import { sumInBase } from "@/lib/fx";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
-import { listBucketsWithTotals, createBucket, addToAllocation } from "@/actions/buckets";
+import { listBucketsWithTotals, submitBucketCreation, submitAllocationAddition } from "@/actions/buckets";
 import { listAccountsWithState } from "@/actions/accounts";
 import { listPurposes } from "@/actions/purpose";
 import {
@@ -63,21 +64,21 @@ export default async function BucketsPage() {
               const tied = ranked.filter((x) => x.priority === g.priority).length > 1;
               const rank = ranked.filter((x) => x.priority < g.priority).length + 1;
               return (
-                <li key={g.id} className="flex items-center gap-2 text-sm py-1">
+                <li key={g.id} className="bucket-priority-row flex items-center gap-2 text-sm py-1">
                   <span
-                    className="text-xs w-5"
+                    className="bucket-priority-rank text-xs w-5"
                     style={{ color: tied ? "var(--accent)" : "var(--muted)" }}
                     title={tied ? uiText("Shares this rank with another goal") : undefined}
                   >
                     {rank}
                   </span>
-                  <Link href={`/buckets/${g.id}`} className="flex-1 truncate hover:underline">
+                  <Link href={`/buckets/${g.id}`} className="bucket-priority-name flex-1 truncate hover:underline">
                     <span translate="no">{g.name}</span>
                   </Link>
-                  <span className="text-[10px] text-[var(--accent)] whitespace-nowrap w-12 text-right">
+                  <span className="bucket-priority-share text-[10px] text-[var(--accent)] whitespace-nowrap w-12 text-right">
                     {shareOf.get(g.id)?.toFixed(1) ?? "0"}%
                   </span>
-                  <span className="text-xs text-[var(--muted)] whitespace-nowrap">
+                  <span className="bucket-priority-remaining text-xs text-[var(--muted)] whitespace-nowrap">
                     {short === null ? (
                       uiText("no target")
                     ) : short === 0 ? (
@@ -90,19 +91,19 @@ export default async function BucketsPage() {
                   {/* Direct entry as well as arrows: setting two goals to the
                       same number is how you create a tie, and nudging can only
                       ever pass through one. */}
-                  <form action={setPriority} className="flex items-center gap-1">
+                  <form action={setPriority} className="bucket-priority-form flex items-center gap-1">
                     <input type="hidden" name="id" value={g.id} />
                     <input
                       name="priority"
                       type="number"
                       min="0"
                       defaultValue={g.priority}
-                      className="input input-narrow text-xs py-0.5 w-14"
+                      className="bucket-priority-input input input-narrow text-xs py-0.5"
                       title={uiText("Rank — lower is more important. Equal numbers share equally.")}
                     />
                     <button type="submit" className="text-[10px] text-[var(--accent)] hover:underline">{uiText("Set")}</button>
                   </form>
-                  <div className="flex gap-1">
+                  <div className="bucket-priority-moves flex gap-1">
                     <form action={moveGoal}>
                       <input type="hidden" name="id" value={g.id} />
                       <input type="hidden" name="direction" value="up" />
@@ -208,7 +209,7 @@ export default async function BucketsPage() {
             {accounts.length === 0 ? uiText("Create an account first.") : uiText("Create a bucket below first.")}
           </p>
         ) : (
-          <form action={addToAllocation} className="space-y-3">
+          <RetryableForm action={submitAllocationAddition} fieldsClassName="space-y-3">
             <select name="accountId" className="input" required>
               {accounts.map((a) => (
                 <option translate="no" key={a.id} value={a.id}>
@@ -226,7 +227,7 @@ export default async function BucketsPage() {
             <input name="amount" type="number" step="0.01" placeholder={uiText("Amount")} className="input" required />
             <button type="submit" className="btn w-full">{uiText("Add to bucket")}</button>
 
-          </form>
+          </RetryableForm>
         )}
       </Section>
 
@@ -293,13 +294,13 @@ export default async function BucketsPage() {
       </div>
 
       <Section title="Create bucket" defaultOpen className="max-w-md">
-        <form action={createBucket} className="space-y-3">
+        <RetryableForm action={submitBucketCreation} fieldsClassName="space-y-3">
           <input name="name" placeholder={uiText("Name (e.g. Emergency Fund)")} className="input" required />
           <input name="description" placeholder={uiText("Description")} className="input" />
           <input name="targetAmount" type="number" step="0.01" placeholder={uiText("Target amount (optional)")} className="input" />
           <button type="submit" className="btn w-full">{uiText("Create")}</button>
           <p className="text-xs text-[var(--muted)]">{uiText("No percentage to set here. How much each goal gets comes from its rank above, and you can override the split when you distribute.")}</p>
-        </form>
+        </RetryableForm>
       </Section>
     </div>
   );

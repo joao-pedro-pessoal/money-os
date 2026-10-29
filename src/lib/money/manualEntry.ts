@@ -1,8 +1,11 @@
+/** Expected input failures may be shown in a financial form. */
+export class ManualEntryError extends Error {}
+
 /** Validate a manual amount without interpreting ambiguous thousands separators. */
 export function manualAmount(value: string): string {
   const normalized = value.trim().replace(",", ".");
   if (!/^\d{1,12}(\.\d{1,2})?$/.test(normalized) || Number(normalized) <= 0) {
-    throw new Error("Enter a positive amount with at most two decimal places.");
+    throw new ManualEntryError("Enter a positive amount with at most two decimal places.");
   }
   return Number(normalized).toFixed(2);
 }
@@ -14,10 +17,10 @@ export function manualAmount(value: string): string {
  * one — and the database used to refuse it instead, with a numeric-syntax error
  * the person adding their first account could do nothing with.
  */
-export function manualBalance(value: string): string {
+export function manualBalance(value: string, message = "Write the account's balance today, with at most two decimal places. 0 if it is empty."): string {
   const normalized = value.trim().replace(",", ".");
   if (!/^-?\d{1,12}(\.\d{1,2})?$/.test(normalized)) {
-    throw new Error("Write the account's balance today, with at most two decimal places. 0 if it is empty.");
+    throw new ManualEntryError(message);
   }
   const amount = Number(normalized);
   return (Object.is(amount, -0) ? 0 : amount).toFixed(2);
@@ -26,7 +29,7 @@ export function manualBalance(value: string): string {
 export function manualDate(value: string): Date {
   const date = new Date(`${value}T12:00:00Z`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
-    throw new Error("Choose a valid date.");
+    throw new ManualEntryError("Choose a valid date.");
   }
   return date;
 }

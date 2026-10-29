@@ -1,7 +1,8 @@
+import RetryableForm from "@/components/RetryableForm";
 import { textForRequest } from "@/actions/pageLanguage";
 import {
   listBudgets,
-  createBudget,
+  submitBudgetCreation,
   updateBudget,
   deleteBudget,
   setBudgetRollover,
@@ -208,8 +209,9 @@ export default async function BudgetsPage({
         </div>
       )}
 
-      <Section title="New budget" defaultOpen={data.items.length === 0} essential>
-        <form action={createBudget} className="space-y-3 max-w-2xl">
+      {/* Keep a stable default so creating the first budget does not hide its confirmation. */}
+      <Section title="New budget" defaultOpen essential>
+        <RetryableForm action={submitBudgetCreation} className="max-w-2xl">
           <input name="name" placeholder={uiText("Name (e.g. Going out, Insurance)")} className="input" required />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -258,7 +260,7 @@ export default async function BudgetsPage({
 
           <button type="submit" className="btn w-full">{uiText("Create budget")}</button>
           <p className="text-xs text-[var(--muted)]">{uiText("The period runs from the date you pick, not from the 1st. A weekly budget started on a Wednesday runs Wednesday to Wednesday.")}</p>
-        </form>
+        </RetryableForm>
       </Section>
     </div>
   );

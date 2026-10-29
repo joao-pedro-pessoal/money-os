@@ -3330,5 +3330,21 @@
   "Quantity sold cannot exceed the registered position.": "Quantity sold cannot exceed the registered position.",
   "Could not verify this registration. Reload the page and try again.": "Could not verify this registration. Reload the page and try again.",
   "Registration is temporarily unavailable. Try again later.": "Registration is temporarily unavailable. Try again later.",
-  "Could not read this registration. Reload the page and try again.": "Could not read this registration. Reload the page and try again."
+  "Could not read this registration. Reload the page and try again.": "Could not read this registration. Reload the page and try again.",
+  "Refresh this page before saving this entry.": "Refresh this page before saving this entry.",
+  "This request was already used with different details. Check the record before starting another one.": "This request was already used with different details. Check the record before starting another one.",
+  "This entry has already been deleted.": "This entry has already been deleted.",
+  "Connection interrupted. Retry with the same details; a saved entry will not be duplicated.": "Connection interrupted. Retry with the same details; a saved entry will not be duplicated.",
+  "Record saved.": "Record saved.",
+  "Start another entry": "Start another entry",
+  "A goal target cannot be negative.": "A goal target cannot be negative.",
+  "Choose a valid budget period.": "Choose a valid budget period.",
+  "Choose a valid billing period.": "Choose a valid billing period.",
+  "Enter a goal target with at most two decimal places.": "Enter a goal target with at most two decimal places.",
+  "Enter an allocation amount with at most two decimal places.": "Enter an allocation amount with at most two decimal places.",
+  "Bucket not found": "Bucket not found",
+  "Choose existing expense categories.": "Choose existing expense categories.",
+  "Choose an expense category.": "Choose an expense category.",
+  "Choose an active account and an existing bucket.": "Choose an active account and an existing bucket.",
+  "An allocation cannot be negative.": "An allocation cannot be negative."
 }

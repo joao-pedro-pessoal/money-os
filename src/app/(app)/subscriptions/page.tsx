@@ -1,9 +1,10 @@
+import RetryableForm from "@/components/RetryableForm";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listSubscriptions,
   getSubscriptionTotals,
-  createSubscription,
+  submitSubscriptionCreation,
   toggleSubscription,
   deleteSubscription,
 } from "@/actions/subscriptions";
@@ -180,7 +181,7 @@ export default async function SubscriptionsPage() {
       )}
 
       <Section title="Add a subscription" defaultOpen className="max-w-2xl">
-        <form action={createSubscription} className="space-y-3">
+        <RetryableForm action={submitSubscriptionCreation} fieldsClassName="space-y-3">
           <input name="name" placeholder={uiText("Name (e.g. Netflix)")} className="input" required />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -233,7 +234,7 @@ export default async function SubscriptionsPage() {
 
           <button type="submit" className="btn w-full">{uiText("Add")}</button>
           <p className="text-xs text-[var(--muted)]">{uiText("The date is the next time you expect to be charged. It rolls forward on its own, so you set it once — leave it blank if you don't know and the cost still counts.")}</p>
-        </form>
+        </RetryableForm>
       </Section>
     </div>
   );

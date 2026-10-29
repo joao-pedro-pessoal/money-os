@@ -1040,3 +1040,15 @@ main .grid > * { min-width: 0; }
   .monthly-report .card { break-inside: avoid; border: 1px solid #ccc; background: #fff !important; }
   .app-main { max-width: none !important; padding: 0 !important; }
 }
+
+/* Goal priority controls wrap below the name on a phone; desktop keeps its row. */
+@media (max-width: 767px) {
+  .bucket-priority-row { flex-wrap: wrap; padding-block: 8px; }
+  .bucket-priority-rank { flex: 0 0 1.25rem; }
+  .bucket-priority-name { flex: 1 1 calc(100% - 5.25rem); min-width: 0; }
+  .bucket-priority-share { flex: 0 0 3rem; }
+  .bucket-priority-remaining { flex: 1 1 3rem; min-width: 0; white-space: normal; margin-left: 1.75rem; }
+  .bucket-priority-form, .bucket-priority-moves { flex: 0 0 auto; }
+  .bucket-priority-input.input { width: 4rem; min-width: 0; }
+  .bucket-priority-form button, .bucket-priority-moves button { min-width: 44px; min-height: 44px; }
+}

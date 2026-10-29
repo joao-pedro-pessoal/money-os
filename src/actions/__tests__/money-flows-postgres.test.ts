@@ -14,9 +14,9 @@ vi.mock("@/actions/session", () => ({ hasSession: async () => isolated.signedIn 
 vi.mock("@/actions/fx", () => ({ getRates: async () => ({ EUR: 1, USD: 1.25 }) }));
 vi.mock("@/actions/settings", () => ({ getBaseCurrency: async () => isolated.base, getDefaultAccountId: async () => null }));
 import { createTransaction, createQuickTransaction, undoQuickTransaction, updateTransaction, deleteTransaction, createTransfer, createInterestPayment } from "../transactions";
-import { createBucket, updateBucket, deleteBucket, addToAllocation, setAllocation, listBucketsWithTotals } from "../buckets";
-import { createBudget, updateBudget, deleteBudget, listBudgets, getUnbudgetedSpending, getBudgetsLeft, getKeptForBudgets, toggleBudgetCategory } from "../budgets";
-import { createSubscription, updateSubscription, toggleSubscription, deleteSubscription } from "../subscriptions";
+import { createBucket, submitBucketCreation, submitAllocationAddition, updateBucket, deleteBucket, addToAllocation, setAllocation, listBucketsWithTotals } from "../buckets";
+import { createBudget, submitBudgetCreation, updateBudget, deleteBudget, listBudgets, getUnbudgetedSpending, getBudgetsLeft, getKeptForBudgets, toggleBudgetCategory } from "../budgets";
+import { createSubscription, submitSubscriptionCreation, updateSubscription, toggleSubscription, deleteSubscription } from "../subscriptions";
 import { createHolding, updateHolding, submitHoldingEdit, submitHoldingOperation, updateHoldingPrice, reinforceHolding, sellHolding, addRewards } from "../investments";
 import { setHoldingAllocation } from "../purpose";
 import { createLiability, updateLiability } from "../liabilities";
@@ -29,6 +29,7 @@ let sequence = 0;
 const form = (data: Record<string, string | string[]>) => {
   const value = new FormData();
   for (const [key, item] of Object.entries(data)) for (const entry of Array.isArray(item) ? item : [item]) value.append(key, entry);
+  if (!value.has("requestId")) value.set("requestId", request());
   return value;
 };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -770,4 +771,158 @@ describe("investment operation outcomes", () => {
     expect(await submitHoldingOperation("unknown" as never,operation({id:"outcome-holding"}))).toEqual({error:"Choose a valid investment operation."});
     expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
   });
+});
+
+
+describe("goal, budget and subscription creation retries", () => {
+  const cases: { name: string; action: (data: FormData) => Promise<void>; data: Record<string,string|string[]>; table: typeof schema.buckets | typeof schema.budgets | typeof schema.subscriptions }[] = [
+    {name:"goal",action:createBucket,data:{name:"Retry goal",targetAmount:"500"},table:schema.buckets},
+    {name:"budget",action:createBudget,data:{name:"Retry budget",limitAmount:"200",period:"monthly",categoryIds:["food"],anchorDate:today()},table:schema.budgets},
+    {name:"subscription",action:createSubscription,data:{name:"Retry subscription",amount:"10",currency:"EUR",cadence:"monthly",accountId:"eur-a",categoryId:"food"},table:schema.subscriptions},
+  ];
+  const state = async () => ({
+    goals: await isolated.db.select().from(schema.buckets), budgets: await isolated.db.select().from(schema.budgets),
+    links: await isolated.db.select().from(schema.budgetCategories), subscriptions: await isolated.db.select().from(schema.subscriptions),
+    audit: await isolated.db.select().from(schema.auditLog),
+  });
+  it.each(cases)("replays the same $name creation exactly once",async({action,data,table})=>{
+    const attempt=form(data);await action(attempt);const saved=await state();await action(attempt);
+    expect(await state()).toEqual(saved);expect(await isolated.db.select().from(table)).toHaveLength(1);
+    expect(await balance("eur-a")).toBe(1000);expect(await txs()).toEqual([]);
+  });
+  it.each(cases)("simultaneous copies of $name creation make one row",async({action,data,table})=>{
+    const attempt=form(data);await Promise.all([action(attempt),action(attempt)]);
+    expect(await isolated.db.select().from(table)).toHaveLength(1);
+  });
+  it.each(cases)("refuses changed details under a used $name request",async({action,data})=>{
+    const attempt=form(data);await action(attempt);const saved=await state();attempt.set("name","Changed after a lost reply");
+    await expect(action(attempt)).rejects.toThrow();expect(await state()).toEqual(saved);
+  });
+  it.each(cases)("does not recreate a deleted $name from an old request",async({action,data,table})=>{
+    const attempt=form(data);await action(attempt);const [row]=await isolated.db.select().from(table);
+    await isolated.db.delete(table).where(eq(table.id,row.id));const saved=await state();
+    await expect(action(attempt)).rejects.toThrow();expect(await state()).toEqual(saved);
+  });
+  it.each(cases)("requires a valid identifier for $name creation",async({action,data})=>{
+    const before=await state();for(const requestId of ["","invalid"]) {
+      await expect(action(form({...data,requestId}))).rejects.toThrow();expect(await state()).toEqual(before);
+    }
+  });
+  it.each(cases)("rolls back $name creation and its receipt when final audit fails",async({action,data,table})=>{
+    const attempt=form(data);const before=await state();
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic final audit failure'; END $$;
+      CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW WHEN (NEW.entity_type <> 'manual_request') EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    await expect(action(attempt)).rejects.toThrow();expect(await state()).toEqual(before);
+    await engine.exec(`RESET ROLE; DROP TRIGGER fail_money_audit ON audit_log; SET ROLE money_flows_test;`);
+    await action(attempt);await action(attempt);expect(await isolated.db.select().from(table)).toHaveLength(1);
+  });
+  it("refuses reusing a creation request for another kind of record",async()=>{
+    const requestId=request();await createBucket(form({name:"One request",requestId}));const saved=await state();
+    await expect(createSubscription(sub({requestId}))).rejects.toThrow();expect(await state()).toEqual(saved);
+  });
+  it("does not consume a request when its budget categories are invalid",async()=>{
+    const attempt=budget({categoryIds:["foreign-category"]});await expect(createBudget(attempt)).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
+    attempt.set("categoryIds","food");await createBudget(attempt);await createBudget(attempt);
+    expect(await isolated.db.select().from(schema.budgets)).toHaveLength(1);
+  });
+  it("does not accept another person's receipt",async()=>{
+    const attempt=form({name:"Private goal"});await createBucket(attempt);
+    await engine.exec(`SELECT set_config('app.user_id','flow-b',false)`);const before=await state();
+    await expect(createBucket(attempt)).rejects.toThrow();expect(await state()).toEqual(before);
+  });
+  it.each(["-1","NaN","0x10","1.001"])("refuses an invalid goal target %s without a row or receipt",async targetAmount=>{
+    const before=await state();await expect(createBucket(form({name:"Invalid goal",targetAmount}))).rejects.toThrow();expect(await state()).toEqual(before);
+  });
+  it("accepts a comma target and preserves an optional blank target",async()=>{
+    await createBucket(form({name:"Comma goal",targetAmount:"125,50"}));await createBucket(form({name:"No target",targetAmount:"  "}));
+    const rows=await isolated.db.select().from(schema.buckets);expect(Number(rows.find(r=>r.name==="Comma goal")?.targetAmount)).toBe(125.5);
+    expect(rows.find(r=>r.name==="No target")?.targetAmount).toBeNull();
+  });
+});
+
+describe("additive goal allocation retries",()=>{
+  const seed=async()=>{await createBucket(form({name:"Allocation retry"}));return (await isolated.db.select().from(schema.buckets))[0];};
+  const state=async()=>({allocations:await isolated.db.select().from(schema.bucketAllocations),audit:await isolated.db.select().from(schema.auditLog)});
+  it("does not add twice after a lost reply",async()=>{
+    const goal=await seed();const attempt=form({accountId:"eur-a",bucketId:goal.id,amount:"10"});
+    await addToAllocation(attempt);const saved=await state();await addToAllocation(attempt);expect(await state()).toEqual(saved);
+    expect(Number(saved.allocations[0].amount)).toBe(10);expect(await balance("eur-a")).toBe(1000);
+  });
+  it("simultaneous copies of an addition count once",async()=>{
+    const goal=await seed();const attempt=form({accountId:"eur-a",bucketId:goal.id,amount:"10"});
+    await Promise.all([addToAllocation(attempt),addToAllocation(attempt)]);expect(Number((await state()).allocations[0].amount)).toBe(10);
+  });
+  it("different attempts with identical amounts are distinct additions",async()=>{
+    const goal=await seed();for(let i=0;i<2;i++)await addToAllocation(form({accountId:"eur-a",bucketId:goal.id,amount:"10"}));
+    expect(Number((await state()).allocations[0].amount)).toBe(20);
+  });
+  it("refuses changed details for a saved addition",async()=>{
+    const goal=await seed();const attempt=form({accountId:"eur-a",bucketId:goal.id,amount:"10"});await addToAllocation(attempt);const saved=await state();
+    attempt.set("amount","20");await expect(addToAllocation(attempt)).rejects.toThrow();expect(await state()).toEqual(saved);
+  });
+  it("does not reapply an old addition after the exact total was changed",async()=>{
+    const goal=await seed();const attempt=form({accountId:"eur-a",bucketId:goal.id,amount:"10"});await addToAllocation(attempt);
+    await setAllocation(form({accountId:"eur-a",bucketId:goal.id,amount:"5"}));const saved=await state();await addToAllocation(attempt);
+    expect(await state()).toEqual(saved);expect(Number(saved.allocations[0].amount)).toBe(5);
+  });
+  it("does not recreate a released allocation when an old addition is retried",async()=>{
+    const goal=await seed();const attempt=form({accountId:"eur-a",bucketId:goal.id,amount:"10"});await addToAllocation(attempt);
+    await setAllocation(form({accountId:"eur-a",bucketId:goal.id,amount:"0"}));const saved=await state();await addToAllocation(attempt);
+    expect(await state()).toEqual(saved);expect(saved.allocations).toEqual([]);
+  });
+});
+
+
+describe("creation form outcomes and goal edits",()=>{
+  const cases: {name:string;action:(data:FormData)=>Promise<{saved?:boolean;error?:string}>;data:Record<string,string|string[]>}[]=[
+    {name:"goal",action:submitBucketCreation,data:{name:"Safe goal"}},
+    {name:"budget",action:submitBudgetCreation,data:{name:"Safe budget",period:"monthly",limitAmount:"100",categoryIds:["food"]}},
+    {name:"subscription",action:submitSubscriptionCreation,data:{name:"Safe subscription",amount:"10",currency:"EUR",cadence:"monthly"}},
+  ];
+  it.each(cases)("confirms $name creation and an identical retry",async({action,data})=>{
+    const attempt=form(data);expect(await action(attempt)).toEqual({saved:true});expect(await action(attempt)).toEqual({saved:true});
+  });
+  it.each(cases)("refuses an expired session for $name creation",async({action,data})=>{
+    isolated.signedIn=false;expect(await action(form(data))).toEqual({error:"Sign in again."});
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
+  });
+  it("returns validation errors and saves after the data is corrected",async()=>{
+    const attempt=budget({categoryIds:[]});expect(await submitBudgetCreation(attempt)).toEqual({error:"Pick at least one category for the budget to watch."});
+    attempt.set("categoryIds","food");expect(await submitBudgetCreation(attempt)).toEqual({saved:true});
+  });
+  it("does not return database diagnostics from a creation failure",async()=>{
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'private-creation-diagnostic'; END $$;
+      CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    expect(await submitBucketCreation(form({name:"No diagnostics"}))).toEqual({error:"Connection interrupted. Retry with the same details; a saved entry will not be duplicated."});
+  });
+  it("checks the session on the allocation form",async()=>{
+    isolated.signedIn=false;expect(await submitAllocationAddition(form({accountId:"eur-a",bucketId:"foreign-bucket",amount:"10"}))).toEqual({error:"Sign in again."});
+  });
+  it.each(["-1","NaN","1.001"])("refuses an invalid goal target when editing (%s)",async targetAmount=>{
+    await createBucket(form({name:"Edit target",targetAmount:"500"}));const [goal]=await isolated.db.select().from(schema.buckets);
+    await expect(updateBucket(form({id:goal.id,name:"Changed",targetAmount}))).rejects.toThrow();
+    expect((await isolated.db.select().from(schema.buckets))[0]).toEqual(goal);
+  });
+  it("rolls a goal edit back if its audit fails",async()=>{
+    await createBucket(form({name:"Edit rollback",targetAmount:"500"}));const [goal]=await isolated.db.select().from(schema.buckets);
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic edit failure'; END $$;
+      CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    await expect(updateBucket(form({id:goal.id,name:"Changed",targetAmount:"600"}))).rejects.toThrow();
+    expect((await isolated.db.select().from(schema.buckets))[0]).toEqual(goal);
+  });
+  it("normalises category order and a blank anchor when matching a budget retry",async()=>{
+    await isolated.db.insert(schema.categories).values({id:"travel",name:"Synthetic travel",kind:"expense"});
+    const attempt=budget({categoryIds:["travel","food"],anchorDate:""});await createBudget(attempt);
+    const before=await isolated.db.select().from(schema.budgets);attempt.delete("categoryIds");attempt.append("categoryIds","food");attempt.append("categoryIds","travel");
+    await createBudget(attempt);expect(await isolated.db.select().from(schema.budgets)).toEqual(before);
+  });
+});
+
+
+it("creation receipts do not retain private notes from the original form",async()=>{
+  const attempt=sub({notes:"synthetic-private-note-for-receipt-test"});await createSubscription(attempt);await createSubscription(attempt);
+  const receipts=(await isolated.db.select().from(schema.auditLog)).filter(row=>row.entityType==="manual_request");
+  expect(receipts).toHaveLength(1);expect(JSON.stringify(receipts)).not.toContain("synthetic-private-note-for-receipt-test");
+  expect((await isolated.db.select().from(schema.subscriptions))[0].notes).toBe("synthetic-private-note-for-receipt-test");
 });
