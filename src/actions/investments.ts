@@ -2,7 +2,7 @@
 
 import { db } from "@/db/client";
 import { HoldingInputError, manualPositionQuantity, manualPositionPrice, manualPositionRate } from "@/lib/portfolio/manual";
-import { manualAmount, manualBalance } from "@/lib/money/manualEntry";
+import { isQuickEntryId, manualAmount, manualBalance } from "@/lib/money/manualEntry";
 import { buildPortfolioSeries, positionsAt, trimLeadingZeros } from "@/lib/portfolio/series";
 import {
   holdings,
@@ -380,14 +380,58 @@ export async function submitHoldingEdit(_previous: HoldingEditResult, formData: 
   }
 }
 
+export type HoldingOperation = "price" | "reinforce" | "sell" | "rewards";
+export type HoldingOperationResult = { saved?: boolean; error?: string };
+type HoldingStore = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function holdingOperationRequest(formData: FormData): Promise<string> {
+  if (!(await hasSession())) throw new HoldingInputError("Sign in again.");
+  const requestId = String(formData.get("requestId") ?? "").toLowerCase();
+  if (!isQuickEntryId(requestId)) throw new HoldingInputError("Refresh this page before recording an investment operation.");
+  return requestId;
+}
+
+/** This durable receipt commits with the mutation. Never prune it as a disposable log. */
+async function claimHoldingOperation(store: HoldingStore, requestId: string, holdingId: string, kind: HoldingOperation, details: string): Promise<boolean> {
+  const receiptId = `${requestId}-holding-operation`;
+  const [receipt] = await store.insert(auditLog).values({
+    id: receiptId, entityType: "holding_operation", entityId: holdingId, action: kind, details,
+  }).onConflictDoNothing({ target: auditLog.id }).returning({ id: auditLog.id });
+  if (receipt) return true;
+  // A conflicting receipt hidden by RLS is also refused, without revealing its owner or contents.
+  const [previous] = await store.select().from(auditLog).where(eq(auditLog.id, receiptId));
+  if (previous?.entityType !== "holding_operation" || previous.entityId !== holdingId || previous.action !== kind || previous.details !== details) {
+    throw new HoldingInputError("This investment request was already used with different details. Check the position before recording another operation.");
+  }
+  return false;
+}
+
+/** Only expected validation errors leave the server; a retry retains the same request identifier. */
+export async function submitHoldingOperation(kind: HoldingOperation, formData: FormData): Promise<HoldingOperationResult> {
+  try {
+    switch (kind) {
+      case "price": await updateHoldingPrice(formData); break;
+      case "reinforce": await reinforceHolding(formData); break;
+      case "sell": await sellHolding(formData); break;
+      case "rewards": await addRewards(formData); break;
+      default: throw new HoldingInputError("Choose a valid investment operation.");
+    }
+    return { saved: true };
+  } catch (error) {
+    return { error: error instanceof HoldingInputError ? error.message : "Connection interrupted. Retry with the same details; a recorded operation will not be duplicated." };
+  }
+}
+
 /** Updates the current price, recording a snapshot so the value-over-time chart has a point. */
 export async function updateHoldingPrice(formData: FormData) {
+  const requestId = await holdingOperationRequest(formData);
   const id = String(formData.get("id") ?? "").trim();
   const currentPrice = String(manualPositionPrice(String(formData.get("currentPrice") ?? "")));
 
   await db.transaction(async (tx) => {
     const [h] = await tx.select().from(holdings).where(eq(holdings.id, id)).for("update");
-    if (!h) throw new Error("Holding not found");
+    if (!h) throw new HoldingInputError("Holding not found");
+    if (!(await claimHoldingOperation(tx, requestId, id, "price", JSON.stringify({ currentPrice })))) return;
 
     await tx
       .update(holdings)
@@ -649,12 +693,16 @@ export async function listAccountsForHoldings() {
 
 /** Records rewards received on a staked position, adding to the running total. */
 export async function addRewards(formData: FormData) {
+  const requestId = await holdingOperationRequest(formData);
   const id = String(formData.get("id") ?? "").trim();
-  const amount = Number(manualAmount(String(formData.get("amount") ?? "")));
+  let amount: number;
+  try { amount = Number(manualAmount(String(formData.get("amount") ?? ""))); }
+  catch { throw new HoldingInputError("Enter a positive amount with at most two decimal places."); }
 
   await db.transaction(async (tx) => {
     const [h] = await tx.select().from(holdings).where(eq(holdings.id, id)).for("update");
-    if (!h) throw new Error("Holding not found");
+    if (!h) throw new HoldingInputError("Holding not found");
+    if (!(await claimHoldingOperation(tx, requestId, id, "rewards", JSON.stringify({ amount })))) return;
 
     const newTotal = Math.round((Number(h.rewardsEarned ?? 0) + amount + Number.EPSILON) * 100) / 100;
     await tx
@@ -968,13 +1016,15 @@ function round2(n: number): number {
  * recorded at the new price so the value chart stays continuous.
  */
 export async function reinforceHolding(formData: FormData) {
+  const requestId = await holdingOperationRequest(formData);
   const id = String(formData.get("id") ?? "").trim();
   const addQuantity = manualPositionQuantity(String(formData.get("quantity") ?? ""));
   const price = manualPositionPrice(String(formData.get("price") ?? ""));
 
   await db.transaction(async (tx) => {
     const [h] = await tx.select().from(holdings).where(eq(holdings.id, id)).for("update");
-    if (!h) throw new Error("Holding not found");
+    if (!h) throw new HoldingInputError("Holding not found");
+    if (!(await claimHoldingOperation(tx, requestId, id, "reinforce", JSON.stringify({ quantity: addQuantity, price })))) return;
 
     const next = reinforcePosition(
       { quantity: Number(h.quantity), avgEntryPrice: Number(h.avgEntryPrice) },
@@ -1017,14 +1067,16 @@ export async function reinforceHolding(formData: FormData) {
  * realizedPnl, so realised money is never mixed with paper gains.
  */
 export async function sellHolding(formData: FormData) {
+  const requestId = await holdingOperationRequest(formData);
   const id = String(formData.get("id") ?? "").trim();
   const sellQuantity = manualPositionQuantity(String(formData.get("quantity") ?? ""));
   const price = manualPositionPrice(String(formData.get("price") ?? ""));
 
   await db.transaction(async (tx) => {
     const [h] = await tx.select().from(holdings).where(eq(holdings.id, id)).for("update");
-    if (!h) throw new Error("Holding not found");
-    if (sellQuantity > Number(h.quantity)) throw new Error("Quantity sold cannot exceed the registered position.");
+    if (!h) throw new HoldingInputError("Holding not found");
+    if (!(await claimHoldingOperation(tx, requestId, id, "sell", JSON.stringify({ quantity: sellQuantity, price })))) return;
+    if (sellQuantity > Number(h.quantity)) throw new HoldingInputError("Quantity sold cannot exceed the registered position.");
 
     const next = reducePosition(
       { quantity: Number(h.quantity), avgEntryPrice: Number(h.avgEntryPrice), direction: h.direction },

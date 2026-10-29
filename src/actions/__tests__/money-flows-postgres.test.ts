@@ -7,17 +7,17 @@ import * as schema from "@/db/schema";
 
 // Real PostgreSQL rules and migrations, entirely in memory. No production
 // client, .env, broker calls or persisted personal data in this suite.
-const isolated = vi.hoisted(() => ({ base: "EUR", db: null as unknown as PgliteDatabase<typeof schema> }));
+const isolated = vi.hoisted(() => ({ base: "EUR", signedIn: true, db: null as unknown as PgliteDatabase<typeof schema> }));
 vi.mock("@/db/client", () => ({ get db() { return isolated.db; } }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
+vi.mock("@/actions/session", () => ({ hasSession: async () => isolated.signedIn }));
 vi.mock("@/actions/fx", () => ({ getRates: async () => ({ EUR: 1, USD: 1.25 }) }));
 vi.mock("@/actions/settings", () => ({ getBaseCurrency: async () => isolated.base, getDefaultAccountId: async () => null }));
 import { createTransaction, createQuickTransaction, undoQuickTransaction, updateTransaction, deleteTransaction, createTransfer, createInterestPayment } from "../transactions";
 import { createBucket, updateBucket, deleteBucket, addToAllocation, setAllocation, listBucketsWithTotals } from "../buckets";
 import { createBudget, updateBudget, deleteBudget, listBudgets, getUnbudgetedSpending, getBudgetsLeft, getKeptForBudgets, toggleBudgetCategory } from "../budgets";
 import { createSubscription, updateSubscription, toggleSubscription, deleteSubscription } from "../subscriptions";
-import { createHolding, updateHolding, submitHoldingEdit, updateHoldingPrice, reinforceHolding, sellHolding, addRewards } from "../investments";
+import { createHolding, updateHolding, submitHoldingEdit, submitHoldingOperation, updateHoldingPrice, reinforceHolding, sellHolding, addRewards } from "../investments";
 import { setHoldingAllocation } from "../purpose";
 import { createLiability, updateLiability } from "../liabilities";
 import { createExpected } from "../expected";
@@ -33,6 +33,7 @@ const form = (data: Record<string, string | string[]>) => {
 };
 const today = () => new Date().toISOString().slice(0, 10);
 const request = () => `quick-00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`;
+const operation = (data: Record<string, string>) => form({ requestId: request(), ...data });
 const balance = async (id: string) => Number((await isolated.db.select().from(schema.accounts).where(eq(schema.accounts.id, id)))[0].balance);
 const txs = () => isolated.db.select().from(schema.transactions);
 const transfer = (extra: Record<string, string> = {}) => form({ fromAccountId: "eur-a", toAccountId: "eur-b", amount: "25", date: today(), requestId: request(), ...extra });
@@ -50,6 +51,7 @@ beforeAll(async () => {
 }, 60_000);
 beforeEach(async () => {
   isolated.base = "EUR";
+  isolated.signedIn = true;
   await engine.exec(`RESET ROLE; DELETE FROM users;
     INSERT INTO users(id) VALUES ('flow-a'), ('flow-b');
     SET ROLE money_flows_test;
@@ -509,72 +511,72 @@ describe("manual investment operation safety", () => {
     await seed(); const before = await read();
     await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit failure'; END $$;
       CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
-    await expect(action(form({id:"operation-holding",...values}))).rejects.toThrow();
+    await expect(action(operation({id:"operation-holding",...values}))).rejects.toThrow();
     expect(await read()).toEqual(before);
     expect(await isolated.db.select().from(schema.holdingSnapshots)).toEqual([]);
   });
   it.each(operations)("refuses %s for another person's position", async (_name, action, values) => {
     await seed();
     await engine.exec(`SELECT set_config('app.user_id','flow-b',false)`);
-    await expect(action(form({id:"operation-holding",...values}))).rejects.toThrow("Holding not found");
+    await expect(action(operation({id:"operation-holding",...values}))).rejects.toThrow("Holding not found");
     await engine.exec(`SELECT set_config('app.user_id','flow-a',false)`);
     expect(Number((await read()).quantity)).toBe(10);
     expect(await isolated.db.select().from(schema.holdingSnapshots)).toEqual([]);
   });
   it.each(["", "-1", "NaN", "Infinity", "0x10", "1.00001"])("refuses invalid price %s without touching the position", async value => {
     await seed(); const before = await read();
-    await expect(updateHoldingPrice(form({id:"operation-holding",currentPrice:value}))).rejects.toThrow();
+    await expect(updateHoldingPrice(operation({id:"operation-holding",currentPrice:value}))).rejects.toThrow();
     expect(await read()).toEqual(before);
   });
   it.each([reinforceHolding, sellHolding])("refuses invalid quantities and prices in a trade", async action => {
     await seed(); const before = await read();
     for (const quantity of ["", "0", "-1", "NaN", "Infinity", "0.000000001"]) {
-      await expect(action(form({id:"operation-holding",quantity,price:"12"}))).rejects.toThrow();
+      await expect(action(operation({id:"operation-holding",quantity,price:"12"}))).rejects.toThrow();
       expect(await read()).toEqual(before);
     }
     for (const price of ["", "-1", "NaN", "Infinity", "1.00001"]) {
-      await expect(action(form({id:"operation-holding",quantity:"1",price}))).rejects.toThrow();
+      await expect(action(operation({id:"operation-holding",quantity:"1",price}))).rejects.toThrow();
       expect(await read()).toEqual(before);
     }
   });
   it.each(["", "0", "-1", "NaN", "Infinity", "1.001"])("refuses invalid received rewards %s", async amount => {
     await seed(); const before = await read();
-    await expect(addRewards(form({id:"operation-holding",amount}))).rejects.toThrow();
+    await expect(addRewards(operation({id:"operation-holding",amount}))).rejects.toThrow();
     expect(await read()).toEqual(before);
   });
   it("refuses a sale larger than the registered position", async () => {
     await seed(); const before = await read();
-    await expect(sellHolding(form({id:"operation-holding",quantity:"11",price:"12"}))).rejects.toThrow();
+    await expect(sellHolding(operation({id:"operation-holding",quantity:"11",price:"12"}))).rejects.toThrow();
     expect(await read()).toEqual(before);
     expect(await isolated.db.select().from(schema.holdingSnapshots)).toEqual([]);
   });
   it("keeps both simultaneous reinforcements", async () => {
     await seed();
-    await Promise.all([reinforceHolding(form({id:"operation-holding",quantity:"2",price:"15"})),reinforceHolding(form({id:"operation-holding",quantity:"2",price:"15"}))]);
+    await Promise.all([reinforceHolding(operation({id:"operation-holding",quantity:"2",price:"15"})),reinforceHolding(operation({id:"operation-holding",quantity:"2",price:"15"}))]);
     const row = await read(); expect(Number(row.quantity)).toBe(14); expect(Number(row.avgEntryPrice)).toBeCloseTo(160/14, 3);
     expect(await isolated.db.select().from(schema.holdingSnapshots)).toHaveLength(2);
   });
   it("keeps both simultaneous sales and their realised gain", async () => {
     await seed();
-    await Promise.all([sellHolding(form({id:"operation-holding",quantity:"2",price:"12"})),sellHolding(form({id:"operation-holding",quantity:"2",price:"12"}))]);
+    await Promise.all([sellHolding(operation({id:"operation-holding",quantity:"2",price:"12"})),sellHolding(operation({id:"operation-holding",quantity:"2",price:"12"}))]);
     const row = await read(); expect(Number(row.quantity)).toBe(6); expect(Number(row.realizedPnl)).toBe(8);
   });
   it("keeps both simultaneous reward receipts", async () => {
     await seed();
-    await Promise.all([addRewards(form({id:"operation-holding",amount:"2"})),addRewards(form({id:"operation-holding",amount:"3"}))]);
+    await Promise.all([addRewards(operation({id:"operation-holding",amount:"2"})),addRewards(operation({id:"operation-holding",amount:"3"}))]);
     expect(Number((await read()).rewardsEarned)).toBe(10);
   });
   it("records a zero-price full sale and keeps cash balances separate", async () => {
     await seed();
-    await sellHolding(form({id:"operation-holding",quantity:"10",price:"0"}));
+    await sellHolding(operation({id:"operation-holding",quantity:"10",price:"0"}));
     const row = await read(); expect(Number(row.quantity)).toBe(0); expect(Number(row.realizedPnl)).toBe(-100);
     expect(Number(row.avgEntryPrice)).toBe(10); expect(await balance("eur-a")).toBe(1000);
   });
   it("accepts comma decimals, updates price history and accumulates rewards", async () => {
     await seed();
-    await updateHoldingPrice(form({id:"operation-holding",currentPrice:"12,3456"}));
+    await updateHoldingPrice(operation({id:"operation-holding",currentPrice:"12,3456"}));
     expect(Number((await read()).currentPrice)).toBe(12.3456);
-    await addRewards(form({id:"operation-holding",amount:"0,25"}));
+    await addRewards(operation({id:"operation-holding",amount:"0,25"}));
     expect(Number((await read()).rewardsEarned)).toBe(5.25);
     expect(await isolated.db.select().from(schema.holdingSnapshots)).toHaveLength(1);
   });
@@ -612,7 +614,7 @@ describe("manual holding detail validation", () => {
   });
   it("an edit cannot overwrite rewards received after the form was opened", async () => {
     await createHolding(form({...draft,rewardsEarned:"5"}));const row=await read();
-    await addRewards(form({id:row.id,amount:"2"}));
+    await addRewards(operation({id:row.id,amount:"2"}));
     await updateHolding(form({...draft,id:row.id,name:"Renamed",rewardsEarned:"5"}));
     expect(Number((await read()).rewardsEarned)).toBe(7);
   });
@@ -637,5 +639,135 @@ describe("manual holding detail validation", () => {
     await createHolding(form(draft));const row=await read();
     await updateHolding(form({...draft,id:row.id,quantity:"0"}));
     expect(Number((await read()).quantity)).toBe(0);
+  });
+});
+
+
+describe("manual investment request receipts", () => {
+  const seed = async (id = "retry-holding") => isolated.db.insert(schema.holdings).values({
+    id, symbol: "TEST.RETRY", accountId: "eur-a", quantity: "10", avgEntryPrice: "10",
+    currentPrice: "12", realizedPnl: "0", rewardsEarned: "5", currency: "EUR",
+  });
+  const state = async () => ({
+    holdings: await isolated.db.select().from(schema.holdings),
+    snapshots: await isolated.db.select().from(schema.holdingSnapshots),
+    audit: await isolated.db.select().from(schema.auditLog),
+  });
+  const operations = [
+    ["price", updateHoldingPrice, {currentPrice:"15"}, {currentPrice:"16"}],
+    ["reinforce", reinforceHolding, {quantity:"2",price:"15"}, {quantity:"3",price:"15"}],
+    ["sell", sellHolding, {quantity:"2",price:"15"}, {quantity:"3",price:"15"}],
+    ["rewards", addRewards, {amount:"2"}, {amount:"3"}],
+  ] as const;
+  it.each(operations)("replaying %s never repeats the mutation, snapshot or audit", async (_name, action, values) => {
+    await seed(); const data = operation({id:"retry-holding",...values});
+    await action(data); const saved = await state();
+    await action(data); expect(await state()).toEqual(saved);
+  });
+  it.each(operations)("simultaneous copies of %s are one operation", async (_name, action, values) => {
+    await seed(); const data = operation({id:"retry-holding",...values});
+    await Promise.all([action(data), action(data)]);
+    const once = await state();
+    await action(data); expect(await state()).toEqual(once);
+    if (_name === "reinforce") expect(Number(once.holdings[0].quantity)).toBe(12);
+    if (_name === "sell") expect(Number(once.holdings[0].quantity)).toBe(8);
+    if (_name === "rewards") expect(Number(once.holdings[0].rewardsEarned)).toBe(7);
+    expect(once.snapshots).toHaveLength(_name === "rewards" ? 0 : 1);
+  });
+  it.each(operations)("refuses changed details under the same %s request", async (_name, action, values, changed) => {
+    await seed(); const requestId = request();
+    await action(operation({id:"retry-holding",requestId,...values})); const saved = await state();
+    await expect(action(operation({id:"retry-holding",requestId,...changed}))).rejects.toThrow();
+    expect(await state()).toEqual(saved);
+  });
+  it.each(operations)("requires an identifier for %s", async (_name, action, values) => {
+    await seed(); const before = await state();
+    for (const requestId of ["", "not-a-request"]) {
+      await expect(action(operation({id:"retry-holding",requestId,...values}))).rejects.toThrow();
+      expect(await state()).toEqual(before);
+    }
+  });
+  it("recognises a full sale after the remaining quantity has reached zero", async () => {
+    await seed(); const data = operation({id:"retry-holding",quantity:"10",price:"15"});
+    await sellHolding(data); const saved = await state();
+    await expect(sellHolding(data)).resolves.toBeUndefined();
+    expect(await state()).toEqual(saved); expect(Number(saved.holdings[0].quantity)).toBe(0);
+    expect(Number(saved.holdings[0].realizedPnl)).toBe(50);
+  });
+  it("does not reapply an old price after a newer valuation", async () => {
+    await seed(); const old = operation({id:"retry-holding",currentPrice:"15"});
+    await updateHoldingPrice(old); await updateHoldingPrice(operation({id:"retry-holding",currentPrice:"20"}));
+    const saved = await state(); await updateHoldingPrice(old);
+    expect(await state()).toEqual(saved); expect(Number(saved.holdings[0].currentPrice)).toBe(20);
+  });
+  it("normalises equivalent decimal inputs before matching a request", async () => {
+    await seed(); const requestId = request();
+    await reinforceHolding(operation({id:"retry-holding",requestId,quantity:"2,0",price:"15,00"}));
+    const saved = await state();
+    await reinforceHolding(operation({id:"retry-holding",requestId,quantity:"2.00000000",price:"15.0000"}));
+    expect(await state()).toEqual(saved);
+  });
+  it("cannot reuse an identifier for a different operation or holding", async () => {
+    await seed(); await seed("second-holding"); const requestId = request();
+    await reinforceHolding(operation({id:"retry-holding",requestId,quantity:"2",price:"15"}));
+    const saved = await state();
+    await expect(sellHolding(operation({id:"retry-holding",requestId,quantity:"2",price:"15"}))).rejects.toThrow();
+    await expect(reinforceHolding(operation({id:"second-holding",requestId,quantity:"2",price:"15"}))).rejects.toThrow();
+    expect(await state()).toEqual(saved);
+  });
+  it("a failed write rolls its receipt back so the same request can be retried", async () => {
+    await seed(); const data = operation({id:"retry-holding",quantity:"2",price:"15"}); const before = await state();
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic failure after receipt'; END $$;
+      CREATE TRIGGER fail_money_insert BEFORE UPDATE ON holdings FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    await expect(reinforceHolding(data)).rejects.toThrow(); expect(await state()).toEqual(before);
+    await engine.exec(`RESET ROLE; DROP TRIGGER fail_money_insert ON holdings; SET ROLE money_flows_test;`);
+    await reinforceHolding(data); expect(Number((await state()).holdings[0].quantity)).toBe(12);
+    const saved = await state(); await reinforceHolding(data); expect(await state()).toEqual(saved);
+  });
+  it("never recreates a deleted position when an old operation is retried", async () => {
+    await seed(); const data = operation({id:"retry-holding",amount:"2"}); await addRewards(data);
+    await isolated.db.delete(schema.holdings).where(eq(schema.holdings.id,"retry-holding"));
+    const saved = await state(); await expect(addRewards(data)).rejects.toThrow("Holding not found");
+    expect(await state()).toEqual(saved);
+  });
+  it("does not accept another user's receipt even with matching details", async () => {
+    await seed(); const requestId = request();
+    await addRewards(operation({id:"retry-holding",requestId,amount:"2"}));
+    await engine.exec(`SELECT set_config('app.user_id','flow-b',false)`);
+    await isolated.db.insert(schema.holdings).values({id:"other-retry",symbol:"OTHER",accountId:"foreign",quantity:"10",avgEntryPrice:"10",currentPrice:"12"});
+    const before = await state();
+    await expect(addRewards(operation({id:"other-retry",requestId,amount:"2"}))).rejects.toThrow();
+    expect(await state()).toEqual(before);
+  });
+});
+
+
+describe("investment operation outcomes", () => {
+  const seed = async () => isolated.db.insert(schema.holdings).values({id:"outcome-holding",symbol:"TEST.OUTCOME",accountId:"eur-a",quantity:"2",avgEntryPrice:"10",currentPrice:"12"});
+  it("returns a validation error and can save the corrected request", async () => {
+    await seed(); const data = operation({id:"outcome-holding",quantity:"3",price:"15"});
+    expect(await submitHoldingOperation("sell",data)).toEqual({error:"Quantity sold cannot exceed the registered position."});
+    data.set("quantity","1"); expect(await submitHoldingOperation("sell",data)).toEqual({saved:true});
+    expect(await submitHoldingOperation("sell",data)).toEqual({saved:true});
+    expect(Number((await isolated.db.select().from(schema.holdings))[0].quantity)).toBe(1);
+  });
+  it("never returns database diagnostic text", async () => {
+    await seed();
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'sensitive-database-diagnostic'; END $$;
+      CREATE TRIGGER fail_money_insert BEFORE UPDATE ON holdings FOR EACH ROW EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+    const result = await submitHoldingOperation("price",operation({id:"outcome-holding",currentPrice:"15"}));
+    expect(result).toEqual({error:"Connection interrupted. Retry with the same details; a recorded operation will not be duplicated."});
+    expect(JSON.stringify(result)).not.toContain("sensitive-database-diagnostic");
+  });
+  it("refuses an expired session before recording anything", async () => {
+    await seed(); isolated.signedIn = false;
+    expect(await submitHoldingOperation("rewards",operation({id:"outcome-holding",amount:"2"}))).toEqual({error:"Sign in again."});
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
+    expect(Number((await isolated.db.select().from(schema.holdings))[0].rewardsEarned)).toBe(0);
+  });
+  it("refuses an unknown operation without writing a receipt", async () => {
+    await seed();
+    expect(await submitHoldingOperation("unknown" as never,operation({id:"outcome-holding"}))).toEqual({error:"Choose a valid investment operation."});
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
   });
 });

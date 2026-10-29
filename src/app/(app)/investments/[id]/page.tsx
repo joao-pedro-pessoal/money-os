@@ -5,17 +5,14 @@ import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   getHolding,
   getHoldingSnapshots,
-  updateHoldingPrice,
   deleteHolding,
   listAccountsForHoldings,
-  addRewards,
-  reinforceHolding,
-  sellHolding,
 } from "@/actions/investments";
 import HoldingTags from "@/components/HoldingTags";
 import HoldingPurposes from "@/components/HoldingPurposes";
 import Section from "@/components/Section";
 import { tagLabel } from "@/lib/portfolio/tags";
+import HoldingOperationForm from "@/components/HoldingOperationForm";
 import HoldingEditForm from "@/components/HoldingEditForm";
 import HoldingFormFields from "@/components/HoldingFormFields";
 import { listPlaylists } from "@/actions/playlists";
@@ -119,7 +116,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           persistKey="holding:price"
           summary={holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleDateString("pt-PT") : uiText("never updated")}
         >
-          <form action={updateHoldingPrice} className="space-y-3">
+          <HoldingOperationForm kind="price">
             <input type="hidden" name="id" value={holding.id} />
             {valuation && (
               <p
@@ -145,7 +142,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             <button type="submit" className="btn w-full">{uiText("Save price")}</button>
             <p className="text-xs text-[var(--muted)]">{uiText("Last updated")}{" "}
               {holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleString("pt-PT") : uiText("never")}{uiText(". Each update is recorded so the value-over-time chart fills in.")}</p>
-          </form>
+          </HoldingOperationForm>
         </Section>
 
         <Section
@@ -186,7 +183,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Section title="Buy more (reinforce)" defaultOpen persistKey="holding:buy">
-          <form action={reinforceHolding} className="space-y-3">
+          <HoldingOperationForm kind="reinforce">
             <input type="hidden" name="id" value={holding.id} />
             <div className="flex gap-2">
               <input name="quantity" type="number" step="0.00000001" placeholder={uiText("Quantity bought")} className="input" required />
@@ -194,11 +191,11 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             </div>
             <button type="submit" className="btn w-full">{uiText("Add to position")}</button>
             <p className="text-xs text-[var(--muted)]">{uiText("The average entry price is recalculated as a weighted average of what you already held and this new lot.")}</p>
-          </form>
+          </HoldingOperationForm>
         </Section>
 
         <Section title="Sell (partial or full)" defaultOpen persistKey="holding:sell">
-          <form action={sellHolding} className="space-y-3">
+          <HoldingOperationForm kind="sell">
             <input type="hidden" name="id" value={holding.id} />
             <div className="flex gap-2">
               <input
@@ -216,7 +213,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
               <span className={Number(holding.realizedPnl ?? 0) >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}>
                 <Money value={Number(holding.realizedPnl ?? 0)} currency={holding.currency} />
               </span>{uiText(". The average entry price stays put — only the quantity drops.")}</p>
-          </form>
+          </HoldingOperationForm>
         </Section>
       </div>
 
@@ -243,7 +240,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
         </div>
-        <form action={addRewards} className="flex gap-2">
+        <HoldingOperationForm kind="rewards" fieldsClassName="flex gap-2">
           <input type="hidden" name="id" value={holding.id} />
           <input
             name="amount"
@@ -254,7 +251,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             required
           />
           <button type="submit" className="btn whitespace-nowrap">{uiText("Add")}</button>
-        </form>
+        </HoldingOperationForm>
         <p className="text-xs text-[var(--muted)] mt-2">{uiText("\"Projected / year\" is an estimate from the APR. \"Rewards received\" is what actually landed — the two are kept apart on purpose.")}</p>
       </Section>
 

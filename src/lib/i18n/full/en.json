@@ -3320,5 +3320,12 @@
   "Choose a valid position direction.": "Choose a valid position direction.",
   "Could not confirm the save. Reload to check the position before retrying.": "Could not confirm the save. Reload to check the position before retrying.",
   "Position saved.": "Position saved.",
-  "Leave the current price blank to use the entry price as an estimate until you add a valuation.": "Leave the current price blank to use the entry price as an estimate until you add a valuation."
+  "Leave the current price blank to use the entry price as an estimate until you add a valuation.": "Leave the current price blank to use the entry price as an estimate until you add a valuation.",
+  "Refresh this page before recording an investment operation.": "Refresh this page before recording an investment operation.",
+  "This investment request was already used with different details. Check the position before recording another operation.": "This investment request was already used with different details. Check the position before recording another operation.",
+  "Choose a valid investment operation.": "Choose a valid investment operation.",
+  "Connection interrupted. Retry with the same details; a recorded operation will not be duplicated.": "Connection interrupted. Retry with the same details; a recorded operation will not be duplicated.",
+  "Operation recorded.": "Operation recorded.",
+  "Record another operation": "Record another operation",
+  "Quantity sold cannot exceed the registered position.": "Quantity sold cannot exceed the registered position."
 }
