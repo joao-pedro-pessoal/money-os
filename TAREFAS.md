@@ -44,6 +44,20 @@ Valores da auditoria são uma fotografia desta data, não valores a fixar no có
   ser reaproveitados.
 - Esta lista não autoriza publicação, distribuição ou alterações aos dados reais.
 
+## 1b. Plano para o Codex (30/10/2026)
+
+Procedimento completo em [docs/CODEX_PROXIMOS_PASSOS.md](docs/CODEX_PROXIMOS_PASSOS.md). Sem migrações, sem publicar.
+
+| ID | Tarefa | Estado e critério de conclusão |
+| --- | --- | --- |
+| C1 | Números e gráficos no formato da língua escolhida | **Por fazer.** `fmt` e ~29 `"pt-PT"` fixos: em inglês aparece `12 298,77 €` e `4 mil`. Concluído com en/pt testados no painel, Contas, Movimentos, relatórios e PDF. |
+| C2 | Edição completa só na conta do dono | **Por fazer.** Na compilação `money`, `OWNER_USER_ID` vê investimentos; outros recebem 404 e ações recusadas. Decisão só no servidor, pela sessão. |
+| C3 | Primeira entrada numa conta nova | **Por fazer.** Cartão «Get started» com 3 passos que se marcam sozinhos. |
+| C4 | Só inglês e português na edição de lançamento | **Por fazer.** Seletor com en/pt na edição `money`; outras línguas caem para inglês; cópia completa mantém 15. |
+| C5 | Textos na língua errada | **Por fazer.** Descrições de acertos de saldo, frase de câmbio em Movimentos, «cancelled» nas subscrições; verificação de páginas en/pt na compilação `money`. |
+| C6 | Acertar saldo na página da conta como no painel rápido | **Por fazer.** `EditForm` + `submitAccountBalance` + tipos por direção partilhados com `AccountQuick`. |
+| C7 | Cópia de segurança do serviço (preparar) | **Por fazer.** Script e procedimento com restauro ensaiado só em base local fictícia; destino decidido pelo utilizador. |
+
 ## 2. Prioridade atual — aplicação em uso
 
 | ID | Tarefa | Estado e critério de conclusão |
