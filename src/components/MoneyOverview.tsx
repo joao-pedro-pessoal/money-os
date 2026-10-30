@@ -1,9 +1,12 @@
+import GetStarted from "./GetStarted";
+import { currentUserId } from "@/actions/session";
+import { listTransactions } from "@/actions/transactions";
 import { currentInvestments } from "@/actions/releaseEdition";
 import Link from "next/link";
 import { textForRequest } from "@/actions/pageLanguage";
 import { getNetWorth } from "@/actions/networth";
 import { getAccountComposition, getMonthShape } from "@/actions/dashboard";
-import { listAccountsWithState } from "@/actions/accounts";
+import { listAccountsWithState, listArchivedAccounts } from "@/actions/accounts";
 import { listBudgets } from "@/actions/budgets";
 import { listBucketsWithTotals } from "@/actions/buckets";
 import { getTotalNetWorthOverTime } from "@/actions/analytics";
@@ -23,11 +26,12 @@ import AccountQuick from "./AccountQuick";
 export default async function MoneyOverview({ analytics = false }: { analytics?: boolean }) {
   const investmentsEnabled = await currentInvestments();
   const t = await textForRequest();
-  const [worth, month, accounts, budgets, goals, series, due, composition, subscriptions] = await Promise.all([
+  const [worth, month, accounts, budgets, goals, series, due, composition, subscriptions, recent, userId] = await Promise.all([
     getNetWorth(), getMonthShape(), listAccountsWithState(), listBudgets(),
     listBucketsWithTotals(), getTotalNetWorthOverTime(), getDueSubscriptionCharges(),
-    getAccountComposition(), listSubscriptions(),
+    getAccountComposition(), listSubscriptions(), listTransactions(1), currentUserId(),
   ]);
+  const accountCount = accounts.length || (await listArchivedAccounts()).length;
   const activeSubscriptions = subscriptions.filter(sub => sub.active && sub.monthlyInBase !== null);
   const currency = worth.baseCurrency;
   const cards = [
@@ -38,6 +42,7 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
   ];
   return <div className="space-y-6">
     <h1 className="text-lg font-semibold">{t(analytics ? "Analytics" : "Dashboard")}</h1>
+    {!analytics && userId && <GetStarted key={userId} userId={userId} counts={{accounts:accountCount,transactions:recent.rows.length,budgets:budgets.items.length,goals:goals.length}} canRecord={accounts.length>0} />}
     {analytics && <PageTabs tabs={analyticsTabs(investmentsEnabled)} />}
     {worth.unconverted.length > 0 && <p role="status" className="card p-3 text-sm text-[var(--amber)]">{t("Some amounts could not be converted to ")}{currency}. {t("Add a rate in Settings.")}</p>}
     <p className="text-sm text-[var(--muted)]">{t("Income and expenses for the current month.")}</p>

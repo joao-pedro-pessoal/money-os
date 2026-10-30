@@ -70,3 +70,21 @@ com múltiplos backends. Evidência ignorada em `c1-c7/C2/`, `c2-ui.mjs` e
 `single-backend-pool.cjs`. A APK store continua sem os widgets de investimento
 no manifesto; o dono usa a APK home para estes widgets. Nenhum Android, segredo,
 produção ou configuração externa foi alterado nesta tarefa.
+
+## C3 — Primeiros passos
+
+O cartão no painel money usa os dados já existentes da pessoa: conta ativa ou
+arquivada, qualquer movimento e orçamento ou objetivo. Não infere movimento de
+uma previsão. O registo usa o evento quick-entry existente, sem criar outro
+formulário. Sem conta ativa o botão de movimento está desativado. A conclusão
+retira o cartão; o fecho é uma preferência por pessoa e aparelho, com alternativa
+em memória se o armazenamento estiver indisponível. A privacidade descreve-a.
+
+Validação: **3436 testes em 223 ficheiros**, TypeScript, lint e compilação money.
+**11 verificações no navegador**: em inglês no computador e português no
+telemóvel, uma pessoa sem dados vê três passos, cria uma conta com saldo, abre o
+registo rápido a partir do cartão e cria um objetivo. Cada passo é marcado e o
+cartão desaparece ao terminar. O fecho persiste após recarregar; sem armazenamento
+funciona durante a visita. Sem erros de execução. Migrações reais só na base
+PGlite fictícia, sem serviços externos. Evidência ignorada em `c1-c7/C3/` e
+`c3-ui.mjs`.
