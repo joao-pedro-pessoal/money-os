@@ -1,26 +1,32 @@
 import Link from "next/link";
 import { textForRequest } from "@/actions/pageLanguage";
 import { getNetWorth } from "@/actions/networth";
-import { getMonthShape } from "@/actions/dashboard";
+import { getAccountComposition, getMonthShape } from "@/actions/dashboard";
 import { listAccountsWithState } from "@/actions/accounts";
 import { listBudgets } from "@/actions/budgets";
 import { listBucketsWithTotals } from "@/actions/buckets";
 import { getTotalNetWorthOverTime } from "@/actions/analytics";
 import { getDueSubscriptionCharges } from "@/actions/subscriptionCharges";
+import { listSubscriptions } from "@/actions/subscriptions";
 import { Money } from "./PrivacyContext";
 import NetWorthChart from "./NetWorthChart";
 import DueSubscriptionCharges from "./DueSubscriptionCharges";
 import PageTabs from "./PageTabs";
 import { ANALYTICS_TABS } from "@/lib/navigation";
 import Section from "./Section";
+import DonutChart from "./DonutChart";
+import ProgressBars, { budgetTone } from "./ProgressBars";
+import AccountQuick from "./AccountQuick";
 
 /** Everyday money, using the same totals as the full edition. Never rewrites old data. */
 export default async function MoneyOverview({ analytics = false }: { analytics?: boolean }) {
   const t = await textForRequest();
-  const [worth, month, accounts, budgets, goals, series, due] = await Promise.all([
+  const [worth, month, accounts, budgets, goals, series, due, composition, subscriptions] = await Promise.all([
     getNetWorth(), getMonthShape(), listAccountsWithState(), listBudgets(),
     listBucketsWithTotals(), getTotalNetWorthOverTime(), getDueSubscriptionCharges(),
+    getAccountComposition(), listSubscriptions(),
   ]);
+  const activeSubscriptions = subscriptions.filter(sub => sub.active && sub.monthlyInBase !== null);
   const currency = worth.baseCurrency;
   const cards = [
     { label: "Net worth", value: worth.total },
@@ -46,27 +52,32 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
       {[{href:"/accounts",label:"Accounts"},{href:"/transactions",label:"Cash Flow"},{href:"/import",label:"Import statement"},{href:"/analytics/report",label:"Reports"}].map(link => <Link key={link.href} href={link.href} className="inline-flex items-center min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--accent)]">{t(link.label)}</Link>)}
     </div>
     <Section title="Accounts" defaultOpen essential>
-      {accounts.length === 0 ? <Link href="/accounts" className="btn">{t("Add account by hand")}</Link> : <ul className="divide-y divide-[var(--border)]">
-        {accounts.map(account => <li key={account.id}>
-          <Link href={`/accounts/${account.id}`} className="flex justify-between gap-3 py-3 min-h-11">
-            <span translate="no">{account.name}</span><Money value={account.balance} currency={account.currency} />
-          </Link>
-        </li>)}
-      </ul>}
+      {accounts.length === 0 ? <Link href="/accounts" className="btn">{t("Add account by hand")}</Link> : <>
+        <DonutChart compact currency={currency} data={composition.filter(row => row.composition.total > 0).map(row => ({ name: row.name, value: row.composition.total }))} />
+        <p className="text-xs text-[var(--muted)] mt-4">{t("Tap an account to set its balance or add an entry.")}</p>
+        <ul className="divide-y divide-[var(--border)]">
+          {accounts.map(account => <li key={account.id}>
+            <AccountQuick account={{ id: account.id, name: account.name, currency: account.currency, balance: account.balance }} className="flex w-full justify-between gap-3 py-3 min-h-11 text-left">
+              <span translate="no">{account.name}</span><Money value={account.balance} currency={account.currency} />
+            </AccountQuick>
+          </li>)}
+        </ul>
+      </>}
     </Section>
     <Section title="Budgets" defaultOpen essential>
-      <ul className="space-y-3">{budgets.items.map(budget => <li key={budget.id} className="flex justify-between gap-3 flex-wrap">
-        <Link href="/budgets" className="hover:underline" translate="no">{budget.name}</Link>
-        <span><Money value={budget.spent} currency={currency} /> / <Money value={budget.limit} currency={currency} /></span>
-      </li>)}</ul>
+      <ProgressBars currency={currency} items={budgets.items.map(budget => ({ id: budget.id, name: budget.name, href: "/budgets", value: budget.spent, max: budget.available, tone: budgetTone(budget) }))} />
       <Link href="/budgets" className="inline-block mt-3 text-[var(--accent)]">{t("New budget")}</Link>
     </Section>
     <Section title="Buckets" defaultOpen essential>
-      <ul className="space-y-3">{goals.map(goal => <li key={goal.id} className="flex justify-between gap-3 flex-wrap">
-        <Link href={`/buckets/${goal.id}`} className="hover:underline" translate="no">{goal.name}</Link>
-        <Money value={goal.total} currency={currency} />
-      </li>)}</ul>
+      <ProgressBars currency={currency} items={goals.map(goal => ({ id: goal.id, name: goal.name, href: `/buckets/${goal.id}`, value: goal.total, max: goal.targetAmount === null ? null : Number(goal.targetAmount) }))} />
       <Link href="/buckets" className="inline-block mt-3 text-[var(--accent)]">{t("Create bucket")}</Link>
+    </Section>
+    <Section title="Subscriptions" defaultOpen essential>
+      {activeSubscriptions.length === 0 ? <Link href="/subscriptions" className="text-[var(--accent)]">{t("Add a subscription")}</Link> : <>
+        <p className="text-xs text-[var(--muted)] mb-3">{t("Committed each month")}: <Money value={activeSubscriptions.reduce((sum, sub) => sum + (sub.monthlyInBase ?? 0), 0)} currency={currency} /></p>
+        <DonutChart compact currency={currency} data={activeSubscriptions.map(sub => ({ name: sub.name, value: Math.round((sub.monthlyInBase ?? 0) * 100) / 100 }))} />
+        <Link href="/subscriptions" className="inline-block mt-3 text-[var(--accent)]">{t("Subscriptions")} →</Link>
+      </>}
     </Section>
     <Section title="Net worth over time" defaultOpen={analytics} essential={analytics}>
       {series.some(point => point.approximate) && <p className="text-xs text-[var(--muted)] mb-3">{t("Historical values are approximate.")}</p>}

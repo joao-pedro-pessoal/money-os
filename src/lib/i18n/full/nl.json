@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "Ongeldige snelle invoer.",
   "Cannot transfer to the same account": "Kan niet overboeken naar hetzelfde account",
   "Enter an amount, or set a rate on the account so it can be worked out.": "Voer een bedrag in, of zet een tarief op de rekening, zodat het kan worden uitgerekend.",
-  "Interest": "Interesse",
+  "Interest": "Rente",
   "Transaction not found": "Transactie niet gevonden",
   "Transfers can't be edited — delete and recreate instead": "Overdrachten kunnen niet worden bewerkt. Verwijder ze en maak ze opnieuw aan",
   "A cashback movement cannot also carry purchase savings.": "Een cashback-beweging kan niet ook aankoopbesparingen met zich meebrengen.",
@@ -2423,7 +2423,7 @@
   "Buy": "Koop",
   "Dividend": "Dividend",
   "Deposit": "Borg",
-  "Withdrawal": "Intrekking",
+  "Withdrawal": "Opname",
   "Fee": "Vergoeding",
   "The date couldn't be read.": "De datum kon niet worden gelezen.",
   "The amount couldn't be read.": "Het bedrag kon niet worden gelezen.",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "Tik op een rekening om het saldo aan te passen of een boeking toe te voegen.",
+  "Tap a balance to change it or add an entry.": "Tik op een saldo om het te wijzigen of een boeking toe te voegen.",
+  "Add expense": "Uitgave toevoegen",
+  "Add income": "Inkomsten toevoegen",
+  "Set balance": "Saldo instellen",
+  "Save balance": "Saldo opslaan",
+  "Close": "Sluiten",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple toont alleen het belangrijkste van elke pagina; Complex toont alle opties.",
+  "Choose a type that matches the change in balance.": "Kies een soort die past bij de wijziging van het saldo."
 }

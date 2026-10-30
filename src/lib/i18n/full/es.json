@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "Entrada rápida no válida.",
   "Cannot transfer to the same account": "No se puede transferir a la misma cuenta",
   "Enter an amount, or set a rate on the account so it can be worked out.": "Ingrese un monto o establezca una tasa en la cuenta para que se pueda calcular.",
-  "Interest": "Interés",
+  "Interest": "Intereses",
   "Transaction not found": "Transacción no encontrada",
   "Transfers can't be edited — delete and recreate instead": "Las transferencias no se pueden editar; en su lugar, elimínelas y vuelva a crearlas.",
   "A cashback movement cannot also carry purchase savings.": "Un movimiento de devolución de dinero no puede incluir también ahorros de compra.",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "Toca una cuenta para ajustar su saldo o añadir un movimiento.",
+  "Tap a balance to change it or add an entry.": "Toca un saldo para cambiarlo o añadir un movimiento.",
+  "Add expense": "Añadir gasto",
+  "Add income": "Añadir ingreso",
+  "Set balance": "Ajustar saldo",
+  "Save balance": "Guardar saldo",
+  "Close": "Cerrar",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple muestra solo lo esencial de cada página; Complex muestra todas las opciones.",
+  "Choose a type that matches the change in balance.": "Elige un tipo que coincida con el cambio de saldo."
 }

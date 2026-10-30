@@ -2423,7 +2423,7 @@
   "Buy": "شراء",
   "Dividend": "توزيعات الأرباح",
   "Deposit": "إيداع",
-  "Withdrawal": "الانسحاب",
+  "Withdrawal": "سحب",
   "Fee": "رسوم",
   "The date couldn't be read.": "لا يمكن قراءة التاريخ.",
   "The amount couldn't be read.": "لا يمكن قراءة المبلغ.",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "اضغط على حساب لتعديل رصيده أو إضافة قيد.",
+  "Tap a balance to change it or add an entry.": "اضغط على رصيد لتغييره أو إضافة قيد.",
+  "Add expense": "إضافة مصروف",
+  "Add income": "إضافة دخل",
+  "Set balance": "تعيين الرصيد",
+  "Save balance": "حفظ الرصيد",
+  "Close": "إغلاق",
+  "Simple shows only the essentials of each page; Complex shows every option.": "يعرض Simple الأساسيات فقط في كل صفحة، ويعرض Complex جميع الخيارات.",
+  "Choose a type that matches the change in balance.": "اختر نوعًا يطابق التغير في الرصيد."
 }

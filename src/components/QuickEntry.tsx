@@ -57,10 +57,12 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
       window.history.replaceState(window.history.state, "", url);
     }
     if (first) open(first);
+    // An account's quick sheet asks with `{ kind, accountId }` to start on that account.
     const handle = (event: Event) => {
-      const kind = kindOf((event as CustomEvent<string>).detail);
+      const detail = (event as CustomEvent<string | { kind?: string; accountId?: string }>).detail;
+      const kind = kindOf(typeof detail === "object" && detail ? detail.kind : detail);
       delete pending.__moneyOsQuickEntry;
-      if (kind) open(kind);
+      if (kind) open(kind, typeof detail === "object" && detail ? detail.accountId : undefined);
     };
     window.addEventListener("money-os:quick-entry", handle);
     return () => window.removeEventListener("money-os:quick-entry", handle);
@@ -68,9 +70,11 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function open(kind: "expense" | "income" = "expense") {
+  function open(kind: "expense" | "income" = "expense", account?: string) {
+    const chosen = account && accounts.some(a => a.id === account) ? account : null;
     if (dialog.current?.open) {
       setType(kind);
+      if (chosen) setAccountId(chosen);
       return;
     }
     form.current?.reset();
@@ -79,7 +83,8 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
     setError("");
     setSavedId(null);
     setUndone(false);
-    if (!accounts.some(account => account.id === accountId)) setAccountId(accounts[0]?.id ?? "");
+    if (chosen) setAccountId(chosen);
+    else if (!accounts.some(account => account.id === accountId)) setAccountId(accounts[0]?.id ?? "");
     requestId.current = newQuickEntryId();
     scrollBefore.current = document.body.style.overflow;
     document.body.style.overflow = "hidden";

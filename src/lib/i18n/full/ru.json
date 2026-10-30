@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "Неверный быстрый ввод.",
   "Cannot transfer to the same account": "Невозможно перенести на тот же аккаунт",
   "Enter an amount, or set a rate on the account so it can be worked out.": "Введите сумму или установите ставку на счете, чтобы ее можно было рассчитать.",
-  "Interest": "Интерес",
+  "Interest": "Проценты",
   "Transaction not found": "Транзакция не найдена",
   "Transfers can't be edited — delete and recreate instead": "Трансферы нельзя редактировать — вместо этого удалите и создайте заново.",
   "A cashback movement cannot also carry purchase savings.": "Движение кэшбэка не может также приносить сбережения на покупках.",
@@ -2422,7 +2422,7 @@
   "Could not decrypt — wrong encryption key, or the stored value was altered": "Не удалось расшифровать — неправильный ключ шифрования или сохраненное значение было изменено.",
   "Buy": "Купить",
   "Dividend": "Дивиденды",
-  "Deposit": "Депозит",
+  "Deposit": "Пополнение",
   "Withdrawal": "Вывод средств",
   "Fee": "Плата",
   "The date couldn't be read.": "Не удалось прочитать дату.",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "Нажмите на счёт, чтобы изменить баланс или добавить запись.",
+  "Tap a balance to change it or add an entry.": "Нажмите на баланс, чтобы изменить его или добавить запись.",
+  "Add expense": "Добавить расход",
+  "Add income": "Добавить доход",
+  "Set balance": "Указать баланс",
+  "Save balance": "Сохранить баланс",
+  "Close": "Закрыть",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple показывает только главное на каждой странице, Complex — все параметры.",
+  "Choose a type that matches the change in balance.": "Выберите тип, соответствующий изменению баланса."
 }

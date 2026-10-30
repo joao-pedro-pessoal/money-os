@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "Bakiyesini ayarlamak veya kayıt eklemek için bir hesaba dokunun.",
+  "Tap a balance to change it or add an entry.": "Değiştirmek veya kayıt eklemek için bir bakiyeye dokunun.",
+  "Add expense": "Gider ekle",
+  "Add income": "Gelir ekle",
+  "Set balance": "Bakiyeyi ayarla",
+  "Save balance": "Bakiyeyi kaydet",
+  "Close": "Kapat",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple her sayfanın yalnızca temel öğelerini, Complex ise tüm seçenekleri gösterir.",
+  "Choose a type that matches the change in balance.": "Bakiyedeki değişikliğe uyan bir tür seçin."
 }

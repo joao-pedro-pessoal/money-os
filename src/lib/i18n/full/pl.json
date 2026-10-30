@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "Nieprawidłowy szybki wpis.",
   "Cannot transfer to the same account": "Nie można przenieść na to samo konto",
   "Enter an amount, or set a rate on the account so it can be worked out.": "Wprowadź kwotę lub ustal kurs na koncie, aby można było ją wyliczyć.",
-  "Interest": "Zainteresowanie",
+  "Interest": "Odsetki",
   "Transaction not found": "Nie znaleziono transakcji",
   "Transfers can't be edited — delete and recreate instead": "Przelewów nie można edytować — zamiast tego usuń je i utwórz ponownie",
   "A cashback movement cannot also carry purchase savings.": "Ruch cashback nie może również wiązać się z oszczędnościami zakupowymi.",
@@ -2423,7 +2423,7 @@
   "Buy": "Kup",
   "Dividend": "Dywidenda",
   "Deposit": "Depozyt",
-  "Withdrawal": "Wycofanie",
+  "Withdrawal": "Wypłata",
   "Fee": "Opłata",
   "The date couldn't be read.": "Nie udało się odczytać daty.",
   "The amount couldn't be read.": "Nie udało się odczytać kwoty.",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "Dotknij konta, aby ustawić saldo lub dodać wpis.",
+  "Tap a balance to change it or add an entry.": "Dotknij salda, aby je zmienić lub dodać wpis.",
+  "Add expense": "Dodaj wydatek",
+  "Add income": "Dodaj przychód",
+  "Set balance": "Ustaw saldo",
+  "Save balance": "Zapisz saldo",
+  "Close": "Zamknij",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple pokazuje tylko to, co najważniejsze na każdej stronie; Complex pokazuje wszystkie opcje.",
+  "Choose a type that matches the change in balance.": "Wybierz typ zgodny ze zmianą salda."
 }

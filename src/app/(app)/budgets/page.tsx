@@ -13,6 +13,7 @@ import { PERIODS } from "@/lib/accounting/envelopes";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Section from "@/components/Section";
+import ProgressBars, { budgetTone } from "@/components/ProgressBars";
 import Link from "next/link";
 import FilterLink from "@/components/FilterLink";
 import { localDay } from "@/lib/calendar/localDay";
@@ -58,6 +59,12 @@ export default async function BudgetsPage({
           </FilterLink>
         </div>
       </div>
+
+      {data.items.length > 0 && (
+        <div className="card p-4">
+          <ProgressBars currency={data.baseCurrency} items={data.items.map((b) => ({ id: b.id, name: b.name, value: b.spent, max: b.available, tone: budgetTone(b) }))} />
+        </div>
+      )}
 
       {(data.items.some(b => b.unconverted > 0) || unbudgeted.unconverted.length > 0) && <p role="status" className="card p-3 text-xs text-[var(--amber)]">{uiText("Spending totals are incomplete because an exchange rate is missing. Refresh rates in Settings.")}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

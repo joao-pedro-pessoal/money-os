@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "Entrée rapide invalide.",
   "Cannot transfer to the same account": "Impossible de transférer vers le même compte",
   "Enter an amount, or set a rate on the account so it can be worked out.": "Entrez un montant ou définissez un taux sur le compte afin qu'il puisse être calculé.",
-  "Interest": "Intérêt",
+  "Interest": "Intérêts",
   "Transaction not found": "Transaction introuvable",
   "Transfers can't be edited — delete and recreate instead": "Les transferts ne peuvent pas être modifiés : supprimez-les et recréez-les à la place",
   "A cashback movement cannot also carry purchase savings.": "Un mouvement de cashback ne peut pas non plus générer d’épargne d’achat.",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "Appuyez sur un compte pour ajuster son solde ou ajouter une opération.",
+  "Tap a balance to change it or add an entry.": "Appuyez sur un solde pour le modifier ou ajouter une opération.",
+  "Add expense": "Ajouter une dépense",
+  "Add income": "Ajouter un revenu",
+  "Set balance": "Ajuster le solde",
+  "Save balance": "Enregistrer le solde",
+  "Close": "Fermer",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple n’affiche que l’essentiel de chaque page ; Complex affiche toutes les options.",
+  "Choose a type that matches the change in balance.": "Choisissez un type qui correspond à la variation du solde."
 }

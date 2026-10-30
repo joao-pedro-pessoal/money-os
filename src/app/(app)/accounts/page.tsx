@@ -20,6 +20,10 @@ import { ACCOUNTS_TABS } from "@/lib/navigation";
 import BalanceMeaningField from "@/components/BalanceMeaningField";
 import Link from "next/link";
 import Section from "@/components/Section";
+import DonutChart from "@/components/DonutChart";
+import AccountQuick from "@/components/AccountQuick";
+import { getAccountComposition } from "@/actions/dashboard";
+import { getBaseCurrency } from "@/actions/settings";
 
 const STATE_COLOR: Record<string, string> = {
   RECONCILED: "text-[var(--green)]",
@@ -29,13 +33,15 @@ const STATE_COLOR: Record<string, string> = {
 
 export default async function AccountsPage() {
   const uiText = await textForRequest();
-  const [accounts, archived, platformTotals, removable, connections] =
+  const [accounts, archived, platformTotals, removable, connections, composition, baseCurrency] =
     await Promise.all([
       listAccountsWithState(),
       listArchivedAccounts(),
       getAccountPlatformTotals(),
       listRemovableAccounts(),
       listConnections(),
+      getAccountComposition(),
+      getBaseCurrency(),
     ]);
 
   // What could be connected instead of typed in, and what already is.
@@ -62,6 +68,12 @@ export default async function AccountsPage() {
       />
 
       <Section title="Accounts" defaultOpen essential summary={uiText("{0} active", { "0": accounts.length })}>
+        {composition.some((row) => row.composition.total > 0) && (
+          <div className="mb-4">
+            <DonutChart compact currency={baseCurrency} data={composition.filter((row) => row.composition.total > 0).map((row) => ({ name: row.name, value: row.composition.total }))} />
+            <p className="text-xs text-[var(--muted)] mt-3">{uiText("Tap a balance to change it or add an entry.")}</p>
+          </div>
+        )}
         <div className="table-scroll mobile-records account-records" role="region" aria-label={uiText("Accounts")} tabIndex={0}><ResponsiveTable className="data-table" role="table">
           <thead>
             <tr>
@@ -88,7 +100,9 @@ export default async function AccountsPage() {
                     const shown = p ? p.total : a.balance;
                     return (
                       <>
-                        <Money value={shown} currency={a.currency} />
+                        <AccountQuick account={{ id: a.id, name: a.name, currency: a.currency, balance: a.balance }} className="underline decoration-dotted underline-offset-4">
+                          <Money value={shown} currency={a.currency} />
+                        </AccountQuick>
                         {INVESTMENTS_ENABLED && p && p.unrealizedPnl !== 0 && (
                           <span
                             className={

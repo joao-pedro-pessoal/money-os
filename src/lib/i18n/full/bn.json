@@ -2423,7 +2423,7 @@
   "Buy": "কিনুন",
   "Dividend": "লভ্যাংশ",
   "Deposit": "জমা",
-  "Withdrawal": "প্রত্যাহার",
+  "Withdrawal": "উত্তোলন",
   "Fee": "ফি",
   "The date couldn't be read.": "তারিখ পড়া যাবে না.",
   "The amount couldn't be read.": "পরিমাণ পড়া যাবে না.",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "ব্যালেন্স ঠিক করতে বা এন্ট্রি যোগ করতে একটি অ্যাকাউন্টে ট্যাপ করুন।",
+  "Tap a balance to change it or add an entry.": "ব্যালেন্স বদলাতে বা এন্ট্রি যোগ করতে সেটিতে ট্যাপ করুন।",
+  "Add expense": "খরচ যোগ করুন",
+  "Add income": "আয় যোগ করুন",
+  "Set balance": "ব্যালেন্স ঠিক করুন",
+  "Save balance": "ব্যালেন্স সংরক্ষণ করুন",
+  "Close": "বন্ধ করুন",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple প্রতিটি পৃষ্ঠার শুধু প্রয়োজনীয় অংশ দেখায়; Complex সব বিকল্প দেখায়।",
+  "Choose a type that matches the change in balance.": "ব্যালেন্সের পরিবর্তনের সঙ্গে মেলে এমন একটি ধরন বেছে নিন।"
 }

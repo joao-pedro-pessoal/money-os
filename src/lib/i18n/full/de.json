@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "Ungültige Schnelleingabe.",
   "Cannot transfer to the same account": "Eine Übertragung auf dasselbe Konto ist nicht möglich",
   "Enter an amount, or set a rate on the account so it can be worked out.": "Geben Sie einen Betrag ein oder legen Sie einen Zinssatz für das Konto fest, damit dieser berechnet werden kann.",
-  "Interest": "Interesse",
+  "Interest": "Zinsen",
   "Transaction not found": "Transaktion nicht gefunden",
   "Transfers can't be edited — delete and recreate instead": "Übertragungen können nicht bearbeitet werden. Löschen Sie sie stattdessen und erstellen Sie sie neu",
   "A cashback movement cannot also carry purchase savings.": "Eine Cashback-Aktion kann nicht auch Einkaufsersparnisse mit sich bringen.",
@@ -2423,7 +2423,7 @@
   "Buy": "Kaufen",
   "Dividend": "Dividende",
   "Deposit": "Anzahlung",
-  "Withdrawal": "Rückzug",
+  "Withdrawal": "Abhebung",
   "Fee": "Gebühr",
   "The date couldn't be read.": "Das Datum konnte nicht gelesen werden.",
   "The amount couldn't be read.": "Der Betrag konnte nicht gelesen werden.",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "Tippen Sie auf ein Konto, um den Saldo anzupassen oder eine Buchung hinzuzufügen.",
+  "Tap a balance to change it or add an entry.": "Tippen Sie auf einen Saldo, um ihn zu ändern oder eine Buchung hinzuzufügen.",
+  "Add expense": "Ausgabe hinzufügen",
+  "Add income": "Einnahme hinzufügen",
+  "Set balance": "Saldo festlegen",
+  "Save balance": "Saldo speichern",
+  "Close": "Schließen",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple zeigt nur das Wesentliche jeder Seite, Complex zeigt alle Optionen.",
+  "Choose a type that matches the change in balance.": "Wählen Sie eine Art, die zur Änderung des Saldos passt."
 }

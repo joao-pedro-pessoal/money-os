@@ -17,6 +17,7 @@ import { Money } from "@/components/PrivacyContext";
 import Distributor from "@/components/Distributor";
 import Link from "next/link";
 import Section from "@/components/Section";
+import DonutChart from "@/components/DonutChart";
 
 export default async function BucketsPage() {
   const uiText = await textForRequest();
@@ -41,6 +42,12 @@ export default async function BucketsPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-lg font-semibold">{uiText("Buckets")}</h1>
+
+      {buckets.some((b) => b.total > 0) && (
+        <div className="card p-4">
+          <DonutChart compact currency={base} data={buckets.filter((b) => b.total > 0).map((b) => ({ name: b.name, value: b.total }))} />
+        </div>
+      )}
 
       {(distributable.unconverted.length > 0 || buckets.some(b => b.unconverted.length > 0)) && <p role="status" className="card p-3 text-xs text-[var(--amber)]">{uiText("Goal totals are incomplete because an exchange rate is missing. Refresh rates in Settings.")}</p>}
       {/* The hierarchy, and the thing that makes it worth having. */}

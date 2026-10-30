@@ -8,7 +8,7 @@ import { MANUAL_RETRY_MESSAGE, type ManualEntryResult } from "@/lib/money/manual
 import { hasSession } from "./session";
 
 type Store = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type Kind = "bucket:create" | "budget:create" | "subscription:create" | "allocation:add" | "bucket:edit" | "budget:limit" | "allocation:set";
+type Kind = "bucket:create" | "budget:create" | "subscription:create" | "allocation:add" | "bucket:edit" | "budget:limit" | "allocation:set" | "balance:set";
 
 export async function manualRequestId(form: FormData): Promise<string> {
   if (!(await hasSession())) throw new ManualEntryError("Sign in again.");

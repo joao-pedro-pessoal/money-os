@@ -16,6 +16,7 @@ import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { fmt } from "@/lib/format";
 import Section from "@/components/Section";
+import DonutChart from "@/components/DonutChart";
 import DueSubscriptionCharges from "@/components/DueSubscriptionCharges";
 import { getDueSubscriptionCharges } from "@/actions/subscriptionCharges";
 
@@ -68,6 +69,12 @@ export default async function SubscriptionsPage() {
           )}
         </div>
       </div>
+
+      {active.length > 0 && (
+        <div className="card p-4">
+          <DonutChart compact currency={totals.baseCurrency} data={active.filter((s) => s.monthlyInBase !== null).map((s) => ({ name: s.name, value: Math.round((s.monthlyInBase ?? 0) * 100) / 100 }))} />
+        </div>
+      )}
 
       {totals.unconverted.length > 0 && (
         <div className="card p-3 text-xs" style={{ borderColor: "var(--amber)" }}>{uiText("Left out of the totals: ")}{totals.unconverted.join(", ")}{uiText(" — no exchange rate yet. Refresh rates in Settings and these will be included.")}</div>

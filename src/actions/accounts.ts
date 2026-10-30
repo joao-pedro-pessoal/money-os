@@ -21,11 +21,15 @@ import { getAccountPlatformTotals } from "./platformTotals";
 import { isAbandoned, reasonsToKeep, type AccountUsage } from "@/lib/accounting/abandoned";
 import { meaningOf } from "@/lib/accounting/balanceScope";
 import { writeSnapshot } from "./snapshots";
-import { manualBalance } from "@/lib/money/manualEntry";
+import { ManualEntryError, manualBalance } from "@/lib/money/manualEntry";
+import { MANUAL_EDIT_RETRY_MESSAGE } from "@/lib/money/manualRequest";
+import { claimManualRequest, manualEntryResult, manualRequestId } from "./manualRequest";
 
 export async function listAccountsWithState() {
   const [allAccounts, allAllocations, platformTotals] = await Promise.all([
-    db.select().from(accounts).where(eq(accounts.active, true)),
+    // A fixed order: without it PostgreSQL returns an account just updated last,
+    // so a balance saved from the quick sheet moved its row and closed the sheet.
+    db.select().from(accounts).where(eq(accounts.active, true)).orderBy(accounts.createdAt, accounts.id),
     db.select().from(bucketAllocations),
     /**
      * Read here rather than at each screen that happened to remember to.
@@ -329,11 +333,6 @@ export async function removeEmptyAccounts(formData: FormData) {
   revalidatePath("/");
 }
 
-async function categoryByName(name: string) {
-  const [cat] = await db.select().from(categories).where(eq(categories.name, name));
-  return cat ?? null;
-}
-
 /**
  * Reconciliation-assisted balance update (MVP_SPEC.md §58 style, scoped to V1).
  *
@@ -350,28 +349,73 @@ async function categoryByName(name: string) {
  */
 export async function updateAccountBalance(formData: FormData) {
   const accountId = String(formData.get("accountId"));
-  const newBalance = Number(formData.get("newBalance"));
+  const newBalance = Number(manualBalance(String(formData.get("newBalance") ?? "")));
   const classification = String(formData.get("classification") ?? "correction");
 
-  const [acc] = await db.select().from(accounts).where(eq(accounts.id, accountId));
-  if (!acc) throw new Error("Account not found");
+  const currency = await db.transaction(async (store) => {
+    const [acc] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
+    if (!acc) throw new Error("Account not found");
+    await recordBalance(store, acc, newBalance, classification);
+    return acc.currency;
+  });
+  await writeSnapshot(accountId, newBalance, currency);
+  revalidateBalance(accountId);
+}
 
+/**
+ * The same reconciliation from the account's quick sheet, where a phone taps
+ * Save on a flaky connection: each attempt carries a request id, so a retry
+ * after a lost response confirms the saved balance instead of recording the
+ * difference again. Returns the outcome for the form rather than throwing.
+ */
+export async function setAccountBalance(formData: FormData) {
+  const requestId = await manualRequestId(formData);
+  const accountId = String(formData.get("accountId") ?? "");
+  const newBalance = manualBalance(String(formData.get("newBalance") ?? ""));
+  const classification = String(formData.get("classification") ?? "correction");
+
+  const currency = await db.transaction(async (store) => {
+    const [acc] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
+    if (!acc) throw new ManualEntryError("Account not found");
+    if (!(await claimManualRequest(store, requestId, "balance:set", accountId, JSON.stringify({ newBalance, classification })))) return null;
+    await recordBalance(store, acc, Number(newBalance), classification);
+    return acc.currency;
+  });
+  if (currency) await writeSnapshot(accountId, Number(newBalance), currency);
+  revalidateBalance(accountId);
+}
+
+export async function submitAccountBalance(formData: FormData) {
+  return manualEntryResult(() => setAccountBalance(formData), MANUAL_EDIT_RETRY_MESSAGE);
+}
+
+type Store = Parameters<Parameters<typeof db.transaction>[0]>[0];
+const MONEY_IN = new Set(["interest", "income", "deposit"]);
+const MONEY_OUT = new Set(["expense", "withdrawal"]);
+
+/** Sets the balance and books the difference as `classification` says, inside the caller's transaction. */
+async function recordBalance(store: Store, acc: typeof accounts.$inferSelect, newBalance: number, classification: string) {
   const oldBalance = Number(acc.balance);
   const diff = Math.round((newBalance - oldBalance + Number.EPSILON) * 100) / 100;
+  const accountId = acc.id;
+  const categoryByName = async (name: string) => (await store.select().from(categories).where(eq(categories.name, name)))[0] ?? null;
+  // A rise booked as an expense (or a fall as income) would move the balance one
+  // way and the cash flow the other.
+  if ((diff > 0 && MONEY_OUT.has(classification)) || (diff < 0 && MONEY_IN.has(classification))) {
+    throw new ManualEntryError("Choose a type that matches the change in balance.");
+  }
 
-  await db
+  await store
     .update(accounts)
     .set({ balance: String(newBalance), lastManualUpdate: new Date(), updatedAt: new Date() })
     .where(eq(accounts.id, accountId));
 
-  await writeSnapshot(accountId, newBalance, acc.currency);
-
   if (diff !== 0) {
     const date = new Date();
     if (classification === "interest") {
-      await db.insert(interestPayments).values({ accountId, amount: String(Math.abs(diff)), date });
+      await store.insert(interestPayments).values({ accountId, amount: String(Math.abs(diff)), date });
       const cat = await categoryByName("Interest");
-      await db.insert(transactions).values({
+      await store.insert(transactions).values({
         accountId,
         type: "income",
         amount: String(diff),
@@ -382,7 +426,7 @@ export async function updateAccountBalance(formData: FormData) {
       });
     } else if (classification === "income" || classification === "deposit") {
       const cat = await categoryByName("Other Income");
-      await db.insert(transactions).values({
+      await store.insert(transactions).values({
         accountId,
         type: "income",
         amount: String(Math.abs(diff)),
@@ -393,7 +437,7 @@ export async function updateAccountBalance(formData: FormData) {
       });
     } else if (classification === "expense" || classification === "withdrawal") {
       const cat = await categoryByName("Other");
-      await db.insert(transactions).values({
+      await store.insert(transactions).values({
         accountId,
         type: "expense",
         amount: String(-Math.abs(diff)),
@@ -407,13 +451,15 @@ export async function updateAccountBalance(formData: FormData) {
     // this is a recording fix, not a real movement of money.
   }
 
-  await db.insert(auditLog).values({
+  await store.insert(auditLog).values({
     entityType: "account",
     entityId: accountId,
     action: "balance_updated",
     details: JSON.stringify({ oldBalance, newBalance, diff, classification }),
   });
+}
 
+function revalidateBalance(accountId: string) {
   revalidatePath("/accounts");
   revalidatePath(`/accounts/${accountId}`);
   revalidatePath("/transactions");

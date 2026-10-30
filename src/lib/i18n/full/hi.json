@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "अमान्य त्वरित प्रविष्टि.",
   "Cannot transfer to the same account": "उसी खाते में स्थानांतरित नहीं किया जा सकता",
   "Enter an amount, or set a rate on the account so it can be worked out.": "एक राशि दर्ज करें, या खाते पर एक दर निर्धारित करें ताकि इसकी गणना की जा सके।",
-  "Interest": "रुचि",
+  "Interest": "ब्याज",
   "Transaction not found": "लेन-देन नहीं मिला",
   "Transfers can't be edited — delete and recreate instead": "स्थानांतरण संपादित नहीं किए जा सकते - इसके बजाय हटाएं और पुनः बनाएं",
   "A cashback movement cannot also carry purchase savings.": "कैशबैक आंदोलन खरीद बचत भी नहीं ले जा सकता।",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "शेष राशि बदलने या प्रविष्टि जोड़ने के लिए किसी खाते पर टैप करें।",
+  "Tap a balance to change it or add an entry.": "शेष राशि बदलने या प्रविष्टि जोड़ने के लिए उस पर टैप करें।",
+  "Add expense": "खर्च जोड़ें",
+  "Add income": "आय जोड़ें",
+  "Set balance": "शेष राशि सेट करें",
+  "Save balance": "शेष राशि सहेजें",
+  "Close": "बंद करें",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple हर पेज की केवल ज़रूरी चीज़ें दिखाता है; Complex सभी विकल्प दिखाता है।",
+  "Choose a type that matches the change in balance.": "शेष राशि में हुए बदलाव से मेल खाने वाला प्रकार चुनें।"
 }

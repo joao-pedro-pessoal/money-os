@@ -991,7 +991,7 @@ main .grid > * { min-width: 0; }
 }
 
 /* Mobile modes only change presentation. The existing interface is the default. */
-:where(.mobile-mode-picker, .simple-only) { display: none; }
+:where(.mobile-mode-picker, .simple-only, .mobile-mode-setting) { display: none; }
 .mobile-fold[data-simple-only] > .mobile-fold-toggle { display: none; }
 .mobile-fold[data-simple-only] > .mobile-fold-body { display: block; margin-top: 0; }
 .dashboard-overview > .overview-secondary > .relative { height: 100%; }
@@ -999,7 +999,8 @@ main .grid > * { min-width: 0; }
 .transaction-page-header > .mobile-fold[data-simple-only] > .mobile-fold-body { display: contents; }
 
 @media (max-width: 767px) {
-  .mobile-mode-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 5px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+  .mobile-mode-setting { display: block; }
+  .mobile-mode-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 5px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
   .mobile-mode-picker button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 52px; border: 1px solid transparent; border-radius: 10px; color: var(--muted); cursor: pointer; }
   .mobile-mode-picker button > span { font-size: 14px; font-weight: 600; }
   .mobile-mode-picker small { font-size: 11px; }

@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "Tap an account to set its balance or add an entry.",
+  "Tap a balance to change it or add an entry.": "Tap a balance to change it or add an entry.",
+  "Add expense": "Add expense",
+  "Add income": "Add income",
+  "Set balance": "Set balance",
+  "Save balance": "Save balance",
+  "Close": "Close",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple shows only the essentials of each page; Complex shows every option.",
+  "Choose a type that matches the change in balance.": "Choose a type that matches the change in balance."
 }

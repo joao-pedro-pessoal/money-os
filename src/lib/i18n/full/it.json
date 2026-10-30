@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "Inserimento rapido non valido.",
   "Cannot transfer to the same account": "Impossibile trasferire sullo stesso account",
   "Enter an amount, or set a rate on the account so it can be worked out.": "Inserisci un importo o imposta un tasso sul conto in modo che possa essere calcolato.",
-  "Interest": "Interesse",
+  "Interest": "Interessi",
   "Transaction not found": "Transazione non trovata",
   "Transfers can't be edited — delete and recreate instead": "I trasferimenti non possono essere modificati: eliminali e ricreali",
   "A cashback movement cannot also carry purchase savings.": "Un movimento di cashback non può comportare anche risparmi sugli acquisti.",
@@ -2423,7 +2423,7 @@
   "Buy": "Acquista",
   "Dividend": "Dividendo",
   "Deposit": "Deposito",
-  "Withdrawal": "Ritiro",
+  "Withdrawal": "Prelievo",
   "Fee": "Tariffa",
   "The date couldn't be read.": "Non è stato possibile leggere la data.",
   "The amount couldn't be read.": "Non è stato possibile leggere l'importo.",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "Tocca un conto per correggere il saldo o aggiungere un movimento.",
+  "Tap a balance to change it or add an entry.": "Tocca un saldo per modificarlo o aggiungere un movimento.",
+  "Add expense": "Aggiungi spesa",
+  "Add income": "Aggiungi entrata",
+  "Set balance": "Imposta saldo",
+  "Save balance": "Salva saldo",
+  "Close": "Chiudi",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple mostra solo l’essenziale di ogni pagina; Complex mostra tutte le opzioni.",
+  "Choose a type that matches the change in balance.": "Scegli un tipo che corrisponda alla variazione del saldo."
 }

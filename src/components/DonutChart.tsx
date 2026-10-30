@@ -30,12 +30,23 @@ export const SLICE_COLORS = [
   "var(--muted)",
 ];
 
+/** The five largest slices and one "Other" for the rest: a glance, not an audit. */
+export function topSlices(data: { name: string; value: number }[], keep: number, other: string) {
+  const sorted = [...data].sort((a, b) => b.value - a.value);
+  if (sorted.length <= keep + 1) return sorted;
+  const rest = sorted.slice(keep).reduce((s, d) => s + d.value, 0);
+  return [...sorted.slice(0, keep), { name: other, value: Math.round(rest * 100) / 100 }];
+}
+
 export default function DonutChart({
   data,
   currency = "EUR",
+  compact = false,
 }: {
   data: { name: string; value: number }[];
   currency?: string;
+  /** A small doughnut beside its legend, for the top of a page or a dashboard section. */
+  compact?: boolean;
 }) {
   const uiText = useText();
   const { hidden } = usePrivacy();
@@ -46,6 +57,34 @@ export default function DonutChart({
 
   const total = data.reduce((s, d) => s + d.value, 0);
   const share = (v: number) => (total > 0 ? Math.round((v / total) * 1000) / 10 : 0);
+
+  if (compact) {
+    const slices = topSlices(data, 5, uiText("Other"));
+    return (
+      <div className="flex items-center gap-4">
+        <div translate="no" className="dashboard-chart shrink-0" style={{ width: 112, height: 112 }}>
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie isAnimationActive={false} data={slices} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="100%"
+                paddingAngle={2} stroke="var(--surface)" strokeWidth={2}>
+                {slices.map((_, i) => <Cell key={i} fill={SLICE_COLORS[i % SLICE_COLORS.length]} />)}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <ul translate="no" className="flex-1 min-w-0 space-y-1.5">
+          {slices.map((d, i) => (
+            <li key={d.name} className="flex items-center gap-2 text-xs">
+              <span className="shrink-0" style={{ width: 8, height: 8, borderRadius: 999, background: SLICE_COLORS[i % SLICE_COLORS.length] }} />
+              <span className="truncate" title={d.name}>{d.name}</span>
+              <span className="ml-auto shrink-0 text-[var(--muted)] tabular-nums">{share(d.value)}%</span>
+              {!hidden && <span className="shrink-0 tabular-nums">{fmt(d.value, currency)}</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div>

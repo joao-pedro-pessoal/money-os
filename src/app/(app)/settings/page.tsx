@@ -15,6 +15,7 @@ import {
 import { listAccountsWithState } from "@/actions/accounts";
 import { SUPPORTED_CURRENCIES } from "@/lib/fx";
 import ThemePicker from "@/components/ThemePicker";
+import MobileModeSwitch from "@/components/MobileMode";
 import SettingRow from "@/components/SettingRow";
 import Link from "next/link";
 import DashboardWindowSettings from "@/components/DashboardWindowSettings";
@@ -176,6 +177,13 @@ export default async function SettingsGeneralPage() {
         <SettingRow title={w.appearanceTitle} description={w.appearanceText} stacked>
           <ThemePicker />
         </SettingRow>
+
+        {/* Phone only: the choice used to sit above every page, which cost a phone screen a fifth of its height. */}
+        <div className="mobile-mode-setting">
+          <SettingRow title={uiText("Mobile display mode")} description={uiText("Simple shows only the essentials of each page; Complex shows every option.")} stacked>
+            <MobileModeSwitch />
+          </SettingRow>
+        </div>
 
         {INVESTMENTS_ENABLED && (<SettingRow
           title={w.windowsTitle}

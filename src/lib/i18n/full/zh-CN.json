@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "快速输入无效。",
   "Cannot transfer to the same account": "无法转账至同一账户",
   "Enter an amount, or set a rate on the account so it can be worked out.": "输入金额，或在帐户上设置费率，以便计算出来。",
-  "Interest": "兴趣",
+  "Interest": "利息",
   "Transaction not found": "未找到交易",
   "Transfers can't be edited — delete and recreate instead": "无法编辑传输 - 请删除并重新创建",
   "A cashback movement cannot also carry purchase savings.": "现金返还活动也不能带来购买节省。",
@@ -2422,7 +2422,7 @@
   "Could not decrypt — wrong encryption key, or the stored value was altered": "无法解密 - 加密密钥错误，或存储的值已更改",
   "Buy": "购买",
   "Dividend": "股息",
-  "Deposit": "押金",
+  "Deposit": "存款",
   "Withdrawal": "提款",
   "Fee": "费用",
   "The date couldn't be read.": "无法读取日期。",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "点击账户即可调整余额或添加记录。",
+  "Tap a balance to change it or add an entry.": "点击余额即可修改或添加记录。",
+  "Add expense": "添加支出",
+  "Add income": "添加收入",
+  "Set balance": "设置余额",
+  "Save balance": "保存余额",
+  "Close": "关闭",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple 只显示每页的要点；Complex 显示全部选项。",
+  "Choose a type that matches the change in balance.": "请选择与余额变化相符的类型。"
 }

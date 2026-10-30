@@ -8,7 +8,6 @@ import { getAlerts } from "@/actions/alerts";
 import { getQuickEntryOptions } from "@/actions/transactions";
 import QuickEntry from "@/components/QuickEntry";
 import MobileNav from "@/components/MobileNav";
-import MobileModeSwitch from "@/components/MobileMode";
 import { SymbolNamesProvider } from "@/components/SymbolName";
 import { getSymbolNames } from "@/actions/symbolNames";
 
@@ -39,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             */}
             <div id="app-content" className="flex-1 min-w-0 flex flex-col">
               <TopBar alerts={alerts} quickEntry={<QuickEntry {...quickEntry} />} />
-              <main className="app-main flex-1 p-4 md:p-8 max-w-5xl"><MobileModeSwitch />{children}</main>
+              <main className="app-main flex-1 p-4 md:p-8 max-w-5xl">{children}</main>
               <MobileNav />
             </div>
           </div>

@@ -2257,7 +2257,7 @@
   "Invalid quick entry.": "無効なクイック入力です。",
   "Cannot transfer to the same account": "同一口座への振込はできません",
   "Enter an amount, or set a rate on the account so it can be worked out.": "金額を入力するか、アカウントにレートを設定して計算できるようにします。",
-  "Interest": "興味",
+  "Interest": "利息",
   "Transaction not found": "トランザクションが見つかりません",
   "Transfers can't be edited — delete and recreate instead": "転送は編集できません - 代わりに削除して再作成してください",
   "A cashback movement cannot also carry purchase savings.": "キャッシュバック ムーブメントでは、購入時の貯蓄も含めることはできません。",
@@ -2422,7 +2422,7 @@
   "Could not decrypt — wrong encryption key, or the stored value was altered": "復号化できませんでした - 暗号化キーが間違っているか、保存されている値が変更されました",
   "Buy": "購入する",
   "Dividend": "配当金",
-  "Deposit": "デポジット",
+  "Deposit": "入金",
   "Withdrawal": "出金",
   "Fee": "料金",
   "The date couldn't be read.": "日付が読み取れませんでした。",
@@ -3362,5 +3362,14 @@
   "Income and expenses for the current month.": "Income and expenses for the current month.",
   "Historical values are approximate.": "Historical values are approximate.",
   "This version accepts bank transactions only.": "This version accepts bank transactions only.",
-  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup.",
+  "Tap an account to set its balance or add an entry.": "口座をタップすると、残高の修正や記録の追加ができます。",
+  "Tap a balance to change it or add an entry.": "残高をタップすると、変更や記録の追加ができます。",
+  "Add expense": "支出を追加",
+  "Add income": "収入を追加",
+  "Set balance": "残高を設定",
+  "Save balance": "残高を保存",
+  "Close": "閉じる",
+  "Simple shows only the essentials of each page; Complex shows every option.": "Simple は各ページの要点だけを、Complex はすべての項目を表示します。",
+  "Choose a type that matches the change in balance.": "残高の変化に合った種類を選んでください。"
 }
