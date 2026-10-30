@@ -1,3 +1,4 @@
+import { currentInvestments } from "@/actions/releaseEdition";
 import Link from "next/link";
 import { textForRequest } from "@/actions/pageLanguage";
 import { getNetWorth } from "@/actions/networth";
@@ -12,7 +13,7 @@ import { Money } from "./PrivacyContext";
 import NetWorthChart from "./NetWorthChart";
 import DueSubscriptionCharges from "./DueSubscriptionCharges";
 import PageTabs from "./PageTabs";
-import { ANALYTICS_TABS } from "@/lib/navigation";
+import { analyticsTabs } from "@/lib/navigation";
 import Section from "./Section";
 import DonutChart from "./DonutChart";
 import ProgressBars, { budgetTone } from "./ProgressBars";
@@ -20,6 +21,7 @@ import AccountQuick from "./AccountQuick";
 
 /** Everyday money, using the same totals as the full edition. Never rewrites old data. */
 export default async function MoneyOverview({ analytics = false }: { analytics?: boolean }) {
+  const investmentsEnabled = await currentInvestments();
   const t = await textForRequest();
   const [worth, month, accounts, budgets, goals, series, due, composition, subscriptions] = await Promise.all([
     getNetWorth(), getMonthShape(), listAccountsWithState(), listBudgets(),
@@ -36,7 +38,7 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
   ];
   return <div className="space-y-6">
     <h1 className="text-lg font-semibold">{t(analytics ? "Analytics" : "Dashboard")}</h1>
-    {analytics && <PageTabs tabs={ANALYTICS_TABS} />}
+    {analytics && <PageTabs tabs={analyticsTabs(investmentsEnabled)} />}
     {worth.unconverted.length > 0 && <p role="status" className="card p-3 text-sm text-[var(--amber)]">{t("Some amounts could not be converted to ")}{currency}. {t("Add a rate in Settings.")}</p>}
     <p className="text-sm text-[var(--muted)]">{t("Income and expenses for the current month.")}</p>
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

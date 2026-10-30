@@ -1,5 +1,5 @@
 "use server";
-import { requireInvestments } from "@/lib/release/edition";
+import { requireInvestments } from "./releaseEdition";
 
 
 import { db } from "@/db/client";
@@ -59,7 +59,7 @@ export async function listPlaylists() {
 }
 
 export async function createPlaylist(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   const color = String(formData.get("color") ?? "").trim() || null;
@@ -78,7 +78,7 @@ export async function createPlaylist(formData: FormData) {
 }
 
 export async function updatePlaylist(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const id = String(formData.get("id"));
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
@@ -96,7 +96,7 @@ export async function updatePlaylist(formData: FormData) {
  * transaction: an array element has no foreign key to do it.
  */
 export async function deletePlaylist(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const id = String(formData.get("id"));
   await db.transaction(async (tx) => {
     await tx.insert(auditLog).values({ entityType: "playlist", entityId: id, action: "playlist_deleted" });
@@ -135,7 +135,7 @@ export async function listWatchlist() {
 }
 
 export async function addWatchlistItem(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const symbol = String(formData.get("symbol") ?? "").trim().toUpperCase();
   const name = String(formData.get("name") ?? "").trim() || null;
   const assetType = String(formData.get("assetType") ?? "").trim() || null;
@@ -155,7 +155,7 @@ export async function addWatchlistItem(formData: FormData) {
 }
 
 export async function updateWatchlistItem(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const id = String(formData.get("id"));
   const symbol = String(formData.get("symbol") ?? "").trim().toUpperCase();
   const name = String(formData.get("name") ?? "").trim() || null;
@@ -176,7 +176,7 @@ export async function updateWatchlistItem(formData: FormData) {
 }
 
 export async function deleteWatchlistItem(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const id = String(formData.get("id"));
   await db.delete(watchlistItems).where(eq(watchlistItems.id, id));
   revalidatePath("/investments/watchlist");

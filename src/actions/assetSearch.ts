@@ -1,5 +1,5 @@
 "use server";
-import { requireInvestments } from "@/lib/release/edition";
+import { requireInvestments } from "./releaseEdition";
 
 import { hasSession } from './session';
 import { db } from '@/db/client';
@@ -8,7 +8,7 @@ import { searchQuery, parseAssetSuggestions, mergeAssetSuggestions, type AssetSu
 import { knownListingFor } from '@/lib/quotes/knownListings';
 
 export async function searchAssets(raw: string): Promise<{ results: AssetSuggestion[]; warning: string | null }> {
-  requireInvestments();
+  await requireInvestments();
   if (!(await hasSession())) throw new Error('Sign in again.');
   const query = searchQuery(raw);
   if (query.length < 2) return { results: [], warning: null };

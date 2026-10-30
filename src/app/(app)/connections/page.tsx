@@ -1,3 +1,4 @@
+import { currentInvestments } from "@/actions/releaseEdition";
 import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
@@ -14,7 +15,7 @@ import {
 } from "@/actions/connections";
 import AutoSync from "@/components/AutoSync";
 import PageTabs from "@/components/PageTabs";
-import { INVESTMENT_TABS } from "@/lib/navigation";
+import { investmentTabs } from "@/lib/navigation";
 import { NEW_ACCOUNT, PLATFORM_SETUP, BYBIT_REGIONS, PLATFORM_LABELS } from "@/lib/connectors/constants";
 import ConnectionForm from "@/components/ConnectionForm";
 import { listAccountsForHoldings } from "@/actions/investments";
@@ -28,6 +29,7 @@ import Section from "@/components/Section";
 export default async function ConnectionsPage() {
   const language = await currentLanguage();
   const { locale: numberLocale } = formatFor(language);
+  const investmentsEnabled = await currentInvestments();
   const uiText = await textForRequest();
   const [connections, accountList, secretsAvailable] = await Promise.all([
     listConnections(),
@@ -42,7 +44,7 @@ export default async function ConnectionsPage() {
 
   return (
     <div className="space-y-6">
-      <PageTabs tabs={INVESTMENT_TABS} />
+      <PageTabs tabs={investmentTabs(investmentsEnabled)} />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold">{uiText("Connections")}</h1>

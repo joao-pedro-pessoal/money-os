@@ -1,5 +1,5 @@
 "use server";
-import { requireInvestments } from "@/lib/release/edition";
+import { requireInvestments } from "./releaseEdition";
 
 
 import { db } from "@/db/client";
@@ -27,7 +27,7 @@ export async function getBenchmarkChoice(): Promise<BenchmarkDefinition> {
 }
 
 export async function setBenchmarkChoice(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const id = String(formData.get("benchmarkId") ?? "").trim();
   if (benchmarkById(id) === null) throw new Error(`Unknown benchmark: ${id}`);
 
@@ -55,7 +55,7 @@ export async function setBenchmarkChoice(formData: FormData) {
  * trip every time.
  */
 export async function refreshBenchmark(id?: string) {
-  requireInvestments();
+  await requireInvestments();
   const definition = id ? benchmarkById(id) : await getBenchmarkChoice();
   if (definition === null) return { ok: false as const, reason: `Unknown benchmark: ${id}` };
 

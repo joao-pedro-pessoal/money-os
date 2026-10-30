@@ -1,5 +1,5 @@
 "use server";
-import { requireInvestments } from "@/lib/release/edition";
+import { requireInvestments } from "./releaseEdition";
 
 import { db } from "@/db/client";
 import { holdingAllocations, holdings, buckets, bucketAllocations, accounts, auditLog } from "@/db/schema";
@@ -172,7 +172,7 @@ export async function getHoldingAllocations(holdingId: string) {
  * through repeated clicks.
  */
 export async function setHoldingAllocation(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const holdingId = String(formData.get("holdingId") ?? "").trim();
   const bucketId = String(formData.get("bucketId") ?? "").trim();
   const rawPercent = String(formData.get("percent") ?? "").trim().replace(",", ".");
@@ -217,7 +217,7 @@ export async function setHoldingAllocation(formData: FormData) {
 }
 
 export async function removeHoldingAllocation(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const id = String(formData.get("id"));
   const [row] = await db.select().from(holdingAllocations).where(eq(holdingAllocations.id, id));
   await db.delete(holdingAllocations).where(eq(holdingAllocations.id, id));

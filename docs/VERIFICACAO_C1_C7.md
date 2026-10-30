@@ -30,3 +30,43 @@ contas e registos fictícios. Os scripts de ensaio não contactam fornecedores.
 
 Evidência local ignorada: `.local-checkpoints/qr-e2e/c1-c7/C1/`
 (resultado, servidor, capturas, PDFs e texto extraído) e `c1-ui.mjs`.
+
+## C2 — Edição efetiva por sessão
+
+A compilação define a edição de base; só a identidade de sessão validada do
+dono (`OWNER_USER_ID`) recebe a edição completa na compilação money. Não se
+usa email, corpo de ação, parâmetro ou cookie de edição. A função central de
+identidade aceita uma restrição que apenas pode limitar a identidade assinada;
+assim outra conta é recusada antes de ler dados. O dono continua sujeito à
+verificação de existência e revogação da sessão. Sem sessão, o proxy envia para
+a entrada antes de decidir os destinos disponíveis.
+
+O contexto do cliente só controla apresentação. Listas de menus, pesquisa e
+abas são funções da edição efetiva e não constantes avaliadas ao carregar o
+módulo. Todas as 42 ações aguardam a autorização do servidor. Relatórios/PDF,
+widgets e alertas usam a mesma decisão, sem guardar a edição de uma pessoa em
+estado global. O cabeçalho X-MoneyOS-Edition identifica a compilação de base,
+não os privilégios do utilizador. Não foi introduzida variável ou migração.
+
+Validação: **3416 testes em 222 ficheiros**, TypeScript, lint e compilações
+money/full aprovados. Testes cobrem identidade restrita, sessões inválidas,
+revogadas e conta eliminada; ações de outra pessoa recusadas sem base/rede,
+identidade exata do dono, alternância de pessoas e comportamento da cópia full.
+
+**11 verificações no navegador** numa compilação money: destinos sem sessão
+redirecionam; dono acede a investimentos/definições/trends, outra conta recebe
+404; menus, widgets e relatórios seguem a sessão; parâmetros/cookies adicionais
+não alteram acesso. Uma atualização real de preço do dono passou de 25 para 30
+e foi confirmada no widget. PDFs reais gerados para as duas pessoas: texto
+extraído confirma o símbolo DEMO no relatório de investimentos do dono e a
+ausência dele no relatório forçado a dinheiro da outra pessoa. Sem erros de
+execução no navegador ou servidor.
+
+O ensaio PGlite usa um adaptador de teste que serializa leases de todas as pools
+e reaplica identidade por lease: há um único backend PGlite, ao contrário das
+ligações PostgreSQL independentes em produção. O código de conexão da app não
+foi alterado para contornar essa limitação. Isto não mede carga nem concorrência
+com múltiplos backends. Evidência ignorada em `c1-c7/C2/`, `c2-ui.mjs` e
+`single-backend-pool.cjs`. A APK store continua sem os widgets de investimento
+no manifesto; o dono usa a APK home para estes widgets. Nenhum Android, segredo,
+produção ou configuração externa foi alterado nesta tarefa.

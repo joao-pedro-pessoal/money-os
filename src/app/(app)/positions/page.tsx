@@ -1,3 +1,4 @@
+import { currentInvestments } from "@/actions/releaseEdition";
 import { textForRequest } from "@/actions/pageLanguage";
 import SymbolName from "@/components/SymbolName";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -24,7 +25,7 @@ import {
 } from "@/lib/portfolio/groupBalances";
 import { describePnlSource } from "@/lib/portfolio/entryOverride";
 import PageTabs from "@/components/PageTabs";
-import { INVESTMENT_TABS } from "@/lib/navigation";
+import { investmentTabs } from "@/lib/navigation";
 import { getRates } from "@/actions/fx";
 import { getBaseCurrency } from "@/actions/settings";
 import { leftOut, openTotals, type BaseTotal } from "@/lib/trading/openTotals";
@@ -144,7 +145,7 @@ export default async function PositionsPage() {
 
   return (
     <div className="positions-page space-y-6">
-      <PageTabs tabs={INVESTMENT_TABS} />
+      <PageTabs tabs={investmentTabs(await currentInvestments())} />
       <div className="positions-header flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold">{uiText("Open positions & balances")}</h1>

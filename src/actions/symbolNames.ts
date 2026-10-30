@@ -1,5 +1,5 @@
 "use server";
-import { requireInvestments } from "@/lib/release/edition";
+import { requireInvestments } from "./releaseEdition";
 
 import { cache } from "react";
 import { eq, sql } from "drizzle-orm";
@@ -24,7 +24,7 @@ export async function getSymbolNames(): Promise<SymbolNames> {
 
 /** Names a ticker, or with an empty name, forgets the name it had. */
 export async function setSymbolName(formData: FormData): Promise<void> {
-  requireInvestments();
+  await requireInvestments();
   if (!(await hasSession())) throw new Error("Sign in again.");
   const symbol = cleanSymbol(String(formData.get("symbol") ?? ""));
   const name = cleanSymbolName(String(formData.get("name") ?? ""));

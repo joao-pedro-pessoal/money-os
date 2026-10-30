@@ -1,7 +1,8 @@
+import { currentInvestments } from "@/actions/releaseEdition";
 import { textForRequest } from "@/actions/pageLanguage";
 import { getSpendingAnalysis } from "@/actions/spending";
 import PageTabs from "@/components/PageTabs";
-import { ANALYTICS_TABS } from "@/lib/navigation";
+import { analyticsTabs } from "@/lib/navigation";
 import SpendingAnalysis from "@/components/SpendingAnalysis";
 
 /**
@@ -13,13 +14,14 @@ import SpendingAnalysis from "@/components/SpendingAnalysis";
  * demo.
  */
 export default async function SpendingPage() {
+  const investmentsEnabled = await currentInvestments();
   const uiText = await textForRequest();
   const data = await getSpendingAnalysis();
 
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold">{uiText("Analytics")}</h1>
-      <PageTabs tabs={ANALYTICS_TABS} />
+      <PageTabs tabs={analyticsTabs(investmentsEnabled)} />
       <p className="text-xs text-[var(--muted)]">{uiText("Every figure here comes from transactions you recorded. Transfers between your own accounts are never counted as spending — moving money is not losing it.")}</p>
 
       <SpendingAnalysis

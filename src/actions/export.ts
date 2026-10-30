@@ -1,5 +1,5 @@
 "use server";
-import { requireInvestments } from "@/lib/release/edition";
+import { requireInvestments } from "./releaseEdition";
 
 import { db } from "@/db/client";
 import * as schema from "@/db/schema";
@@ -106,7 +106,7 @@ export async function exportTransactionsCsv() {
 }
 
 export async function exportHoldingsCsv() {
-  requireInvestments();
+  await requireInvestments();
   const rows = await db.select().from(schema.holdings);
   const accountsList = await db.select().from(schema.accounts);
   const accountName = new Map(accountsList.map((a) => [a.id, a.name]));

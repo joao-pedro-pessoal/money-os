@@ -1,4 +1,5 @@
 "use client";
+import { useInvestments } from "./EditionContext";
 
 import Link from "next/link";
 import { availablePath } from "@/lib/release/edition";
@@ -6,7 +7,7 @@ import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useNav } from "./NavContext";
 import NavFrame, { navLinkClass } from "./NavFrame";
-import { NAV_GROUPS as groups, SEARCHABLE_PAGES as searchablePages, isNavigationActive } from "@/lib/navigation";
+import { navGroups, searchablePages, isNavigationActive } from "@/lib/navigation";
 import { logout } from "@/app/login/actions";
 import { useMobileMode } from "./MobileMode";
 import MobileFold from "./MobileFold";
@@ -14,6 +15,9 @@ import { useLanguage } from "./LanguageContext";
 import { labelIn } from "@/lib/i18n/messages";
 
 export default function Nav() {
+  const investmentsEnabled = useInvestments();
+  const groups = navGroups(investmentsEnabled);
+  const pages = searchablePages(investmentsEnabled);
   const pathname = usePathname();
   const { setOpen } = useNav();
   const { simple } = useMobileMode();
@@ -24,7 +28,7 @@ export default function Nav() {
   const searching = terms.length > 0;
   // Pages are named in English where they are defined (labelIn translates them by that name).
   // Found by either name, so a page can be looked for in the language it is shown in.
-  const matches = searchablePages.filter(link =>
+  const matches = pages.filter(link =>
     terms.every(term => `${link.label} ${labelIn(m, link.label)} ${link.href}`.toLowerCase().includes(term)),
   );
 
@@ -81,7 +85,7 @@ export default function Nav() {
             {[
               { href: "/", label: t.home }, { href: "/accounts", label: t.accounts }, { href: "/transactions", label: t.cashFlow },
               { href: "/savings", label: t.savings }, { href: "/budgets", label: t.budgets }, { href: "/investments", label: t.investments },
-            ].filter(link => availablePath(link.href)).map(link => <li key={link.href}><Link href={link.href} className={linkClass(link.href)} aria-current={isActive(link.href) ? "page" : undefined} onClick={() => setOpen(false)}>{link.label}</Link></li>)}
+            ].filter(link => availablePath(link.href, investmentsEnabled ? "full" : "money")).map(link => <li key={link.href}><Link href={link.href} className={linkClass(link.href)} aria-current={isActive(link.href) ? "page" : undefined} onClick={() => setOpen(false)}>{link.label}</Link></li>)}
           </ul>
           <MobileFold simpleOnly title={t.morePages} persistKey="simple-navigation">
             <ul className="space-y-1">

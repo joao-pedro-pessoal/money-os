@@ -1,4 +1,4 @@
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { currentInvestments } from "@/actions/releaseEdition";
 import { textForRequest } from "@/actions/pageLanguage";
 import { directionOf } from "@/lib/i18n/languages";
 import {
@@ -33,6 +33,7 @@ import { messagesFor } from "@/lib/i18n/messages";
 import { LEGAL_PATHS } from "@/lib/legal/paths";
 
 export default async function SettingsGeneralPage() {
+  const investmentsEnabled = await currentInvestments();
   const uiText = await textForRequest();
   const baseCurrency = await getBaseCurrency();
   const favourites = await getFavouriteCurrencies();
@@ -126,7 +127,7 @@ export default async function SettingsGeneralPage() {
           </form>
         </SettingRow>
 
-        {INVESTMENTS_ENABLED && (<SettingRow
+        {investmentsEnabled && (<SettingRow
           title={w.dashboardCurrencyTitle}
           description={w.dashboardCurrencyText}
         >
@@ -185,7 +186,7 @@ export default async function SettingsGeneralPage() {
           </SettingRow>
         </div>
 
-        {INVESTMENTS_ENABLED && (<SettingRow
+        {investmentsEnabled && (<SettingRow
           title={w.windowsTitle}
           description={w.windowsText}
           stacked

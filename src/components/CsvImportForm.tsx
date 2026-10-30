@@ -1,5 +1,5 @@
 "use client";
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { useInvestments } from "@/components/EditionContext";
 
 
 import { useText } from "@/components/useText";
@@ -28,6 +28,7 @@ const sha256 = sha256Text;
  * guessed from the headers so the common case needs no work.
  */
 export default function CsvImportForm({ accounts }: { accounts: { id: string; name: string }[] }) {
+  const investmentsEnabled = useInvestments();
   const uiText = useText();
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [fileName, setFileName] = useState("");
@@ -103,7 +104,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
       : [];
 
   async function doImport() {
-    if (!INVESTMENTS_ENABLED && looksLikeBroker) return;
+    if (!investmentsEnabled && looksLikeBroker) return;
     setBusy(true);
     try {
       const res = await commitImport(
@@ -183,9 +184,9 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
           className="rounded-lg border p-3 text-xs space-y-1"
           style={{ borderColor: "var(--amber)" }}
         >
-          <div style={{ color: "var(--amber)" }}>{uiText(INVESTMENTS_ENABLED ? "This looks like a broker export." : "This version accepts bank transactions only.")}</div>
+          <div style={{ color: "var(--amber)" }}>{uiText(investmentsEnabled ? "This looks like a broker export." : "This version accepts bank transactions only.")}</div>
           <p className="text-[var(--muted)] leading-snug">{uiText("It names instruments and quantities, which this importer cannot store. Imported here, every purchase becomes an expense and every sale and dividend becomes income — the rows land, the cash flow goes wrong, and nothing appears in your portfolio.")}</p>
-          <p className="text-[var(--muted)] leading-snug" hidden={!INVESTMENTS_ENABLED}>{uiText("Use ")}<strong>{uiText("Import the broker statement instead")}</strong>{uiText(", higher up this page.")}</p>
+          <p className="text-[var(--muted)] leading-snug" hidden={!investmentsEnabled}>{uiText("Use ")}<strong>{uiText("Import the broker statement instead")}</strong>{uiText(", higher up this page.")}</p>
         </div>
       )}
 
@@ -320,7 +321,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
               <button
                 type="button"
                 onClick={doImport}
-                disabled={busy || stats.importable === 0 || (!INVESTMENTS_ENABLED && looksLikeBroker)}
+                disabled={busy || stats.importable === 0 || (!investmentsEnabled && looksLikeBroker)}
                 className="btn w-full"
                 style={busy || stats.importable === 0 ? { opacity: 0.5 } : undefined}
               >

@@ -1,9 +1,10 @@
+import { currentInvestments } from "@/actions/releaseEdition";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { getStatistics } from "@/actions/stats";
 import { Money } from "@/components/PrivacyContext";
 import PageTabs from "@/components/PageTabs";
-import { ANALYTICS_TABS } from "@/lib/navigation";
+import { analyticsTabs } from "@/lib/navigation";
 import BenchmarkCard from "@/components/BenchmarkCard";
 import Section from "@/components/Section";
 import TrendsViews from "@/components/TrendsViews";
@@ -11,6 +12,7 @@ import ProjectionScenario from "@/components/ProjectionScenario";
 import IndependencePlan from "@/components/IndependencePlan";
 
 export default async function StatisticsPage() {
+  const investmentsEnabled = await currentInvestments();
   const uiText = await textForRequest();
   const s = await getStatistics();
   const c = s.baseCurrency;
@@ -21,7 +23,7 @@ export default async function StatisticsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold">{uiText("Analytics")}</h1>
-      <PageTabs tabs={ANALYTICS_TABS} />
+      <PageTabs tabs={analyticsTabs(investmentsEnabled)} />
 
       {/* Every figure on this page is converted to the base currency first.
           Anything that had no rate is left out and named here, rather than

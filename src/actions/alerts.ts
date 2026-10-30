@@ -1,5 +1,6 @@
 "use server";
-import { INVESTMENTS_ENABLED, availablePath } from "@/lib/release/edition";
+import { currentInvestments } from "@/actions/releaseEdition";
+import { availablePath } from "@/lib/release/edition";
 
 
 import { db } from "@/db/client";
@@ -38,21 +39,22 @@ import {
  * function does no deciding; it only fetches and shapes.
  */
 export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }> {
+  const investmentsEnabled = await currentInvestments();
   const today = new Date();
 
   const [budgets, connections, portfolio, base, subs, watch, accountRows, allocations, due, holdingRows] =
     await Promise.all([
       listBudgets(),
-      INVESTMENTS_ENABLED ? listConnections() : [],
-      INVESTMENTS_ENABLED ? getPortfolioItems() : {items:[],baseCurrency:""},
+      investmentsEnabled ? listConnections() : [],
+      investmentsEnabled ? getPortfolioItems() : {items:[],baseCurrency:""},
       getBaseCurrency(),
       db.select().from(subscriptions).where(eq(subscriptions.active, true)),
-      INVESTMENTS_ENABLED ? db.select().from(watchlistItems) : [],
+      investmentsEnabled ? db.select().from(watchlistItems) : [],
       db.select().from(accounts).where(eq(accounts.active, true)),
       db.select().from(bucketAllocations),
       // The same list the dashboard and Subscriptions page ask you to answer.
       getDueSubscriptionCharges(),
-      INVESTMENTS_ENABLED ? db.select().from(holdings) : [],
+      investmentsEnabled ? db.select().from(holdings) : [],
     ]);
 
   const alerts: Alert[] = [];
@@ -186,5 +188,5 @@ export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }
     })
   );
 
-  return { alerts: sortAlerts(alerts.filter(alert => availablePath(alert.href))), currency: base };
+  return { alerts: sortAlerts(alerts.filter(alert => availablePath(alert.href, investmentsEnabled ? "full" : "money"))), currency: base };
 }

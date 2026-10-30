@@ -1,4 +1,5 @@
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { EditionProvider } from "@/components/EditionContext";
+import { currentInvestments } from "@/actions/releaseEdition";
 import { PrivacyProvider } from "@/components/PrivacyContext";
 import { ThemeProvider } from "@/components/ThemeContext";
 import Nav from "@/components/Nav";
@@ -20,9 +21,11 @@ export const dynamic = "force-dynamic";
  * happened to go looking.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [{ alerts }, quickEntry, symbolNames] = await Promise.all([getAlerts(), getQuickEntryOptions(), INVESTMENTS_ENABLED ? getSymbolNames() : {}]);
+  const investmentsEnabled = await currentInvestments();
+  const [{ alerts }, quickEntry, symbolNames] = await Promise.all([getAlerts(), getQuickEntryOptions(), investmentsEnabled ? getSymbolNames() : {}]);
 
   return (
+    <EditionProvider investmentsEnabled={investmentsEnabled}>
     <ThemeProvider>
       <PrivacyProvider>
         {/* Your names for tickers, for every <SymbolName> on every page below. */}
@@ -46,5 +49,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </SymbolNamesProvider>
       </PrivacyProvider>
     </ThemeProvider>
+    </EditionProvider>
   );
 }

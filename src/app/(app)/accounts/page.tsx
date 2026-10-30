@@ -1,4 +1,4 @@
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { currentInvestments } from "@/actions/releaseEdition";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
@@ -32,6 +32,7 @@ const STATE_COLOR: Record<string, string> = {
 };
 
 export default async function AccountsPage() {
+  const investmentsEnabled = await currentInvestments();
   const uiText = await textForRequest();
   const [accounts, archived, platformTotals, removable, connections, composition, baseCurrency] =
     await Promise.all([
@@ -103,7 +104,7 @@ export default async function AccountsPage() {
                         <AccountQuick account={{ id: a.id, name: a.name, currency: a.currency, balance: a.balance }} className="underline decoration-dotted underline-offset-4">
                           <Money value={shown} currency={a.currency} />
                         </AccountQuick>
-                        {INVESTMENTS_ENABLED && p && p.unrealizedPnl !== 0 && (
+                        {investmentsEnabled && p && p.unrealizedPnl !== 0 && (
                           <span
                             className={
                               "account-balance-detail " + (p.unrealizedPnl > 0
@@ -116,7 +117,7 @@ export default async function AccountsPage() {
                             {Math.abs(p.unrealizedPnl).toFixed(2)})
                           </span>
                         )}
-                        {INVESTMENTS_ENABLED && p && p.spot > 0 && (
+                        {investmentsEnabled && p && p.spot > 0 && (
                           <div className="account-balance-detail text-[10px] text-[var(--muted)]">
                             {p.equity.toFixed(2)}{uiText(" in positions + ")}{p.spot.toFixed(2)}{" "}{uiText("spot")}</div>
                         )}
@@ -154,8 +155,8 @@ export default async function AccountsPage() {
             />
             <select name="accountType" className="input">
               <option value="bank">{uiText("Bank")}</option>
-              {(INVESTMENTS_ENABLED) && <option value="broker">{uiText("Broker")}</option>}
-              {(INVESTMENTS_ENABLED) && <option value="exchange">{uiText("Exchange")}</option>}
+              {(investmentsEnabled) && <option value="broker">{uiText("Broker")}</option>}
+              {(investmentsEnabled) && <option value="exchange">{uiText("Exchange")}</option>}
               <option value="cash">{uiText("Cash")}</option>
               <option value="other">{uiText("Other")}</option>
             </select>

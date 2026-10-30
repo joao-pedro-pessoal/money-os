@@ -1,6 +1,6 @@
+import { currentInvestments } from "@/actions/releaseEdition";
 import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listCategories } from "@/actions/transactions";
@@ -55,6 +55,7 @@ async function importStatementAction(formData: FormData) {
 }
 
 export default async function ImportPage() {
+  const investmentsEnabled = await currentInvestments();
   const language = await currentLanguage();
   const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
@@ -63,7 +64,7 @@ export default async function ImportPage() {
     listAccountsWithState(),
     getBaseCurrency(),
     listImports(),
-    INVESTMENTS_ENABLED ? getImportedStatements() : [],
+    investmentsEnabled ? getImportedStatements() : [],
   ]);
 
   return (
@@ -76,7 +77,7 @@ export default async function ImportPage() {
       {/* A broker export is a different animal: it has trades, dividends,
           interest and — crucially — deposits, which the bank importer would
           flatten into anonymous income. It gets its own path. */}
-      {INVESTMENTS_ENABLED && (<Section
+      {investmentsEnabled && (<Section
         title="Investment account? Import the broker statement instead"
         summary={uiText("trades, dividends, interest and deposits")}
       >

@@ -8,7 +8,7 @@ import { en, pt } from "../source";
 import { LanguageProvider } from "@/components/LanguageContext";
 import LanguagePicker from "@/components/LanguagePicker";
 import QrSignIn from "@/components/QrSignIn";
-import { SEARCHABLE_PAGES, SETTINGS_TABS, INVESTMENT_TABS, ACCOUNTS_TABS, ANALYTICS_TABS } from "@/lib/navigation";
+import { searchablePages, settingsTabs, investmentTabs, ACCOUNTS_TABS, analyticsTabs } from "@/lib/navigation";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh() {} }), usePathname: () => "/login" }));
 
@@ -64,7 +64,7 @@ describe("15 languages with complete shared catalogs", () => {
       expect(m.settings.sameAsBase("JPY")).toContain("JPY");
       expect(m.settings.lastDone("2026-10-14")).toContain("2026-10-14");
       for (const count of [0, 1, 2, 5, 21, 100]) expect(m.nav.pagesFound(count)).toContain(String(count));
-      for (const page of [...SEARCHABLE_PAGES, ...SETTINGS_TABS, ...INVESTMENT_TABS, ...ACCOUNTS_TABS, ...ANALYTICS_TABS]) {
+      for (const page of [...searchablePages(true), ...settingsTabs(true), ...investmentTabs(true), ...ACCOUNTS_TABS, ...analyticsTabs(true)]) {
         if (code !== "en") expect(m.labels[page.label], `${code}: ${page.label}`).toBeTruthy();
       }
     }

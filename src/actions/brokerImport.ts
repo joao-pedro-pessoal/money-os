@@ -1,6 +1,6 @@
 "use server";
 
-import { requireInvestments } from "@/lib/release/edition";
+import { requireInvestments } from "./releaseEdition";
 
 import { db } from "@/db/client";
 import { brokerEvents, accounts, positions, holdings, auditLog } from "@/db/schema";
@@ -30,7 +30,7 @@ import { getBaseCurrency } from "./settings";
  * and finding out afterwards that half of it was rejected is too late.
  */
 export async function previewBrokerStatement(text: string, accountId: string) {
-  requireInvestments();
+  await requireInvestments();
   // The file is inspected before it is parsed, so an export the app has never
   // seen reports which columns it couldn't recognise instead of failing with a
   // single unhelpful sentence. Nothing here writes; the file has to be safe to
@@ -114,7 +114,7 @@ function countKinds(events: readonly BrokerEvent[]): Record<string, number> {
  * Importing the same file twice is a normal thing to do by accident.
  */
 export async function importBrokerStatement(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const accountId = String(formData.get("accountId") ?? "");
   const text = String(formData.get("statement") ?? "");
   if (!accountId) throw new Error("Choose the account this statement belongs to.");
@@ -293,7 +293,7 @@ export async function getContributionBreakdown() {
  *    its job, and it is why this can't inflate anything.
  */
 export async function adoptStatementPositions(formData: FormData) {
-  requireInvestments();
+  await requireInvestments();
   const accountId = String(formData.get("accountId") ?? "");
   if (!accountId) throw new Error("Which account?");
   return adoptForAccount(accountId);
@@ -311,7 +311,7 @@ export async function adoptStatementPositions(formData: FormData) {
  * Idempotent, so calling it before every operation costs one query.
  */
 export async function adoptAllStatements() {
-  requireInvestments();
+  await requireInvestments();
   const [rows, positionRows] = await Promise.all([
     db.select().from(brokerEvents),
     db.select().from(positions),

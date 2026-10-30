@@ -20,10 +20,10 @@ describe("first release edition", () => {
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_EDITION","money");
     vi.resetModules();
     const nav = await import("@/lib/navigation");
-    const links = [...nav.NAV_GROUPS.flatMap(group=>group.links),...nav.SEARCHABLE_PAGES,...nav.SETTINGS_TABS,...nav.ANALYTICS_TABS];
+    const links = [...nav.navGroups(false).flatMap(group=>group.links),...nav.searchablePages(false),...nav.settingsTabs(false),...nav.analyticsTabs(false)];
     expect(links.every(link=>availablePath(link.href,"money"))).toBe(true);
-    expect(nav.INVESTMENT_TABS).toEqual([]);
-    expect(nav.NAV_GROUPS.every(group=>group.links.length>0)).toBe(true);
+    expect(nav.investmentTabs(false)).toEqual([]);
+    expect(nav.navGroups(false).every(group=>group.links.length>0)).toBe(true);
     expect(links.some(link=>link.href==="/buckets")).toBe(true);
     expect(links.some(link=>link.href==="/analytics/report")).toBe(true);
   });

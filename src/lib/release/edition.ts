@@ -17,11 +17,6 @@ export function availablePath(path: string, edition: ProductEdition = INVESTMENT
   return edition === "full" || !LATER_PATHS.some(root => pathname === root || pathname.startsWith(root + "/"));
 }
 
-export function availableLinks<T extends { href: string }>(links: T[]): T[] {
-  return links.filter(link => availablePath(link.href));
-}
-
-/** Also checked by mutations: hiding a page alone does not disable its actions. */
-export function requireInvestments(): void {
-  if (!INVESTMENTS_ENABLED) throw new Error("Investments are not available in this version.");
+export function availableLinks<T extends { href: string }>(links: T[], investmentsEnabled: boolean): T[] {
+  return links.filter(link => availablePath(link.href, investmentsEnabled ? "full" : "money"));
 }

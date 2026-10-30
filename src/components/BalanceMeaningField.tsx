@@ -1,5 +1,5 @@
 "use client";
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { useInvestments } from "@/components/EditionContext";
 
 
 import { useText } from "@/components/useText";
@@ -29,9 +29,10 @@ export default function BalanceMeaningField({
   defaultInvested?: number | null;
   currency?: string;
 }) {
+  const investmentsEnabled = useInvestments();
   const uiText = useText();
   const [meaning, setMeaning] = useState<BalanceMeaning>(defaultMeaning);
-  if (!INVESTMENTS_ENABLED) return <>
+  if (!investmentsEnabled) return <>
     <input type="hidden" name="balanceMeaning" value={defaultMeaning} />
     <input type="hidden" name="investedValue" value={defaultInvested ?? ""} />
   </>;

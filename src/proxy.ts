@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { investmentsFor } from "@/actions/releaseEdition";
 import { availablePath } from "@/lib/release/edition";
 import { SESSION_COOKIE_NAME, endedBy, newSessionValue, readSession, sessionCookieOptions } from "@/lib/auth";
 import { sessionsNotBefore } from "@/actions/session";
@@ -7,8 +8,7 @@ import { isPublicPath } from "@/lib/accounts/publicPaths";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (!availablePath(pathname)) return new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
-  if (isPublicPath(pathname)) {
+  if (isPublicPath(pathname) && availablePath(pathname)) {
     return NextResponse.next();
   }
 
@@ -22,6 +22,8 @@ export async function proxy(req: NextRequest) {
     loginUrl.searchParams.set("next", safeReturnPath(req.nextUrl.pathname + req.nextUrl.search));
     return NextResponse.redirect(loginUrl);
   }
+
+  if (!availablePath(pathname, investmentsFor(session.userId) ? "full" : "money")) return new NextResponse(null, { status:404, headers:{"Cache-Control":"no-store"} });
 
   /**
    * A session in use is renewed once a day, so only one left idle for the

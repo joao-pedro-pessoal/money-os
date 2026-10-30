@@ -1,3 +1,4 @@
+import { currentInvestments } from "@/actions/releaseEdition";
 /**
  * Everything a report needs, read once, for the page and for its PDF.
  *
@@ -8,7 +9,6 @@
  * Not a server action: nothing in the browser calls it. The report page and
  * the PDF route import it directly, which is why there is no "use server" here.
  */
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { textForRequest } from "./pageLanguage";
 import { periodCopy } from "@/lib/reports/copy";
 import { db } from "@/db/client";
@@ -91,10 +91,11 @@ function resolvePeriod(params: ReportParams, today: string): { kind: ReportKind;
 }
 
 export async function loadReport(params: ReportParams): Promise<LoadedReport> {
+  const investmentsEnabled = await currentInvestments();
   // The period on the wall, not in UTC: see `localDay`.
   const today = localDay();
   const { kind, key, current } = resolvePeriod(params, today);
-  const scope: ReportScope = !INVESTMENTS_ENABLED ? "money" : isReportScope(params.scope) ? params.scope : "both";
+  const scope: ReportScope = !investmentsEnabled ? "money" : isReportScope(params.scope) ? params.scope : "both";
   const wantsMoney = scope !== "investments";
   const wantsInvestments = scope !== "money";
 

@@ -43,9 +43,10 @@ export async function sessionsNotBefore(userId: string): Promise<Date | null> {
 }
 
 /** The signed-in account, or null. */
-export async function currentUserId(): Promise<string | null> {
+export async function currentUserId(requiredUserId?: string): Promise<string | null> {
   const session = await readSession((await cookies()).get(SESSION_COOKIE_NAME)?.value ?? null);
-  if (!session.valid) return null;
+  // A server-side restriction can only narrow the signed identity, never select another one.
+  if (!session.valid || (requiredUserId !== undefined && session.userId !== requiredUserId)) return null;
   return endedBy(await sessionsNotBefore(session.userId), session.issuedAt) ? null : session.userId;
 }
 

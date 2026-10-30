@@ -1,4 +1,5 @@
 "use client";
+import { useInvestments } from "./EditionContext";
 
 import { directionOf } from "@/lib/i18n/languages";
 import Link from "next/link";
@@ -6,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { useLanguage } from "./LanguageContext";
 import { labelIn } from "@/lib/i18n/messages";
 
-import { SETTINGS_TABS as TABS } from "@/lib/navigation";
+import { settingsTabs } from "@/lib/navigation";
 
 /**
  * Settings used to be one long scroll with six unrelated cards, which is how
@@ -14,6 +15,7 @@ import { SETTINGS_TABS as TABS } from "@/lib/navigation";
  * subject means each page fits on a screen and nothing hides below the fold.
  */
 export default function SettingsTabs() {
+  const TABS = settingsTabs(useInvestments());
   const pathname = usePathname();
   const { m, language } = useLanguage();
 

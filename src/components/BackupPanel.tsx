@@ -1,5 +1,5 @@
 "use client";
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { useInvestments } from "@/components/EditionContext";
 
 import { useText } from "@/components/useText";
 import { useState } from "react";
@@ -18,6 +18,7 @@ export default function BackupPanel({
 }: {
   restoreAction: (formData: FormData) => Promise<void>;
 }) {
+  const investmentsEnabled = useInvestments();
   const uiText = useText();
   const [busy, setBusy] = useState<string | null>(null);
   const [fileText, setFileText] = useState<string>("");
@@ -66,7 +67,7 @@ export default function BackupPanel({
             {busy === "json" ? uiText("Preparing…") : uiText("Download full backup (JSON)")}
           </button>
           <button onClick={() => download("tx")} className="btn" disabled={busy !== null}>{uiText("Transactions (CSV)")}</button>
-          {INVESTMENTS_ENABLED && <button onClick={() => download("holdings")} className="btn" disabled={busy !== null}>{uiText("Holdings (CSV)")}</button>}
+          {investmentsEnabled && <button onClick={() => download("holdings")} className="btn" disabled={busy !== null}>{uiText("Holdings (CSV)")}</button>}
         </div>
       </div>
 

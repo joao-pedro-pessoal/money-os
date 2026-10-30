@@ -1,6 +1,6 @@
+import { currentInvestments } from "@/actions/releaseEdition";
 import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import MoneyOverview from "@/components/MoneyOverview";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -41,9 +41,10 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ currency?: string }>;
 }) {
+  const investmentsEnabled = await currentInvestments();
   const language = await currentLanguage();
   const { locale: numberLocale } = formatFor(language);
-  if (!INVESTMENTS_ENABLED) return <MoneyOverview />;
+  if (!investmentsEnabled) return <MoneyOverview />;
   const uiText = await textForRequest();
   /**
    * Reading the same money in another currency.

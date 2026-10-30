@@ -1,4 +1,4 @@
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { currentInvestments } from "@/actions/releaseEdition";
 import MoneyManual from "@/components/MoneyManual";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -42,7 +42,8 @@ async function Note({
   tone?: "plain" | "care" | "stop";
   children: React.ReactNode;
 }) {
-  if (!INVESTMENTS_ENABLED) return <MoneyManual />;
+  const investmentsEnabled = await currentInvestments();
+  if (!investmentsEnabled) return <MoneyManual />;
   const uiText = await textForRequest();
   const colour =
     tone === "stop" ? "var(--red)" : tone === "care" ? "var(--amber)" : "var(--border-strong)";

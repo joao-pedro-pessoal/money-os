@@ -1,5 +1,5 @@
 "use client";
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { useInvestments } from "@/components/EditionContext";
 
 
 import { useText } from "@/components/useText";
@@ -29,9 +29,10 @@ export default function ConnectablePlatforms({
   institutionInputName?: string;
   children: React.ReactNode;
 }) {
+  const investmentsEnabled = useInvestments();
   const uiText = useText();
   const [typed, setTyped] = useState("");
-  if (!INVESTMENTS_ENABLED) return <>{children}</>;
+  if (!investmentsEnabled) return <>{children}</>;
   const match = matchPlatform(typed, options);
 
   const watch = (e: React.FormEvent<HTMLDivElement>) => {

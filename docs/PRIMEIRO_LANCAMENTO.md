@@ -19,6 +19,13 @@ os dados anteriores; o dashboard explica a presença de ativos antigos e o
 backup completo continua a incluí-los. Não somar outra vez os investimentos
 às contas nem apresentar o património como se fosse todo dinheiro disponível.
 
+A edição completa é também disponibilizada à conta original do dono,
+identificada no servidor por `OWNER_USER_ID`, mesmo numa compilação money.
+As outras contas continuam na edição reduzida. A decisão não pode ser mudada
+por parâmetros ou preferências do cliente. O cabeçalho identifica a compilação,
+enquanto menus e operações seguem a sessão. Na APK store os widgets de
+investimento continuam desativados; o dono precisa da APK home para os usar.
+
 ## Configuração do site
 
 Configurar `APP_EDITION=money` no ambiente Vercel destinado ao primeiro

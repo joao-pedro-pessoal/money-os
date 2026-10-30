@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { labelIn, messagesFor, serverMessageIn } from "../messages";
 import { DEFAULT_LANGUAGE, languageOf, LANGUAGES, localeOf } from "../languages";
-import { ACCOUNTS_TABS, ANALYTICS_TABS, INVESTMENT_TABS, NAV_GROUPS, SEARCHABLE_PAGES, SETTINGS_TABS } from "@/lib/navigation";
+import { ACCOUNTS_TABS, analyticsTabs, investmentTabs, navGroups, searchablePages, settingsTabs } from "@/lib/navigation";
 import { registrationRefusal } from "@/lib/accounts/limits";
 import { passwordProblem } from "@/lib/accounts/password";
 import { manualAmount, manualDate } from "@/lib/money/manualEntry";
@@ -73,12 +73,12 @@ describe("Portuguese", () => {
 
   it("names every page and tab in the menus", () => {
     const names = [
-      ...ANALYTICS_TABS,
+      ...analyticsTabs(true),
       ...ACCOUNTS_TABS,
-      ...INVESTMENT_TABS,
-      ...NAV_GROUPS.flatMap(group => group.links),
-      ...SEARCHABLE_PAGES,
-      ...SETTINGS_TABS,
+      ...investmentTabs(true),
+      ...navGroups(true).flatMap(group => group.links),
+      ...searchablePages(true),
+      ...settingsTabs(true),
     ].map((t) => t.label);
     const missing = names.filter((name) => name !== "Manual" && labelIn(pt, name) === name);
     expect(missing).toEqual([]);

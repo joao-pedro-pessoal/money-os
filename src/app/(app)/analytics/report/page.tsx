@@ -1,4 +1,4 @@
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { currentInvestments } from "@/actions/releaseEdition";
 import { textForRequest } from "@/actions/pageLanguage";
 import { loadReport } from "@/actions/reports";
 import PageTabs from "@/components/PageTabs";
@@ -9,7 +9,7 @@ import InvestmentReportSection from "@/components/InvestmentReport";
 import RangePicker from "@/components/RangePicker";
 import FilterSelect from "@/components/FilterSelect";
 import { Money } from "@/components/PrivacyContext";
-import { ANALYTICS_TABS } from "@/lib/navigation";
+import { analyticsTabs } from "@/lib/navigation";
 import { periodNoun } from "@/lib/reports/monthly";
 import { periodCopy } from "@/lib/reports/copy";
 import { translatedDate } from "@/lib/reports/translatedDate";
@@ -47,6 +47,7 @@ export default async function ReportPage({
 }: {
   searchParams: Promise<{ period?: string; at?: string; month?: string; from?: string; to?: string; scope?: string }>;
 }) {
+  const investmentsEnabled = await currentInvestments();
   const uiText = await textForRequest();
   const loaded = await loadReport(await searchParams);
   const { kind, key, current, scope } = loaded;
@@ -78,7 +79,7 @@ export default async function ReportPage({
   return (
     <div className="monthly-report space-y-6">
       <h1 className="text-lg font-semibold">{uiText("Analytics")}</h1>
-      <PageTabs tabs={ANALYTICS_TABS} />
+      <PageTabs tabs={analyticsTabs(investmentsEnabled)} />
 
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
@@ -115,7 +116,7 @@ export default async function ReportPage({
             label={uiText("What the report covers")}
             value={scope}
             className="input"
-            options={REPORT_SCOPES.filter(s => INVESTMENTS_ENABLED || s.value === "money").map((s) => ({ value: s.value, label: uiText(s.label), href: href({ scope: s.value }) }))}
+            options={REPORT_SCOPES.filter(s => investmentsEnabled || s.value === "money").map((s) => ({ value: s.value, label: uiText(s.label), href: href({ scope: s.value }) }))}
           />
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import { currentInvestments } from "@/actions/releaseEdition";
 import MoneyOverview from "@/components/MoneyOverview";
 import { textForRequest } from "@/actions/pageLanguage";
 import { getTotalNetWorthOverTime, getMoneyByLocation } from "@/actions/analytics";
@@ -16,10 +16,11 @@ import CompositionCard, { BudgetBars } from "@/components/CompositionCard";
 import TimeSeriesCard from "@/components/TimeSeriesCard";
 import { getBaseCurrency } from "@/actions/settings";
 import PageTabs from "@/components/PageTabs";
-import { ANALYTICS_TABS } from "@/lib/navigation";
+import { analyticsTabs } from "@/lib/navigation";
 
 export default async function AnalyticsPage() {
-  if (!INVESTMENTS_ENABLED) return <MoneyOverview analytics />;
+  const investmentsEnabled = await currentInvestments();
+  if (!investmentsEnabled) return <MoneyOverview analytics />;
   const uiText = await textForRequest();
   const [netWorthSeries, byLocation, buckets, portfolio, budgets, netWorth, accounts, rates, baseCurrency] =
     await Promise.all([
@@ -92,7 +93,7 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold">{uiText("Analytics")}</h1>
-      <PageTabs tabs={ANALYTICS_TABS} />
+      <PageTabs tabs={analyticsTabs(investmentsEnabled)} />
 
       <TimeSeriesCard
         title={uiText("Net worth over time")}

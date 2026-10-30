@@ -1,6 +1,6 @@
+import { currentInvestments } from "@/actions/releaseEdition";
 import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
-import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import EditForm from "@/components/EditForm";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -19,6 +19,7 @@ import Section from "@/components/Section";
 import AccountViews from "@/components/AccountViews";
 
 export default async function AccountDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const investmentsEnabled = await currentInvestments();
   const language = await currentLanguage();
   const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
@@ -108,7 +109,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             <span className="badge border border-[var(--border)] text-[var(--muted)] text-[10px]">
               {account.currency}
             </span>
-            {INVESTMENTS_ENABLED && account.portfolioCashPercent !== null && (
+            {investmentsEnabled && account.portfolioCashPercent !== null && (
               <span
                 className="badge border text-[10px]"
                 style={{ borderColor: "var(--border)", color: "var(--muted)" }}
@@ -207,7 +208,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             data={series.map((p) => ({ date: p.date, netWorth: p.value }))}
             currency={account.currency}
           />
-          <p className="text-xs text-[var(--muted)] mt-2">{uiText(INVESTMENTS_ENABLED ? "Change in balance, not investment return — a deposit shows here as growth because from the account's point of view that's exactly what it is." : "Change in the recorded account balance, including income, expenses and transfers.")}</p>
+          <p className="text-xs text-[var(--muted)] mt-2">{uiText(investmentsEnabled ? "Change in balance, not investment return — a deposit shows here as growth because from the account's point of view that's exactly what it is." : "Change in the recorded account balance, including income, expenses and transfers.")}</p>
         </Section>
       )}
 
@@ -312,8 +313,8 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             <span className="text-[var(--muted)]">{uiText("Type")}</span>
             <select name="accountType" defaultValue={account.accountType} className="input mt-1">
             <option value="bank">{uiText("Bank")}</option>
-            {(INVESTMENTS_ENABLED || account.accountType === "broker") && <option value="broker">{uiText("Broker")}</option>}
-            {(INVESTMENTS_ENABLED || account.accountType === "exchange") && <option value="exchange">{uiText("Exchange")}</option>}
+            {(investmentsEnabled || account.accountType === "broker") && <option value="broker">{uiText("Broker")}</option>}
+            {(investmentsEnabled || account.accountType === "exchange") && <option value="exchange">{uiText("Exchange")}</option>}
             <option value="cash">{uiText("Cash")}</option>
             <option value="other">{uiText("Other")}</option>
             </select>
@@ -336,7 +337,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               that nothing holds it, and not free in the sense that matters
               before you commit to a purchase. This keeps it out of the
               dashboard's Free Cash without hiding it. */}
-          {INVESTMENTS_ENABLED ? (<label className="block text-xs">
+          {investmentsEnabled ? (<label className="block text-xs">
             <span className="text-[var(--muted)]">{uiText("How much of this account's spare cash is investing money?")}</span>
             <div className="flex items-center gap-2 mt-1">
               <input
