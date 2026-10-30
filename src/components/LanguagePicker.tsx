@@ -1,7 +1,8 @@
 "use client";
 
+import { languagesForEdition } from "@/lib/i18n/editionLanguages";
 import { directionOf } from "@/lib/i18n/languages";
-import { LANGUAGES, useLanguage, type Language } from "./LanguageContext";
+import { useLanguage, type Language } from "./LanguageContext";
 
 /** The app's language: Settings, and the sign-in page for someone who has not signed in yet. */
 export default function LanguagePicker({ className = "input min-w-0" }: { className?: string }) {
@@ -14,7 +15,7 @@ export default function LanguagePicker({ className = "input min-w-0" }: { classN
       value={language}
       onChange={(e) => setLanguage(e.target.value as Language)}
     >
-      {LANGUAGES.map(({ code, name }) => (
+      {languagesForEdition().map(({ code, name }) => (
         <option key={code} value={code} lang={code} dir={directionOf(code)}>
           {name}
         </option>

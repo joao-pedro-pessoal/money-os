@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { languageForEdition } from "@/lib/i18n/editionLanguages";
 import { isLanguage, LANGUAGE_COOKIE, type Language } from "@/lib/i18n/languages";
 import { messagesFor, type Messages } from "@/lib/i18n/messages";
 import { pendingLanguage, type PendingLanguage } from "@/lib/i18n/pendingLanguage";
@@ -38,14 +39,16 @@ const OLD_KEY = "moneyos_language";
  * another one writes the cookie, shows it here at once, and asks the server to
  * redraw its own parts in it.
  */
-export function LanguageProvider({ language, catalog = EMPTY_CATALOG, children }: { language: Language; catalog?: TextCatalog; children: React.ReactNode }) {
+export function LanguageProvider({ language: requestedLanguage, catalog = EMPTY_CATALOG, children }: { language: Language; catalog?: TextCatalog; children: React.ReactNode }) {
+  const language = languageForEdition(requestedLanguage);
   const router = useRouter();
   const [chosen, setChosen] = useState<PendingLanguage | null>(null);
   const pending = pendingLanguage(language, chosen);
   if (pending !== chosen) setChosen(pending);
   const active = pending?.value ?? language;
 
-  const setLanguage = (next: Language) => {
+  const setLanguage = (requested: Language) => {
+    const next = languageForEdition(requested);
     document.cookie = `${LANGUAGE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
     try {
       window.localStorage.setItem(OLD_KEY, next);

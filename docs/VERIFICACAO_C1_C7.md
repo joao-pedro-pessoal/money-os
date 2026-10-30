@@ -88,3 +88,20 @@ cartão desaparece ao terminar. O fecho persiste após recarregar; sem armazenam
 funciona durante a visita. Sem erros de execução. Migrações reais só na base
 PGlite fictícia, sem serviços externos. Evidência ignorada em `c1-c7/C3/` e
 `c3-ui.mjs`.
+
+## C4 — Línguas revistas na edição pública
+
+A política partilhada de línguas depende da compilação: money oferece inglês
+e português, full mantém 15. Privilégios de investimento não alteram esta
+política pública. Cookie, estado inicial do cliente, alteração de preferência e
+preferência antiga são normalizados; inglês é a alternativa. Os catálogos não
+foram apagados. Os documentos legais não enumeram línguas disponíveis e não
+precisaram de alteração nesta tarefa.
+
+Validação: **3460 testes em 224 ficheiros**, TypeScript, lint e compilação money.
+Os testes exercitam todos os 15 valores, valores inválidos e a renderização real
+do seletor e do fornecedor de língua nas duas edições. **7 verificações no
+navegador** confirmam o seletor na entrada e Definições, cookies ar/de/ja e
+inválido, preferência antiga em armazenamento e mudanças en → pt → en. Dono e
+outra pessoa seguem a mesma lista de duas línguas. Sem erros de execução.
+Evidência ignorada em `c1-c7/C4/` e `c4-ui.mjs`.

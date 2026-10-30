@@ -6,11 +6,12 @@
  * browser draws. Not a server action: pages and layouts call it directly.
  */
 import { cookies } from "next/headers";
-import { LANGUAGE_COOKIE, languageOf, type Language } from "@/lib/i18n/languages";
+import { LANGUAGE_COOKIE, type Language } from "@/lib/i18n/languages";
+import { languageForEdition } from "@/lib/i18n/editionLanguages";
 import { messagesFor, type Messages } from "@/lib/i18n/messages";
 
 export async function currentLanguage(): Promise<Language> {
-  return languageOf((await cookies()).get(LANGUAGE_COOKIE)?.value);
+  return languageForEdition((await cookies()).get(LANGUAGE_COOKIE)?.value);
 }
 
 /** Every word, in the language this request asked for. */
