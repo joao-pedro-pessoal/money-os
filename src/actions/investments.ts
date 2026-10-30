@@ -1,5 +1,7 @@
 "use server";
 
+import { requireInvestments } from "@/lib/release/edition";
+
 import { db } from "@/db/client";
 import { HoldingInputError, manualPositionQuantity, manualPositionPrice, manualPositionRate } from "@/lib/portfolio/manual";
 import { isQuickEntryId, manualAmount, manualBalance } from "@/lib/money/manualEntry";
@@ -175,6 +177,7 @@ export async function getHoldingSnapshots(holdingId: string) {
 }
 
 export async function createHolding(formData: FormData) {
+  requireInvestments();
   const symbol = String(formData.get("symbol") ?? "").trim().toUpperCase();
   const name = String(formData.get("name") ?? "").trim();
   const accountId = tagValue(formData, "accountId");
@@ -268,6 +271,7 @@ export async function createHolding(formData: FormData) {
  * near them.
  */
 export async function setHoldingTags(formData: FormData) {
+  requireInvestments();
   const id = String(formData.get("id"));
   if (!id) throw new Error("Which position?");
   const playlistIds = await chosenPlaylists(formData);
@@ -299,6 +303,7 @@ export async function setHoldingTags(formData: FormData) {
 
 /** Edit static details (symbol, name, platform, quantity, avg entry) without touching current price. */
 export async function updateHolding(formData: FormData) {
+  requireInvestments();
   const id = String(formData.get("id"));
   const symbol = String(formData.get("symbol") ?? "").trim().toUpperCase();
   const name = String(formData.get("name") ?? "").trim();
@@ -424,6 +429,7 @@ export async function submitHoldingOperation(kind: HoldingOperation, formData: F
 
 /** Updates the current price, recording a snapshot so the value-over-time chart has a point. */
 export async function updateHoldingPrice(formData: FormData) {
+  requireInvestments();
   const requestId = await holdingOperationRequest(formData);
   const id = String(formData.get("id") ?? "").trim();
   const currentPrice = String(manualPositionPrice(String(formData.get("currentPrice") ?? "")));
@@ -457,6 +463,7 @@ export async function updateHoldingPrice(formData: FormData) {
 }
 
 export async function deleteHolding(formData: FormData) {
+  requireInvestments();
   const id = String(formData.get("id"));
   await db.insert(auditLog).values({ entityType: "holding", entityId: id, action: "holding_deleted" });
   await db.delete(holdings).where(eq(holdings.id, id));
@@ -693,6 +700,7 @@ export async function listAccountsForHoldings() {
 
 /** Records rewards received on a staked position, adding to the running total. */
 export async function addRewards(formData: FormData) {
+  requireInvestments();
   const requestId = await holdingOperationRequest(formData);
   const id = String(formData.get("id") ?? "").trim();
   let amount: number;
@@ -1016,6 +1024,7 @@ function round2(n: number): number {
  * recorded at the new price so the value chart stays continuous.
  */
 export async function reinforceHolding(formData: FormData) {
+  requireInvestments();
   const requestId = await holdingOperationRequest(formData);
   const id = String(formData.get("id") ?? "").trim();
   const addQuantity = manualPositionQuantity(String(formData.get("quantity") ?? ""));
@@ -1067,6 +1076,7 @@ export async function reinforceHolding(formData: FormData) {
  * realizedPnl, so realised money is never mixed with paper gains.
  */
 export async function sellHolding(formData: FormData) {
+  requireInvestments();
   const requestId = await holdingOperationRequest(formData);
   const id = String(formData.get("id") ?? "").trim();
   const sellQuantity = manualPositionQuantity(String(formData.get("quantity") ?? ""));

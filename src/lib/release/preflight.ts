@@ -29,3 +29,10 @@ export function closedTestPreflight(env: { [key: string]: string | undefined }):
   }
   return problems;
 }
+
+/** The first money-only release uses the existing controlled invitation launch. */
+export function moneyReleasePreflight(env: { [key: string]: string | undefined }): string[] {
+  const problems = closedTestPreflight(env);
+  if (env.APP_EDITION !== "money") problems.push("Definir APP_EDITION=money antes de compilar a primeira versão publicada.");
+  return problems;
+}

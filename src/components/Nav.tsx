@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { availablePath } from "@/lib/release/edition";
 import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useNav } from "./NavContext";
@@ -80,7 +81,7 @@ export default function Nav() {
             {[
               { href: "/", label: t.home }, { href: "/accounts", label: t.accounts }, { href: "/transactions", label: t.cashFlow },
               { href: "/savings", label: t.savings }, { href: "/budgets", label: t.budgets }, { href: "/investments", label: t.investments },
-            ].map(link => <li key={link.href}><Link href={link.href} className={linkClass(link.href)} aria-current={isActive(link.href) ? "page" : undefined} onClick={() => setOpen(false)}>{link.label}</Link></li>)}
+            ].filter(link => availablePath(link.href)).map(link => <li key={link.href}><Link href={link.href} className={linkClass(link.href)} aria-current={isActive(link.href) ? "page" : undefined} onClick={() => setOpen(false)}>{link.label}</Link></li>)}
           </ul>
           <MobileFold simpleOnly title={t.morePages} persistKey="simple-navigation">
             <ul className="space-y-1">

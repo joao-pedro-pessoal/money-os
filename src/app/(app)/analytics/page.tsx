@@ -1,3 +1,5 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import MoneyOverview from "@/components/MoneyOverview";
 import { textForRequest } from "@/actions/pageLanguage";
 import { getTotalNetWorthOverTime, getMoneyByLocation } from "@/actions/analytics";
 import { getPortfolioContribution } from "@/actions/investments";
@@ -17,6 +19,7 @@ import PageTabs from "@/components/PageTabs";
 import { ANALYTICS_TABS } from "@/lib/navigation";
 
 export default async function AnalyticsPage() {
+  if (!INVESTMENTS_ENABLED) return <MoneyOverview analytics />;
   const uiText = await textForRequest();
   const [netWorthSeries, byLocation, buckets, portfolio, budgets, netWorth, accounts, rates, baseCurrency] =
     await Promise.all([

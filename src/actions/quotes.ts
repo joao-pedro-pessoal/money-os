@@ -1,4 +1,6 @@
 "use server";
+import { requireInvestments } from "@/lib/release/edition";
+
 
 import { db } from "@/db/client";
 import { accountConnections, holdings, holdingSnapshots, auditLog, accounts } from "@/db/schema";
@@ -65,6 +67,7 @@ import {
  * look identical until you see the number.
  */
 export async function checkQuoteSymbol(symbol: string, expectedCurrency: string) {
+  requireInvestments();
   const clean = symbol.trim();
   if (clean === "") return { ok: false as const, reason: "Type a symbol first." };
 
@@ -147,6 +150,7 @@ export async function checkQuoteSymbol(symbol: string, expectedCurrency: string)
  * listing is a different listing.
  */
 export async function fetchYahooQuote(symbol: string, expectedCurrency: string) {
+  requireInvestments();
   try {
     const response = await fetch(yahooUrl(symbol), {
       cache: "no-store",
@@ -211,6 +215,7 @@ export async function fetchYahooQuote(symbol: string, expectedCurrency: string) 
 
 /** Stores the symbol to price a position from. Empty clears it. */
 export async function setQuoteSymbol(formData: FormData) {
+  requireInvestments();
   const id = String(formData.get("id"));
   const raw = String(formData.get("quoteSymbol") ?? "").trim();
 
@@ -244,6 +249,7 @@ export async function setQuoteSymbol(formData: FormData) {
  * is asked, because a person clicking "refresh" means now.
  */
 export async function refreshQuotedPrices(options?: { olderThanMinutes?: number }) {
+  requireInvestments();
   const rows = await db.select().from(holdings);
   const now = new Date();
   const quoted = rows.filter((h) =>
@@ -331,6 +337,7 @@ export async function refreshQuotedPrices(options?: { olderThanMinutes?: number 
  * a symbol that works, whatever the metadata claimed.
  */
 export async function findSymbolForIsin(isin: string, currency: string) {
+  requireInvestments();
   const tried: { symbol: string; note: string }[] = [];
 
   /**
@@ -484,6 +491,7 @@ export async function findSymbolForIsin(isin: string, currency: string) {
  * rest carry on.
  */
 export async function autoPriceHoldings() {
+  requireInvestments();
   /**
    * Make the statement's positions real first.
    *
@@ -724,6 +732,7 @@ export async function getPricingCrossCheck() {
 }
 
 export async function probeIbkrQuotes(isin: string) {
+  requireInvestments();
   const [connection] = await db
     .select()
     .from(accountConnections)
@@ -833,6 +842,7 @@ export async function probeIbkrQuotes(isin: string) {
  * place to second-guess that.
  */
 export async function forgetFoundPrices() {
+  requireInvestments();
   const rows = await db.select().from(holdings);
 
   const automatic = rows.filter((h) => wasFoundAutomatically(h.quoteSymbol));
@@ -871,6 +881,7 @@ export async function forgetFoundPrices() {
  */
 export async function autoRefreshPricesAction(): Promise<void> {
   "use server";
+  requireInvestments();
   await refreshQuotedPrices({ olderThanMinutes: REPRICE_AFTER_MINUTES });
   // And the logo of anything bought since the last one, which is the moment a
   // position has none. It cannot throw and it cannot delay a price: see

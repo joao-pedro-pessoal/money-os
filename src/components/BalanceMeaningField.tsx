@@ -1,4 +1,6 @@
 "use client";
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+
 
 import { useText } from "@/components/useText";
 import { useState } from "react";
@@ -29,6 +31,10 @@ export default function BalanceMeaningField({
 }) {
   const uiText = useText();
   const [meaning, setMeaning] = useState<BalanceMeaning>(defaultMeaning);
+  if (!INVESTMENTS_ENABLED) return <>
+    <input type="hidden" name="balanceMeaning" value={defaultMeaning} />
+    <input type="hidden" name="investedValue" value={defaultInvested ?? ""} />
+  </>;
   const help = BALANCE_MEANINGS.find((m) => m.value === meaning)?.help ?? "";
 
   return (

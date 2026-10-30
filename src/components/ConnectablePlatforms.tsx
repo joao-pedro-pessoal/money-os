@@ -1,4 +1,6 @@
 "use client";
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+
 
 import { useText } from "@/components/useText";
 import { useState } from "react";
@@ -29,6 +31,7 @@ export default function ConnectablePlatforms({
 }) {
   const uiText = useText();
   const [typed, setTyped] = useState("");
+  if (!INVESTMENTS_ENABLED) return <>{children}</>;
   const match = matchPlatform(typed, options);
 
   const watch = (e: React.FormEvent<HTMLDivElement>) => {

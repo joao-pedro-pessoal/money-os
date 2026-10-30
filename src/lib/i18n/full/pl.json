@@ -3350,5 +3350,17 @@
   "Changes saved.": "Changes saved.",
   "Connection interrupted. Retry with the same details; a saved edit will not be applied again.": "Connection interrupted. Retry with the same details; a saved edit will not be applied again.",
   "Enter a whole-number priority from 0 to 9999.": "Enter a whole-number priority from 0 to 9999.",
-  "Budget not found": "Budget not found"
+  "Budget not found": "Budget not found",
+  "Create an account and enter its current balance.": "Create an account and enter its current balance.",
+  "Record income and expenses. Transfers move money between your own accounts.": "Record income and expenses. Transfers move money between your own accounts.",
+  "Set a spending limit and choose the expense categories it watches.": "Set a spending limit and choose the expense categories it watches.",
+  "Set money aside for a goal. Allocations do not move money between accounts.": "Set money aside for a goal. Allocations do not move money between accounts.",
+  "Track upcoming charges. A forecast does not change your balance.": "Track upcoming charges. A forecast does not change your balance.",
+  "Review your income and spending, then download a CSV or PDF.": "Review your income and spending, then download a CSV or PDF.",
+  "Export a backup, restore your records or delete your account in Settings.": "Export a backup, restore your records or delete your account in Settings.",
+  "Change in the recorded account balance, including income, expenses and transfers.": "Change in the recorded account balance, including income, expenses and transfers.",
+  "Income and expenses for the current month.": "Income and expenses for the current month.",
+  "Historical values are approximate.": "Historical values are approximate.",
+  "This version accepts bank transactions only.": "This version accepts bank transactions only.",
+  "Includes previously recorded assets. Their records remain in your full backup.": "Includes previously recorded assets. Their records remain in your full backup."
 }

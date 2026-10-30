@@ -1,3 +1,4 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { NextResponse } from "next/server";
 import { textForRequest } from "@/actions/pageLanguage";
 import { currentLanguage } from "@/actions/language";
@@ -28,6 +29,17 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
  * the base currency and comes from the same actions the pages render.
  */
 export async function GET() {
+  if (!INVESTMENTS_ENABLED) {
+    const [nw, series, composition, month] = await Promise.all([getNetWorth(), getTotalNetWorthOverTime(), getAccountComposition(), getMonthShape()]);
+    const now = new Date();
+    const locale = localeOf(await currentLanguage());
+    const income = month.flows.income.total, expenses = month.flows.expenses.total;
+    return NextResponse.json({currency:nw.baseCurrency,updatedAt:now.toISOString(),netWorth:round2(nw.total),
+      series:downsample(series.map(p => ({date:p.date,value:p.netWorth})),60),
+      where:topSlices(composition.map(c => ({name:c.name,value:c.composition.total})),4),
+      month:{label:now.toLocaleDateString(locale,{month:"long",year:"numeric"}),income:round2(income),expenses:round2(expenses),net:round2(income-expenses)},
+    },{headers:{"Cache-Control":"no-store"}});
+  }
   const uiText = await textForRequest();
   const locale = localeOf(await currentLanguage());
   const [nw, series, composition, month, portfolio, dividends, open, connections, rates] =

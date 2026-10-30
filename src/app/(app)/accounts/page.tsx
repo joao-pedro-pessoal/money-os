@@ -1,3 +1,4 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
@@ -88,7 +89,7 @@ export default async function AccountsPage() {
                     return (
                       <>
                         <Money value={shown} currency={a.currency} />
-                        {p && p.unrealizedPnl !== 0 && (
+                        {INVESTMENTS_ENABLED && p && p.unrealizedPnl !== 0 && (
                           <span
                             className={
                               "account-balance-detail " + (p.unrealizedPnl > 0
@@ -101,7 +102,7 @@ export default async function AccountsPage() {
                             {Math.abs(p.unrealizedPnl).toFixed(2)})
                           </span>
                         )}
-                        {p && p.spot > 0 && (
+                        {INVESTMENTS_ENABLED && p && p.spot > 0 && (
                           <div className="account-balance-detail text-[10px] text-[var(--muted)]">
                             {p.equity.toFixed(2)}{uiText(" in positions + ")}{p.spot.toFixed(2)}{" "}{uiText("spot")}</div>
                         )}
@@ -139,8 +140,8 @@ export default async function AccountsPage() {
             />
             <select name="accountType" className="input">
               <option value="bank">{uiText("Bank")}</option>
-              <option value="broker">{uiText("Broker")}</option>
-              <option value="exchange">{uiText("Exchange")}</option>
+              {(INVESTMENTS_ENABLED) && <option value="broker">{uiText("Broker")}</option>}
+              {(INVESTMENTS_ENABLED) && <option value="exchange">{uiText("Exchange")}</option>}
               <option value="cash">{uiText("Cash")}</option>
               <option value="other">{uiText("Other")}</option>
             </select>

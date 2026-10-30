@@ -1,3 +1,5 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import MoneyManual from "@/components/MoneyManual";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import Link from "next/link";
@@ -40,6 +42,7 @@ async function Note({
   tone?: "plain" | "care" | "stop";
   children: React.ReactNode;
 }) {
+  if (!INVESTMENTS_ENABLED) return <MoneyManual />;
   const uiText = await textForRequest();
   const colour =
     tone === "stop" ? "var(--red)" : tone === "care" ? "var(--amber)" : "var(--border-strong)";

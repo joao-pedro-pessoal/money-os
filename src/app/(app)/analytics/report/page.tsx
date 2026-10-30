@@ -1,3 +1,4 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { textForRequest } from "@/actions/pageLanguage";
 import { loadReport } from "@/actions/reports";
 import PageTabs from "@/components/PageTabs";
@@ -114,7 +115,7 @@ export default async function ReportPage({
             label={uiText("What the report covers")}
             value={scope}
             className="input"
-            options={REPORT_SCOPES.map((s) => ({ value: s.value, label: uiText(s.label), href: href({ scope: s.value }) }))}
+            options={REPORT_SCOPES.filter(s => INVESTMENTS_ENABLED || s.value === "money").map((s) => ({ value: s.value, label: uiText(s.label), href: href({ scope: s.value }) }))}
           />
         </div>
       </div>

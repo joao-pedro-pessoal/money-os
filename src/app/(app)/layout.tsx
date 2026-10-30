@@ -1,3 +1,4 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { PrivacyProvider } from "@/components/PrivacyContext";
 import { ThemeProvider } from "@/components/ThemeContext";
 import Nav from "@/components/Nav";
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
  * happened to go looking.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [{ alerts }, quickEntry, symbolNames] = await Promise.all([getAlerts(), getQuickEntryOptions(), getSymbolNames()]);
+  const [{ alerts }, quickEntry, symbolNames] = await Promise.all([getAlerts(), getQuickEntryOptions(), INVESTMENTS_ENABLED ? getSymbolNames() : {}]);
 
   return (
     <ThemeProvider>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { availablePath } from "@/lib/release/edition";
 import { SESSION_COOKIE_NAME, endedBy, newSessionValue, readSession, sessionCookieOptions } from "@/lib/auth";
 import { sessionsNotBefore } from "@/actions/session";
 import { safeReturnPath } from "@/lib/accounts/returnPath";
@@ -6,6 +7,7 @@ import { isPublicPath } from "@/lib/accounts/publicPaths";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  if (!availablePath(pathname)) return new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }

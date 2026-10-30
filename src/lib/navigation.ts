@@ -1,3 +1,5 @@
+import { availableLinks } from "./release/edition";
+
 /**
  * Where things live.
  *
@@ -24,12 +26,12 @@ export function isNavigationActive(pathname: string, href: string): boolean {
   );
 }
 
-export const ANALYTICS_TABS = [
+export const ANALYTICS_TABS = availableLinks([
   { href: "/analytics", label: "Overview" },
   { href: "/analytics/spending", label: "Where it goes" },
   { href: "/statistics", label: "Trends & projections" },
   { href: "/analytics/report", label: "Reports" },
-];
+]);
 
 export const ACCOUNTS_TABS = [
   { href: "/accounts", label: "Accounts" },
@@ -39,7 +41,7 @@ export const ACCOUNTS_TABS = [
   { href: "/interest", label: "Interest received" },
 ];
 
-export const INVESTMENT_TABS = [
+export const INVESTMENT_TABS = availableLinks([
   { href: "/investments", label: "Holdings" },
   { href: "/investments/analysis", label: "Analysis" },
   // What you actually did, as opposed to what you currently hold. The page
@@ -51,7 +53,7 @@ export const INVESTMENT_TABS = [
   { href: "/investments/dividends", label: "Dividends" },
   { href: "/positions", label: "Open positions" },
   { href: "/connections", label: "Connections" },
-];
+]);
 
 /**
  * Eleven entries in three groups, down from fifteen in a flat list.
@@ -64,7 +66,7 @@ export const INVESTMENT_TABS = [
  * - "Import statement" was an action masquerading as a place. It lives on the
  *   Cash Flow page, which is the data it changes, and in Settings → Your data.
  */
-export const NAV_GROUPS: { label?: "groupMoney" | "groupLearning" | "groupNotGuaranteed"; links: { href: string; label: string }[] }[] = [
+const ALL_NAV_GROUPS: { label?: "groupMoney" | "groupLearning" | "groupNotGuaranteed"; links: { href: string; label: string }[] }[] = [
   {
     links: [
       { href: "/", label: "Dashboard" },
@@ -97,6 +99,8 @@ export const NAV_GROUPS: { label?: "groupMoney" | "groupLearning" | "groupNotGua
   },
 ];
 
+export const NAV_GROUPS = ALL_NAV_GROUPS.map(group => ({...group,links:availableLinks(group.links)})).filter(group => group.links.length > 0);
+
 // Reuse the page tabs so search follows the same destinations and labels.
 export const SEARCHABLE_PAGES = [
   ...NAV_GROUPS.flatMap(group => group.links),
@@ -109,11 +113,11 @@ export const SEARCHABLE_PAGES = [
 ].filter((link, index, pages) => pages.findIndex(page => page.href === link.href) === index);
 
 
-export const SETTINGS_TABS = [
+export const SETTINGS_TABS = availableLinks([
   { href: "/settings", label: "General" },
   { href: "/settings/categories", label: "Categories" },
   { href: "/settings/rates", label: "Currency & rates" },
   { href: "/settings/names", label: "Ticker names" },
   { href: "/settings/data", label: "Your data" },
   { href: "/settings/phone", label: "On your phone" },
-];
+]);

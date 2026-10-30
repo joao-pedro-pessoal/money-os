@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { productEdition } from "./src/lib/release/edition";
 
 /**
  * Sent with every page and file.
@@ -30,10 +31,10 @@ export const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   // Expose only the activation boolean; server checks the trusted host marker independently.
-  env: { NEXT_PUBLIC_REGISTRATION_BOT_PROTECTION: process.env.VERCEL === "1" ? "1" : "0" },
+  env: { NEXT_PUBLIC_PRODUCT_EDITION: productEdition(process.env.APP_EDITION), NEXT_PUBLIC_REGISTRATION_BOT_PROTECTION: process.env.VERCEL === "1" ? "1" : "0" },
   outputFileTracingIncludes: { "/api/report/pdf": ["./assets/fonts/**/*"] },
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [{ source: "/:path*", headers: [...SECURITY_HEADERS, { key:"X-MoneyOS-Edition", value:productEdition(process.env.APP_EDITION) }] }];
   },
 };
 

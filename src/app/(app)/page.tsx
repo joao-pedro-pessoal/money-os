@@ -1,3 +1,5 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
+import MoneyOverview from "@/components/MoneyOverview";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listAccountsWithState } from "@/actions/accounts";
@@ -37,6 +39,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ currency?: string }>;
 }) {
+  if (!INVESTMENTS_ENABLED) return <MoneyOverview />;
   const uiText = await textForRequest();
   /**
    * Reading the same money in another currency.

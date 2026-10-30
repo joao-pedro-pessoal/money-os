@@ -3,7 +3,7 @@ import nextConfig, { SECURITY_HEADERS } from "../../../../next.config";
 
 describe("headers sent with every page", () => {
   it("cover every path", async () => {
-    expect(await nextConfig.headers!()).toEqual([{ source: "/:path*", headers: SECURITY_HEADERS }]);
+    expect(await nextConfig.headers!()).toEqual([{ source: "/:path*", headers: [...SECURITY_HEADERS, {key:"X-MoneyOS-Edition",value:process.env.APP_EDITION || "full"}] }]);
   });
 
   it("refuse framing by other sites, sniffing and full referrers, and keep scripts unrestricted", () => {

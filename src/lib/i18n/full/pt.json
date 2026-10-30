@@ -3350,5 +3350,17 @@
   "Changes saved.": "Alterações guardadas.",
   "Connection interrupted. Retry with the same details; a saved edit will not be applied again.": "Ligação interrompida. Tenta novamente com os mesmos dados; uma edição já guardada não será aplicada outra vez.",
   "Enter a whole-number priority from 0 to 9999.": "Indica uma prioridade inteira entre 0 e 9999.",
-  "Budget not found": "Orçamento não encontrado."
+  "Budget not found": "Orçamento não encontrado.",
+  "Create an account and enter its current balance.": "Cria uma conta e indica o saldo atual.",
+  "Record income and expenses. Transfers move money between your own accounts.": "Regista receitas e despesas. As transferências movem dinheiro entre as tuas próprias contas.",
+  "Set a spending limit and choose the expense categories it watches.": "Define um limite de gastos e escolhe as categorias de despesas que abrange.",
+  "Set money aside for a goal. Allocations do not move money between accounts.": "Reserva dinheiro para um objetivo. As afetações não movem dinheiro entre contas.",
+  "Track upcoming charges. A forecast does not change your balance.": "Acompanha as próximas cobranças. Uma previsão não altera o saldo.",
+  "Review your income and spending, then download a CSV or PDF.": "Consulta as receitas e despesas e descarrega um CSV ou PDF.",
+  "Export a backup, restore your records or delete your account in Settings.": "Exporta uma cópia de segurança, restaura os registos ou elimina a conta nas Definições.",
+  "Change in the recorded account balance, including income, expenses and transfers.": "Variação do saldo registado da conta, incluindo receitas, despesas e transferências.",
+  "Income and expenses for the current month.": "Receitas e despesas do mês atual.",
+  "Historical values are approximate.": "Os valores históricos são aproximados.",
+  "This version accepts bank transactions only.": "Esta versão aceita apenas movimentos bancários.",
+  "Includes previously recorded assets. Their records remain in your full backup.": "Inclui ativos registados anteriormente. Os respetivos registos mantêm-se na cópia de segurança completa."
 }

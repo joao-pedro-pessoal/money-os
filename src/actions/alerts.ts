@@ -1,4 +1,6 @@
 "use server";
+import { INVESTMENTS_ENABLED, availablePath } from "@/lib/release/edition";
+
 
 import { db } from "@/db/client";
 import { subscriptions, watchlistItems, accounts, bucketAllocations, holdings } from "@/db/schema";
@@ -41,16 +43,16 @@ export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }
   const [budgets, connections, portfolio, base, subs, watch, accountRows, allocations, due, holdingRows] =
     await Promise.all([
       listBudgets(),
-      listConnections(),
-      getPortfolioItems(),
+      INVESTMENTS_ENABLED ? listConnections() : [],
+      INVESTMENTS_ENABLED ? getPortfolioItems() : {items:[],baseCurrency:""},
       getBaseCurrency(),
       db.select().from(subscriptions).where(eq(subscriptions.active, true)),
-      db.select().from(watchlistItems),
+      INVESTMENTS_ENABLED ? db.select().from(watchlistItems) : [],
       db.select().from(accounts).where(eq(accounts.active, true)),
       db.select().from(bucketAllocations),
       // The same list the dashboard and Subscriptions page ask you to answer.
       getDueSubscriptionCharges(),
-      db.select().from(holdings),
+      INVESTMENTS_ENABLED ? db.select().from(holdings) : [],
     ]);
 
   const alerts: Alert[] = [];
@@ -184,5 +186,5 @@ export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }
     })
   );
 
-  return { alerts: sortAlerts(alerts), currency: base };
+  return { alerts: sortAlerts(alerts.filter(alert => availablePath(alert.href))), currency: base };
 }

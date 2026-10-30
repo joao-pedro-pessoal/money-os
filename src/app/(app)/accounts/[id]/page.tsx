@@ -1,3 +1,4 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import EditForm from "@/components/EditForm";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -103,7 +104,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             <span className="badge border border-[var(--border)] text-[var(--muted)] text-[10px]">
               {account.currency}
             </span>
-            {account.portfolioCashPercent !== null && (
+            {INVESTMENTS_ENABLED && account.portfolioCashPercent !== null && (
               <span
                 className="badge border text-[10px]"
                 style={{ borderColor: "var(--border)", color: "var(--muted)" }}
@@ -202,7 +203,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             data={series.map((p) => ({ date: p.date, netWorth: p.value }))}
             currency={account.currency}
           />
-          <p className="text-xs text-[var(--muted)] mt-2">{uiText("Change in balance, not investment return — a deposit shows here as growth because from the account's point of view that's exactly what it is.")}</p>
+          <p className="text-xs text-[var(--muted)] mt-2">{uiText(INVESTMENTS_ENABLED ? "Change in balance, not investment return — a deposit shows here as growth because from the account's point of view that's exactly what it is." : "Change in the recorded account balance, including income, expenses and transfers.")}</p>
         </Section>
       )}
 
@@ -307,8 +308,8 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             <span className="text-[var(--muted)]">{uiText("Type")}</span>
             <select name="accountType" defaultValue={account.accountType} className="input mt-1">
             <option value="bank">{uiText("Bank")}</option>
-            <option value="broker">{uiText("Broker")}</option>
-            <option value="exchange">{uiText("Exchange")}</option>
+            {(INVESTMENTS_ENABLED || account.accountType === "broker") && <option value="broker">{uiText("Broker")}</option>}
+            {(INVESTMENTS_ENABLED || account.accountType === "exchange") && <option value="exchange">{uiText("Exchange")}</option>}
             <option value="cash">{uiText("Cash")}</option>
             <option value="other">{uiText("Other")}</option>
             </select>
@@ -331,7 +332,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               that nothing holds it, and not free in the sense that matters
               before you commit to a purchase. This keeps it out of the
               dashboard's Free Cash without hiding it. */}
-          <label className="block text-xs">
+          {INVESTMENTS_ENABLED ? (<label className="block text-xs">
             <span className="text-[var(--muted)]">{uiText("How much of this account's spare cash is investing money?")}</span>
             <div className="flex items-center gap-2 mt-1">
               <input
@@ -347,7 +348,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
               <span className="text-[var(--muted)]">%</span>
             </div>
             <span className="text-[10px] text-[var(--muted)] block mt-1">{uiText("Left blank, it counts as spendable and the dashboard says it hasn't been set.")}</span>
-          </label>
+          </label>) : <input type="hidden" name="portfolioCashPercent" value={account.portfolioCashPercent ?? ""} />}
 
           <label className="block text-xs">
             <span className="text-[var(--muted)]">{uiText("Notes")}</span>

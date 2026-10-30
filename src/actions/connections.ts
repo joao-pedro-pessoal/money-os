@@ -1,5 +1,7 @@
 "use server";
 
+import { requireInvestments } from "@/lib/release/edition";
+
 import { db } from "@/db/client";
 import { isCurrencyCode } from "@/lib/fx";
 import {
@@ -261,6 +263,7 @@ export async function listAllPositions() {
  * Upserted on (connectionId, coin) so it survives every future sync.
  */
 export async function setPositionTags(formData: FormData) {
+  requireInvestments();
   const connectionId = String(formData.get("connectionId"));
   const coin = String(formData.get("coin"));
   const value = (field: string) => {
@@ -471,6 +474,7 @@ export async function getSyncLogs(connectionId: string, limit = 10) {
 }
 
 export async function createConnection(formData: FormData) {
+  requireInvestments();
   let accountId = String(formData.get("accountId") ?? "").trim();
   const platform = String(formData.get("platform") ?? "hyperliquid").trim();
   // Identifiers — wallet addresses, API keys, account ids — never contain
@@ -585,6 +589,7 @@ export async function createConnection(formData: FormData) {
 }
 
 export async function deleteConnection(formData: FormData) {
+  requireInvestments();
   const id = String(formData.get("id"));
 
   const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, id));
@@ -637,6 +642,7 @@ export async function deleteConnection(formData: FormData) {
  * intact, to be updated by hand like a bank.
  */
 export async function convertToManual(formData: FormData) {
+  requireInvestments();
   const id = String(formData.get("id"));
 
   const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, id));
@@ -686,6 +692,7 @@ export async function syncConnectionAction(formData: FormData) {
  * the key is, and the page says so (`lockedHere`).
  */
 export async function syncConnection(connectionId: string, trigger: "manual" | "scheduled" = "manual") {
+  requireInvestments();
   const [conn] = await db
     .select()
     .from(accountConnections)
@@ -1051,6 +1058,7 @@ export async function autoSyncAction() {
 
 /** Syncs every active connection. Used by the schedulable route. */
 export async function syncAllConnections(trigger: "manual" | "scheduled" = "scheduled") {
+  requireInvestments();
   const conns = await db.select().from(accountConnections).where(eq(accountConnections.active, true));
   const results = [];
   for (const c of conns) {

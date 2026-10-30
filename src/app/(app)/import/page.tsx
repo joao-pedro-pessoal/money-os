@@ -1,3 +1,4 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listCategories } from "@/actions/transactions";
@@ -58,7 +59,7 @@ export default async function ImportPage() {
     listAccountsWithState(),
     getBaseCurrency(),
     listImports(),
-    getImportedStatements(),
+    INVESTMENTS_ENABLED ? getImportedStatements() : [],
   ]);
 
   return (
@@ -71,7 +72,7 @@ export default async function ImportPage() {
       {/* A broker export is a different animal: it has trades, dividends,
           interest and — crucially — deposits, which the bank importer would
           flatten into anonymous income. It gets its own path. */}
-      <Section
+      {INVESTMENTS_ENABLED && (<Section
         title="Investment account? Import the broker statement instead"
         summary={uiText("trades, dividends, interest and deposits")}
       >
@@ -118,7 +119,7 @@ export default async function ImportPage() {
         ) : (
           <p className="text-[10px] text-[var(--muted)] mt-3">{uiText("No broker statement has been imported yet.")}</p>
         )}
-      </Section>
+      </Section>)}
 
       <Step
         n={1}

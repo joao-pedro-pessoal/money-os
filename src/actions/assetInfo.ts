@@ -1,4 +1,5 @@
 "use server";
+import { requireInvestments } from "@/lib/release/edition";
 import { db } from "@/db/client";
 import { appSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -11,6 +12,7 @@ import { hasSession } from "./session";
 const keyFor = (symbol: string) => `asset_note:${symbol.trim().toUpperCase()}`;
 
 export async function getAssetInfo(symbol: string) {
+  requireInvestments();
   const [manual, positions, balances, notes] = await Promise.all([
     listHoldingsWithPnL(), listAllPositions(), listBalances(),
     db.select().from(appSettings).where(eq(appSettings.key, keyFor(symbol))),
@@ -27,6 +29,7 @@ export async function getAssetInfo(symbol: string) {
 }
 
 export async function saveAssetNote(formData: FormData) {
+  requireInvestments();
   if (!(await hasSession())) throw new Error("Sign in again.");
   const symbol = String(formData.get("symbol") ?? "").trim().toUpperCase();
   if (!symbol) return;

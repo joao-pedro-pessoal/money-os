@@ -1052,3 +1052,8 @@ main .grid > * { min-width: 0; }
   .bucket-priority-input.input { width: 4rem; min-width: 0; }
   .bucket-priority-form button, .bucket-priority-moves button { min-width: 44px; min-height: 44px; }
 }
+
+@media (max-width: 767px) {
+  .mobile-bottom-nav[data-money-edition] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  [data-mobile-ui="simple"] .mobile-bottom-nav[data-money-edition] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}

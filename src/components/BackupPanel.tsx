@@ -1,4 +1,5 @@
 "use client";
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 
 import { useText } from "@/components/useText";
 import { useState } from "react";
@@ -65,7 +66,7 @@ export default function BackupPanel({
             {busy === "json" ? uiText("Preparing…") : uiText("Download full backup (JSON)")}
           </button>
           <button onClick={() => download("tx")} className="btn" disabled={busy !== null}>{uiText("Transactions (CSV)")}</button>
-          <button onClick={() => download("holdings")} className="btn" disabled={busy !== null}>{uiText("Holdings (CSV)")}</button>
+          {INVESTMENTS_ENABLED && <button onClick={() => download("holdings")} className="btn" disabled={busy !== null}>{uiText("Holdings (CSV)")}</button>}
         </div>
       </div>
 

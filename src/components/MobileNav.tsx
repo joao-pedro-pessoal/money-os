@@ -2,6 +2,7 @@
 
 import { directionOf } from "@/lib/i18n/languages";
 import Link from "next/link";
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { usePathname } from "next/navigation";
 import { isNavigationActive } from "@/lib/navigation";
 import { useNav } from "./NavContext";
@@ -26,11 +27,12 @@ export default function MobileNav() {
   const { open, setOpen } = useNav();
   const { simple } = useMobileMode();
   const { t, language } = useLanguage();
-  const moreActive = !shortcuts.some(({ href }) => (!simple || href !== "/investments") && isNavigationActive(pathname, href));
+  const visibleShortcuts = INVESTMENTS_ENABLED ? shortcuts : shortcuts.filter(link => link.href !== "/investments");
+  const moreActive = !visibleShortcuts.some(({ href }) => (!simple || href !== "/investments") && isNavigationActive(pathname, href));
 
   return (
-    <nav translate="no" lang={language} dir={directionOf(language)} className="mobile-bottom-nav" aria-label={t.quickNavigation}>
-      {shortcuts.map(({ href, word, path }) => (
+    <nav translate="no" lang={language} dir={directionOf(language)} className="mobile-bottom-nav" data-money-edition={!INVESTMENTS_ENABLED || undefined} aria-label={t.quickNavigation}>
+      {visibleShortcuts.map(({ href, word, path }) => (
         <Link key={href} href={href} aria-current={isNavigationActive(pathname, href) ? "page" : undefined}>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={path} /></svg>
           <span>{t[word] as string}</span>

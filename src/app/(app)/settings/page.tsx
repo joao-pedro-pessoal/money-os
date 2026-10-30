@@ -1,3 +1,4 @@
+import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { textForRequest } from "@/actions/pageLanguage";
 import { directionOf } from "@/lib/i18n/languages";
 import {
@@ -124,7 +125,7 @@ export default async function SettingsGeneralPage() {
           </form>
         </SettingRow>
 
-        <SettingRow
+        {INVESTMENTS_ENABLED && (<SettingRow
           title={w.dashboardCurrencyTitle}
           description={w.dashboardCurrencyText}
         >
@@ -147,7 +148,7 @@ export default async function SettingsGeneralPage() {
               {w.save}
             </button>
           </form>
-        </SettingRow>
+        </SettingRow>)}
 
         <SettingRow
           title={w.defaultAccountTitle}
@@ -176,13 +177,13 @@ export default async function SettingsGeneralPage() {
           <ThemePicker />
         </SettingRow>
 
-        <SettingRow
+        {INVESTMENTS_ENABLED && (<SettingRow
           title={w.windowsTitle}
           description={w.windowsText}
           stacked
         >
           <DashboardWindowSettings preferences={dashboardWindows} />
-        </SettingRow>
+        </SettingRow>)}
       </div>
 
       {/* Only inside the Android app; renders nothing in a browser. */}

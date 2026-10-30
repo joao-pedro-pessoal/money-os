@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <receiver android:name=".MoneyWidgets$Investments" android:enabled="false" />
+    <receiver android:name=".MoneyWidgets$Allocation" android:enabled="false" />
+    <receiver android:name=".MoneyWidgets$Movers" android:enabled="false" />
+    <receiver android:name=".MoneyWidgets$Dividends" android:enabled="false" />
+    <receiver android:name=".MoneyWidgets$OpenTrades" android:enabled="false" />
+    <service android:name=".PositionsListService" android:enabled="false" />
+  </application>
+</manifest>
