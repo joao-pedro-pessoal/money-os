@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isPublicPath } from "../publicPaths";
+import { BOTID_CHALLENGE_ROOT } from "../botProtection";
 import { LEGAL_PATHS } from "@/lib/legal/paths";
 
 describe("what opens without a session", () => {
@@ -22,6 +23,13 @@ describe("what opens without a session", () => {
   it("opens only the exact registration endpoint", () => {
     expect(isPublicPath("/api/register")).toBe(true);
     for (const path of ["/api/register/admin", "/api/register-extra", "/api/registers"]) expect(isPublicPath(path)).toBe(false);
+  });
+
+  it("lets BotID's check load for someone who has no account yet, and nothing beside it", () => {
+    expect(isPublicPath(`${BOTID_CHALLENGE_ROOT}/a-4-a/c.js`)).toBe(true);
+    expect(isPublicPath(`${BOTID_CHALLENGE_ROOT}/anything/below`)).toBe(true);
+    expect(isPublicPath(`${BOTID_CHALLENGE_ROOT}-extra/c.js`)).toBe(false);
+    expect(isPublicPath("/149e9513-01fa-4fb0-aad4-566afd725d1b/other")).toBe(false);
   });
 
   it("keeps every page with a figure on it behind the sign-in", () => {

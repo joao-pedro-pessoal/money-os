@@ -67,3 +67,8 @@ funcionalidade de investimentos anunciada nesta versão.
 
 Usar estas imagens para revisão; capturar a versão Android final depois da
 publicação do site antes de concluir a ficha da Play.
+
+Imagem de destaque (1024×500, PNG sem transparência):
+`../feature-graphic-pt.png` e `../feature-graphic-en.png`, com «Contas ·
+gastos · orçamentos · objetivos» / «Accounts · spending · budgets · goals» —
+sem investimentos, como esta versão (30/10/2026).

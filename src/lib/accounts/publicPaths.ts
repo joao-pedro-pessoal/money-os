@@ -1,4 +1,4 @@
-import { REGISTRATION_PATH } from "./botProtection";
+import { BOTID_CHALLENGE_ROOT, REGISTRATION_PATH } from "./botProtection";
 import { LEGAL_PATHS } from "@/lib/legal/paths";
 
 const LEGAL = new Set(Object.values(LEGAL_PATHS));
@@ -9,6 +9,9 @@ const LEGAL = new Set(Object.values(LEGAL_PATHS));
  * /login is where an account is made or signed into, so it cannot need one.
  *
  * /api/register accepts only same-origin JSON and validates BotID, invitation and limits itself.
+ * The BotID check it needs is loaded before that from beneath BOTID_CHALLENGE_ROOT,
+ * which only passes through to Vercel; redirected to /login, every registration
+ * on the published site was refused.
  *
  * /api/sync is called by a scheduler rather than a browser and enforces its
  * own shared-secret check.
@@ -30,6 +33,7 @@ const LEGAL = new Set(Object.values(LEGAL_PATHS));
 export function isPublicPath(pathname: string): boolean {
   return (
     pathname === REGISTRATION_PATH ||
+    pathname.startsWith(BOTID_CHALLENGE_ROOT + "/") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/public") ||

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withBotId } from "botid/next/config";
 import { productEdition } from "./src/lib/release/edition";
 
 /**
@@ -38,4 +39,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// BotID's browser check is served from this domain and passed on to Vercel by
+// these rewrites; without them it never loads and every registration is refused.
+// Only the hosted build challenges anyone, so a home copy proxies nothing.
+export default process.env.VERCEL === "1" ? withBotId(nextConfig) : nextConfig;
