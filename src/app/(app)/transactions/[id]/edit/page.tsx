@@ -1,3 +1,4 @@
+import { transactionTypeLabel } from "@/lib/i18n/systemText";
 import { textForRequest } from "@/actions/pageLanguage";
 import { getTransaction, updateTransaction, listCategories } from "@/actions/transactions";
 import { notFound, redirect } from "next/navigation";
@@ -21,7 +22,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
       <div className="card p-4">
         <form action={updateTransaction} className="space-y-3">
           <input type="hidden" name="id" value={tx.id} />
-          <div className="text-xs text-[var(--muted)]">{uiText("Type: ")}{tx.type}{uiText(" (can't be changed here)")}</div>
+          <div className="text-xs text-[var(--muted)]">{uiText("Type: ")}{transactionTypeLabel(tx.type,uiText)}{uiText(" (can't be changed here)")}</div>
           <select name="categoryId" defaultValue={tx.categoryId ?? ""} className="input">
             <option value="">{uiText("No category")}</option>
             {relevantCategories.map((c) => (

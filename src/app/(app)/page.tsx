@@ -1,3 +1,4 @@
+import { transactionDescription, transactionTypeLabel } from "@/lib/i18n/systemText";
 import { currentInvestments } from "@/actions/releaseEdition";
 import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
@@ -600,7 +601,7 @@ export default async function DashboardPage({
             {recentTx.map((t) => (
               <tr key={t.id}>
                 <td>{new Date(t.date).toLocaleDateString(numberLocale)}</td>
-                <td><span translate="no">{t.description || t.categoryName || t.type}</span></td>
+                <td><span translate="no">{transactionDescription(t.description,uiText) || t.categoryName || transactionTypeLabel(t.type,uiText)}</span></td>
                 <td>
                   <Money value={Number(t.amount)} currency={recentTxData.baseCurrency} />
                 </td>

@@ -57,6 +57,13 @@ describe("Portuguese report copy", () => {
     expect(JSON.stringify(tables)).not.toContain("17 Oct 2026");
   });
 
+  it("translates the empty report month and the generated-on footer", () => {
+    const money=buildReport({kind:"month",key:"2026-10",netWorthSeries:[],rows:[]});
+    const blocks=reportBlocks({title:"Monthly report",label:"October 2026",from:"2026-10-01",to:"2026-10-31",currency:"EUR",generatedOn:"2026-10-30",money,investments:null,notes:[],language:"pt",translate});
+    expect(blocks).toContainEqual({type:"text",text:"Nada registado em outubro 2026.",muted:true});
+    expect(translate("Made on {0}",{0:"30 out. 2026"})).toBe("Criado em 30 out. 2026");
+  });
+
   it("formats and translates all free-cash explanations without changing the amount", () => {
     const view = accountFreeCash({ id: "test", balance: 999 }, 150, { available: 100, spot: 20, marginUsed: 12.5 });
     const explanations = explainFree(view, "EUR", translate, "pt");

@@ -726,7 +726,7 @@ export const pt: Messages = {
       "Usa o endereço publicado por HTTPS para instalar num navegador compatível. O endereço de casa pelo Wi-Fi (HTTP) só permite um marcador, sem atalhos da app nem a página sem ligação. A app publicada funciona em qualquer lado com internet e atualiza-se quando sai uma versão nova.",
     shortcutsTitle: "2 · Atalhos no ícone",
     shortcutsAndroid:
-      "**Android:** carrega uns segundos no ícone **Money OS**. Abre uma lista com **Record expense**, **Record income**, **Cash Flow** e **Investments**.",
+      "**Android:** carrega uns segundos no ícone **Money OS**. Abre uma lista com **Registar despesa**, **Registar receita**, **Movimentos** e **Investimentos**.",
     shortcutsDrag:
       "Para ficar com um no ecrã principal, carrega uns segundos nele dessa lista e arrasta-o para fora. Fica um ícone próprio: um toque e o registo rápido abre logo, pronto para o valor.",
     shortcutsIphone:

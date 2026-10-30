@@ -105,3 +105,42 @@ navegador** confirmam o seletor na entrada e Definições, cookies ar/de/ja e
 inválido, preferência antiga em armazenamento e mudanças en → pt → en. Dono e
 outra pessoa seguem a mesma lista de duas línguas. Sem erros de execução.
 Evidência ignorada em `c1-c7/C4/` e `c4-ui.mjs`.
+
+## C5 — Verificação de inglês e português
+
+Cinco descrições canónicas exatas de reconciliação são traduzidas só na
+apresentação, incluindo a lista de Movimentos, Poupança e o painel completo.
+Notas parecidas, nomes de contas, categorias e lojas ficam intactos. Ações de
+gravação e exportações de dados não foram alteradas. Tipos de movimentos,
+aviso cambial, filtro ativo, contagens de subscrições singular/plural, rótulos
+de Poupança, novas categorias e instruções de atalhos passam pela tradução.
+Os atalhos descritos na edição money não incluem investimentos. O nome da
+instituição Trade Republic continua um nome próprio no exemplo português.
+
+Validação: **3478 testes em 225 ficheiros**, TypeScript, lint e compilação money.
+Uma auditoria antes e depois percorreu os mesmos **74 estados**: 26 destinos no
+computador em cada língua e sete destinos no telemóvel em cada língua, com
+painéis e detalhes abertos, filtro de movimentos e folha rápida da conta.
+Inclui painel, contas e detalhe, dívidas, juros, movimentos e edição, poupança
+com desconto/cashback, orçamentos, objetivos e detalhe, subscrições ativas e
+canceladas, receitas previstas, análise, relatório preenchido e vazio,
+definições (geral/categorias/câmbio/dados/telemóvel), manual e páginas legais.
+
+Usaram-se migrações reais, pessoas/nomes fictícios e base PGlite local. São
+contados textos distintos por língua/aparelho/destino/estado que correspondem a
+copy da outra língua, acrescidos dos padrões de diagnóstico de reconciliação,
+tipos, canceladas e aviso cambial. O mesmo classificador final é aplicado aos
+textos capturados antes e depois. Excluem-se registos pessoais, códigos de
+moeda, Simple/Complex (reservados pela especificação) e «Data», que é português
+correto para uma data. Resultado revisto: **47 ocorrências (20 textos) → 0**;
+inglês já tinha zero. Os nomes pessoais em inglês não foram traduzidos para
+obter esse resultado. Isto descreve a cobertura observada, não todas as
+combinações de dados e erros possíveis. Sem erros no navegador ou servidor.
+
+Foram gerados oito PDFs reais por passagem (duas línguas, dois aparelhos,
+períodos com dados e vazio). A extração dos dois PDFs portugueses do computador
+confirma que October/Made on presentes antes desapareceram, substituídos por
+outubro/Criado em, incluindo cabeçalho, mensagem vazia e rodapé. O teste de
+regressão cobre a mensagem vazia e o rodapé. Evidência ignorada em `c1-c7/C5/`,
+com capturas de texto, contagens, PDFs e o script de classificação. Não houve
+tradução online, alteração de registos ou ligações externas.

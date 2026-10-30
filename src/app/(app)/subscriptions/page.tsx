@@ -1,3 +1,4 @@
+import { subscriptionCountText } from "@/lib/i18n/systemText";
 import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
 import RetryableForm from "@/components/RetryableForm";
@@ -53,7 +54,7 @@ export default async function SubscriptionsPage() {
             <Money value={totals.monthly} currency={totals.baseCurrency} />
           </div>
           <div className="text-xs text-[var(--muted)] mt-1">
-            {totals.activeCount}{uiText(" active")}{totals.inactiveCount > 0 && ` · ${totals.inactiveCount} cancelled`}
+            {subscriptionCountText(totals.activeCount,true,uiText)}{totals.inactiveCount > 0 && ` · ${subscriptionCountText(totals.inactiveCount,false,uiText)}`}
           </div>
         </div>
         <div className="card p-4">

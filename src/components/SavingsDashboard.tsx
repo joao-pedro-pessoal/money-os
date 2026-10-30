@@ -1,5 +1,6 @@
 "use client";
 
+import { transactionDescription, transactionTypeLabel } from "@/lib/i18n/systemText";
 import { useText } from "@/components/useText";
 import { useActionState, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
@@ -51,7 +52,7 @@ export default function SavingsDashboard({ data, initialPurchase = '' }: { data:
   const purchases = data.transactions.filter(t => t.type === 'expense' && !t.cashbackForId);
   const purchase = purchases.find(t => t.id === selected);
   const labels = new Map(data.accounts.map(a => [a.id, a.name]));
-  const label = (t: Data['transactions'][number]) => `${t.date.slice(0, 10)} · ${t.description || t.type} · ${labels.get(t.accountId) ?? 'Account'}${hidden ? '' : ` · ${t.amount} ${t.currency}`}`;
+  const label = (t: Data['transactions'][number]) => `${t.date.slice(0, 10)} · ${transactionDescription(t.description,uiText) || transactionTypeLabel(t.type,uiText)} · ${labels.get(t.accountId) ?? uiText('Account')}${hidden ? '' : ` · ${t.amount} ${t.currency}`}`;
   const linkedPurchaseIds = new Set(data.transactions.map(t => t.cashbackForId).filter(Boolean));
   const receipts = purchase ? data.transactions.filter(t => t.id !== purchase.id && !t.cashbackForId && t.currency === purchase.currency &&
     !Number(t.discountAmount) && !Number(t.cashbackExpected) && !linkedPurchaseIds.has(t.id)) : [];
@@ -71,12 +72,12 @@ export default function SavingsDashboard({ data, initialPurchase = '' }: { data:
       <p className="text-xs text-[var(--muted)] mt-3">{uiText("Filters select purchases. Cashback includes all receipts and reversals linked to those purchases, even if received later. Currencies are kept separate.")}</p>
     </PanelFrame>
     {report.totals.map(t => <PanelFrame key={t.currency} persistKey={`savings-${t.currency}`} essential title={`Savings · ${t.currency}`} className="card p-4">
-      <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">{[['Discounts', t.discount], ['Cashback received (net)', t.received], ['Total saved', t.total], ['Cashback pending', t.pending]].map(([name, value]) => <div key={name}><dt className="text-xs text-[var(--muted)]">{name}</dt><dd className="text-lg"><Money value={Number(value)} currency={t.currency} /></dd></div>)}</dl>
+      <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">{[['Discounts', t.discount], ['Cashback received (net)', t.received], ['Total saved', t.total], ['Cashback pending', t.pending]].map(([name, value]) => <div key={name}><dt className="text-xs text-[var(--muted)]">{uiText(String(name))}</dt><dd className="text-lg"><Money value={Number(value)} currency={t.currency} /></dd></div>)}</dl>
     </PanelFrame>)}
     <PanelFrame persistKey="savings-history" essential title="Purchase savings history" className="card p-4">
       {!report.rows.length && <p className="text-sm mt-3">{uiText("No savings recorded for these filters. Select a purchase below to add a discount or cashback.")}</p>}
       <div className="divide-y divide-[var(--border)]">{report.rows.slice(0, visible).map(row => <div key={row.purchase.id} className="py-4 space-y-2">
-        <button type="button" className="text-left underline" onClick={() => setSelected(row.purchase.id)}><span translate="no">{row.purchase.description || uiText("Purchase")}</span> · {row.purchase.date.slice(0, 10)}</button>
+        <button type="button" className="text-left underline" onClick={() => setSelected(row.purchase.id)}><span translate="no">{transactionDescription(row.purchase.description,uiText) || uiText("Purchase")}</span> · {row.purchase.date.slice(0, 10)}</button>
         <p className="text-xs text-[var(--muted)]">{labels.get(row.purchase.accountId)}{uiText(" · Paid ")}<Money value={Math.abs(Number(row.purchase.amount))} currency={row.purchase.currency} /></p>
         <p className="text-sm">{uiText("Saved ")}<Money value={row.total} currency={row.purchase.currency} />{uiText(" · discount ")}<Money value={row.discount} currency={row.purchase.currency} />{uiText(" · cashback ")}<Money value={row.received} currency={row.purchase.currency} />{uiText(" · pending ")}<Money value={row.pending} currency={row.purchase.currency} /></p>
       </div>)}</div>

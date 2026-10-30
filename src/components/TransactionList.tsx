@@ -1,5 +1,6 @@
 "use client";
 
+import { transactionDescription, transactionTypeLabel } from "@/lib/i18n/systemText";
 import { useLanguage } from "@/components/LanguageContext";
 import { localeOf } from "@/lib/i18n/languages";
 import { useText } from "@/components/useText";
@@ -111,7 +112,7 @@ export default function TransactionList({
           </div>
           <div>
             <div className="text-[10px] text-[var(--muted)]">
-              <span className="cash-flow-phone-only">{uiText("Net change")}</span><span className="cash-flow-desktop-only">{uiText("Net")}{active && " — over what is shown"}</span>
+              <span className="cash-flow-phone-only">{uiText("Net change")}</span><span className="cash-flow-desktop-only">{uiText("Net")}{active && uiText(" — over what is shown")}</span>
             </div>
             <div
               className={`text-sm font-semibold ${
@@ -140,7 +141,7 @@ export default function TransactionList({
           {/* Several accounts, categories or types at once; every field applies. */}
           <MultiSelect label={uiText("Account")} options={options.accounts} selected={filters.accounts} onChange={(v) => set("accounts", v)} />
           <MultiSelect label={uiText("Category")} options={options.categories} selected={filters.categories} onChange={(v) => set("categories", v)} noneLabel="No category" />
-          <MultiSelect label={uiText("Type")} options={options.types} selected={filters.types} onChange={(v) => set("types", v)} />
+          <MultiSelect label={uiText("Type")} options={options.types} render={type=>transactionTypeLabel(type,uiText)} selected={filters.types} onChange={(v) => set("types", v)} />
           <label className="text-xs text-[var(--muted)]"><span className="block text-[10px] mb-1">{uiText("Amount from")}</span>
           <input
             type="number"
@@ -198,7 +199,7 @@ export default function TransactionList({
         {(approximate || unconverted.length > 0) && (
           <div className="text-[10px] text-[var(--muted)] mb-3 max-w-prose leading-relaxed">
             {approximate &&
-              `Amounts recorded in another currency are converted at today's rate, so figures before today are approximate. `}
+              uiText("Amounts recorded in another currency are converted at today's rate, so figures before today are approximate.")+" "}
             {unconverted.length > 0 && (
               <span className="text-[var(--amber)]">
                 {unconverted.length}{uiText(" row")}{unconverted.length === 1 ? uiText(" is") : uiText("s are")}{uiText(" missing entirely — ")}{[...new Set(unconverted.map((u) => u.currency))].join(", ")}{uiText(" has no rate, so it is left out and said rather than counted as nothing.")}</span>
@@ -236,7 +237,7 @@ export default function TransactionList({
                         <div className="text-[10px] text-[var(--muted)]">{uiText("internal transfer")}</div>
                       )}
                     </td>
-                    <td role="cell" data-label={uiText("Description")} className="record-description max-w-64 truncate"><span className="cash-flow-phone-only"><span translate="no">{t.description || t.merchant || t.categoryName || (t.type === "transfer" ? uiText("Internal transfer") : t.type === "investment_contribution" ? uiText("Investment contribution") : out ? uiText("Expense") : uiText("Income"))}</span></span><span className="cash-flow-desktop-only"><span translate="no">{t.description || t.merchant || t.categoryName || "—"}</span></span></td>
+                    <td role="cell" data-label={uiText("Description")} className="record-description max-w-64 truncate"><span className="cash-flow-phone-only"><span translate="no">{transactionDescription(t.description,uiText) || t.merchant || t.categoryName || (t.type === "transfer" ? uiText("Internal transfer") : t.type === "investment_contribution" ? uiText("Investment contribution") : out ? uiText("Expense") : uiText("Income"))}</span></span><span className="cash-flow-desktop-only"><span translate="no">{transactionDescription(t.description,uiText) || t.merchant || t.categoryName || "—"}</span></span></td>
                     <td
                       role="cell" data-label={uiText("Amount")}
                       className={`text-right font-medium ${

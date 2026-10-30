@@ -1,3 +1,5 @@
+import { currentInvestments } from "@/actions/releaseEdition";
+import { textForRequest } from "@/actions/pageLanguage";
 import { directionOf } from "@/lib/i18n/languages";
 import InstallApp from "@/components/InstallApp";
 import Rich from "@/components/Rich";
@@ -13,10 +15,12 @@ import { messagesFor } from "@/lib/i18n/messages";
  * with no store and no download — so the steps name the browser's own menus.
  * The shortcuts are the `shortcuts` list in `public/manifest.webmanifest`, and
  * they open the quick entry form through `?quick=`, which `QuickEntry` reads on
- * any page. Their names come from the manifest, which has one language, so the
+ * any page. Their names come from the language-specific manifest, so the
  * steps name them as the phone will show them.
  */
 export default async function PhoneSettingsPage() {
+  const investmentsEnabled = await currentInvestments();
+  const uiText = await textForRequest();
   const language = await currentLanguage();
   const w = messagesFor(language).phone;
   return (
@@ -31,7 +35,7 @@ export default async function PhoneSettingsPage() {
         <h2 id="phone-shortcuts" className="text-sm font-medium">{w.shortcutsTitle}</h2>
         <ol className="text-sm space-y-2 list-decimal pl-5 max-w-2xl">
           <li>
-            <Rich text={w.shortcutsAndroid} />
+            <Rich text={investmentsEnabled ? w.shortcutsAndroid : uiText("**Android:** touch and hold the **Money OS** icon. Choose **Record expense**, **Record income** or **Cash Flow**.")} />
           </li>
           <li>{w.shortcutsDrag}</li>
           <li>

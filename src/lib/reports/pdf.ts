@@ -117,7 +117,7 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
     const before = m.previous;
     blocks.push({ type: "heading", text: "Day-to-day money" });
     if (m.totals.transactions === 0) {
-      blocks.push({ type: "text", text: `Nothing recorded in ${m.label}.`, muted: true });
+      blocks.push({ type: "text", text: `Nothing recorded in ${translatedDate(m.label,uiText)}.`, muted: true });
     } else {
       blocks.push({
         type: "stats",
@@ -810,8 +810,9 @@ class Layout {
 
 /** The report as a PDF file. */
 export async function renderReportPdf(input: ReportPdfInput): Promise<Uint8Array> {
+  const label = translatedDate(input.label,input.translate);
   const doc = await PDFDocument.create();
-  doc.setTitle(`Money OS · ${input.title} · ${input.label}`);
+  doc.setTitle(`Money OS · ${input.title} · ${label}`);
   doc.setProducer("Money OS");
   doc.setCreator("Money OS");
   if (input.fonts) doc.registerFontkit(fontkit);
@@ -822,7 +823,7 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Uint8Array
   const bold = input.fonts?.bold === input.fonts?.regular && input.fonts
     ? regular : await doc.embedFont(input.fonts?.bold ?? StandardFonts.HelveticaBold, { subset });
   const fallback = input.fonts?.fallback ? await doc.embedFont(input.fonts.fallback, { subset: true }) : undefined;
-  const layout = new Layout(doc, regular, bold, `Money OS · ${input.title} · ${input.label}`, !!input.fonts, input.translate, fallback, input.language);
+  const layout = new Layout(doc, regular, bold, `Money OS · ${input.title} · ${label}`, !!input.fonts, input.translate, fallback, input.language);
 
   for (const block of reportBlocks(input)) {
     switch (block.type) {

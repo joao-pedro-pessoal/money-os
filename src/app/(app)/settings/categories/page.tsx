@@ -69,7 +69,7 @@ async function CategoryColumn({
       <form action={createCategory} className="space-y-2">
         <input type="hidden" name="kind" value={kind} />
         <div className="flex gap-2">
-          <input name="name" placeholder={uiText("New {0} category", { "0": kind })} className="input" required />
+          <input name="name" placeholder={uiText(kind === "income" ? "New income category" : "New expense category")} className="input" required />
           <button type="submit" className="btn whitespace-nowrap">{uiText("Add")}</button>
         </div>
         <label className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
