@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
@@ -27,6 +29,8 @@ export default async function ExpectedPage({
 }: {
   searchParams: Promise<{ from?: string }>;
 }) {
+  const language = await currentLanguage();
+  const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
   const [{ from }, data, options] = await Promise.all([
     searchParams,
@@ -148,7 +152,7 @@ export default async function ExpectedPage({
                         <span className="text-[var(--muted)]">{uiText("no date")}</span>
                       ) : (
                         <>
-                          {r.next.toLocaleDateString("pt-PT")}
+                          {r.next.toLocaleDateString(numberLocale)}
                           {r.inDays !== null && (
                             <div className="text-[10px]">
                               {r.overdue

@@ -46,7 +46,7 @@ describe("Portuguese report copy", () => {
     expect(csv).toContain("September");
     expect(csv).toContain("Income");
     expect(csv).toContain("October");
-    const blocks = reportBlocks({ ...contents, title: "Monthly report", generatedOn: "2026-11-01", notes: [], translate });
+    const blocks = reportBlocks({ ...contents, title: "Monthly report", generatedOn: "2026-11-01", notes: [], translate, language:"pt" });
     const title = blocks.find(b => b.type === "title");
     expect(title?.text).toBe("Relatório mensal · outubro 2026");
     expect(title?.subtitle).not.toMatch(/Oct|Nov|made on|amounts in/);
@@ -59,12 +59,12 @@ describe("Portuguese report copy", () => {
 
   it("formats and translates all free-cash explanations without changing the amount", () => {
     const view = accountFreeCash({ id: "test", balance: 999 }, 150, { available: 100, spot: 20, marginUsed: 12.5 });
-    const explanations = explainFree(view, "EUR", translate);
+    const explanations = explainFree(view, "EUR", translate, "pt");
     expect(view.free).toBe(-50);
     expect(explanations).toEqual([
-      `${fmt(12.5, "EUR")} está a garantir operações abertas e não pode ser gasto`,
-      `${fmt(100, "EUR")} está reservado para objetivos`,
-      `${fmt(20, "EUR")} está num saldo separado na plataforma`,
+      `${fmt(12.5, "EUR", "pt")} está a garantir operações abertas e não pode ser gasto`,
+      `${fmt(100, "EUR", "pt")} está reservado para objetivos`,
+      `${fmt(20, "EUR", "pt")} está num saldo separado na plataforma`,
       "os objetivos têm mais dinheiro reservado do que esta conta pode gastar neste momento",
     ]);
   });

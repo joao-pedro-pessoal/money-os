@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import AssetSearch from "@/components/AssetSearch";
 import {
@@ -13,7 +15,6 @@ import PortfolioTable from "@/components/PortfolioTable";
 import { portfolioSummary } from "@/lib/portfolio/positionView";
 import { getPortfolioContribution } from "@/actions/investments";
 import { Money } from "@/components/PrivacyContext";
-import { fmt } from "@/lib/format";
 import TimeSeriesCard from "@/components/TimeSeriesCard";
 import Section from "@/components/Section";
 import AutoSync from "@/components/AutoSync";
@@ -45,6 +46,8 @@ async function adoptAction(formData: FormData) {
 }
 
 export default async function InvestmentsPage() {
+  const language = await currentLanguage();
+  const { fmt } = formatFor(language);
   const uiText = await textForRequest();
   const [
     valueSeries,

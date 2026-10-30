@@ -1,3 +1,4 @@
+import type { Language } from "@/lib/i18n/languages";
 /**
  * What "free" is allowed to mean.
  *
@@ -175,9 +176,9 @@ export function accountFreeCash(
  * Only what actually applies: a cash account with no margin and no buckets
  * shouldn't be handed a list of caveats that are all zero.
  */
-export function explainFree(view: UnallocatedView, currency: string, uiText: TextTranslator = sourceText): string[] {
+export function explainFree(view: UnallocatedView, currency: string, uiText: TextTranslator = sourceText, language: Language = "en"): string[] {
   const parts: string[] = [];
-  const money = (n: number) => fmt(n, currency);
+  const money = (n: number) => fmt(n, currency, language);
 
   if (view.lockedAsMargin > 0) {
     parts.push(uiText("{0} is backing open trades and can't be spent", { 0: money(view.lockedAsMargin) }));

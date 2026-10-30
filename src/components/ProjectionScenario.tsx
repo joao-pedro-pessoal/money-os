@@ -1,10 +1,10 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { project } from "@/lib/stats";
-import { fmt } from "@/lib/format";
 import { Money, usePrivacy } from "./PrivacyContext";
 import Section from "./Section";
 
@@ -12,6 +12,7 @@ import Section from "./Section";
 export default function ProjectionScenario({ current, monthlySaving, basis, currency }: {
   current: number; monthlySaving: number | null; basis: string; currency: string;
 }) {
+  const { fmt, number: formatNumeric } = useFormat();
   const uiText = useText();
   const [saving, setSaving] = useState(monthlySaving === null ? "" : String(monthlySaving));
   const [rate, setRate] = useState(5);
@@ -60,7 +61,7 @@ export default function ProjectionScenario({ current, monthlySaving, basis, curr
           <LineChart data={data} margin={{ top: 8, right: 10, left: 0, bottom: 4 }}>
             <CartesianGrid stroke="var(--border)" vertical={false} />
             <XAxis dataKey="year" tick={{ fontSize: 11 }} tickFormatter={(value) => value === 0 ? "Now" : `${value}y`} />
-            <YAxis width={55} tick={{ fontSize: 11 }} tickFormatter={(value) => new Intl.NumberFormat("pt-PT", { notation: "compact" }).format(value)} />
+            <YAxis width={55} tick={{ fontSize: 11 }} tickFormatter={(value) => formatNumeric(value, { notation: "compact" })} />
             <Tooltip formatter={(value) => fmt(Number(value), currency)} labelFormatter={(value) => Number(value) === 0 ? "Now" : `After ${value} ${Number(value) === 1 ? "year" : "years"}`}
               contentStyle={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)", fontSize: 12 }} />
             <Line type="linear" dataKey="scenario" name={uiText("Scenario ({0}%)", {0: rate})} stroke="var(--accent)" strokeWidth={2} dot={false} isAnimationActive={false} />

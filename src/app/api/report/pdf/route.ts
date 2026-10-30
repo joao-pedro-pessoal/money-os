@@ -18,12 +18,14 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   const translate = await textForRequest();
-  const fonts = await reportFonts(await currentLanguage());
+  const language = await currentLanguage();
+  const fonts = await reportFonts(language);
   const report = await loadReport(Object.fromEntries(request.nextUrl.searchParams));
   const bytes = await renderReportPdf({
     title: translate(REPORT_TITLE[report.kind]),
     label: translate(report.label),
     translate,
+    language,
     fonts,
     from: report.from,
     to: report.to,

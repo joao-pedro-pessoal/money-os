@@ -23,7 +23,8 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type RGB }
 import "regenerator-runtime/runtime";
 import fontkit from "@pdf-lib/fontkit";
 import { sourceText, type TextTranslator } from "@/lib/i18n/text";
-import { fmt } from "@/lib/format";
+import type { Language } from "@/lib/i18n/languages";
+import { fmt, formatNumber } from "@/lib/format";
 import { barShares, columnChart, compactAmount, labelEvery, lineChart, shortDate as rawShortDate, type DatedValue } from "./charts";
 import type { InvestmentReport } from "./investments";
 import type { PeriodReport } from "./monthly";
@@ -62,6 +63,7 @@ export type Block =
     };
 
 export interface ReportPdfInput {
+  language?: Language;
   translate?: TextTranslator;
   /** Font bytes supplied by the server; this module performs no I/O. */
   fonts?: { regular: Uint8Array; bold: Uint8Array; fallback?: Uint8Array };
@@ -80,22 +82,25 @@ export interface ReportPdfInput {
   notes: string[];
 }
 
-const percent = (n: number, digits = 1) => `${n.toFixed(digits)}%`;
-const signedPercent = (n: number, digits = 1) => `${n > 0 ? "+" : ""}${n.toFixed(digits)}%`;
 const toneOf = (n: number): Tone => (n > 0 ? "good" : n < 0 ? "bad" : null);
-const rate = (fraction: number) => signedPercent(fraction * 100, 2);
-
-/** "+12.5% vs August 2026", or nothing to compare with. */
-function versus(now: number, before: number | null, label: string): string | undefined {
-  if (before === null || before === 0) return undefined;
-  return `${signedPercent(((now - before) / before) * 100)} vs ${label}`;
-}
 
 /** What the document says, in order. */
 export function reportBlocks(input: ReportPdfInput): Block[] {
+  const language = input.language ?? "en";
+  const percent = (n: number, digits = 1) => `${formatNumber(n, language, {minimumFractionDigits:digits,maximumFractionDigits:digits})}%`;
+  const signedPercent = (n: number, digits = 1) => `${n > 0 ? "+" : ""}${formatNumber(n, language, {minimumFractionDigits:digits,maximumFractionDigits:digits})}%`;
+  const rate = (fraction: number) => signedPercent(fraction * 100, 2);
+
+  /** "+12.5% vs August 2026", or nothing to compare with. */
+  function versus(now: number, before: number | null, label: string): string | undefined {
+    if (before === null || before === 0) return undefined;
+    return `${signedPercent(((now - before) / before) * 100)} vs ${label}`;
+  }
+
+
   const uiText = input.translate ?? sourceText;
   const shortDate = (date: string) => translatedDate(rawShortDate(date), uiText);
-  const money = (n: number) => fmt(n, input.currency);
+  const money = (n: number) => fmt(n, input.currency, language);
   const signedMoney = (n: number) => `${n > 0 ? "+" : ""}${money(n)}`;
   const blocks: Block[] = [
     {
@@ -509,7 +514,8 @@ class Layout {
     private readonly running: string,
     private readonly unicode = false,
     private readonly translate: TextTranslator = sourceText,
-    private readonly fallback?: PDFFont
+    private readonly fallback?: PDFFont,
+    private readonly language: Language = "en"
   ) {
     this.newPage();
   }
@@ -662,7 +668,7 @@ class Layout {
 
     for (const tick of chart.yTicks) {
       this.page.drawLine({ start: at(40, tick.y), end: at(WIDTH - 8, tick.y), thickness: 0.4, color: COLOURS.rule });
-      this.write(compactAmount(tick.value), MARGIN.left, top + tick.y - 4, 7, this.regular, COLOURS.muted, 34, "right");
+      this.write(compactAmount(tick.value, this.language), MARGIN.left, top + tick.y - 4, 7, this.regular, COLOURS.muted, 34, "right");
     }
     if (chart.zeroY !== null) {
       this.page.drawLine({ start: at(40, chart.zeroY), end: at(WIDTH - 8, chart.zeroY), thickness: 0.7, color: COLOURS.muted });
@@ -747,7 +753,7 @@ class Layout {
     const at = (x: number, y: number) => ({ x: MARGIN.left + x, y: PAGE_HEIGHT - top - y });
     for (const tick of chart.yTicks) {
       this.page.drawLine({ start: at(40, tick.y), end: at(WIDTH - 8, tick.y), thickness: 0.4, color: COLOURS.rule });
-      this.write(compactAmount(tick.value), MARGIN.left, top + tick.y - 4, 7, this.regular, COLOURS.muted, 34, "right");
+      this.write(compactAmount(tick.value, this.language), MARGIN.left, top + tick.y - 4, 7, this.regular, COLOURS.muted, 34, "right");
     }
     // As many month names as fit without running into each other.
     const every = labelEvery(
@@ -816,7 +822,7 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Uint8Array
   const bold = input.fonts?.bold === input.fonts?.regular && input.fonts
     ? regular : await doc.embedFont(input.fonts?.bold ?? StandardFonts.HelveticaBold, { subset });
   const fallback = input.fonts?.fallback ? await doc.embedFont(input.fonts.fallback, { subset: true }) : undefined;
-  const layout = new Layout(doc, regular, bold, `Money OS · ${input.title} · ${input.label}`, !!input.fonts, input.translate, fallback);
+  const layout = new Layout(doc, regular, bold, `Money OS · ${input.title} · ${input.label}`, !!input.fonts, input.translate, fallback, input.language);
 
   for (const block of reportBlocks(input)) {
     switch (block.type) {

@@ -16,6 +16,7 @@ vi.mock("@/actions/investments", () => ({
   addRewards: async () => {}, reinforceHolding: async () => {}, sellHolding: async () => {},
 }));
 vi.mock("@/actions/playlists", () => ({ listPlaylists: async () => [] }));
+vi.mock("@/actions/language", () => ({currentLanguage: async () => "en"}));
 vi.mock("@/actions/pageLanguage", () => ({ textForRequest: async () => (text: string) => text }));
 vi.mock("@/components/useText", () => ({ useText: () => (text: string) => text }));
 vi.mock("@/components/Section", () => ({ default: ({ children }: { children: ReactNode }) => children }));

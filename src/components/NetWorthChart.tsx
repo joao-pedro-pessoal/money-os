@@ -1,9 +1,9 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { usePrivacy } from "./PrivacyContext";
-import { fmt } from "@/lib/format";
 
 export default function NetWorthChart({
   data,
@@ -12,6 +12,7 @@ export default function NetWorthChart({
   data: { date: string; netWorth: number }[];
   currency?: string;
 }) {
+  const { fmt, number: formatNumeric } = useFormat();
   const uiText = useText();
   const { hidden } = usePrivacy();
 
@@ -44,7 +45,7 @@ export default function NetWorthChart({
             tickLine={false}
             hide={hidden}
             width={hidden ? 0 : 56}
-            tickFormatter={(v) => new Intl.NumberFormat("pt-PT", { notation: "compact" }).format(v)}
+            tickFormatter={(v) => formatNumeric(v, { notation: "compact" })}
           />
           {!hidden && (
             <Tooltip

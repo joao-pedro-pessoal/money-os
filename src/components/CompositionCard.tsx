@@ -1,4 +1,5 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -7,7 +8,6 @@ import ResponsiveTable from "@/components/ResponsiveTable";
 import { useState } from "react";
 import DonutChart, { SLICE_COLORS } from "./DonutChart";
 import { Money } from "./PrivacyContext";
-import { fmt } from "@/lib/format";
 
 /**
  * A breakdown, drawn the way you want to read it.
@@ -170,6 +170,7 @@ export function BudgetBars({
   }[];
   currency?: string;
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   if (items.length === 0) {
     return (

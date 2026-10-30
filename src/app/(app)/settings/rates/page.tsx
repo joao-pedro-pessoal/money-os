@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listRates, refreshRatesAction, setManualRate, unpinRate } from "@/actions/fx";
@@ -6,6 +8,8 @@ import { DEFAULT_BASE_CURRENCY } from "@/lib/fx";
 import SettingRow from "@/components/SettingRow";
 
 export default async function SettingsRatesPage() {
+  const language = await currentLanguage();
+  const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
   const [rates, baseCurrency] = await Promise.all([listRates(), getBaseCurrency()]);
 
@@ -51,7 +55,7 @@ export default async function SettingsRatesPage() {
                       )}
                     </td>
                     <td className="text-xs text-[var(--muted)]">
-                      {new Date(r.fetchedAt).toLocaleString("pt-PT")}
+                      {new Date(r.fetchedAt).toLocaleString(numberLocale)}
                     </td>
                     <td className="text-right">
                       {r.manual && (

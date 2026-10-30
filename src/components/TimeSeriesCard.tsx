@@ -1,9 +1,9 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import { useMemo, useState } from "react";
 import NetWorthChart from "@/components/NetWorthChart";
-import { fmt } from "@/lib/format";
 import {
   applyView,
   changeOver,
@@ -38,6 +38,7 @@ export default function TimeSeriesCard({
   note?: React.ReactNode;
   action?: React.ReactNode;
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   const [range, setRange] = useState<RangeKey>("3m");
   const [bucket, setBucket] = useState<Bucket>(suggestBucket("3m"));

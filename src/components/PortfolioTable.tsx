@@ -1,4 +1,5 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import { playlistsText } from "@/lib/portfolio/playlists";
@@ -19,7 +20,6 @@ import Link from "next/link";
 import DonutChart from "@/components/DonutChart";
 import AssetLogo from "@/components/AssetLogo";
 import { holdingLogoSymbol } from "@/lib/logos";
-import { fmt } from "@/lib/format";
 import { tagLabel, type TagAxis } from "@/lib/portfolio/tags";
 import {
   groupItems,
@@ -159,6 +159,7 @@ export default function PortfolioTable({
    */
   logos?: Record<string, string>;
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   /**
    * Which columns are shown, remembered between visits.

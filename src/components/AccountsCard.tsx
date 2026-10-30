@@ -1,10 +1,10 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Money } from "@/components/PrivacyContext";
-import { fmt } from "@/lib/format";
 import {
   applyAccountFilters,
   filterOptions,
@@ -54,6 +54,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function AccountsCard({ accounts }: { accounts: AccountRow[] }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   const [f, setF] = useState<AccountFilters>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState(false);

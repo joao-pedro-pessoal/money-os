@@ -1,4 +1,5 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -6,7 +7,6 @@ import ResponsiveTable from "@/components/ResponsiveTable";
 
 import { useState } from "react";
 import { Money } from "@/components/PrivacyContext";
-import { fmt } from "@/lib/format";
 
 /**
  * What the statement says you did with the money.
@@ -65,6 +65,7 @@ export default function StatementBreakdown({
     } | null;
   };
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   const [showInterest, setShowInterest] = useState(false);
   const [showDividends, setShowDividends] = useState(false);
@@ -305,6 +306,7 @@ function PaymentList({
   open: boolean;
   onToggle: () => void;
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   return (
     <div className="card p-4">

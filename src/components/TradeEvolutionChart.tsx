@@ -1,4 +1,5 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import PanelFrame from "./PanelFrame";
@@ -7,12 +8,12 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Money, usePrivacy } from './PrivacyContext';
 import type { PnlPoint } from '@/lib/trading/stats';
 import type { AccountEvolution } from '@/lib/trading/accountEvolution';
-import { fmt } from '@/lib/format';
 
 export default function TradeEvolutionChart({ pnl, currency, accounts, accountName, from, to, onAccount }: {
   pnl: PnlPoint[]; currency: string; accounts: AccountEvolution[]; accountName: string | null;
   from: string | null; to: string | null; onAccount: (name: string) => void;
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   const [mode, setMode] = useState<'pnl' | 'account'>('pnl');
   const { hidden } = usePrivacy();

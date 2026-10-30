@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
@@ -10,7 +12,6 @@ import { getNetWorth } from "@/actions/networth";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { describeMonths, liabilityLabel } from "@/lib/accounting/liabilities";
-import { fmt } from "@/lib/format";
 import Section from "@/components/Section";
 
 /**
@@ -21,6 +22,8 @@ import Section from "@/components/Section";
  * This page is the other half.
  */
 export default async function LiabilitiesPage() {
+  const language = await currentLanguage();
+  const { fmt } = formatFor(language);
   const uiText = await textForRequest();
   const [data, netWorth] = await Promise.all([listLiabilities(), getNetWorth()]);
   const base = data.baseCurrency;

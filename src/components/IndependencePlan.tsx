@@ -1,4 +1,5 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useLanguage } from "@/components/LanguageContext";
 import { localeOf } from "@/lib/i18n/languages";
@@ -6,7 +7,6 @@ import { useText } from "@/components/useText";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { independencePlan, monthsGained, type PlanInput } from "@/lib/stats/independence";
-import { fmt } from "@/lib/format";
 import { Money, usePrivacy } from "./PrivacyContext";
 import Section from "./Section";
 
@@ -49,6 +49,7 @@ export default function IndependencePlan({
   basis: string;
   currency: string;
 }) {
+  const { fmt, number: formatNumeric } = useFormat();
   const uiText = useText();
   const { language } = useLanguage();
   const { hidden } = usePrivacy();
@@ -159,7 +160,7 @@ export default function IndependencePlan({
                 <LineChart data={plan.path} margin={{ top: 8, right: 10, left: 0, bottom: 4 }}>
                   <CartesianGrid stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="year" tick={{ fontSize: 11 }} tickFormatter={(v) => (v === 0 ? "Now" : `${v}y`)} />
-                  <YAxis width={55} tick={{ fontSize: 11 }} tickFormatter={(v) => new Intl.NumberFormat("pt-PT", { notation: "compact" }).format(v)} />
+                  <YAxis width={55} tick={{ fontSize: 11 }} tickFormatter={(v) => formatNumeric(v, { notation: "compact" })} />
                   <Tooltip
                     formatter={(v) => fmt(Number(v), currency)}
                     labelFormatter={(v) => (Number(v) === 0 ? "Now" : `After ${v} ${Number(v) === 1 ? "year" : "years"}`)}

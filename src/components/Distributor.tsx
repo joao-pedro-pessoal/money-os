@@ -1,4 +1,5 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -8,7 +9,6 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { planDistribution } from "@/actions/distribute";
 import { STRATEGIES, type Strategy, type Share } from "@/lib/accounting/distribute";
 import { newQuickEntryId } from "@/lib/money/quickEntryId";
-import { fmt } from "@/lib/format";
 
 type Plan = Awaited<ReturnType<typeof planDistribution>>;
 
@@ -35,6 +35,7 @@ export default function Distributor({
   defaultShares: Share[];
   applyAction: (formData: FormData) => Promise<{ saved?: boolean; error?: string }>;
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   const request = useRef("");
   const [applied, apply, applying] = useActionState<{ saved?: boolean; error?: string }, FormData>(async (_, form) => {

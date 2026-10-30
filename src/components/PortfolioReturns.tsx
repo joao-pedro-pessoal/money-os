@@ -1,8 +1,8 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import { asPercent } from "@/lib/portfolio/returns";
-import { fmt } from "@/lib/format";
 import type { TwrResult, ReturnCoverage } from "@/lib/portfolio/returns";
 
 /**
@@ -80,6 +80,7 @@ export default function PortfolioReturns({
   currentValue: number;
   currency: string;
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   const twrPercent = timeWeighted ? asPercent(timeWeighted.totalReturn) : null;
 

@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { db } from "@/db/client";
@@ -18,6 +20,8 @@ import Section from "@/components/Section";
 import { localDay } from "@/lib/calendar/localDay";
 
 export default async function InterestPage() {
+  const language = await currentLanguage();
+  const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
   const payments = await db
     .select({
@@ -152,7 +156,7 @@ export default async function InterestPage() {
                       <span translate="no">{o.name}</span>
                       <div className="text-[10px] text-[var(--muted)]">{uiText("since")}{" "}
                         {o.lastPaid
-                          ? o.lastPaid.toLocaleDateString("pt-PT")
+                          ? o.lastPaid.toLocaleDateString(numberLocale)
                           : uiText("the account was created")}
                       </div>
                     </td>
@@ -257,7 +261,7 @@ export default async function InterestPage() {
           <tbody>
             {payments.map((p) => (
               <tr key={p.id}>
-                <td>{new Date(p.date).toLocaleDateString("pt-PT")}</td>
+                <td>{new Date(p.date).toLocaleDateString(numberLocale)}</td>
                 <td><span translate="no">{p.accountName}</span></td>
                 <td>
                   <Money value={Number(p.amount)} />

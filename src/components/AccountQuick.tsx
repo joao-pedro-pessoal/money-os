@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormat } from "./useFormat";
 import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { submitAccountBalance } from "@/actions/accounts";
@@ -21,10 +22,11 @@ export default function AccountQuick({
   children: ReactNode;
   className?: string;
 }) {
+  const { input } = useFormat();
   const uiText = useText();
   const dialog = useRef<HTMLDialogElement>(null);
   const scrollBefore = useRef("");
-  const [typed, setTyped] = useState(account.balance.toFixed(2));
+  const [typed, setTyped] = useState(input(account.balance));
   // Only the types that match the change: a rise is money in or a correction, a fall money out.
   const entered = Number(typed.trim().replace(",", "."));
   const direction = !typed.trim() || !Number.isFinite(entered) || entered === account.balance ? "same" : entered > account.balance ? "up" : "down";
@@ -38,7 +40,7 @@ export default function AccountQuick({
   ].filter((type) => type.when.includes(direction));
 
   function open() {
-    setTyped(account.balance.toFixed(2));
+    setTyped(input(account.balance));
     scrollBefore.current = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialog.current?.showModal();

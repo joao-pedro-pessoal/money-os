@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listPlaylists } from "@/actions/playlists";
@@ -15,6 +17,8 @@ import TradeHistory from "@/components/TradeHistory";
 import Section from "@/components/Section";
 import MobileFold from "@/components/MobileFold";
 export default async function InvestmentHistoryPage() {
+  const language = await currentLanguage();
+  const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
   const [accounts, data, baseCurrency, analysis, playlists] = await Promise.all([
     listAccountsWithState(),
@@ -87,7 +91,7 @@ export default async function InvestmentHistoryPage() {
         >
           <p className="text-xs text-[var(--muted)] mt-1">{uiText("Undo removes only the historical events created by that file.")}</p>
           <div className="overflow-x-auto mt-3"><div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap text-xs"><thead><tr><th>{uiText("When")}</th><th>{uiText("File")}</th><th>{uiText("Account")}</th><th className="text-right">{uiText("Imported")}</th><th className="text-right">{uiText("Duplicates")}</th><th /></tr></thead><tbody>
-            {data.imports.map((row) => <tr key={row.id}><td>{new Date(row.createdAt).toLocaleString("pt-PT")}</td><td className="max-w-64 truncate">{row.fileName}</td><td><span translate="no">{row.accountName}</span></td><td className="text-right">{row.rowsImported}</td><td className="text-right">{row.rowsDuplicated}</td><td className="text-right"><form action={undoInvestmentActivityImport}><input type="hidden" name="importId" value={row.id} /><ConfirmSubmitButton label={uiText("Undo")} confirmMessage={`Remove ${row.rowsImported} events imported from “${row.fileName}”?`} /></form></td></tr>)}
+            {data.imports.map((row) => <tr key={row.id}><td>{new Date(row.createdAt).toLocaleString(numberLocale)}</td><td className="max-w-64 truncate">{row.fileName}</td><td><span translate="no">{row.accountName}</span></td><td className="text-right">{row.rowsImported}</td><td className="text-right">{row.rowsDuplicated}</td><td className="text-right"><form action={undoInvestmentActivityImport}><input type="hidden" name="importId" value={row.id} /><ConfirmSubmitButton label={uiText("Undo")} confirmMessage={`Remove ${row.rowsImported} events imported from “${row.fileName}”?`} /></form></td></tr>)}
           </tbody></ResponsiveTable></div></div>
         </Section>
       ) : null}

@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import MoneyOverview from "@/components/MoneyOverview";
 import { textForRequest } from "@/actions/pageLanguage";
@@ -39,6 +41,8 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ currency?: string }>;
 }) {
+  const language = await currentLanguage();
+  const { locale: numberLocale } = formatFor(language);
   if (!INVESTMENTS_ENABLED) return <MoneyOverview />;
   const uiText = await textForRequest();
   /**
@@ -172,7 +176,7 @@ export default async function DashboardPage({
       // the dashboard's free-cash figure must not include.
       portfolioCashPercent: a.portfolioCashPercent === null ? null : Number(a.portfolioCashPercent),
       free: a.free,
-      freeExplained: explainFree(a.freeView, a.currency, uiText),
+      freeExplained: explainFree(a.freeView, a.currency, uiText, language),
       marginUsed: p?.marginUsed ?? 0,
       /**
        * Everything converted once, here, so the card never mixes currencies.
@@ -594,7 +598,7 @@ export default async function DashboardPage({
           <tbody>
             {recentTx.map((t) => (
               <tr key={t.id}>
-                <td>{new Date(t.date).toLocaleDateString("pt-PT")}</td>
+                <td>{new Date(t.date).toLocaleDateString(numberLocale)}</td>
                 <td><span translate="no">{t.description || t.categoryName || t.type}</span></td>
                 <td>
                   <Money value={Number(t.amount)} currency={recentTxData.baseCurrency} />

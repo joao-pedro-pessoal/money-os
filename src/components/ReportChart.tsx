@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage } from "./LanguageContext";
 
 import { translatedDate } from "@/lib/reports/translatedDate";
 import { useText } from "@/components/useText";
@@ -81,6 +82,7 @@ export default function ReportChart(props: ReportChartProps) {
 type Area = typeof AREA & { width: number; height: number };
 
 function Axis({ ticks, area, hidden }: { ticks: { value: number; y: number }[]; area: Area; hidden: boolean }) {
+  const { language } = useLanguage();
   return (
     <>
       {ticks.map((t) => (
@@ -88,7 +90,7 @@ function Axis({ ticks, area, hidden }: { ticks: { value: number; y: number }[]; 
           <line x1={area.left} x2={area.width - area.right} y1={t.y} y2={t.y} stroke="var(--border)" strokeWidth={1} />
           {!hidden && (
             <text x={area.left - 6} y={t.y + 3.5} textAnchor="end" fontSize={10} fill="var(--muted)">
-              {compactAmount(t.value)}
+              {compactAmount(t.value, language)}
             </text>
           )}
         </g>

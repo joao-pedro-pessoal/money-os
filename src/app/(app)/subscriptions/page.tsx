@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import RetryableForm from "@/components/RetryableForm";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -14,13 +16,14 @@ import { CADENCES } from "@/lib/accounting/subscriptions";
 import { SUPPORTED_CURRENCIES } from "@/lib/fx";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
-import { fmt } from "@/lib/format";
 import Section from "@/components/Section";
 import DonutChart from "@/components/DonutChart";
 import DueSubscriptionCharges from "@/components/DueSubscriptionCharges";
 import { getDueSubscriptionCharges } from "@/actions/subscriptionCharges";
 
 export default async function SubscriptionsPage() {
+  const language = await currentLanguage();
+  const { fmt, locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
   const [subs, totals, accounts, categories, due] = await Promise.all([
     listSubscriptions(),
@@ -123,7 +126,7 @@ export default async function SubscriptionsPage() {
                     <td className="text-xs">
                       {s.nextChargeOn ? (
                         <>
-                          {s.nextChargeOn.toLocaleDateString("pt-PT")}
+                          {s.nextChargeOn.toLocaleDateString(numberLocale)}
                           {s.daysAway !== null && (
                             <span
                               className={

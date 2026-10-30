@@ -1,7 +1,7 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { createContext, useContext, useSyncExternalStore } from "react";
-import { fmt } from "@/lib/format";
 
 interface PrivacyCtx {
   hidden: boolean;
@@ -89,14 +89,16 @@ export function usePrivacy() {
  * Hidden by privacy mode like any other figure — it is still your position.
  */
 export function Bare({ value }: { value: number }) {
+  const { number: formatNumeric } = useFormat();
   const { hidden } = usePrivacy();
   if (hidden) return <span translate="no">••••••</span>;
   return (
-    <span translate="no">{new Intl.NumberFormat("pt-PT", { minimumFractionDigits: 2 }).format(value)}</span>
+    <span translate="no">{formatNumeric(value, { minimumFractionDigits: 2 })}</span>
   );
 }
 
 export function Money({ value, currency = "EUR" }: { value: number; currency?: string }) {
+  const { fmt } = useFormat();
   const { hidden } = usePrivacy();
   if (hidden) return <span translate="no">••••••</span>;
   const formatted = fmt(value, currency);

@@ -1,4 +1,5 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -18,7 +19,6 @@ import {
 } from "recharts";
 import DonutChart from "./DonutChart";
 import { Money } from "./PrivacyContext";
-import { fmt } from "@/lib/format";
 import {
   byCategory,
   bySubcategory,
@@ -64,6 +64,7 @@ export default function SpendingAnalysis({
   unconverted: string[];
   approximate: boolean;
 }) {
+  const { fmt, number: formatNumeric } = useFormat();
   const uiText = useText();
   const [filters, setFilters] = useState<SpendingFilters>(NO_SPENDING_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -369,7 +370,7 @@ export default function SpendingAnalysis({
                   tickLine={false}
                   width={52}
                   tickFormatter={(v) =>
-                    new Intl.NumberFormat("pt-PT", { notation: "compact" }).format(Number(v))
+                    formatNumeric(Number(v), { notation: "compact" })
                   }
                 />
                 <Tooltip
@@ -410,7 +411,7 @@ export default function SpendingAnalysis({
                 tickLine={false}
                 width={52}
                 tickFormatter={(v) =>
-                  new Intl.NumberFormat("pt-PT", { notation: "compact" }).format(Number(v))
+                  formatNumeric(Number(v), { notation: "compact" })
                 }
               />
               <Tooltip

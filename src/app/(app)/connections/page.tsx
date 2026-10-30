@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import {
@@ -24,6 +26,8 @@ import Link from "next/link";
 import Section from "@/components/Section";
 
 export default async function ConnectionsPage() {
+  const language = await currentLanguage();
+  const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
   const [connections, accountList, secretsAvailable] = await Promise.all([
     listConnections(),
@@ -133,7 +137,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                   </div>
                   <div className="text-xs text-[var(--muted)] mt-1">
                     {c.lastSyncAt
-                      ? uiText("Last sync {0}", { "0": new Date(c.lastSyncAt).toLocaleString("pt-PT") })
+                      ? uiText("Last sync {0}", { "0": new Date(c.lastSyncAt).toLocaleString(numberLocale) })
                       : uiText("Never synced")}
                   </div>
                   {c.lastSyncError && (
@@ -234,7 +238,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                             <span className={l.status === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}>
                               {l.status}
                             </span>
-                            <span>{new Date(l.startedAt).toLocaleString("pt-PT")}</span>
+                            <span>{new Date(l.startedAt).toLocaleString(numberLocale)}</span>
                           </div>
                           <div className="text-[11px] mt-0.5">
                             {l.trigger} · {l.positionsFound ?? "—"}{uiText(" positions ·")}{" "}
@@ -271,7 +275,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                     <tbody>
                       {(logsFor.get(c.id) ?? []).map((l) => (
                         <tr key={l.id}>
-                          <td>{new Date(l.startedAt).toLocaleString("pt-PT")}</td>
+                          <td>{new Date(l.startedAt).toLocaleString(numberLocale)}</td>
                           <td className={l.status === "ok" ? "text-[var(--green)]" : "text-[var(--red)]"}>
                             {l.status}
                             {l.message && (

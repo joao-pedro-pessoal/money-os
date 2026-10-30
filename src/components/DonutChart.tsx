@@ -1,9 +1,9 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { usePrivacy } from "./PrivacyContext";
-import { fmt } from "@/lib/format";
 
 /**
  * Every slice colour comes from the theme, none from here.
@@ -48,6 +48,7 @@ export default function DonutChart({
   /** A small doughnut beside its legend, for the top of a page or a dashboard section. */
   compact?: boolean;
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   const { hidden } = usePrivacy();
 

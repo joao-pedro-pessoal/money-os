@@ -50,7 +50,7 @@ Procedimento completo em [docs/CODEX_PROXIMOS_PASSOS.md](docs/CODEX_PROXIMOS_PAS
 
 | ID | Tarefa | Estado e critério de conclusão |
 | --- | --- | --- |
-| C1 | Números e gráficos no formato da língua escolhida | **Por fazer.** `fmt` e ~29 `"pt-PT"` fixos: em inglês aparece `12 298,77 €` e `4 mil`. Concluído com en/pt testados no painel, Contas, Movimentos, relatórios e PDF. |
+| C1 | Números e gráficos no formato da língua escolhida | **Concluído localmente (30/10/2026), por rever.** Formatação partilhada por língua, inglês por omissão, moeda do montante preservada; valores e eixos em en/pt, incluindo relatórios/PDF. Campos de edição sem agrupamento, compatíveis com os validadores nas 15 línguas. CSV mantém formato de máquina. 3406 testes, TypeScript, lint e compilação `APP_EDITION=money` aprovados; 15 verificações no navegador e texto dos dois PDFs confirmados, só com dados fictícios locais. [Evidência C1–C7](docs/VERIFICACAO_C1_C7.md). |
 | C2 | Edição completa só na conta do dono | **Por fazer.** Na compilação `money`, `OWNER_USER_ID` vê investimentos; outros recebem 404 e ações recusadas. Decisão só no servidor, pela sessão. |
 | C3 | Primeira entrada numa conta nova | **Por fazer.** Cartão «Get started» com 3 passos que se marcam sozinhos. |
 | C4 | Só inglês e português na edição de lançamento | **Por fazer.** Seletor com en/pt na edição `money`; outras línguas caem para inglês; cópia completa mantém 15. |

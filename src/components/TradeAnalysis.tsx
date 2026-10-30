@@ -1,4 +1,5 @@
 "use client";
+import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import SymbolName from "@/components/SymbolName";
@@ -18,7 +19,6 @@ import {
   Cell,
 } from "recharts";
 import { Fragment, useState } from "react";
-import { fmt } from "@/lib/format";
 import type {
   PnlPoint,
   SymbolStats,
@@ -114,6 +114,7 @@ export default function TradeAnalysis({
   approximate: boolean;
   unconvertible: number;
 }) {
+  const { fmt } = useFormat();
   const uiText = useText();
   /** Which group is opened. Local state: nothing else on the page reads it. */
   const [openGroup, setOpenGroup] = useState<string | null>(null);

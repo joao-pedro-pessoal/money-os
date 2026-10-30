@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import EditForm from "@/components/EditForm";
 import { textForRequest } from "@/actions/pageLanguage";
@@ -17,6 +19,8 @@ import Section from "@/components/Section";
 import AccountViews from "@/components/AccountViews";
 
 export default async function AccountDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const language = await currentLanguage();
+  const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
   const { id } = await params;
   const account = await getAccount(id);
@@ -162,7 +166,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
         <div className="card p-4">
           <div className="text-xs text-[var(--muted)] mb-1">{uiText("Last Updated")}</div>
           <div className="text-sm">
-            {account.lastManualUpdate ? new Date(account.lastManualUpdate).toLocaleString("pt-PT") : uiText("never")}
+            {account.lastManualUpdate ? new Date(account.lastManualUpdate).toLocaleString(numberLocale) : uiText("never")}
           </div>
         </div>
         <div className="card p-4">

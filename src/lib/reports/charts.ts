@@ -1,3 +1,5 @@
+import { formatNumber } from "@/lib/format";
+import type { Language } from "@/lib/i18n/languages";
 /**
  * The geometry of a report's charts, worked out once.
  *
@@ -197,7 +199,8 @@ export function columnChart(
  * Rounding it to one decimal of a thousand turned an axis stepping by 25 into
  * "2.1k, 2.1k, 2.2k, 2.2k", five lines with three names.
  */
-export function compactAmount(value: number): string {
+export function compactAmount(value: number, language?: Language): string {
+  if (language) return formatNumber(value,language,{notation:"compact",maximumFractionDigits:3});
   const abs = Math.abs(value);
   const sign = value < 0 ? "-" : "";
   if (abs >= 1_000_000) return `${sign}${shortest(abs / 1_000_000)}M`;

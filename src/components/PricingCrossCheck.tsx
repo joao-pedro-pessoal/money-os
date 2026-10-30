@@ -1,6 +1,7 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import { getPricingCrossCheck } from "@/actions/quotes";
-import { fmt } from "@/lib/format";
 
 /**
  * Does the sum of the parts agree with the whole?
@@ -12,6 +13,8 @@ import { fmt } from "@/lib/format";
  * looks perfect.
  */
 export default async function PricingCrossCheck() {
+  const language = await currentLanguage();
+  const { fmt } = formatFor(language);
   const uiText = await textForRequest();
   const rows = await getPricingCrossCheck();
   const worth = rows.filter((r) => r.check !== null);

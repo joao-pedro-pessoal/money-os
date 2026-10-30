@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import PlaylistPicker from "@/components/PlaylistPicker";
 import SymbolName from "@/components/SymbolName";
@@ -24,6 +26,8 @@ import Link from "next/link";
 import { ageLabel, valuationAge } from "@/lib/portfolio/valuation";
 
 export default async function HoldingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const language = await currentLanguage();
+  const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
   const { id } = await params;
   const holding = await getHolding(id);
@@ -114,7 +118,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
           title={valuation ? "Update value" : "Update price"}
           defaultOpen
           persistKey="holding:price"
-          summary={holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleDateString("pt-PT") : uiText("never updated")}
+          summary={holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleDateString(numberLocale) : uiText("never updated")}
         >
           <HoldingOperationForm kind="price">
             <input type="hidden" name="id" value={holding.id} />
@@ -141,7 +145,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
             />
             <button type="submit" className="btn w-full">{uiText("Save price")}</button>
             <p className="text-xs text-[var(--muted)]">{uiText("Last updated")}{" "}
-              {holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleString("pt-PT") : uiText("never")}{uiText(". Each update is recorded so the value-over-time chart fills in.")}</p>
+              {holding.lastPriceUpdate ? new Date(holding.lastPriceUpdate).toLocaleString(numberLocale) : uiText("never")}{uiText(". Each update is recorded so the value-over-time chart fills in.")}</p>
           </HoldingOperationForm>
         </Section>
 
@@ -166,7 +170,7 @@ export default async function HoldingDetailPage({ params }: { params: Promise<{ 
               <tbody>
                 {[...snapshots].reverse().slice(0, 10).map((s) => (
                   <tr key={s.id}>
-                    <td>{new Date(s.timestamp).toLocaleDateString("pt-PT")}</td>
+                    <td>{new Date(s.timestamp).toLocaleDateString(numberLocale)}</td>
                     <td>
                       <Money value={Number(s.price)} currency={holding.currency} />
                     </td>

@@ -87,7 +87,7 @@ describe("what the PDF says", () => {
       categories: money.categories.map(c => ({ ...c, name: "Income", changePercent: null })),
       budgets: [{ name: "September", spent: 150, limit: 100, percent: 150, status: "over" as const }],
     };
-    const blocks = reportBlocks({ ...input, money: populated, translate });
+    const blocks = reportBlocks({ ...input, money: populated, translate, language:"pt" });
     const tables = blocks.filter(b => b.type === "table");
     expect(tables.some(b => b.rows.some(r => r.includes("novo")))).toBe(true);
     expect(tables.some(b => b.rows.some(r => r.includes("150% acima do limite")))).toBe(true);
@@ -259,8 +259,22 @@ describe("chart geometry, shared by the page and the PDF", () => {
     expect(compactAmount(-1_250_000)).toBe("-1.25M");
     expect(compactAmount(0.5)).toBe("0.5");
     // A narrow axis keeps one name per line.
-    const labels = niceTicks(2105, 2190).map(compactAmount);
+    const labels = niceTicks(2105, 2190).map(value => compactAmount(value));
     expect(new Set(labels).size).toBe(labels.length);
     expect(labels).toEqual(["2100", "2125", "2150", "2175", "2200"]);
+  });
+});
+
+describe("C1 PDF language",()=>{
+  it("writes the same report figures in the selected notation",()=>{
+    const en=JSON.stringify(reportBlocks({...input,language:"en"}));
+    const pt=JSON.stringify(reportBlocks({...input,language:"pt"}));
+    expect(en).toContain(fmt(money.netWorth!.end!,"EUR","en"));
+    expect(pt).toContain(fmt(money.netWorth!.end!,"EUR","pt"));
+    expect(en).not.toContain(fmt(money.netWorth!.end!,"EUR","pt"));
+    expect(compactAmount(4000,"en")).toBe("4K");
+    expect(compactAmount(4000,"pt").replace(/\s/g," ")).toBe("4 mil");
+    const labels=niceTicks(2105,2190).map(value=>compactAmount(value,"en"));
+    expect(new Set(labels).size).toBe(labels.length);
   });
 });

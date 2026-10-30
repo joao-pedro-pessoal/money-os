@@ -1,3 +1,5 @@
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
@@ -53,6 +55,8 @@ async function importStatementAction(formData: FormData) {
 }
 
 export default async function ImportPage() {
+  const language = await currentLanguage();
+  const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
   const [categories, accounts, baseCurrency, importHistory, imported] = await Promise.all([
     listCategories(),
@@ -174,7 +178,7 @@ export default async function ImportPage() {
               <tbody>
                 {importHistory.map((i) => (
                   <tr key={i.id}>
-                    <td>{new Date(i.createdAt).toLocaleString("pt-PT")}</td>
+                    <td>{new Date(i.createdAt).toLocaleString(numberLocale)}</td>
                     <td className="max-w-[14rem] truncate">{i.fileName}</td>
                     <td><span translate="no">{i.accountName}</span></td>
                     <td className="text-right">{i.rowsImported}</td>
