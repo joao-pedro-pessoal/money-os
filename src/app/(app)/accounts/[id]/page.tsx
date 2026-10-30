@@ -1,10 +1,11 @@
+import AccountBalanceEditor from "@/components/AccountBalanceEditor";
 import { currentInvestments } from "@/actions/releaseEdition";
 import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
 import EditForm from "@/components/EditForm";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
-import { getAccount, getAccountSnapshots, updateAccountBalance, updateAccount, archiveAccount } from "@/actions/accounts";
+import { getAccount, getAccountSnapshots, updateAccount, archiveAccount } from "@/actions/accounts";
 import { listBucketsWithTotals, submitExactAllocation } from "@/actions/buckets";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
@@ -227,34 +228,8 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
       </Section>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section title="Update balance (reconciliation)" defaultOpen>
-          <form action={updateAccountBalance} className="space-y-3">
-            <input type="hidden" name="accountId" value={account.id} />
-            <label className="block text-xs">
-              <span className="text-[var(--muted)]">{uiText("What the account really holds now")}</span>
-              <input
-                name="newBalance"
-                type="number"
-                step="0.01"
-                placeholder={uiText("e.g. {0}", { "0": Number(account.balance).toFixed(2) })}
-                className="input mt-1"
-                required
-              />
-            </label>
-            <label className="block text-xs">
-              <span className="text-[var(--muted)]">{uiText("Record the difference as")}</span>
-            <select name="classification" className="input">
-              <option value="interest">{uiText("Interest")}</option>
-              <option value="deposit">{uiText("Deposit")}</option>
-              <option value="withdrawal">{uiText("Withdrawal")}</option>
-              <option value="income">{uiText("Income")}</option>
-              <option value="expense">{uiText("Expense")}</option>
-              <option value="correction">{uiText("Correction (no cash-flow impact)")}</option>
-              <option value="other">{uiText("Other (no cash-flow impact)")}</option>
-              </select>
-            </label>
-            <button type="submit" className="btn w-full">{uiText("Save")}</button>
-            <p className="text-xs text-[var(--muted)]">{uiText("The difference vs. the current balance is recorded as a transaction of this type (except Correction/Other, which just fixes the number without affecting cash flow).")}</p>
-          </form>
+          <AccountBalanceEditor account={{id:account.id,balance:Number(account.balance),currency:account.currency}} />
+          <p className="text-xs text-[var(--muted)] mt-3">{uiText("The difference vs. the current balance is recorded as a transaction of this type (except Correction/Other, which just fixes the number without affecting cash flow).")}</p>
         </Section>
 
         <Section title="Bucket allocations" defaultOpen>

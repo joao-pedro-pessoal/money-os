@@ -144,3 +144,29 @@ outubro/Criado em, incluindo cabeçalho, mensagem vazia e rodapé. O teste de
 regressão cobre a mensagem vazia e o rodapé. Evidência ignorada em `c1-c7/C5/`,
 com capturas de texto, contagens, PDFs e o script de classificação. Não houve
 tradução online, alteração de registos ou ligações externas.
+
+## C6 — Acerto de saldo com confirmação no formulário
+
+A página da conta usa EditForm e submitAccountBalance, a ação idempotente que
+a folha rápida já utilizava. Os campos e escolhas por direção são partilhados;
+a leitura da direção segue o validador manual, aceita ponto/vírgula e não
+interpreta milhares nem notação científica. O servidor continua a validar a
+mudança real e a identidade. A ação antiga foi removida depois de confirmar que
+não tinha outros usos; os respetivos testes de falhas agora chamam a ação comum.
+Não houve alteração dos montantes, regras financeiras, esquema ou migrações.
+
+Validação: **3495 testes em 226 ficheiros**, TypeScript, lint e compilação money.
+Testes de escolhas incluem saldo negativo, zero, centésimos e entrada inválida;
+os testes reais em PGlite mantêm atomicidade, RLS, autorização e idempotência.
+**15 verificações no navegador**, inglês/computador e português/telemóvel:
+campos e escolhas, erro de formato, tipo incompatível injetado e recusado no
+servidor, gravação e repetição, nova edição e equivalência com a folha rápida.
+
+Para testar perda de resposta, o navegador enviou a ação real e o teste esperou
+a resposta do servidor depois da gravação, interrompendo a entrega ao cliente.
+A base já continha saldo 950,50, um movimento de -49,50 e uma auditoria. O
+formulário mostrou o erro de ligação e permitiu repetir; o segundo pedido
+levou o mesmo requestId e confirmou sucesso, mantendo exatamente esses valores
+e contagens. Alterar depois para 970,50 criou apenas o novo movimento de 20.
+Ambas as línguas passaram, sem página de erro nem erros de execução. Evidência
+ignorada em `c1-c7/C6/` e `c6-ui.mjs`. Só dados fictícios locais.

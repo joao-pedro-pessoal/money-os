@@ -152,7 +152,7 @@ export async function createAccount(formData: FormData) {
   revalidatePath("/");
 }
 
-/** Edit the descriptive fields of an account. Does NOT touch balance (use updateAccountBalance for that). */
+/** Edit the descriptive fields of an account. Does NOT touch balance (use setAccountBalance for that). */
 export async function updateAccount(formData: FormData) {
   const id = String(formData.get("id"));
   const institution = String(formData.get("institution") ?? "").trim();
@@ -347,23 +347,8 @@ export async function removeEmptyAccounts(formData: FormData) {
  * - correction/other -> balance is fixed, no cash-flow transaction is created
  *   (this is the "I mis-recorded this, not real money movement" case).
  */
-export async function updateAccountBalance(formData: FormData) {
-  const accountId = String(formData.get("accountId"));
-  const newBalance = Number(manualBalance(String(formData.get("newBalance") ?? "")));
-  const classification = String(formData.get("classification") ?? "correction");
-
-  const currency = await db.transaction(async (store) => {
-    const [acc] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
-    if (!acc) throw new Error("Account not found");
-    await recordBalance(store, acc, newBalance, classification);
-    return acc.currency;
-  });
-  await writeSnapshot(accountId, newBalance, currency);
-  revalidateBalance(accountId);
-}
-
 /**
- * The same reconciliation from the account's quick sheet, where a phone taps
+ * Reconciliation from the account page and quick sheet, where a phone taps
  * Save on a flaky connection: each attempt carries a request id, so a retry
  * after a lost response confirms the saved balance instead of recording the
  * difference again. Returns the outcome for the form rather than throwing.

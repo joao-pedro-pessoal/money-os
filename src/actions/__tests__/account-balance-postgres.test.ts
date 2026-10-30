@@ -13,7 +13,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/actions/session", () => ({ hasSession: async () => isolated.signedIn }));
 vi.mock("@/actions/fx", () => ({ getRates: async () => ({ EUR: 1, USD: 1.25 }) }));
 vi.mock("@/actions/settings", () => ({ getBaseCurrency: async () => "EUR", getDefaultAccountId: async () => null }));
-import { submitAccountBalance, updateAccountBalance } from "../accounts";
+import { submitAccountBalance } from "../accounts";
 
 let engine: PGlite;
 let sequence = 0;
@@ -54,7 +54,7 @@ afterEach(async () => {
 });
 afterAll(async () => { await engine?.close(); });
 
-describe("setting an account's balance from its quick sheet", () => {
+describe("setting an account's balance from either form", () => {
   it("books the difference once, even when a lost response makes the phone send it again", async () => {
     const attempt = form({ accountId: "eur-a", newBalance: "950,50", classification: "expense", requestId: request() });
     expect(await submitAccountBalance(attempt)).toEqual({ saved: true });
@@ -89,7 +89,7 @@ describe("setting an account's balance from its quick sheet", () => {
     const mismatch = "Choose a type that matches the change in balance.";
     expect(await submitAccountBalance(form({ accountId: "eur-a", newBalance: "1017.83", classification: "expense", requestId: request() }))).toEqual({ error: mismatch });
     expect(await submitAccountBalance(form({ accountId: "eur-a", newBalance: "990", classification: "interest", requestId: request() }))).toEqual({ error: mismatch });
-    await expect(updateAccountBalance(form({ accountId: "eur-a", newBalance: "1100", classification: "withdrawal" }))).rejects.toThrow(mismatch);
+    expect(await submitAccountBalance(form({ accountId: "eur-a", newBalance: "1100", classification: "withdrawal", requestId:request() }))).toEqual({error:mismatch});
     expect(await balance("eur-a")).toBe(1000);
     expect(await txs()).toHaveLength(0);
     expect(await submitAccountBalance(form({ accountId: "eur-a", newBalance: "1017.83", classification: "deposit", requestId: request() }))).toEqual({ saved: true });
@@ -101,7 +101,6 @@ describe("setting an account's balance from its quick sheet", () => {
       CREATE TRIGGER fail_balance_movement BEFORE INSERT ON transactions FOR EACH ROW EXECUTE FUNCTION synthetic_balance_failure(); SET ROLE account_balance_test;`);
     const attempt = form({ accountId: "eur-a", newBalance: "900", classification: "expense", requestId: request() });
     expect((await submitAccountBalance(attempt)).error).toBeTruthy();
-    await expect(updateAccountBalance(form({ accountId: "eur-a", newBalance: "900", classification: "expense" }))).rejects.toThrow();
     expect(await balance("eur-a")).toBe(1000);
     expect(await audits()).toHaveLength(0);
   });
