@@ -8,3 +8,8 @@ tsconfig.tsbuildinfo
 .local-checkpoints/
 # The app's database address for the hosted copy (scripts/app-role.ts).
 for-vercel.txt
+
+# Whole-service encrypted backups belong in private storage, never Git.
+*.moneyos.enc
+*.moneyos.enc.sha256
+*.moneyos.enc.partial-*

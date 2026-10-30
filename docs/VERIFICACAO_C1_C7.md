@@ -170,3 +170,47 @@ levou o mesmo requestId e confirmou sucesso, mantendo exatamente esses valores
 e contagens. Alterar depois para 970,50 criou apenas o novo movimento de 20.
 Ambas as línguas passaram, sem página de erro nem erros de execução. Evidência
 ignorada em `c1-c7/C6/` e `c6-ui.mjs`. Só dados fictícios locais.
+
+## C7 — Cópia integral preparada e restauro fictício real
+
+Comandos novos: `backup:service` (create/verify/restore-local) e
+`backup:rehearse`. Nenhum carrega dotenv, usa DATABASE_URL como alternativa ou
+imprime credenciais. O criador usa DATABASE_ADMIN_URL explícito e recusa rede
+remota por omissão. A opção de origem remota existe para uma execução futura
+autorizada, não foi usada nesta tarefa. O restaurador só aceita loopback,
+verifica integridade antes de abrir o destino e recusa objetos existentes.
+
+O arquivo custom PostgreSQL de toda a base é cifrado em fluxo com AES-256-GCM;
+salt/nonce aleatórios, cabeçalho autenticado, scrypt e chave no ambiente. Há
+checksum SHA-256 do arquivo cifrado. Não se escreve arquivo temporário em
+texto simples, não se substituem ficheiros existentes e não se promove nada.
+pg_restore verifica o catálogo antes do destino e restaura em uma transação.
+Owners/grants e segredos de infraestrutura são tratados no procedimento,
+que também explica recuperação por pessoa via base isolada + exportação JSON
+existente, retenção proposta de sete dias e decisões anteriores à ativação.
+
+Validação final: **3511 testes em 227 ficheiros**, TypeScript, lint e compilação
+`APP_EDITION=money` aprovados. Testes novos cobrem limites de ligação, opções de
+clientes, credenciais só no ambiente, remoção de segredos não necessários,
+checksums, assinatura, chave errada e adulteração mesmo com checksum recalculado.
+O comando de ajuda foi executado sem ligação à base.
+
+O ensaio adicional usou **PostgreSQL 16.2 real**, portátil no Ubuntu local,
+com servidor temporário só em 127.0.0.1:54339. As ferramentas públicas foram
+extraídas no workspace, sem instalação de serviço. Aplicaram-se as migrações
+reais apenas à origem fictícia e criaram-se duas pessoas, quatro contas,
+movimentos, objetivos/alocações, orçamentos, recibos e estado partilhado.
+**11 verificações passaram**: role limitada não produz uma cópia parcial;
+pg_dump de administrador → cifra → verificação → pg_restore real; chave errada
+e alteração recusadas; destino ocupado e ficheiro existente preservados; todas
+as **54 tabelas** e respetivos dados, migrações, sequências, flags RLS e
+**45 políticas** iguais; role da app sem bypass não lê/altera/insere linhas
+de outra pessoa. O servidor temporário é encerrado ao concluir a verificação.
+
+A evidência ignorada está em `c1-c7/C7/`, com result.json, arquivo fictício
+cifrado e checksum, logs de controlos e ensaio. O código de reprodução está em
+scripts/rehearse-service-backup.ts. A chave aleatória fictícia do ensaio ficou
+só no processo; para repetir, usa uma pasta nova. Não se ligou à produção,
+não se correu db:migrate, não se mudou configuração externa nem se agendou
+qualquer cópia real. Destino, retenção final e ativação continuam por decidir
+pelo responsável, conforme a tarefa.

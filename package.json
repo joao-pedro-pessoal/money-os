@@ -16,7 +16,9 @@
     "release:check": "tsx scripts/release-check.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:dedupe-categories": "tsx scripts/dedupe-categories.ts"
+    "db:dedupe-categories": "tsx scripts/dedupe-categories.ts",
+    "backup:service": "tsx scripts/service-backup.ts",
+    "backup:rehearse": "tsx scripts/rehearse-service-backup.ts"
   },
   "dependencies": {
     "@noble/ciphers": "2.4.0",
