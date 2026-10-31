@@ -3401,5 +3401,12 @@
   "New income category": "Nova categoria de receita",
   "New expense category": "Nova categoria de despesa",
   "Made on {0}": "Criado em {0}",
-  "**Android:** touch and hold the **Money OS** icon. Choose **Record expense**, **Record income** or **Cash Flow**.": "**Android:** carrega uns segundos no ícone **Money OS**. Escolhe **Registar despesa**, **Registar receita** ou **Movimentos**."
+  "**Android:** touch and hold the **Money OS** icon. Choose **Record expense**, **Record income** or **Cash Flow**.": "**Android:** carrega uns segundos no ícone **Money OS**. Escolhe **Registar despesa**, **Registar receita** ou **Movimentos**.",
+  "Recorded value": "Valor registado",
+  "Recorded value through the period": "Valor registado ao longo do período",
+  "Recorded value at start": "Valor registado no início",
+  "Recorded value at end": "Valor registado no fim",
+  "Recorded value change": "Variação do valor registado",
+  "Account balances and holdings from recorded snapshots. Separate debts are not deducted, so this is not net worth.": "Saldos de contas e posições das fotografias registadas. As dívidas separadas não são deduzidas, pelo que este valor não é o património líquido.",
+  "No recorded value snapshot inside this period.": "Não há fotografias do valor registado neste período."
 }

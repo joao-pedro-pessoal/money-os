@@ -1,4 +1,4 @@
-import { periodCopy } from "./copy";
+import { periodCopy, RECORDED_VALUE_COPY } from "./copy";
 import { translatedDate } from "./translatedDate";
 import { sourceText, type TextTranslator } from "@/lib/i18n/text";
 /**
@@ -412,9 +412,10 @@ export function moneyCsvLines(report: PeriodReport, uiText: TextTranslator = sou
   ];
   if (report.netWorth) {
     lines.push(
-      [uiText("Net worth at start"), report.netWorth.start, null],
-      [uiText("Net worth at end"), report.netWorth.end, null],
-      [uiText("Net worth change"), report.netWorth.change, null]
+      [uiText(RECORDED_VALUE_COPY.start), report.netWorth.start, null],
+      [uiText(RECORDED_VALUE_COPY.end), report.netWorth.end, null],
+      [uiText(RECORDED_VALUE_COPY.change), report.netWorth.change, null],
+      [uiText(RECORDED_VALUE_COPY.note), null, null]
     );
   }
   if (report.months) {

@@ -3401,5 +3401,12 @@
   "New income category": "New income category",
   "New expense category": "New expense category",
   "Made on {0}": "Made on {0}",
-  "**Android:** touch and hold the **Money OS** icon. Choose **Record expense**, **Record income** or **Cash Flow**.": "**Android:** touch and hold the **Money OS** icon. Choose **Record expense**, **Record income** or **Cash Flow**."
+  "**Android:** touch and hold the **Money OS** icon. Choose **Record expense**, **Record income** or **Cash Flow**.": "**Android:** touch and hold the **Money OS** icon. Choose **Record expense**, **Record income** or **Cash Flow**.",
+  "Recorded value": "Recorded value",
+  "Recorded value through the period": "Recorded value through the period",
+  "Recorded value at start": "Recorded value at start",
+  "Recorded value at end": "Recorded value at end",
+  "Recorded value change": "Recorded value change",
+  "Account balances and holdings from recorded snapshots. Separate debts are not deducted, so this is not net worth.": "Account balances and holdings from recorded snapshots. Separate debts are not deducted, so this is not net worth.",
+  "No recorded value snapshot inside this period.": "No recorded value snapshot inside this period."
 }

@@ -112,7 +112,7 @@ describe("what the PDF says", () => {
   it("draws net worth, spending by category, the portfolio and what is held", () => {
     const charts = blocks.filter((b) => b.type === "line" || b.type === "bars" || b.type === "columns");
     expect(charts.map((b) => ("title" in b ? b.title : ""))).toEqual([
-      "Net worth through the period",
+      "Recorded value through the period",
       "Where it went",
       "Portfolio value through the period",
       "What is held today, by type · " + fmt(3200, "EUR"),
@@ -276,5 +276,27 @@ describe("C1 PDF language",()=>{
     expect(compactAmount(4000,"pt").replace(/\s/g," ")).toBe("4 mil");
     const labels=niceTicks(2105,2190).map(value=>compactAmount(value,"en"));
     expect(new Set(labels).size).toBe(labels.length);
+  });
+});
+
+
+describe("recorded value disclosure", () => {
+  it.each(["en", "pt"] as const)("labels snapshot values honestly in %s exports", (language) => {
+    const translate = (s: string) => language === "pt" ? translateText(portuguese, s) : s;
+    const note = translate("Account balances and holdings from recorded snapshots. Separate debts are not deducted, so this is not net worth.");
+    const blocks = reportBlocks({ ...input, investments: null, translate, language });
+    expect(allText(blocks)).toContain(note);
+    expect(allText(blocks)).not.toContain("markets included");
+    const csv = moneyCsvLines(money, translate);
+    expect(csv).toContainEqual([translate("Recorded value at start"), 5000, null]);
+    expect(csv).toContainEqual([translate("Recorded value at end"), 6249.5, null]);
+    expect(csv).toContainEqual([note, null, null]);
+    expect(blocks.some(b => b.type === "line" && b.title === translate("Recorded value through the period"))).toBe(true);
+  });
+  it("describes absent snapshots without claiming a net worth history", () => {
+    const empty = { ...money, netWorth: null, netWorthLine: [] };
+    const text = allText(reportBlocks({ ...input, money: empty, investments: null }));
+    expect(text).toContain("No recorded value snapshot inside this period.");
+    expect(text).not.toContain("No net worth snapshot");
   });
 });

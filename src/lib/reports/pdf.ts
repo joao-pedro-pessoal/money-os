@@ -29,7 +29,7 @@ import { barShares, columnChart, compactAmount, labelEvery, lineChart, shortDate
 import type { InvestmentReport } from "./investments";
 import type { PeriodReport } from "./monthly";
 import { monthTick, spansYears } from "./periods";
-import { periodCopy } from "./copy";
+import { periodCopy, RECORDED_VALUE_COPY } from "./copy";
 import { translatedDate } from "./translatedDate";
 
 export type Tone = "good" | "bad" | null;
@@ -138,12 +138,12 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
         items: [
           m.netWorth
             ? {
-                label: "Net worth",
+                label: RECORDED_VALUE_COPY.title,
                 value: signedMoney(m.netWorth.change),
-                note: `${money(m.netWorth.start)} -> ${money(m.netWorth.end)}, markets included`,
+                note: `${money(m.netWorth.start)} -> ${money(m.netWorth.end)}`,
                 tone: toneOf(m.netWorth.change),
               }
-            : { label: "Net worth", value: "—", note: periodCopy(kind, "noSnapshot", uiText) },
+            : { label: RECORDED_VALUE_COPY.title, value: "—", note: uiText(RECORDED_VALUE_COPY.empty) },
           {
             label: "Fixed spending",
             value: money(m.split.fixed),
@@ -155,11 +155,12 @@ export function reportBlocks(input: ReportPdfInput): Block[] {
             : []),
         ],
       });
+      blocks.push({ type: "text", text: uiText(RECORDED_VALUE_COPY.note), muted: true });
       if (m.netWorthLine.length >= 2) {
         blocks.push({
           type: "line",
-          title: "Net worth through the period",
-          series: [{ name: "Net worth", color: "accent", points: m.netWorthLine }],
+          title: RECORDED_VALUE_COPY.chart,
+          series: [{ name: RECORDED_VALUE_COPY.title, color: "accent", points: m.netWorthLine }],
           range: { from: m.from, to: m.to },
           unit: input.currency,
         });

@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **30 de outubro de 2026**.
+Atualizado em **31 de outubro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -57,6 +57,9 @@ Procedimento completo em [docs/CODEX_PROXIMOS_PASSOS.md](docs/CODEX_PROXIMOS_PAS
 | C5 | Textos na língua errada | **Concluído localmente (30/10/2026), por rever.** As cinco descrições exatas de reconciliação são traduzidas só ao apresentar; notas pessoais e dados guardados preservados. Frase de câmbio e tipos/filtros de Movimentos, contagens completas singular/plural de subscrições, rótulos de Poupança, categorias, atalhos e mês/rodapé dos PDFs corrigidos. Auditoria money en/pt: **47 → 0 ocorrências em 74 estados**, com computador e telemóvel e sem contar dados pessoais, moedas, Simple/Complex ou Data como data em português. 3478 testes, TypeScript, lint e compilação money aprovados. [Evidência e cobertura](docs/VERIFICACAO_C1_C7.md). |
 | C6 | Acertar saldo na página da conta como no painel rápido | **Concluído localmente (30/10/2026), por rever.** Página e folha rápida usam EditForm + submitAccountBalance e os mesmos campos/tipos por direção, extraídos e testados; ação antiga sem outros usos removida. Erros e confirmação no formulário. 3495 testes, TypeScript, lint e compilação money aprovados; 15 verificações no navegador, com perda real simulada da resposta depois do commit local, repetição com o mesmo ID, um só movimento/auditoria e nova edição após sucesso, em en/pt. [Evidência](docs/VERIFICACAO_C1_C7.md). |
 | C7 | Cópia de segurança do serviço (preparar) | **Concluído localmente (30/10/2026), por rever; não ativado em produção.** Script de cópia integral por DATABASE_ADMIN_URL, cifrada AES-256-GCM, checksum e autenticação, sem dotenv, URLs ou passwords nos logs/argumentos. Origem remota exige opção explícita; restauro só local e vazio, numa transação. Ensaio real pg_dump → cifra → pg_restore aprovado com migrações reais, duas pessoas, **54 tabelas e 45 políticas RLS**, conteúdo/sequências iguais e isolamento; 11 verificações, incluindo role limitada, adulteração, chave errada, destino ocupado e ficheiro existente. 3511 testes, TypeScript, lint e compilação money aprovados. [Procedimento, retenção proposta e recuperação por pessoa](docs/COPIA_SEGURANCA_SERVICO.md). Destino, retenção e ativação reais continuam a cargo do utilizador. [Evidência](docs/VERIFICACAO_C1_C7.md). |
+
+| C8 | Identificar corretamente o histórico dos relatórios | **Concluído localmente (31/10/2026), por rever.** Histórico de saldos/posições identificado como valor registado, com aviso de que não desconta dívidas separadas, no ecrã, CSV e PDF; montantes e dados preservados. Inglês e português revistos. 3514 testes, TypeScript, lint e compilação APP_EDITION=money aprovados; navegador com dados sintéticos: ecrã e downloads CSV/PDF em en (desktop) e pt (telemóvel), sem erros de execução. |
+| C9 | Rever o mesmo histórico fora dos relatórios | **Por fazer.** A série usada nos gráficos do painel/análise, estatísticas e variações dos widgets também não possui histórico de dívidas separadas. Rever rótulos e comparações com património líquido atual, sem inventar dívida passada nem migrar sem plano. |
 
 ## 2. Prioridade atual — aplicação em uso
 

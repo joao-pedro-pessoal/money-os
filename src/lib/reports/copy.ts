@@ -48,3 +48,14 @@ export const PERIOD_COPY = {
 export function periodCopy(kind: ReportKind, key: keyof typeof PERIOD_COPY.month, translate: TextTranslator = sourceText, values?: TextValues): string {
   return translate(PERIOD_COPY[kind][key], values);
 }
+
+/** Snapshot history has no separate-debt history. Never label it net worth. */
+export const RECORDED_VALUE_COPY = {
+  title: "Recorded value",
+  chart: "Recorded value through the period",
+  start: "Recorded value at start",
+  end: "Recorded value at end",
+  change: "Recorded value change",
+  note: "Account balances and holdings from recorded snapshots. Separate debts are not deducted, so this is not net worth.",
+  empty: "No recorded value snapshot inside this period.",
+} as const;

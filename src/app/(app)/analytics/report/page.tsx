@@ -11,7 +11,7 @@ import FilterSelect from "@/components/FilterSelect";
 import { Money } from "@/components/PrivacyContext";
 import { analyticsTabs } from "@/lib/navigation";
 import { periodNoun } from "@/lib/reports/monthly";
-import { periodCopy } from "@/lib/reports/copy";
+import { periodCopy, RECORDED_VALUE_COPY } from "@/lib/reports/copy";
 import { translatedDate } from "@/lib/reports/translatedDate";
 import { monthTick, periodLabel, REPORT_KINDS, spansYears, type ReportKind } from "@/lib/reports/periods";
 import { REPORT_SCOPES, REPORT_TITLE, reportCsv, reportFileName, type ReportScope } from "@/lib/reports/document";
@@ -193,7 +193,7 @@ export default async function ReportPage({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="card p-4">
-              <div className="text-sm font-medium">{uiText("Net worth")}</div>
+              <div className="text-sm font-medium">{uiText(RECORDED_VALUE_COPY.title)}</div>
               {report.netWorth ? (
                 <>
                   <div className={`text-xl font-semibold mt-2 ${tone(report.netWorth.change)}`}>
@@ -204,10 +204,10 @@ export default async function ReportPage({
                     <Money value={report.netWorth.start} currency={base} /> →{" "}
                     <Money value={report.netWorth.end} currency={base} />
                   </div>
-                  <p className="text-[11px] text-[var(--muted)] mt-2">{periodCopy(kind, "net", uiText)}</p>
+                  <p className="text-[11px] text-[var(--muted)] mt-2">{uiText(RECORDED_VALUE_COPY.note)}</p>
                 </>
               ) : (
-                <p className="text-xs text-[var(--muted)] mt-2">{periodCopy(kind, "noSnapshot", uiText)}</p>
+                <p className="text-xs text-[var(--muted)] mt-2">{uiText(RECORDED_VALUE_COPY.empty)}</p>
               )}
             </div>
             <div className="card p-4">
@@ -233,8 +233,8 @@ export default async function ReportPage({
             <div className="card p-4">
               <ReportChart
                 kind="line"
-                title={uiText("Net worth through the period")}
-                series={[{ name: "Net worth", color: "accent", points: report.netWorthLine }]}
+                title={uiText(RECORDED_VALUE_COPY.chart)}
+                series={[{ name: RECORDED_VALUE_COPY.title, color: "accent", points: report.netWorthLine }]}
                 range={{ from: report.from, to: report.to }}
                 unit={base}
               />
