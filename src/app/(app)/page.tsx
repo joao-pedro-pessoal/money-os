@@ -410,7 +410,7 @@ export default async function DashboardPage({
         />
       </SimpleOverview>
 
-      <nav className="simple-only simple-dashboard-actions" aria-label={uiText("Tarefas do dia a dia")}>
+      <nav className="simple-only simple-dashboard-actions" aria-label={uiText("Everyday tasks")}>
         <Link href="/accounts">{uiText("View accounts ")}<span aria-hidden="true">→</span></Link>
         <Link href="/transactions">{uiText("View transactions ")}<span aria-hidden="true">→</span></Link>
         <Link href="/budgets">{uiText("Budgets ")}<span aria-hidden="true">→</span></Link>

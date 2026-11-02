@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { balanceChoices, balanceDirection } from "@/lib/money/balanceChoices";
 import { useText } from "./useText";
 
@@ -11,6 +12,11 @@ export default function AccountBalanceFields({ account, value, onChange }: {
 }) {
   const uiText = useText();
   const direction = balanceDirection(account.balance, value);
+  const choices = balanceChoices(direction);
+  // Chosen before typing, it must survive the amount: falling back to Correction
+  // would quietly record no transaction. It only falls back when it no longer fits.
+  const [chosen, setChosen] = useState("correction");
+  const classification = choices.some(type => type.value === chosen) ? chosen : "correction";
   return <>
     <input type="hidden" name="accountId" value={account.id} />
     <label className="block text-xs">
@@ -20,8 +26,8 @@ export default function AccountBalanceFields({ account, value, onChange }: {
     </label>
     <label className="block text-xs">
       <span className="text-[var(--muted)]">{uiText("Record the difference as")}</span>
-      <select key={direction} name="classification" className="input mt-1" defaultValue="correction">
-        {balanceChoices(direction).map(type => <option key={type.value} value={type.value}>{uiText(type.label)}</option>)}
+      <select name="classification" className="input mt-1" value={classification} onChange={event => setChosen(event.target.value)}>
+        {choices.map(type => <option key={type.value} value={type.value}>{uiText(type.label)}</option>)}
       </select>
     </label>
   </>;

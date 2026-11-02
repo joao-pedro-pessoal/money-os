@@ -49,7 +49,7 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
   ];
   return <div className="space-y-6">
     <h1 className="text-lg font-semibold">{t(analytics ? "Analytics" : "Dashboard")}</h1>
-    {!analytics && userId && <GetStarted key={userId} userId={userId} counts={{accounts:accountCount,transactions:recent.rows.length,budgets:budgets.items.length,goals:goals.length}} canRecord={accounts.length>0} />}
+    {!analytics && userId && <GetStarted key={userId} userId={userId} counts={{accounts:accountCount,transactions:recent.rows.length + recent.unconverted.length,budgets:budgets.items.length,goals:goals.length}} canRecord={accounts.length>0} />}
     {analytics && <PageTabs tabs={analyticsTabs(investmentsEnabled)} />}
     {worth.unconverted.length > 0 && <p role="status" className="card p-3 text-sm text-[var(--amber)]">{t("Some amounts could not be converted to ")}{currency}. {t("Add a rate in Settings.")}</p>}
     <p className="text-sm text-[var(--muted)]">{t("Income and expenses for the current month.")}</p>

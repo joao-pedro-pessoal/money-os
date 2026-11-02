@@ -117,9 +117,14 @@ function addMonths(d: Date, n: number): Date {
   return out;
 }
 
-function fmtRange(from: Date, to: Date): string {
-  const f = (d: Date) => d.toLocaleDateString("pt-PT", { day: "numeric", month: "short" });
+function fmtRange(from: Date, to: Date, locale = "pt-PT"): string {
+  const f = (d: Date) => d.toLocaleDateString(locale, { day: "numeric", month: "short" });
   return `${f(from)} – ${f(to)}`;
+}
+
+/** A period's dates in the reader's language, for the screen. */
+export function periodRange(bounds: Bounds, locale: string): string {
+  return fmtRange(bounds.start, addDays(bounds.end, -1), locale);
 }
 
 /** Steps to the previous or next period. */

@@ -2,7 +2,7 @@ import { sourceText, type TextTranslator } from "./text";
 
 const reconciliation = new Set([
   "Expense (reconciliation)", "Income (reconciliation)", "Deposit (reconciliation)",
-  "Withdrawal (reconciliation)", "Interest (reconciliation)",
+  "Withdrawal (reconciliation)", "Interest (reconciliation)", "Internal transfer",
 ]);
 
 /** Only exact, known system descriptions; personal notes are never translated. */

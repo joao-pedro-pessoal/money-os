@@ -229,7 +229,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section title="Update balance (reconciliation)" defaultOpen>
           <AccountBalanceEditor account={{id:account.id,balance:Number(account.balance),currency:account.currency}} />
-          <p className="text-xs text-[var(--muted)] mt-3">{uiText("The difference vs. the current balance is recorded as a transaction of this type (except Correction/Other, which just fixes the number without affecting cash flow).")}</p>
+          <p className="text-xs text-[var(--muted)] mt-3">{uiText("The difference vs. the current balance is recorded as a transaction of this type (except Correction, which just fixes the number without affecting cash flow).")}</p>
         </Section>
 
         <Section title="Bucket allocations" defaultOpen>

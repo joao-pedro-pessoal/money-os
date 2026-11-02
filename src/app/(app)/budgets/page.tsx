@@ -1,6 +1,8 @@
 import EditForm from "@/components/EditForm";
 import RetryableForm from "@/components/RetryableForm";
 import { textForRequest } from "@/actions/pageLanguage";
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
 import {
   listBudgets,
   submitBudgetCreation,
@@ -9,7 +11,7 @@ import {
   setBudgetRollover,
   getUnbudgetedSpending,
 } from "@/actions/budgets";
-import { PERIODS } from "@/lib/accounting/envelopes";
+import { PERIODS, periodRange } from "@/lib/accounting/envelopes";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Section from "@/components/Section";
@@ -30,6 +32,7 @@ export default async function BudgetsPage({
 }: {
   searchParams: Promise<{ offset?: string }>;
 }) {
+  const { locale } = formatFor(await currentLanguage());
   const uiText = await textForRequest();
   const sp = await searchParams;
   const offset = Number(sp.offset ?? 0) || 0;
@@ -101,7 +104,7 @@ export default async function BudgetsPage({
                 <div>
                   <span className="text-sm font-medium"><span translate="no">{b.name}</span></span>
                   <span className="text-xs text-[var(--muted)] ml-2">
-                    {PERIODS.find((p) => p.value === b.period)?.label.toLowerCase()} · {uiText(b.bounds.label ?? "")}
+                    {uiText(PERIODS.find((p) => p.value === b.period)?.label ?? "").toLowerCase()} · {periodRange(b.bounds, locale)}
                   </span>
                 </div>
                 <div className="text-xs">
