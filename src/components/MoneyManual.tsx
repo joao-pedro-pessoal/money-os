@@ -10,6 +10,7 @@ export default async function MoneyManual() {
     { href:"/budgets", title:"Budgets", text:"Set a spending limit and choose the expense categories it watches." },
     { href:"/buckets", title:"Buckets", text:"Set money aside for a goal. Allocations do not move money between accounts." },
     { href:"/subscriptions", title:"Subscriptions", text:"Track upcoming charges. A forecast does not change your balance." },
+    { href:"/expected", title:"Coming in", text:"Money that has not arrived yet, counted nowhere until it does. Say when it arrives, all of it or only some, add more, or change it." },
     { href:"/analytics/report", title:"Reports", text:"Review your income and spending, then download a CSV or PDF." },
     { href:"/settings/data", title:"Your data", text:"Export a backup, restore your records or delete your account in Settings." },
   ];

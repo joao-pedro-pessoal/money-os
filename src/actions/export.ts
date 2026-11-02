@@ -38,6 +38,7 @@ const TABLES: Record<BackupTable, typeof schema.accounts> = {
   subscriptionCharges: schema.subscriptionCharges,
   transfers: schema.transfers,
   interestPayments: schema.interestPayments,
+  expectedArrivals: schema.expectedArrivals,
   accountSnapshots: schema.accountSnapshots,
   playlists: schema.playlists,
   holdings: schema.holdings,

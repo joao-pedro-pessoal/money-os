@@ -22,6 +22,7 @@ import Link from "next/link";
 import Section from "@/components/Section";
 import DonutChart from "@/components/DonutChart";
 import AccountQuick from "@/components/AccountQuick";
+import TryQuickEntry from "@/components/TryQuickEntry";
 import { getAccountComposition } from "@/actions/dashboard";
 import { getBaseCurrency } from "@/actions/settings";
 
@@ -58,6 +59,7 @@ export default async function AccountsPage() {
       <h1 className="text-lg font-semibold">{uiText("Accounts")}</h1>
       <p className="simple-only text-sm text-[var(--muted)]">{uiText("Each account’s balance and available cash. Tap its name for details and reserved money.")}</p>
       <PageTabs tabs={ACCOUNTS_TABS} />
+      {accounts.length > 1 && <TryQuickEntry kind="transfer" label="Send money" />}
 
       <TidyEmptyAccounts
         removable={removable.map((a) => ({
@@ -101,7 +103,7 @@ export default async function AccountsPage() {
                     const shown = p ? p.total : a.balance;
                     return (
                       <>
-                        <AccountQuick account={{ id: a.id, name: a.name, currency: a.currency, balance: a.balance }} className="underline decoration-dotted underline-offset-4">
+                        <AccountQuick canSend={accounts.length > 1} account={{ id: a.id, name: a.name, currency: a.currency, balance: a.balance }} className="underline decoration-dotted underline-offset-4">
                           <Money value={shown} currency={a.currency} />
                         </AccountQuick>
                         {investmentsEnabled && p && p.unrealizedPnl !== 0 && (

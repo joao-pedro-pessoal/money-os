@@ -49,7 +49,7 @@ describe("expected money reaches no total", () => {
       if (OWNERS.some((owner) => relative === owner)) continue;
 
       const source = readFileSync(file, "utf8");
-      if (/\bexpectedMoney\b/.test(source)) {
+      if (/\bexpected(Money|Arrivals)\b/.test(source)) {
         offenders.push(relative);
       }
     }

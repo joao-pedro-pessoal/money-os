@@ -505,6 +505,20 @@
       "when": 1792341634895,
       "tag": "0071_request_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1793602204772,
+      "tag": "0072_expected_arrivals",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1793602209114,
+      "tag": "0073_expected_arrivals_own_rows",
+      "breakpoints": true
     }
   ]
 }

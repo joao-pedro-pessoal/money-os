@@ -39,7 +39,7 @@ export async function getMonthAhead(): Promise<MonthAhead> {
   const days = daysLeftInMonth(today);
   const arriving = expected.rows.filter((r) => r.inDays !== null && r.inDays <= days);
   const coming = sumInBase(
-    arriving.map((r) => ({ amount: r.amount, currency: r.currency })),
+    arriving.map((r) => ({ amount: r.remaining, currency: r.currency })),
     rates,
     base
   );

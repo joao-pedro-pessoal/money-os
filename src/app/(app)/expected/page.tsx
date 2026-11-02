@@ -5,15 +5,16 @@ import ResponsiveTable from "@/components/ResponsiveTable";
 import {
   listExpected,
   listExpectedOptions,
+  listExpectedArrivals,
+  countExpectedArrived,
   createExpected,
-  markExpectedReceived,
-  stopExpected,
-  deleteExpected,
+  undoExpectedArrival,
 } from "@/actions/expected";
 import { Money } from "@/components/PrivacyContext";
 import { ARRIVALS } from "@/lib/accounting/expected";
 import ArrivalFields from "@/components/ArrivalFields";
-import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import ExpectedSheet from "@/components/ExpectedSheet";
+import { localDay } from "@/lib/calendar/localDay";
 import Link from "next/link";
 import Section from "@/components/Section";
 
@@ -32,10 +33,12 @@ export default async function ExpectedPage({
   const language = await currentLanguage();
   const { locale: numberLocale } = formatFor(language);
   const uiText = await textForRequest();
-  const [{ from }, data, options] = await Promise.all([
+  const [{ from }, data, options, arrivals, arrivedCount] = await Promise.all([
     searchParams,
     listExpected(),
     listExpectedOptions(),
+    listExpectedArrivals(),
+    countExpectedArrived(),
   ]);
 
   /**
@@ -71,7 +74,7 @@ export default async function ExpectedPage({
         </div>
         <div className="card p-4">
           <div className="text-[10px] text-[var(--muted)]">{uiText("Already arrived")}</div>
-          <div className="text-xl font-semibold">{data.settled}</div>
+          <div className="text-xl font-semibold">{arrivedCount}</div>
           <div className="text-[10px] text-[var(--muted)] mt-1">{uiText("kept as evidence, counted nowhere")}</div>
         </div>
       </div>
@@ -119,10 +122,10 @@ export default async function ExpectedPage({
           title="Still coming"
           defaultOpen
           essential
-          summary={`${data.rows.length} ${data.rows.length === 1 ? "entry" : "entries"}`}
+          summary={uiText(data.rows.length === 1 ? "{0} entry" : "{0} entries", { "0": data.rows.length })}
         >
           <div className="overflow-x-auto">
-            <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
+            <div className="table-scroll mobile-records expected-records" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
               <thead>
                 <tr>
                   <th>{uiText("What")}</th>
@@ -136,16 +139,16 @@ export default async function ExpectedPage({
               <tbody>
                 {data.rows.map((r) => (
                   <tr key={r.id}>
-                    <td className="font-medium">
+                    <td className="font-medium record-description" data-label={uiText("What")}>
                       <span translate="no">{r.name}</span>
                       {r.categoryName && (
                         <div className="text-[10px] text-[var(--muted)]"><span translate="no">{r.categoryName}</span></div>
                       )}
                     </td>
-                    <td className="text-[var(--muted)]">
+                    <td className="text-[var(--muted)]" data-label={uiText("How often")}>
                       {uiText(ARRIVALS.find((a) => a.value === r.arrival)?.label ?? r.arrival)}
                     </td>
-                    <td className={r.overdue ? "text-[var(--red)]" : undefined}>
+                    <td className={r.overdue ? "text-[var(--red)]" : undefined} data-label={uiText("When")}>
                       {/* No date is a real answer for a debt with no agreed
                           day, and reads better than an invented one. */}
                       {r.next === null ? (
@@ -165,29 +168,39 @@ export default async function ExpectedPage({
                         </>
                       )}
                     </td>
-                    <td className="text-[var(--muted)]"><span translate="no">{r.accountName ?? "—"}</span></td>
-                    <td className="text-right font-medium">
-                      <Money value={r.amount} currency={r.currency} />
+                    <td className="text-[var(--muted)]" data-label={uiText("Landing in")}><span translate="no">{r.accountName ?? "—"}</span></td>
+                    <td className="text-right font-medium" data-label={uiText("Amount")}>
+                      <Money value={r.remaining} currency={r.currency} />
+                      {(r.received ?? 0) > 0 && (
+                        <div className="text-[10px] font-normal text-[var(--muted)]">{uiText("Already arrived")}: <Money value={r.received ?? 0} currency={r.currency} /></div>
+                      )}
+                      {(r.extra ?? 0) > 0 && (
+                        <div className="text-[10px] font-normal text-[var(--muted)]">{uiText("Added this time")}: <Money value={r.extra ?? 0} currency={r.currency} /></div>
+                      )}
                     </td>
-                    <td className="text-right">
+                    <td className="text-right record-actions">
                       <div className="flex gap-3 justify-end">
-                        <form action={markExpectedReceived}>
-                          <input type="hidden" name="id" value={r.id} />
-                          <button type="submit" className="text-xs text-[var(--accent)]">{uiText("Arrived")}</button>
-                        </form>
-                        {r.arrival !== "once" && (
-                          <form action={stopExpected}>
-                            <input type="hidden" name="id" value={r.id} />
-                            <button type="submit" className="text-xs text-[var(--muted)]">{uiText("Stop")}</button>
-                          </form>
-                        )}
-                        <form action={deleteExpected}>
-                          <input type="hidden" name="id" value={r.id} />
-                          <ConfirmSubmitButton
-                            label={uiText("Delete")}
-                            confirmMessage={`Remove "${r.name}" entirely? Marking it arrived keeps the record instead.`}
-                          />
-                        </form>
+                        <ExpectedSheet
+                          row={{
+                            id: r.id,
+                            name: r.name,
+                            amount: r.amount,
+                            extra: r.extra ?? 0,
+                            received: r.received ?? 0,
+                            remaining: r.remaining,
+                            currency: r.currency,
+                            arrival: r.arrival,
+                            anchorDate: r.expectedAt ? localDay(r.expectedAt) : "",
+                            anchorDay: r.expectedAt?.getDate() ?? null,
+                            anchorWeekday: r.expectedAt?.getDay() ?? null,
+                            accountId: r.accountId,
+                            categoryId: r.categoryId,
+                            notes: r.notes,
+                          }}
+                          accounts={options.accounts}
+                          categories={options.categories}
+                          today={localDay()}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -195,6 +208,33 @@ export default async function ExpectedPage({
               </tbody>
             </ResponsiveTable></div>
           </div>
+        </Section>
+      )}
+
+      {arrivals.length > 0 && (
+        <Section title="Already arrived" defaultOpen essential summary={uiText("{0} shown", { "0": arrivals.length })}>
+          <ul className="divide-y divide-[var(--border)]">
+            {arrivals.map((a) => (
+              <li key={a.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <div className="truncate"><span translate="no">{a.name}</span></div>
+                  <div className="text-[10px] text-[var(--muted)]">
+                    {a.arrivedAt.toLocaleDateString(numberLocale)}{" · "}
+                    {a.accountName ? <span translate="no">{a.accountName}</span> : uiText("no balance changed")}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <Money value={a.amount} currency={a.currency} />
+                  {a.undoable && (
+                    <form action={undoExpectedArrival}>
+                      <input type="hidden" name="id" value={a.id} />
+                      <button type="submit" className="text-xs text-[var(--accent)] min-h-11">{uiText("Undo")}</button>
+                    </form>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
         </Section>
       )}
 

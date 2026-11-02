@@ -1064,8 +1064,40 @@ export const expectedMoney = pgTable("expected_money", {
   settledAt: timestamp("settled_at", { withTimezone: true }),
   active: boolean("active").notNull().default(true),
   notes: text("notes"),
+  /** How much of the current one has arrived so far. Still coming is `remainingOf`. */
+  received: numeric("received", { precision: 18, scale: 2 }).notNull().default("0"),
+  /** Added to a recurring one for its current arrival only. A one-off's `amount` simply grows. */
+  extra: numeric("extra", { precision: 18, scale: 2 }).notNull().default("0"),
+  /**
+   * The arrival being tracked when the schedule alone cannot say which: the one
+   * after an arrival closed this one early, or a date held because part of it is
+   * still owed. Null means the schedule decides. See `nextArrival`.
+   */
+  nextAt: timestamp("next_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * Each time money that was expected actually came.
+ *
+ * The evidence that it did, and what makes a mistake undoable. `transactionId`
+ * is the income it became when it was put on an account; it stays null when the
+ * money was already recorded some other way, and then no balance moved.
+ */
+export const expectedArrivals = pgTable("expected_arrivals", {
+  userId: ownedBy(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  expectedId: text("expected_id").notNull().references(() => expectedMoney.id, { onDelete: "cascade" }),
+  /** In the expected money's own currency, whatever the account it landed in uses. */
+  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  arrivedAt: timestamp("arrived_at", { withTimezone: true }).notNull(),
+  accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
+  transactionId: text("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+  /** JSON of how the expected money stood before this arrival closed it, so undoing restores it exactly. */
+  closed: text("closed"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ---------- Budget ----------

@@ -20,7 +20,13 @@ import { ARRIVALS, WEEKDAYS, anchorInputFor, type Arrival } from "@/lib/accounti
  * Client-side only because the second field depends on the first. Everything
  * else on this form is a plain server-rendered input.
  */
-export default function ArrivalFields({ defaultArrival }: { defaultArrival: Arrival }) {
+export default function ArrivalFields({ defaultArrival, defaultDate, defaultDay, defaultWeekday }: {
+  defaultArrival: Arrival;
+  /** What is already set, when editing. */
+  defaultDate?: string;
+  defaultDay?: number | null;
+  defaultWeekday?: number | null;
+}) {
   const uiText = useText();
   const [arrival, setArrival] = useState<Arrival>(defaultArrival);
   const kind = anchorInputFor(arrival);
@@ -50,6 +56,7 @@ export default function ArrivalFields({ defaultArrival }: { defaultArrival: Arri
             max={31}
             placeholder={uiText("e.g. 25")}
             className="input mt-1"
+            defaultValue={defaultDay ?? undefined}
           />
           {/* The 31st stays the 31st. A month without one is skipped, and
               February lands on the 28th without the day being forgotten. */}
@@ -60,7 +67,7 @@ export default function ArrivalFields({ defaultArrival }: { defaultArrival: Arri
       {kind === "weekday" && (
         <label className="text-xs block">
           <span className="text-[var(--muted)]">{uiText("Day of the week")}</span>
-          <select name="weekday" className="input mt-1" defaultValue="">
+          <select name="weekday" className="input mt-1" defaultValue={defaultWeekday ?? ""}>
             <option value="">{uiText("Pick a day")}</option>
             {WEEKDAYS.map((d) => (
               <option key={d.value} value={d.value}>
@@ -74,7 +81,7 @@ export default function ArrivalFields({ defaultArrival }: { defaultArrival: Arri
       {kind === "date" && (
         <label className="text-xs block">
           <span className="text-[var(--muted)]">{uiText("When — leave empty if there is no agreed day")}</span>
-          <input name="expectedAt" type="date" className="input mt-1" />
+          <input name="expectedAt" type="date" className="input mt-1" defaultValue={defaultDate} />
         </label>
       )}
     </>

@@ -9,8 +9,10 @@ import PurchaseSavingsFields from '@/components/PurchaseSavingsFields';
 import MobileFold from "@/components/MobileFold";
 import { localDay } from "@/lib/calendar/localDay";
 
-export default async function TransactionsPage() {
+export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ direction?: string }> }) {
   const uiText = await textForRequest();
+  const { direction: asked } = await searchParams;
+  const direction = asked === "in" || asked === "out" ? asked : null;
   const [txData, accounts, categories, defaultAccountId] = await Promise.all([
     listTransactions(200),
     listAccountsWithState(),
@@ -91,6 +93,8 @@ export default async function TransactionsPage() {
       </MobileFold>
 
       <TransactionList
+        key={direction ?? "all"}
+        initialDirection={direction}
         rows={txData.rows}
         currency={txData.baseCurrency}
         approximate={txData.approximate}

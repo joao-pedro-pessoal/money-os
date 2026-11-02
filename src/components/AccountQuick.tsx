@@ -18,8 +18,11 @@ export default function AccountQuick({
   account,
   children,
   className,
+  canSend = true,
 }: {
   account: { id: string; name: string; currency: string; balance: number };
+  /** There is another account to send it to. */
+  canSend?: boolean;
   children: ReactNode;
   className?: string;
 }) {
@@ -40,7 +43,7 @@ export default function AccountQuick({
     dialog.current?.close();
   }
   /** Hands over to the quick entry form, already on this account. */
-  function entry(kind: "expense" | "income") {
+  function entry(kind: "expense" | "income" | "transfer") {
     close();
     window.dispatchEvent(new CustomEvent("money-os:quick-entry", { detail: { kind, accountId: account.id } }));
   }
@@ -60,6 +63,7 @@ export default function AccountQuick({
         <div className="grid grid-cols-2 gap-2 mb-5">
           <button type="button" className="btn" onClick={() => entry("expense")}>{uiText("Add expense")}</button>
           <button type="button" className="btn" onClick={() => entry("income")}>{uiText("Add income")}</button>
+          {canSend && <button type="button" className="btn col-span-2" onClick={() => entry("transfer")}>{uiText("Send money")}</button>}
         </div>
 
         <h3 className="text-sm font-semibold mb-2">{uiText("Set balance")}</h3>

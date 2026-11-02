@@ -9,11 +9,14 @@ import { createQuickTransaction, undoQuickTransaction } from "@/actions/transact
 import type { QuickEntryOptions } from "@/lib/money/manualEntry";
 import { newQuickEntryId } from "@/lib/money/quickEntryId";
 import PurchaseSavingsFields from './PurchaseSavingsFields';
+import TransferForm from './TransferForm';
 import { localDay } from "@/lib/calendar/localDay";
 import { serverMessageIn } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageContext";
 
 const today = () => localDay();
+
+type Kind = "expense" | "income" | "transfer";
 
 export default function QuickEntry({ accounts, categories, defaultAccountId }: QuickEntryOptions) {
   const uiText = useText();
@@ -25,7 +28,9 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
   const router = useRouter();
   const { m, language } = useLanguage();
   const w = m.quickEntry;
-  const [type, setType] = useState<"expense" | "income">("expense");
+  const [type, setType] = useState<Kind>("expense");
+  // Starts each transfer afresh, from the account it was opened on.
+  const [opened, setOpened] = useState(0);
   const [accountId, setAccountId] = useState(defaultAccountId ?? accounts[0]?.id ?? "");
   const [date, setDate] = useState("");
   const [pending, setPending] = useState(false);
@@ -46,7 +51,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
   // request on `window` when the tap started the page, because then it arrives
   // before this component exists. `?quick=` does the same from a plain link.
   useEffect(() => {
-    const kindOf = (value: unknown) => (value === "income" ? "income" : value === "expense" ? "expense" : null);
+    const kindOf = (value: unknown): Kind | null => (value === "income" || value === "expense" || value === "transfer" ? value : null);
     const pending = window as typeof window & { __moneyOsQuickEntry?: string };
     const fromUrl = new URLSearchParams(window.location.search).get("quick");
     const first = kindOf(pending.__moneyOsQuickEntry) ?? kindOf(fromUrl);
@@ -70,13 +75,15 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function open(kind: "expense" | "income" = "expense", account?: string) {
+  function open(kind: Kind = "expense", account?: string) {
     const chosen = account && accounts.some(a => a.id === account) ? account : null;
     if (dialog.current?.open) {
       setType(kind);
       if (chosen) setAccountId(chosen);
+      setOpened(n => n + 1);
       return;
     }
+    setOpened(n => n + 1);
     form.current?.reset();
     setType(kind);
     setDate(today());
@@ -144,6 +151,17 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
     }
   }
 
+  const canTransfer = accounts.length > 1;
+  const kinds = (
+    <div className={`grid ${canTransfer ? "grid-cols-3" : "grid-cols-2"} gap-2`} role="group" aria-label={w.kind}>
+      {(["expense", "income", ...(canTransfer ? ["transfer"] as const : [])] as const).map(value => (
+        <button key={value} type="button" aria-pressed={type === value} className="quick-kind" onClick={() => setType(value)}>
+          {value === "expense" ? w.expense : value === "income" ? w.income : uiText("Transfer")}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <>
       <button translate="no" lang={language} dir={directionOf(language)} type="button" className="icon-btn quick-entry-trigger" aria-label={w.open} title={w.openTitle} onClick={() => open()}>
@@ -172,16 +190,15 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
               <button type="button" className="btn" disabled={pending} onClick={close}>{w.done}</button>
             </div>
           </div>
+        ) : type === "transfer" ? (
+          <div className="space-y-4">
+            {kinds}
+            <TransferForm key={opened} bare accounts={accounts} today={today()} initialFromId={accountId} />
+          </div>
         ) : (
           <form ref={form} onSubmit={submit} className="space-y-4">
             <fieldset disabled={pending} className="space-y-4">
-              <div className="grid grid-cols-2 gap-2" role="group" aria-label={w.kind}>
-                {(["expense", "income"] as const).map(value => (
-                  <button key={value} type="button" aria-pressed={type === value} className="quick-kind" onClick={() => setType(value)}>
-                    {value === "expense" ? w.expense : w.income}
-                  </button>
-                ))}
-              </div>
+              {kinds}
               <input type="hidden" name="type" value={type} />
               <label className="block text-sm" htmlFor="quick-amount">{w.amount(currency ?? null)}
                 <input id="quick-amount" name="amount" inputMode="decimal" placeholder="0,00" className="input mt-1" required autoFocus autoComplete="off" maxLength={15} />

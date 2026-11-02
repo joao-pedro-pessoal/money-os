@@ -470,6 +470,15 @@ table.data-table td {
 .quick-entry .input { font-size: 16px; min-height: 44px; min-width: 0; }
 .quick-entry .btn, .quick-entry summary { min-height: 44px; }
 .quick-entry button:disabled { opacity: 0.6; cursor: wait; }
+/* A whole card that opens the page its figure comes from; anything else in it sits above with .above-card-link. */
+.card-link { position: relative; transition: border-color 120ms; }
+.card-link:hover { border-color: var(--border-strong); }
+.card-link-target::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.card-link-target:focus-visible { outline: none; }
+.card-link-target:focus-visible::after { outline: 2px solid var(--accent); outline-offset: 2px; }
+.above-card-link { position: relative; z-index: 1; }
+.above-card-link:hover, .above-card-link:focus-within { z-index: 2; }
+.quick-entry .btn, .quick-kind { text-align: center; justify-content: center; }
 .quick-kind { min-height: 44px; border: 1px solid var(--border); border-radius: 8px; }
 .quick-kind[aria-pressed="true"] { background: var(--accent); color: var(--accent-contrast); }
 
@@ -821,7 +830,7 @@ main .grid > * { min-width: 0; }
   .mobile-records td::before { content: attr(data-label); display: block; margin-bottom: 4px; color: var(--muted); font-size: 11px; font-weight: 400; }
   .mobile-records td.record-description { overflow: visible; white-space: normal; }
   .mobile-records table.data-table td.record-actions { display: flex; grid-column: 1 / -1; gap: 8px; align-items: center; justify-content: flex-end; border-top: 1px solid var(--border); padding-top: 10px; }
-  .mobile-records td.record-actions::before { display: none; }
+  .mobile-records td.record-actions::before, table.responsive-table[data-phone-records] td.record-actions::before { display: none; }
   .mobile-records .record-actions a, .mobile-records .record-actions button { display: inline-flex; min-height: 44px; align-items: center; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; margin: 0; }
   .account-records table.responsive-table[data-phone-records] tbody { gap: 0; }
   .account-records table.responsive-table[data-phone-records] td.record-name { grid-column: 1; grid-row: 1; font-size: 13px; font-weight: 600; }
@@ -1025,7 +1034,7 @@ main .grid > * { min-width: 0; }
   [data-mobile-ui="simple"] .simple-overview:not([data-show-details="true"]) .overview-secondary { display: none; }
   [data-mobile-ui="simple"] .simple-details-button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; margin-top: 10px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); text-align: left; font-size: 13px; }
   [data-mobile-ui="simple"] .simple-dashboard-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  [data-mobile-ui="simple"] .simple-dashboard-actions a { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 56px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 14px; }
+  [data-mobile-ui="simple"] .simple-dashboard-actions :is(a, .simple-dashboard-action) { display: flex; width: 100%; text-align: left; justify-content: space-between; align-items: center; gap: 8px; min-height: 56px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 14px; }
   [data-mobile-ui="simple"] .simple-dashboard-actions a > span { color: var(--accent); }
   [data-mobile-ui="simple"] .mobile-records:not(.account-records) td.record-description { grid-row: 1; grid-column: 1; font-weight: 600; }
   [data-mobile-ui="simple"] .mobile-records:not(.account-records) td[data-label="Amount"] { grid-row: 1; grid-column: 2; text-align: right; font-size: 17px; }

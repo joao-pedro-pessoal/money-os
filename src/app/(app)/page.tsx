@@ -24,6 +24,7 @@ import { listPurposes } from "@/actions/purpose";
 import { listGoalsByPriority } from "@/actions/distribute";
 import { getTotalNetWorthOverTime } from "@/actions/analytics";
 import Link from "next/link";
+import TryQuickEntry from "@/components/TryQuickEntry";
 import { explainFree, splitPortfolioCash } from "@/lib/accounting/unallocated";
 import { getFavouriteCurrencies, getDashboardCurrency } from "@/actions/settings";
 import { resolveDisplayCurrency } from "@/lib/fx/favourites";
@@ -309,6 +310,7 @@ export default async function DashboardPage({
         <StatCard
           label={uiText("Net Worth")}
           simpleLabel="Net worth"
+          href="/accounts"
           value={inDisplay(nw.total)}
           floating={inDisplay(nw.floating)}
           pnl={{
@@ -338,6 +340,7 @@ export default async function DashboardPage({
         <StatCard
           label={uiText("Investments")}
           simpleLabel="Investments"
+          href="/investments"
           value={inDisplay(nw.portfolio)}
           floating={inDisplay(nw.floating)}
           pnl={{
@@ -356,6 +359,7 @@ export default async function DashboardPage({
         <StatCard
           label={uiText("Free Cash")}
           simpleLabel="Available to spend"
+          href="/accounts"
           value={freeToSpend}
           currency={base}
           explain={[
@@ -383,6 +387,7 @@ export default async function DashboardPage({
         <StatCard
           label={uiText("Allocated Cash")}
           simpleLabel="Reserved money"
+          href="/buckets"
           value={inDisplay(totalAllocated) + keptForBudgets}
           currency={base}
           explain={[
@@ -394,6 +399,7 @@ export default async function DashboardPage({
         <StatCard
           label={uiText("Net Cash Flow (month)")}
           simpleLabel="Monthly cash flow"
+          href="/transactions"
           value={inDisplay(income - expenses)}
           currency={base}
           explain={[
@@ -409,6 +415,8 @@ export default async function DashboardPage({
         <Link href="/transactions">{uiText("View transactions ")}<span aria-hidden="true">→</span></Link>
         <Link href="/budgets">{uiText("Budgets ")}<span aria-hidden="true">→</span></Link>
         <Link href="/savings">{uiText("Savings ")}<span aria-hidden="true">→</span></Link>
+        <Link href="/expected">{uiText("Coming in")} <span aria-hidden="true">→</span></Link>
+        <TryQuickEntry kind="transfer" label="Send money" className="simple-dashboard-action" />
       </nav>
 
       <MonthAheadCard ahead={aheadShown} currency={base} />
@@ -466,7 +474,7 @@ export default async function DashboardPage({
       {/* This month, split into what's already decided and what isn't. A single
           expenses figure can't answer "how much of this month is settled?". */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Section title="This month" defaultOpen essential>
+        <Section title="This month" defaultOpen essential summary={<Link href="/transactions" className="text-xs text-[var(--accent)]">{uiText("Open →")}</Link>}>
           <FlowBars
             shape={{
               flows: {
@@ -506,7 +514,8 @@ export default async function DashboardPage({
           defaultOpen
           summary={
             <>
-              {topBuckets.length} · <Money value={inDisplay(bucketTotalValue)} currency={base} />
+              {topBuckets.length} · <Money value={inDisplay(bucketTotalValue)} currency={base} />{" · "}
+              <Link href="/buckets" className="text-[var(--accent)]">{uiText("Open →")}</Link>
             </>
           }
         >
@@ -568,6 +577,8 @@ export default async function DashboardPage({
                   <Money value={inDisplay(totalFloating)} currency={base} />{uiText(" variable")}</span>
               </>
             )}
+            {" · "}
+            <Link href="/accounts" className="text-[var(--accent)]">{uiText("Open →")}</Link>
           </>
         }
       >
@@ -640,6 +651,7 @@ async function StatCard({
   currency = "EUR",
   note,
   explain,
+  href,
 }: {
   label: string;
   simpleLabel?: string;
@@ -650,6 +662,8 @@ async function StatCard({
   note?: React.ReactNode;
   /** What this figure counts, shown on hover or keyboard focus. */
   explain?: string | string[];
+  /** The page this figure comes from: the whole card opens it, and "what is this?" stays its own tap. */
+  href?: string;
 }) {
   const uiText = await textForRequest();
   const showFloating = floating !== undefined && floating > 0;
@@ -662,7 +676,8 @@ async function StatCard({
   const up = showPnl && pnl.value >= 0;
 
   const card = (
-    <div className="card p-4 h-full">
+    <div className={`card p-4 h-full ${href ? "card-link" : ""}`}>
+      {href && <Link href={href} className="card-link-target" aria-label={label} />}
       <div className="text-xs text-[var(--muted)] mb-1"><span className={simpleLabel ? "complex-visible" : undefined}>{uiText(label ?? "")}</span>{simpleLabel && <span className="simple-only">{uiText(simpleLabel ?? "")}</span>}</div>
       <div className="text-xl font-semibold">
         <Money value={value} currency={currency} />
@@ -693,13 +708,20 @@ async function StatCard({
           </span>{" "}{uiText("not guaranteed")}</div>
       )}
       {note && <div className="text-[10px] text-[var(--muted)] mt-1">{note}</div>}
-      {explain && (
+      {explain && !href && (
         <div className="text-[10px] mt-1" style={{ color: "var(--accent)" }}>{uiText("what is this?")}</div>
+      )}
+      {explain && href && (
+        <div className="above-card-link mt-1">
+          <Explain title={label} body={explain}>
+            <div className="text-[10px]" style={{ color: "var(--accent)" }}>{uiText("what is this?")}</div>
+          </Explain>
+        </div>
       )}
     </div>
   );
 
-  if (!explain) return card;
+  if (!explain || href) return card;
   return (
     <Explain title={label} body={explain}>
       {card}

@@ -44,6 +44,7 @@ export default function TransactionList({
   approximate,
   unconverted,
   deleteAction,
+  initialDirection,
 }: {
   rows: TransactionRow[];
   /** What the converted amounts are in. */
@@ -51,10 +52,12 @@ export default function TransactionList({
   approximate: boolean;
   unconverted: { amount: number; currency: string }[];
   deleteAction: (formData: FormData) => Promise<void>;
+  /** Arriving from a figure that is only one direction, such as the dashboard's income. */
+  initialDirection?: "in" | "out" | null;
 }) {
   const uiText = useText();
   const { language } = useLanguage();
-  const [filters, setFilters] = useState<TransactionFilters>(NO_TRANSACTION_FILTERS);
+  const [filters, setFilters] = useState<TransactionFilters>({ ...NO_TRANSACTION_FILTERS, direction: initialDirection ?? null });
 
   const filtered = useMemo(() => applyTransactionFilters(rows, filters), [rows, filters]);
   const totals = useMemo(() => transactionTotals(filtered), [filtered]);

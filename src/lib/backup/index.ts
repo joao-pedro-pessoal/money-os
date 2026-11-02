@@ -42,6 +42,8 @@ export const BACKUP_TABLES = [
   "subscriptionCharges",
   "transfers",
   "interestPayments",
+  // After expected money and transactions: it references both.
+  "expectedArrivals",
   "accountSnapshots",
   "playlists",
   "holdings",
