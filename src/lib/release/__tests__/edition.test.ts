@@ -9,7 +9,9 @@ describe("first release edition", () => {
   it.each(["Money","cash","false"])("refuses an invalid build edition (%s)",value => {
     expect(() => productEdition(value)).toThrow("APP_EDITION");
   });
-  it.each(["/investments","/investments/asset/AAPL","/investments/history?year=2026","/positions","/connections","/settings/names","/statistics","/library","/api/sync"])("blocks deferred destinations in the money edition (%s)",path => {
+  // Its shared secret decides; the owner's prices are refreshed through it (route.ts).
+  it("leaves the scheduled sync reachable in the money edition", () => { expect(availablePath("/api/sync", "money")).toBe(true); });
+  it.each(["/investments","/investments/asset/AAPL","/investments/history?year=2026","/positions","/connections","/settings/names","/statistics","/library"])("blocks deferred destinations in the money edition (%s)",path => {
     expect(availablePath(path,"money")).toBe(false);
     expect(availablePath(path,"full")).toBe(true);
   });

@@ -1,7 +1,7 @@
 /** Operational tools only. Never imports the app client or loads dotenv. */
 import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { appendFile, link, open, readFile, unlink, writeFile, type FileHandle } from "node:fs/promises";
+import { appendFile, link, open, readFile, rename, unlink, writeFile, type FileHandle } from "node:fs/promises";
 import { join, posix } from "node:path";
 import { spawn } from "node:child_process";
 import { Writable } from "node:stream";
@@ -43,6 +43,22 @@ function sink(onChunk: (chunk: Buffer)=>void = ()=>{}) {
   return new Writable({write(chunk:Buffer,_encoding,done){try{onChunk(chunk);done();}catch(error){done(error as Error);}}});
 }
 async function removeOwnPartial(path: string) { await unlink(path).catch(()=>{}); }
+
+/**
+ * Puts the finished file in place, never over an existing one.
+ *
+ * A hard link does both at once, but exFAT, FAT32 and some network drives have
+ * none, and which error they answer with varies. So any refusal but "it exists"
+ * falls back: claim the name exclusively, then move the finished file onto the
+ * claim. A failure in between leaves no partial backup under the final name.
+ */
+async function publishNew(temporary:string,path:string) {
+  try {await link(temporary,path);return;}
+  catch(error) {if((error as NodeJS.ErrnoException).code==="EEXIST")throw error;}
+  await (await open(path,"wx",0o600)).close();
+  try {await rename(temporary,path);}
+  catch(error) {await removeOwnPartial(path);throw error;}
+}
 
 export function postgresCommand(tool: "pg_dump"|"pg_restore", args: string[], environment: Environment, variables: Environment = {}) {
   const childEnv={...environment};
@@ -119,7 +135,7 @@ export async function createServiceBackup(path:string,environment:Environment=pr
     const file=await open(temporary,"r");const hash=createHash("sha256");
     try {await pipeline(file.createReadStream({autoClose:false}),sink(chunk=>{hash.update(chunk);}));}finally{await file.close();}
     const checksum=hash.digest("hex");
-    await link(temporary,path);published=true;
+    await publishNew(temporary,path);published=true;
     await writeFile(path+".sha256",checksum+"\n",{flag:"wx",mode:0o600});checksumPublished=true;
     await removeOwnPartial(temporary);
     return await verifyServiceBackup(path,environment);

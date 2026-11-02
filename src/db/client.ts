@@ -1,8 +1,10 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool, type PoolClient, type QueryConfig } from "pg";
 import * as schema from "./schema";
 import { readSession, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { actingAs } from "./acting";
+
+export { asUser } from "./acting";
 
 /**
  * The database, always as the person using it.
@@ -26,17 +28,10 @@ import { readSession, SESSION_COOKIE_NAME } from "@/lib/auth";
  *    another request's by the next query.
  */
 
-const acting = new AsyncLocalStorage<{ userId: string }>();
-
-/** Runs `work` as this person, whatever the request's cookie says — for sign-up, cron and scripts. */
-export function asUser<T>(userId: string, work: () => Promise<T>): Promise<T> {
-  return acting.run({ userId }, work);
-}
-
 /** Who the next query is for: `asUser`, else the signed-in session, else nobody (""). */
 async function actingUserId(): Promise<string> {
-  const explicit = acting.getStore();
-  if (explicit) return explicit.userId;
+  const explicit = actingAs();
+  if (explicit !== undefined) return explicit;
   try {
     // Imported here, not at the top: scripts import this module outside Next.
     const { cookies } = await import("next/headers");

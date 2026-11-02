@@ -1,16 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCipheriv, createHash, randomBytes, scryptSync } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { EventEmitter } from "node:events";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { PassThrough } from "node:stream";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { connectionSettings, createServiceBackup, postgresCommand, restoreServiceBackup, verifyServiceBackup } from "../../../scripts/backup/service";
-const guards=vi.hoisted(()=>({spawn:vi.fn(()=>{throw new Error("unexpected subprocess");}),client:vi.fn(()=>{throw new Error("unexpected database");})}));
+const guards=vi.hoisted(()=>({spawn:vi.fn(():unknown=>{throw new Error("unexpected subprocess");}),client:vi.fn(()=>{throw new Error("unexpected database");}),linkError:null as string|null}));
+vi.mock("node:fs/promises",async original=>{
+  const real=await original<typeof import("node:fs/promises")>();
+  return {...real,link:async(from:string,to:string)=>{
+    if(guards.linkError)throw Object.assign(new Error("no hard links here"),{code:guards.linkError});
+    return real.link(from,to);
+  }};
+});
 vi.mock("node:child_process",()=>({spawn:guards.spawn}));
 vi.mock("pg",()=>({Client:guards.client}));
 
 const secret="Synthetic offline backup passphrase 2026";
 let directory:string,file:string;
-beforeEach(async()=>{vi.clearAllMocks();directory=await mkdtemp(join(tmpdir(),"moneyos-backup-test-"));file=join(directory,"synthetic.enc");});
+beforeEach(async()=>{vi.clearAllMocks();guards.linkError=null;directory=await mkdtemp(join(tmpdir(),"moneyos-backup-test-"));file=join(directory,"synthetic.enc");});
 afterEach(async()=>{expect(directory.startsWith(join(tmpdir(),"moneyos-backup-test-"))).toBe(true);await rm(directory,{recursive:true,force:true});});
 async function fixture(payload=Buffer.from("PGDMPsynthetic archive bytes")) {
   const salt=randomBytes(16),iv=randomBytes(12),header=Buffer.concat([Buffer.from("MONEYOS-BACKUP-1\n"),salt,iv]);
@@ -19,6 +28,32 @@ async function fixture(payload=Buffer.from("PGDMPsynthetic archive bytes")) {
   await writeFile(file,bytes);await checksum();
 }
 async function checksum(){const bytes=await readFile(file);await writeFile(file+".sha256",createHash("sha256").update(bytes).digest("hex")+"\n");}
+
+describe("putting the finished backup in place",()=>{
+  const environment={DATABASE_ADMIN_URL:"postgresql://admin:synthetic@127.0.0.1:54339/moneyos_c7",BACKUP_PASSPHRASE:secret};
+  /** A pg_dump that writes a small archive and exits cleanly. */
+  function fakeDump() {
+    guards.spawn.mockImplementation(()=>{
+      const child=Object.assign(new EventEmitter(),{stdin:new PassThrough(),stdout:new PassThrough(),stderr:new PassThrough(),kill(){}});
+      setImmediate(()=>{child.stdout.end("PGDMPsynthetic archive bytes");setImmediate(()=>child.emit("close",0));});
+      return child;
+    });
+  }
+  // EISDIR is what Windows answers on exFAT and FAT32; the others are other systems' words for the same.
+  it.each([null,"EISDIR","EPERM","ENOTSUP","ENOSYS"])("creates a verifiable backup and leaves no partial (link: %s)",async code=>{
+    guards.linkError=code;fakeDump();
+    const result=await createServiceBackup(file,environment);
+    expect(result.archiveBytes).toBe(Buffer.byteLength("PGDMPsynthetic archive bytes"));
+    await expect(verifyServiceBackup(file,{BACKUP_PASSPHRASE:secret})).resolves.toMatchObject({sha256:result.sha256});
+    expect((await readdir(directory)).sort()).toEqual(["synthetic.enc","synthetic.enc.sha256"]);
+  });
+  it.each([null,"EISDIR"])("never replaces an existing file (link: %s)",async code=>{
+    guards.linkError=code;fakeDump();await writeFile(file,"an earlier backup");
+    await expect(createServiceBackup(file,environment)).rejects.toThrow("new filename");
+    expect(await readFile(file,"utf8")).toBe("an earlier backup");
+    expect(await readdir(directory)).toEqual(["synthetic.enc"]);
+  });
+});
 
 describe("C7 service backup boundaries and integrity",()=>{
   it.each([undefined,"not a url","https://example.test/db","postgresql://admin@127.0.0.1/db?password=secret"])("refuses malformed connection configuration without echoing it",value=>{

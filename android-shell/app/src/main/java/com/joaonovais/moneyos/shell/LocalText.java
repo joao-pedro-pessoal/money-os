@@ -26,8 +26,8 @@ final class LocalText {
     }
 
     private static String supported(String value) {
-        if (value.startsWith("zh")) return "zh-CN";
-        return ("|en|pt|es|fr|de|it|nl|pl|ru|tr|ar|hi|bn|ja|").contains("|" + value + "|") ? value : "en";
+        String language = value.startsWith("zh") ? "zh-CN" : value;
+        return BuildConfig.LANGUAGES.contains("|" + language + "|") ? language : "en";
     }
 
     static synchronized String text(Context context, String source) {

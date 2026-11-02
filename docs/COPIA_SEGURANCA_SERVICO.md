@@ -52,7 +52,8 @@ npm run backup:service -- verify --file 'D:\DESTINO_PRIVADO\moneyos-DATA.moneyos
 ```
 
 O caminho é explícito e tem de ser novo; o script nunca substitui um ficheiro
-existente. A origem remota é recusada por omissão, antes de abrir uma ligação;
+existente. Funciona também em discos sem ligações físicas, como exFAT, FAT32 e algumas
+unidades de rede. A origem remota é recusada por omissão, antes de abrir uma ligação;
 `--allow-remote-source` só é aceite em `create`. Não há cópias automáticas nem
 upload configurado. As credenciais vão no ambiente do cliente PostgreSQL,
 nunca nos seus argumentos. O script não imprime URLs, passwords ou stderr do

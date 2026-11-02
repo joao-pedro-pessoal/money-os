@@ -41,8 +41,8 @@ android {
         minSdk = 29
         targetSdk = 36
         // Google Play refuses an upload whose versionCode is not higher than the last.
-        versionCode = 11
-        versionName = '0.9.0'
+        versionCode = 12
+        versionName = '0.9.1'
     }
 
     buildFeatures {
@@ -55,10 +55,15 @@ android {
             dimension = 'where'
             // Empty: the address is typed in on the phone.
             buildConfigField 'String', 'SITE_URL', '""'
+            buildConfigField 'String', 'LANGUAGES', '"|en|pt|es|fr|de|it|nl|pl|ru|tr|ar|hi|bn|ja|zh-CN|"'
         }
         store {
             dimension = 'where'
             buildConfigField 'String', 'SITE_URL', "\"${siteUrl}\""
+            // What the published site offers (lib/i18n/editionLanguages.ts). The others are
+            // unreviewed machine translation, and would put a widget in one language beside a site in another.
+            buildConfigField 'String', 'LANGUAGES', '"|en|pt|"'
+            resourceConfigurations += ['en', 'pt']
         }
     }
 

@@ -26,19 +26,27 @@ import { endedBy, newSessionValue, readSession, sessionCookieOptions, SESSION_CO
  * press; the device that pressed it is given a new session at once.
  */
 const CACHE_MS = 30_000;
-const cached = new Map<string, { value: Date | null; readAt: number }>();
+// The promise, not the answer: the parts of a page ask at the same moment, and
+// holding only the answer sent each of them to the database.
+const cached = new Map<string, { value: Promise<Date | null>; readAt: number }>();
 
-export async function sessionsNotBefore(userId: string): Promise<Date | null> {
-  const hit = cached.get(userId);
-  if (hit && Date.now() - hit.readAt < CACHE_MS) return hit.value;
+async function readSessionsNotBefore(userId: string): Promise<Date | null> {
   const [row] = await db
     .select({ notBefore: users.sessionsNotBefore })
     .from(users)
     .where(eq(users.id, userId));
   // An account that no longer exists ends every session it had.
-  const value = row ? row.notBefore : new Date(8.64e15);
+  return row ? row.notBefore : new Date(8.64e15);
+}
+
+export async function sessionsNotBefore(userId: string): Promise<Date | null> {
+  const hit = cached.get(userId);
+  if (hit && Date.now() - hit.readAt < CACHE_MS) return hit.value;
+  const value = readSessionsNotBefore(userId);
   if (cached.size > 1000) cached.clear();
   cached.set(userId, { value, readAt: Date.now() });
+  // A failed read says nothing about the account: the next request asks again.
+  value.catch(() => { if (cached.get(userId)?.value === value) cached.delete(userId); });
   return value;
 }
 
@@ -66,7 +74,7 @@ export async function logOutOtherDevices(): Promise<void> {
   if (!userId) throw new Error("Sign in again.");
   const now = new Date();
   await db.update(users).set({ sessionsNotBefore: now }).where(eq(users.id, userId));
-  cached.set(userId, { value: now, readAt: Date.now() });
+  cached.set(userId, { value: Promise.resolve(now), readAt: Date.now() });
   (await cookies()).set(SESSION_COOKIE_NAME, await newSessionValue(userId, now), sessionCookieOptions());
   revalidatePath("/settings");
 }

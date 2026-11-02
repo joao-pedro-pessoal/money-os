@@ -68,7 +68,10 @@ mesma base de dados.
   mesma. A Hyperliquid não guarda segredo e sincroniza em qualquer lado.
 - **A Interactive Brokers**: o conector fala com um gateway em
   `https://localhost:5000`, que é o teu PC. Continua a funcionar na cópia de casa.
-- **A sincronização automática** (`/api/sync`): na Vercel não corre. Em casa,
+- **A sincronização automática** (`/api/sync`): na Vercel corre uma vez por dia,
+  se `CRON_SECRET` estiver definido lá: câmbios de todas as contas e preços da
+  conta do dono, com o PC desligado. As corretoras com chave não, porque a chave
+  fica em casa. Em casa,
   com `SYNC_SECRET` no `.env`, o `SITE_PARA_TELEMOVEL.cmd` sincroniza tudo a cada
   15 minutos enquanto a janela dele estiver aberta — incluindo as corretoras com
   chave, que só podem sincronizar aí — e o resultado aparece também no site

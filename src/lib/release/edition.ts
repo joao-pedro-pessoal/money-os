@@ -10,7 +10,7 @@ export function productEdition(value: string | undefined): ProductEdition {
 // next.config.ts derives this public value from APP_EDITION at build time.
 export const INVESTMENTS_ENABLED = process.env.NEXT_PUBLIC_PRODUCT_EDITION !== "money";
 
-const LATER_PATHS = ["/investments", "/positions", "/connections", "/settings/names", "/statistics", "/library", "/api/sync"];
+const LATER_PATHS = ["/investments", "/positions", "/connections", "/settings/names", "/statistics", "/library"];
 
 export function availablePath(path: string, edition: ProductEdition = INVESTMENTS_ENABLED ? "full" : "money"): boolean {
   const pathname = path.split(/[?#]/, 1)[0];

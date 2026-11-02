@@ -67,7 +67,8 @@ inscritos continuamente durante 14 dias, seguido do pedido de acesso e revisão.
 Preparar o site e a Play em paralelo não elimina estes passos. Ver
 [requisitos oficiais](https://support.google.com/googleplay/android-developer/answer/14151465?hl=en).
 
-A versão Android preparada é **0.9.0, código 11**. O flavor `store` mantém os
+A versão Android preparada é **0.9.1, código 12**. O flavor `store` fica só com
+inglês e português, como o site; o `home` conserva as 15 línguas. O flavor `store` mantém os
 widgets Dashboard, Net worth, Where money is e Cash flow e desativa os cinco de
 investimentos/trades/dividendos no manifesto final. O flavor `home` mantém os
 widgets completos. Não foi alterado o identificador da aplicação.

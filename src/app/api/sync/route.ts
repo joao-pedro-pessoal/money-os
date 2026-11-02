@@ -1,4 +1,6 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { investmentsFor } from "@/actions/releaseEdition";
 import { asUser, db } from "@/db/client";
 import { users } from "@/db/schema";
 import { syncAllConnections } from "@/actions/connections";
@@ -12,25 +14,40 @@ export const dynamic = "force-dynamic";
  * Schedulable sync endpoint.
  *
  * Protected by a shared secret rather than the session cookie, so a scheduler
- * (Windows Task Scheduler, cron, a Vercel cron job) can call it without a
- * browser. If SYNC_SECRET isn't set the route refuses to run at all — it must
- * never be an unauthenticated way to trigger outbound requests.
+ * can call it without a browser: POST from the home copy's script (SYNC_SECRET),
+ * GET from the host's cron, which sends `Authorization: Bearer $CRON_SECRET`. With
+ * neither set the route refuses to run at all — it must never be an
+ * unauthenticated way to trigger outbound requests.
+ *
+ * GET takes the bearer only, so a link or a secret left in an address cannot
+ * start it.
  */
 export async function POST(request: Request) {
-  const secret = process.env.SYNC_SECRET;
-  if (!secret) {
+  const url = new URL(request.url);
+  return sync([request.headers.get("x-sync-secret"), bearerOf(request), url.searchParams.get("secret")]);
+}
+
+export async function GET(request: Request) {
+  return sync([bearerOf(request)]);
+}
+
+function bearerOf(request: Request): string | null {
+  const header = request.headers.get("authorization");
+  return header?.startsWith("Bearer ") ? header.slice(7) : null;
+}
+
+/** Compared as digests, so neither the length nor the first wrong character shows in the timing. */
+const sameSecret = (a: string, b: string) => timingSafeEqual(createHash("sha256").update(a).digest(), createHash("sha256").update(b).digest());
+
+async function sync(provided: (string | null)[]) {
+  const secrets = [process.env.SYNC_SECRET, process.env.CRON_SECRET].filter((s): s is string => Boolean(s));
+  if (secrets.length === 0) {
     return NextResponse.json(
       { error: "SYNC_SECRET is not configured; scheduled sync is disabled." },
       { status: 503 }
     );
   }
-
-  const provided =
-    request.headers.get("x-sync-secret") ??
-    new URL(request.url).searchParams.get("secret") ??
-    "";
-
-  if (provided !== secret) {
+  if (!provided.some((given) => given !== null && secrets.some((secret) => sameSecret(given, secret)))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -46,6 +63,9 @@ export async function POST(request: Request) {
   for (const { id } of accounts) {
     await asUser(id, async () => {
       const fx = await refreshRates();
+      if (fx.ok) totals.fxUpdated++;
+      // Rates are everyone's; what follows is investments, which this edition may not give this person.
+      if (!investmentsFor(id)) return;
 
       /**
        * Prices, which this route did not refresh at all.
@@ -61,7 +81,6 @@ export async function POST(request: Request) {
        */
       const prices = await refreshQuotedPrices({ olderThanMinutes: REPRICE_AFTER_MINUTES });
       results.push(...(await syncAllConnections("scheduled")));
-      if (fx.ok) totals.fxUpdated++;
       totals.pricesAttempted += prices.attempted;
       totals.pricesUpdated += prices.updated;
     });
