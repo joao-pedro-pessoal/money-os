@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 import { requireInvestments } from "./releaseEdition";
 
 
@@ -685,6 +686,7 @@ export async function autoPriceHoldings() {
  * Per account, because that is the level at which a declared value exists.
  */
 export async function getPricingCrossCheck() {
+  await requireServerSession();
   const [holdingRows, accountRows] = await Promise.all([
     db.select().from(holdings),
     db.select().from(accounts),
@@ -891,6 +893,7 @@ export async function autoRefreshPricesAction(): Promise<void> {
 
 /** When any quoted price was last fetched, for `AutoSync` to judge staleness. */
 export async function lastQuoteRefreshAt(): Promise<string | null> {
+  await requireServerSession();
   const rows = await db.select().from(holdings);
   const dates = rows
     .filter((h) => h.quoteSymbol !== null && h.lastPriceUpdate !== null)

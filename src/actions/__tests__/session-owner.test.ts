@@ -7,14 +7,20 @@ vi.mock("@/lib/auth",()=>({SESSION_COOKIE_NAME:"test",readSession:async()=>state
   endedBy:(at:Date|null,issued:number)=>at!==null&&at.getTime()>issued,newSessionValue:vi.fn(),sessionCookieOptions:vi.fn()}));
 beforeEach(()=>{vi.resetModules();state.valid=true;state.id="other";state.reads=0;state.fail=false;state.rows=[{notBefore:null}];});
 describe("reading when an account's sessions were ended",()=>{
+  it("does not reuse a settled revocation result after the account changes",async()=>{
+    const {sessionsNotBefore}=await import("../sessionRevocation");
+    expect(await sessionsNotBefore("owner")).toBeNull();
+    state.rows=[{notBefore:new Date(200)}];
+    expect(await sessionsNotBefore("owner")).toEqual(new Date(200));
+  });
   it("parts of a page asking at once share one read",async()=>{
-    state.id="owner";const {sessionsNotBefore}=await import("../session");
+    state.id="owner";const {sessionsNotBefore}=await import("../sessionRevocation");
     await Promise.all([sessionsNotBefore("owner"),sessionsNotBefore("owner"),sessionsNotBefore("owner")]);
     expect(state.reads).toBe(1);
-    await sessionsNotBefore("owner");expect(state.reads).toBe(1);
+    await sessionsNotBefore("owner");expect(state.reads).toBe(2);
   });
   it("a failed read is not remembered",async()=>{
-    state.fail=true;const {sessionsNotBefore}=await import("../session");
+    state.fail=true;const {sessionsNotBefore}=await import("../sessionRevocation");
     await expect(sessionsNotBefore("owner")).rejects.toThrow("database down");
     state.fail=false;state.rows=[{notBefore:new Date(5)}];
     await expect(sessionsNotBefore("owner")).resolves.toEqual(new Date(5));

@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool, type PoolClient, type QueryConfig } from "pg";
 import * as schema from "./schema";
-import { readSession, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { endedBy, readSession, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { actingAs } from "./acting";
 
 export { asUser } from "./acting";
@@ -29,18 +29,29 @@ export { asUser } from "./acting";
  */
 
 /** Who the next query is for: `asUser`, else the signed-in session, else nobody (""). */
-async function actingUserId(): Promise<string> {
+async function actingUserId(client: PoolClient): Promise<string> {
   const explicit = actingAs();
   if (explicit !== undefined) return explicit;
+  let cookie: string | null;
   try {
     // Imported here, not at the top: scripts import this module outside Next.
     const { cookies } = await import("next/headers");
-    const session = await readSession((await cookies()).get(SESSION_COOKIE_NAME)?.value ?? null);
-    return session.valid ? session.userId : "";
+    cookie = (await cookies()).get(SESSION_COOKIE_NAME)?.value ?? null;
   } catch {
     // No request here (a script, a build step): nobody.
     return "";
   }
+  const session = await readSession(cookie);
+  if (!session.valid) return "";
+  // Use this raw connection, not db/currentUserId: those would acquire another
+  // connection and recurse. users is intentionally accessible before sign-in.
+  // Never retain the result across connections or reuse after account recovery.
+  const { rows } = await client.query<{ notBefore: Date | null }>(
+    'select sessions_not_before as "notBefore" from users where id = $1',
+    [session.userId]
+  );
+  const user = rows[0];
+  return user && !endedBy(user.notBefore, session.issuedAt) ? session.userId : "";
 }
 
 const connectionString = process.env.DATABASE_URL;
@@ -95,7 +106,7 @@ class ActingPool {
         throw e;
       });
       await roleChecked;
-      const userId = await actingUserId();
+      const userId = await actingUserId(client);
       if (setFor.get(client) !== userId) {
         await client.query("select set_config('app.user_id', $1, false)", [userId]);
         setFor.set(client, userId);

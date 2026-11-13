@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { requireInvestments } from "./releaseEdition";
 
@@ -127,6 +128,7 @@ const NEEDS_SECRET = new Set(["bybit", "trading212", "kraken", "binance", "okx",
  * crashing on submit after the user has typed their credentials in.
  */
 export async function canStoreSecrets(): Promise<boolean> {
+  await requireServerSession();
   return holdsMasterKey(process.env.ENCRYPTION_KEY);
 }
 
@@ -141,6 +143,7 @@ function masterKey(): string {
 }
 
 export async function listConnections() {
+  await requireServerSession();
   const [conns, allAccounts] = await Promise.all([
     db.select().from(accountConnections),
     db.select().from(accounts),
@@ -149,13 +152,16 @@ export async function listConnections() {
 
   return conns.map((c) => {
     // The encrypted secret must never reach a page prop; only a masked hint.
-    const { encryptedSecret, encryptedPassphrase, ...safe } = c;
+    const { encryptedSecret, encryptedPassphrase, encryptedSession, externalId, ...safe } = c;
+    // The bank session is also a credential, even while encrypted. The API key
+    // stored as externalId must not accompany its masked display value.
+    void encryptedSession;
     return {
       ...safe,
       hasSecret: encryptedSecret !== null,
       /** Synced wherever the key is, never from this copy: see `secretLockedHere`. */
       lockedHere: secretLockedHere({ encryptedSecret, encryptedPassphrase }, process.env.ENCRYPTION_KEY),
-      externalIdMasked: maskSecret(c.externalId),
+      externalIdMasked: maskSecret(externalId),
       accountName: accountName.get(c.accountId) ?? "(unknown account)",
       freshness: freshnessOf({ lastSyncAt: c.lastSyncAt, lastSyncStatus: c.lastSyncStatus }),
       // Equity is not availability: with open positions part of it backs the
@@ -173,11 +179,13 @@ export async function listConnections() {
 }
 
 export async function listPositionsForConnection(connectionId: string) {
+  await requireServerSession();
   const rows = await db.select().from(positions).where(eq(positions.connectionId, connectionId));
   return rows.map(parsePositionRow);
 }
 
 export async function listAllPositions() {
+  await requireServerSession();
   const [rows, conns, allAccounts, meta, allPlaylists] = await Promise.all([
     db.select().from(positions),
     db.select().from(accountConnections),
@@ -367,6 +375,7 @@ function parsePositionRow(r: typeof positions.$inferSelect) {
 }
 
 export async function listBalances() {
+  await requireServerSession();
   const [rows, conns, allAccounts, meta, allPlaylists] = await Promise.all([
     db.select().from(platformBalances),
     db.select().from(accountConnections),
@@ -465,6 +474,7 @@ export async function listBalances() {
 }
 
 export async function getSyncLogs(connectionId: string, limit = 10) {
+  await requireServerSession();
   return db
     .select()
     .from(syncLogs)
@@ -487,6 +497,10 @@ export async function createConnection(formData: FormData) {
   const label = String(formData.get("label") ?? "").trim() || null;
 
   if (!accountId) throw new Error("Pick the account this connection feeds");
+  if (accountId !== NEW_ACCOUNT) {
+    const [account] = await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId));
+    if (!account) throw new Error("Account not found");
+  }
 
   const apiSecret = String(formData.get("apiSecret") ?? "").trim();
   const apiPassphrase = String(formData.get("apiPassphrase") ?? "").trim();
@@ -665,6 +679,7 @@ export async function convertToManual(formData: FormData) {
 }
 
 export async function syncConnectionAction(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   // A synced account is often in another currency, and a balance with no
   // exchange rate is excluded from every total. Refreshing first means the
@@ -1048,6 +1063,7 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
 
 /** Fire-and-forget sync of every connection, for the AutoSync client component. */
 export async function autoSyncAction() {
+  await requireServerSession();
   // Refresh FX first so converted totals use today's rate, not yesterday's.
   await refreshRates();
   await syncAllConnections("scheduled");

@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { subscriptions } from "@/db/schema";
@@ -17,6 +18,7 @@ import { getBaseCurrency } from "./settings";
  * inside it — or overdue, since it has not arrived yet either.
  */
 export async function getMonthAhead(): Promise<MonthAhead> {
+  await requireServerSession();
   const today = new Date();
   const end = endOfMonth(today);
   const [rows, budgets, expected, rates, base] = await Promise.all([

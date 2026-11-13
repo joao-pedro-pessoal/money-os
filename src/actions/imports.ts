@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { transactions, imports, accounts, auditLog, categories } from "@/db/schema";
@@ -17,6 +18,7 @@ export interface ImportRow {
 
 /** Keys of what's already in the account, so the preview can flag duplicates. */
 export async function getExistingKeys(accountId: string): Promise<string[]> {
+  await requireServerSession();
   const existing = await db.select().from(transactions).where(eq(transactions.accountId, accountId));
   return existing.map((t) => dedupKey(new Date(t.date), Number(t.amount), t.description ?? ""));
 }
@@ -44,77 +46,84 @@ export async function commitImport(
   adjustBalance = false,
   integrity?: ImportIntegrity
 ) {
-  const [importRow] = await db
-    .insert(imports)
-    .values({
-      accountId,
-      fileName,
-      columnMapping,
-      rowsImported: "0",
-      rowsDuplicated: "0",
-      rowsIgnored: "0",
-      // Kept so a later "did this file import cleanly?" can be answered from
-      // the record rather than from memory.
-      fileHash: integrity?.fileHash ?? null,
-      rowsInFile: integrity ? String(integrity.rowsInFile) : null,
-      debitTotal: integrity ? String(integrity.debitTotal) : null,
-      creditTotal: integrity ? String(integrity.creditTotal) : null,
-    })
-    .returning();
+  await requireServerSession();
+  const result = await db.transaction(async store => {
+    const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
+    if (!account) throw new Error("Account not found");
+    const [importRow] = await store
+      .insert(imports)
+      .values({
+        accountId,
+        fileName,
+        columnMapping,
+        rowsImported: "0",
+        rowsDuplicated: "0",
+        rowsIgnored: "0",
+        // Kept so a later "did this file import cleanly?" can be answered from
+        // the record rather than from memory.
+        fileHash: integrity?.fileHash ?? null,
+        rowsInFile: integrity ? String(integrity.rowsInFile) : null,
+        debitTotal: integrity ? String(integrity.debitTotal) : null,
+        creditTotal: integrity ? String(integrity.creditTotal) : null,
+      })
+      .returning();
 
-  // Existing categories only. A CSV must never create one: an AI writing
-  // "Groceries" where the app has "Food" would quietly grow a second set, and
-  // this project has already had to clean up 48 duplicated categories once.
-  const existingCategories = await db.select().from(categories);
-  const categoryByName = new Map(existingCategories.map((c) => [c.name.trim().toLowerCase(), c]));
+    // Existing categories only. A CSV must never create one: an AI writing
+    // "Groceries" where the app has "Food" would quietly grow a second set, and
+    // this project has already had to clean up 48 duplicated categories once.
+    const existingCategories = await store.select().from(categories);
+    const categoryByName = new Map(existingCategories.map((c) => [c.name.trim().toLowerCase(), c]));
 
-  let created = 0;
-  let net = 0;
-  let categorised = 0;
+    let created = 0;
+    let net = 0;
+    let categorised = 0;
 
-  for (const row of rows) {
-    const date = new Date(row.date);
-    if (Number.isNaN(date.getTime()) || !Number.isFinite(row.amount) || row.amount === 0) continue;
+    for (const row of rows) {
+      const date = new Date(row.date);
+      if (Number.isNaN(date.getTime()) || !Number.isFinite(row.amount) || row.amount === 0) continue;
 
-    const type = row.amount >= 0 ? "income" : "expense";
-    const match = row.category ? categoryByName.get(row.category.trim().toLowerCase()) : undefined;
-    // A category only applies if it belongs to the right side of the ledger —
-    // "Salary" on an expense would be wrong however confidently it was suggested.
-    const categoryId = match && match.kind === type ? match.id : null;
-    if (categoryId) categorised++;
+      const type = row.amount >= 0 ? "income" : "expense";
+      const match = row.category ? categoryByName.get(row.category.trim().toLowerCase()) : undefined;
+      // A category only applies if it belongs to the right side of the ledger —
+      // "Salary" on an expense would be wrong however confidently it was suggested.
+      const categoryId = match && match.kind === type ? match.id : null;
+      if (categoryId) categorised++;
 
-    await db.insert(transactions).values({
-      accountId,
-      type,
-      amount: String(row.amount),
-      date,
-      description: row.description ?? "",
-      merchant: row.merchant ?? null,
-      categoryId,
-      source: "csv",
-      importId: importRow.id,
+      await store.insert(transactions).values({
+        accountId,
+        currency: account.currency,
+        type,
+        amount: String(row.amount),
+        date,
+        description: row.description ?? "",
+        merchant: row.merchant ?? null,
+        categoryId,
+        source: "csv",
+        importId: importRow.id,
+      });
+      net += row.amount;
+      created++;
+    }
+
+    await store
+      .update(imports)
+      .set({ rowsImported: String(created) })
+      .where(eq(imports.id, importRow.id));
+
+    if (adjustBalance && net !== 0) {
+      await store
+        .update(accounts)
+        .set({ balance: sql`${accounts.balance} + ${net}`, updatedAt: new Date() })
+        .where(eq(accounts.id, accountId));
+    }
+
+    await store.insert(auditLog).values({
+      entityType: "import",
+      entityId: importRow.id,
+      action: "csv_imported",
+      details: JSON.stringify({ fileName, created, net, adjustBalance, categorised }),
     });
-    net += row.amount;
-    created++;
-  }
-
-  await db
-    .update(imports)
-    .set({ rowsImported: String(created) })
-    .where(eq(imports.id, importRow.id));
-
-  if (adjustBalance && net !== 0) {
-    await db
-      .update(accounts)
-      .set({ balance: sql`${accounts.balance} + ${net}`, updatedAt: new Date() })
-      .where(eq(accounts.id, accountId));
-  }
-
-  await db.insert(auditLog).values({
-    entityType: "import",
-    entityId: importRow.id,
-    action: "csv_imported",
-    details: JSON.stringify({ fileName, created, net, adjustBalance, categorised }),
+    return { importId: importRow.id, created, net, categorised };
   });
 
   revalidatePath("/transactions");
@@ -122,10 +131,11 @@ export async function commitImport(
   revalidatePath("/accounts");
   revalidatePath("/");
 
-  return { importId: importRow.id, created, net, categorised };
+  return result;
 }
 
 export async function listImports() {
+  await requireServerSession();
   const [rows, accountsList] = await Promise.all([
     db.select().from(imports),
     db.select().from(accounts),
@@ -152,6 +162,7 @@ export async function listImports() {
  * deleting rows by hand.
  */
 export async function undoImport(formData: FormData) {
+  await requireServerSession();
   const importId = String(formData.get("importId"));
 
   const [imp] = await db.select().from(imports).where(eq(imports.id, importId));

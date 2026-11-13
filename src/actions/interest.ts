@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { accounts, interestPayments } from "@/db/schema";
@@ -24,6 +25,7 @@ function dayCountOf(value: string | null): DayCount {
  * a rate applied late or a payment that never arrived.
  */
 export async function getInterestOutlook() {
+  await requireServerSession();
   const [allAccounts, payments] = await Promise.all([
     db.select().from(accounts).where(eq(accounts.active, true)),
     db.select().from(interestPayments).orderBy(desc(interestPayments.date)),
@@ -81,6 +83,7 @@ export async function getInterestOutlook() {
  * can see the arithmetic for.
  */
 export async function calculateInterest(accountId: string, fromISO: string, toISO: string) {
+  await requireServerSession();
   const [a] = await db.select().from(accounts).where(eq(accounts.id, accountId));
   if (!a) throw new Error("Account not found");
   if (a.apr === null) throw new Error("This account has no rate set. Add one on the account first.");
@@ -110,6 +113,7 @@ export async function calculateInterest(accountId: string, fromISO: string, toIS
 
 /** Compares a payment against what the rate implies, for the history table. */
 export async function checkPayment(accountId: string, amount: number, from: Date, to: Date) {
+  await requireServerSession();
   const [a] = await db.select().from(accounts).where(eq(accounts.id, accountId));
   if (!a || a.apr === null) return null;
 
@@ -127,6 +131,7 @@ export async function checkPayment(accountId: string, amount: number, from: Date
 }
 
 export async function setAccountRate(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("accountId"));
   const raw = String(formData.get("apr") ?? "").trim();
   const apr = raw === "" ? null : Number(raw);

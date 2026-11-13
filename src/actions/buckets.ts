@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { buckets, bucketAllocations, accounts, auditLog } from "@/db/schema";
@@ -13,6 +14,7 @@ import { MANUAL_EDIT_RETRY_MESSAGE } from "@/lib/money/manualRequest";
 import { claimManualRequest, manualEntryResult, manualRequestId } from "./manualRequest";
 
 export async function listBucketsWithTotals() {
+  await requireServerSession();
   const [allBuckets, allAllocations, allAccounts, rates, baseCurrency] = await Promise.all([
     db.select().from(buckets), db.select().from(bucketAllocations), db.select().from(accounts), getRates(), getBaseCurrency(),
   ]);
@@ -28,6 +30,7 @@ export async function listBucketsWithTotals() {
 }
 
 export async function getBucket(id: string) {
+  await requireServerSession();
   const [bucket] = await db.select().from(buckets).where(eq(buckets.id, id));
   return bucket;
 }
@@ -87,6 +90,7 @@ export async function submitBucketEdit(formData: FormData) {
 
 /** Deletes the bucket and all its allocations (cascade) — freed money goes back to Free Cash. */
 export async function deleteBucket(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
 
   await db.insert(auditLog).values({ entityType: "bucket", entityId: id, action: "bucket_deleted" });

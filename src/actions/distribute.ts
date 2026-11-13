@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { buckets, bucketAllocations, accounts, auditLog } from "@/db/schema";
@@ -26,6 +27,7 @@ import {
 
 /** Goals in the order they should be filled. */
 export async function listGoalsByPriority() {
+  await requireServerSession();
   const [rows, purposes] = await Promise.all([db.select().from(buckets), listPurposes()]);
   const totals = new Map(purposes.purposes.map((p) => [p.id, p.totals.total]));
 
@@ -42,6 +44,7 @@ export async function listGoalsByPriority() {
 }
 
 export async function setPriority(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const priority = Number(formData.get("priority"));
 
@@ -68,6 +71,7 @@ export async function setPriority(formData: FormData) {
  * there until you move one of them again.
  */
 export async function moveGoal(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const up = String(formData.get("direction")) === "up";
 
@@ -92,6 +96,7 @@ export async function moveGoal(formData: FormData) {
  */
 /** The split the priority ranking implies, before any hand-editing. */
 export async function getDefaultShares(): Promise<Share[]> {
+  await requireServerSession();
   const goals = await listGoalsByPriority();
   return weightsFromPriority(goals);
 }
@@ -160,6 +165,7 @@ async function buildDistribution(
 }
 
 export async function planDistribution(amount: number, strategy: Strategy = "priority", overrideShares?: Share[]) {
+  await requireServerSession();
   const plan = await buildDistribution(amount, strategy, overrideShares);
   const { accountState: _accountState, nativeMoves: _nativeMoves, ...view } = plan;
   void _accountState; void _nativeMoves;
@@ -174,6 +180,7 @@ export async function planDistribution(amount: number, strategy: Strategy = "pri
  * would allocate money that has already gone somewhere else.
  */
 export async function applyDistribution(formData: FormData) {
+  await requireServerSession();
   const amount = Number(manualAmount(String(formData.get("amount") ?? "")));
   const requestId = String(formData.get("requestId") ?? "");
   if (!isQuickEntryId(requestId)) throw new Error("Preview the distribution again before applying it.");
@@ -235,6 +242,7 @@ export async function applyDistribution(formData: FormData) {
 }
 
 export async function submitDistribution(formData: FormData) {
+  await requireServerSession();
   try { await applyDistribution(formData); return { saved: true }; }
   catch (error) {
     const message = error instanceof Error ? error.message : "";

@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { assetProfiles, auditLog, companyMoves, fundHoldings, holdings } from "@/db/schema";
@@ -188,6 +189,7 @@ export interface ExposureView {
  * profiles already saved. Reads nothing from the internet.
  */
 export async function getExposure(companyLimit = 250): Promise<ExposureView> {
+  await requireServerSession();
   const { lookups } = await equityLookups();
   const keys = [...new Set(lookups.map((l) => l.lookup).filter((k): k is string => k !== null))];
   const rows = keys.length === 0 ? [] : await db.select().from(assetProfiles).where(inArray(assetProfiles.lookup, keys));
@@ -970,6 +972,7 @@ export async function forgetAssetProfile(formData: FormData): Promise<void> {
  * base currency. Rows no rate could convert are left out there and here alike.
  */
 export async function getFeesByYear(): Promise<{ years: FeeYear[]; unconvertible: number; currency: string }> {
+  await requireServerSession();
   const analysis = await getTradeAnalysis();
   return { years: feesByYear(analysis.rows), unconvertible: analysis.unconvertible, currency: analysis.baseCurrency };
 }
@@ -979,6 +982,7 @@ export async function getFeesByYear(): Promise<{ years: FeeYear[]; unconvertible
  * symbol (the ticker a dividend is recorded under). From saved profiles only.
  */
 export async function getAnnouncedDividends(): Promise<Map<string, Announced>> {
+  await requireServerSession();
   const { lookups } = await equityLookups();
   const keys = [...new Set(lookups.map((l) => l.lookup).filter((k): k is string => k !== null))];
   const rows = keys.length === 0 ? [] : await db.select().from(assetProfiles).where(inArray(assetProfiles.lookup, keys));
@@ -995,6 +999,7 @@ export async function getAnnouncedDividends(): Promise<Map<string, Announced>> {
 
 /** The symbols of everything held now, for telling a current payer from a sold one. */
 export async function heldSymbols(): Promise<Set<string>> {
+  await requireServerSession();
   const { items } = await getPortfolioItems();
   return new Set(items.filter((i) => i.value > 0).map((i) => i.symbol));
 }

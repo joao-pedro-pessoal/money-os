@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { savedViews } from "@/db/schema";
@@ -21,6 +22,7 @@ function allowed() {
 }
 
 export async function listAnalysisViews() {
+  await requireServerSession();
   const rows = await db.select().from(savedViews).where(eq(savedViews.scope, VIEW_SCOPE_ANALYSIS));
 
   return rows
@@ -40,6 +42,7 @@ export async function listAnalysisViews() {
 }
 
 export async function saveAnalysisView(formData: FormData) {
+  await requireServerSession();
   const name = cleanName(String(formData.get("name") ?? ""));
   if (!name) throw new Error("Give the view a name.");
 
@@ -76,6 +79,7 @@ export async function saveAnalysisView(formData: FormData) {
 }
 
 export async function deleteSavedView(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   await db.delete(savedViews).where(eq(savedViews.id, id));
   revalidatePath("/investments/analysis");
@@ -96,6 +100,7 @@ function filterScope(scope: string): FilterScope {
 }
 
 export async function listSavedFilters(scope: string): Promise<{ id: string; name: string; config: string }[]> {
+  await requireServerSession();
   const rows = await db.select().from(savedViews).where(eq(savedViews.scope, filterScope(String(scope))));
   return rows
     .map((r) => ({ id: r.id, name: r.name, config: r.config }))
@@ -103,6 +108,7 @@ export async function listSavedFilters(scope: string): Promise<{ id: string; nam
 }
 
 export async function saveFilters(scope: string, rawName: string, config: string): Promise<void> {
+  await requireServerSession();
   // An endpoint like any server action: what arrives need not be what the types say.
   if (typeof scope !== "string" || typeof rawName !== "string" || typeof config !== "string") {
     throw new Error("Those filters could not be saved.");
@@ -132,6 +138,7 @@ export async function saveFilters(scope: string, rawName: string, config: string
 }
 
 export async function deleteSavedFilters(id: string): Promise<void> {
+  await requireServerSession();
   if (typeof id !== "string" || id.length > 64) throw new Error("Which filters?");
   await db.delete(savedViews).where(eq(savedViews.id, id));
 }

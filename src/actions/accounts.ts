@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import {
@@ -26,6 +27,7 @@ import { MANUAL_EDIT_RETRY_MESSAGE } from "@/lib/money/manualRequest";
 import { claimManualRequest, manualEntryResult, manualRequestId } from "./manualRequest";
 
 export async function listAccountsWithState() {
+  await requireServerSession();
   const [allAccounts, allAllocations, platformTotals] = await Promise.all([
     // A fixed order: without it PostgreSQL returns an account just updated last,
     // so a balance saved from the quick sheet moved its row and closed the sheet.
@@ -98,6 +100,7 @@ export async function listAccountsWithState() {
 }
 
 export async function listArchivedAccounts() {
+  await requireServerSession();
   return db.select().from(accounts).where(eq(accounts.active, false));
 }
 
@@ -117,6 +120,7 @@ function investedValueFrom(formData: FormData, meaning: string): string | null {
 }
 
 export async function createAccount(formData: FormData) {
+  await requireServerSession();
   const institution = String(formData.get("institution") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const accountType = String(formData.get("accountType") ?? "other");
@@ -154,6 +158,7 @@ export async function createAccount(formData: FormData) {
 
 /** Edit the descriptive fields of an account. Does NOT touch balance (use setAccountBalance for that). */
 export async function updateAccount(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const institution = String(formData.get("institution") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
@@ -223,6 +228,7 @@ export async function updateAccount(formData: FormData) {
 
 /** Archive (soft delete). Preserves history — transactions/snapshots keep referencing it. */
 export async function archiveAccount(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   await db.update(accounts).set({ active: false, updatedAt: new Date() }).where(eq(accounts.id, id));
   await db.insert(auditLog).values({ entityType: "account", entityId: id, action: "account_archived" });
@@ -231,6 +237,7 @@ export async function archiveAccount(formData: FormData) {
 }
 
 export async function unarchiveAccount(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   await db.update(accounts).set({ active: true, updatedAt: new Date() }).where(eq(accounts.id, id));
   await db.insert(auditLog).values({ entityType: "account", entityId: id, action: "account_unarchived" });
@@ -248,6 +255,7 @@ export async function unarchiveAccount(formData: FormData) {
 export async function listAccountUsage(): Promise<
   (AccountUsage & { createdAt: Date; active: boolean; keptBecause: string[] })[]
 > {
+  await requireServerSession();
   const [all, tx, hold, alloc, conns, imps, snaps] = await Promise.all([
     db.select().from(accounts),
     db.select().from(transactions),
@@ -298,6 +306,7 @@ export async function listAccountUsage(): Promise<
 
 /** The accounts the tidy-up would remove. Shown before anything is deleted. */
 export async function listRemovableAccounts() {
+  await requireServerSession();
   const usage = await listAccountUsage();
   return usage.filter(isAbandoned);
 }
@@ -310,6 +319,7 @@ export async function listRemovableAccounts() {
  * gained a transaction since then must not be swept away by a stale click.
  */
 export async function removeEmptyAccounts(formData: FormData) {
+  await requireServerSession();
   const requested = new Set(formData.getAll("accountId").map(String));
   const usage = await listAccountUsage();
 
@@ -453,11 +463,13 @@ function revalidateBalance(accountId: string) {
 }
 
 export async function getAccount(id: string) {
+  await requireServerSession();
   const [acc] = await db.select().from(accounts).where(eq(accounts.id, id));
   return acc;
 }
 
 export async function getAccountSnapshots(accountId: string) {
+  await requireServerSession();
   return db
     .select()
     .from(accountSnapshots)

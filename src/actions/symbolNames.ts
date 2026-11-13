@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 import { requireInvestments } from "./releaseEdition";
 
 import { cache } from "react";
@@ -19,6 +20,7 @@ const loadNames = cache(async (): Promise<SymbolNames> => {
 
 /** Your names for tickers, symbol → name. */
 export async function getSymbolNames(): Promise<SymbolNames> {
+  await requireServerSession();
   return loadNames();
 }
 
@@ -44,6 +46,7 @@ export async function setSymbolName(formData: FormData): Promise<void> {
 
 /** Every symbol you hold, have traded or watch, with the name you gave it, for Settings. */
 export async function listSymbolsToName() {
+  await requireServerSession();
   const [{ items }, trades, watched, names] = await Promise.all([
     getPortfolioItems(),
     getTradeAnalysis(),

@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { requireInvestments } from "./releaseEdition";
 
@@ -31,6 +32,8 @@ import { getBaseCurrency } from "./settings";
  */
 export async function previewBrokerStatement(text: string, accountId: string) {
   await requireInvestments();
+  const [account] = await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId));
+  if (!account) throw new Error("Account not found");
   // The file is inspected before it is parsed, so an export the app has never
   // seen reports which columns it couldn't recognise instead of failing with a
   // single unhelpful sentence. Nothing here writes; the file has to be safe to
@@ -119,46 +122,51 @@ export async function importBrokerStatement(formData: FormData) {
   const text = String(formData.get("statement") ?? "");
   if (!accountId) throw new Error("Choose the account this statement belongs to.");
 
-  const { events, rejected } = parseBrokerCsv(text);
-  if (events.length === 0) {
-    throw new Error("Nothing readable in that file. Check it's the transaction export.");
-  }
+  const result = await db.transaction(async store => {
+    const [account] = await store.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)).for("key share");
+    if (!account) throw new Error("Account not found");
+    const { events, rejected } = parseBrokerCsv(text);
+    if (events.length === 0) {
+      throw new Error("Nothing readable in that file. Check it's the transaction export.");
+    }
 
-  const known = await db.select().from(positions);
-  const tickers = [...new Set(known.map((p) => p.coin))];
+    const known = await store.select().from(positions);
+    const tickers = [...new Set(known.map((p) => p.coin))];
 
-  await db
-    .insert(brokerEvents)
-    .values(
-      events.map((e) => ({
-        accountId,
-        date: e.date,
-        kind: e.kind,
-        symbol: e.symbol,
-        isin: e.isin,
-        ticker: e.symbol === null ? null : matchTicker(e.symbol, tickers),
-        quantity: e.quantity === null ? null : String(e.quantity),
-        price: e.price === null ? null : String(e.price),
-        amount: String(e.amount),
-        fees: e.fees === null ? null : String(e.fees),
-        currency: e.currency,
-        description: e.description,
-        externalId: e.externalId,
-        naturalKey: naturalKey(e),
-      }))
-    )
-    .onConflictDoNothing();
+    await store
+      .insert(brokerEvents)
+      .values(
+        events.map((e) => ({
+          accountId,
+          date: e.date,
+          kind: e.kind,
+          symbol: e.symbol,
+          isin: e.isin,
+          ticker: e.symbol === null ? null : matchTicker(e.symbol, tickers),
+          quantity: e.quantity === null ? null : String(e.quantity),
+          price: e.price === null ? null : String(e.price),
+          amount: String(e.amount),
+          fees: e.fees === null ? null : String(e.fees),
+          currency: e.currency,
+          description: e.description,
+          externalId: e.externalId,
+          naturalKey: naturalKey(e),
+        }))
+      )
+      .onConflictDoNothing();
 
-  await db.insert(auditLog).values({
-    entityType: "account",
-    entityId: accountId,
-    action: "broker_statement_imported",
-    details: JSON.stringify({ rows: events.length, rejected: rejected.length }),
+    await store.insert(auditLog).values({
+      entityType: "account",
+      entityId: accountId,
+      action: "broker_statement_imported",
+      details: JSON.stringify({ rows: events.length, rejected: rejected.length }),
+    });
+    return { imported: events.length, rejected: rejected.length };
   });
 
   revalidatePath("/investments/analysis");
   revalidatePath("/investments/dividends");
-  return { imported: events.length, rejected: rejected.length };
+  return result;
 }
 
 /**
@@ -176,6 +184,7 @@ export async function importBrokerStatement(formData: FormData) {
  * currency making a third.
  */
 export async function getContributionBreakdown() {
+  await requireServerSession();
   const rows = await db.select().from(brokerEvents);
   if (rows.length === 0) return null;
 
@@ -446,11 +455,13 @@ async function adoptForAccount(accountId: string) {
  * top of the same page, which stores transactions and no instruments at all.
  */
 export async function listKnownIsins(): Promise<string[]> {
+  await requireServerSession();
   const rows = await db.select().from(brokerEvents);
   return [...new Set(rows.map((r) => r.isin).filter((i): i is string => i !== null))].sort();
 }
 
 export async function getImportedStatements() {
+  await requireServerSession();
   const [rows, accountRows] = await Promise.all([
     db.select().from(brokerEvents),
     db.select().from(accounts),
@@ -501,6 +512,7 @@ export async function getImportedStatements() {
  * today is not in the file and is not invented here.
  */
 export async function getStatementBreakdown() {
+  await requireServerSession();
   const rows = await db.select().from(brokerEvents);
   if (rows.length === 0) return null;
 
@@ -606,6 +618,7 @@ export async function getStatementBreakdown() {
  * committed, cost of purchases and income received, and never a value line.
  */
 export async function getStatementHistory() {
+  await requireServerSession();
   const rows = await db.select().from(brokerEvents);
   if (rows.length === 0) return null;
 

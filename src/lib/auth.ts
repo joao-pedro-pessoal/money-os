@@ -97,7 +97,8 @@ export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 export const SESSION_RENEW_AFTER_SECONDS = 24 * 60 * 60;
 /** A clock a little ahead of this one should not make a fresh session invalid. */
 const CLOCK_SKEW_SECONDS = 5 * 60;
-const SESSION_VERSION = "v3";
+// v4 carries milliseconds. v2/v3 remain readable until their ordinary expiry.
+const SESSION_VERSION = "v4";
 /** Whose session a "v2" cookie is: the one account there was. Same value as OWNER_USER_ID in the schema. */
 const V2_USER_ID = "owner";
 /** An account id as the schema makes them (cuid2), or the owner's. */
@@ -110,7 +111,7 @@ const signSession = (body: string) => hmac(required("APP_SECRET"), `session|${bo
 /** A new session for this account, issued at `now`. */
 export async function newSessionValue(userId: string, now: Date = new Date()): Promise<string> {
   if (!USER_ID.test(userId)) throw new Error("That is not an account id.");
-  const issued = Math.floor(now.getTime() / 1000);
+  const issued = now.getTime();
   const body = `${SESSION_VERSION}.${userId}.${issued}.${hex(crypto.getRandomValues(new Uint8Array(16)))}`;
   return `${body}.${await signSession(body)}`;
 }
@@ -125,12 +126,12 @@ export type SessionCheck =
  * `endedBy` and the date on that person's row.
  */
 export async function readSession(value: string | null | undefined, now: Date = new Date()): Promise<SessionCheck> {
-  const v3 = /^(v3)\.([a-z0-9]{1,40})\.(\d{1,12})\.([0-9a-f]{32})\.([0-9a-f]{64})$/.exec(value ?? "");
-  const v2 = v3 ? null : /^(v2)\.(\d{1,12})\.([0-9a-f]{32})\.([0-9a-f]{64})$/.exec(value ?? "");
+  const account = /^(v[34])\.([a-z0-9]{1,40})\.(\d{1,15})\.([0-9a-f]{32})\.([0-9a-f]{64})$/.exec(value ?? "");
+  const v2 = account ? null : /^(v2)\.(\d{1,12})\.([0-9a-f]{32})\.([0-9a-f]{64})$/.exec(value ?? "");
   let userId: string, issued: string, body: string, signature: string;
-  if (v3) {
-    [, , userId, issued, , signature] = v3;
-    body = `${v3[1]}.${userId}.${issued}.${v3[4]}`;
+  if (account) {
+    [, , userId, issued, , signature] = account;
+    body = `${account[1]}.${userId}.${issued}.${account[4]}`;
   } else if (v2) {
     userId = V2_USER_ID;
     [, , issued, , signature] = v2;
@@ -139,28 +140,27 @@ export async function readSession(value: string | null | undefined, now: Date = 
     return { valid: false };
   }
   if (!(await equalsInConstantTime(signature, await signSession(body)))) return { valid: false };
-  const issuedSeconds = Number(issued);
-  const age = Math.floor(now.getTime() / 1000) - issuedSeconds;
-  if (age < -CLOCK_SKEW_SECONDS || age > SESSION_MAX_AGE_SECONDS) return { valid: false };
-  return { valid: true, userId, issuedAt: new Date(issuedSeconds * 1000), renew: age > SESSION_RENEW_AFTER_SECONDS };
+  const issuedMillis = Number(issued) * (account?.[1] === "v4" ? 1 : 1000);
+  const age = now.getTime() - issuedMillis;
+  if (!Number.isSafeInteger(issuedMillis) || !Number.isFinite(age) || age < -CLOCK_SKEW_SECONDS * 1000 || age > SESSION_MAX_AGE_SECONDS * 1000) return { valid: false };
+  return { valid: true, userId, issuedAt: new Date(issuedMillis), renew: age > SESSION_RENEW_AFTER_SECONDS * 1000 };
 }
 
 /**
  * Whether "Log out other devices", pressed at `notBefore`, ended a session
- * issued at `issuedAt`. Compared in whole seconds: a session issued in that
- * same second stands, which is what lets the device that pressed it be given
- * a fresh one at once.
+ * issued at `issuedAt`. A new cookie preserves milliseconds, so an earlier
+ * session in the same second is ended while the one issued at the cutoff stands.
  */
 export function endedBy(notBefore: Date | null, issuedAt: Date): boolean {
-  return notBefore !== null && Math.floor(issuedAt.getTime() / 1000) < Math.floor(notBefore.getTime() / 1000);
+  return notBefore !== null && issuedAt.getTime() < notBefore.getTime();
 }
 
 /** How the session cookie is set, wherever it is set. */
 export function sessionCookieOptions() {
   return {
     httpOnly: true,
-    // "true" when served over HTTPS, e.g. behind a TLS-terminating proxy.
-    secure: process.env.COOKIE_SECURE === "true",
+    // The hosted site always uses HTTPS. The home copy also supports local HTTP.
+    secure: process.env.VERCEL === "1" || process.env.COOKIE_SECURE === "true",
     sameSite: "lax" as const,
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,

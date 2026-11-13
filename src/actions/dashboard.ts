@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { playlistNamesOf } from "@/lib/portfolio/playlists";
 
@@ -40,6 +41,7 @@ import { monthFlows, fixedRunway, needsClassifying } from "@/lib/accounting/fixe
  * to be shown in parentheses.
  */
 export async function getAccountComposition() {
+  await requireServerSession();
   const [accountRows, holdingRows, balanceRows, connectionRows, metaRows, rates, base] =
     await Promise.all([
       db.select().from(accounts).where(eq(accounts.active, true)),
@@ -135,6 +137,7 @@ export async function getAccountComposition() {
  * synced showed "No data yet" while holding real money.
  */
 export async function getPortfolioItems() {
+  await requireServerSession();
   const [holdingRows, positionRows, balanceRows, metaRows, connRows, accountRows, playlistRows, rates, base] =
     await Promise.all([
       db.select().from(holdings),
@@ -548,6 +551,7 @@ export async function getPortfolioItems() {
  * is tight: how much of this month is settled before I do anything?
  */
 export async function getMonthShape() {
+  await requireServerSession();
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -604,6 +608,7 @@ export async function getMonthShape() {
 
 /** Months of fixed costs the free cash covers. */
 export async function getFixedRunway(availableCash: number) {
+  await requireServerSession();
   const { flows } = await getMonthShape();
   return {
     months: fixedRunway(availableCash, flows.expenses.fixed),

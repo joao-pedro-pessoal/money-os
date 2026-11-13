@@ -51,9 +51,11 @@ describe("C2 edition follows the server identity",()=>{
     boundary.actor="owner";const {setSymbolName}=await import("../symbolNames");const data=new FormData();data.set("symbol","TEST");data.set("name","Synthetic name");
     await expect(setSymbolName(data)).rejects.toThrow("Database must not be reached");
   });
-  it("keeps the full build's existing feature availability",async()=>{
+  it("keeps full feature availability while requiring an authenticated caller",async()=>{
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_EDITION","full");vi.resetModules();boundary.actor=null;
     const {investmentsFor,requireInvestments}=await import("../releaseEdition");
-    expect(investmentsFor(null)).toBe(true);expect(investmentsFor("other")).toBe(true);await expect(requireInvestments()).resolves.toBeUndefined();
+    expect(investmentsFor(null)).toBe(true);expect(investmentsFor("other")).toBe(true);
+    await expect(requireInvestments()).rejects.toThrow("Sign in again.");
+    boundary.actor="other";await expect(requireInvestments()).resolves.toBeUndefined();
   });
 });

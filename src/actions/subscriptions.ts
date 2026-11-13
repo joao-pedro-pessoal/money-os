@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { subscriptions, accounts, categories, auditLog } from "@/db/schema";
@@ -39,6 +40,7 @@ function rowToSubscription(r: typeof subscriptions.$inferSelect): Subscription {
 }
 
 export async function listSubscriptions() {
+  await requireServerSession();
   const today = new Date();
   const [rows, allAccounts, allCategories, rates, base] = await Promise.all([
     db.select().from(subscriptions),
@@ -77,6 +79,7 @@ export async function listSubscriptions() {
  * ever added to a balance, to spending totals or to Net Worth.
  */
 export async function getSubscriptionTotals() {
+  await requireServerSession();
   const [rows, rates, base] = await Promise.all([
     db.select().from(subscriptions),
     getRates(),
@@ -98,6 +101,7 @@ export async function submitSubscriptionCreation(formData: FormData) {
 }
 
 export async function updateSubscription(formData: FormData) {
+  await requireServerSession();
   await saveSubscription(formData, String(formData.get("id")));
 }
 
@@ -150,6 +154,7 @@ async function saveSubscription(formData: FormData, id?: string) {
  * explicit action.
  */
 export async function toggleSubscription(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const desired = String(formData.get("active"));
   if (desired !== "true" && desired !== "false") throw new Error("Choose whether to cancel or resume the subscription.");
@@ -171,6 +176,7 @@ export async function toggleSubscription(formData: FormData) {
 }
 
 export async function deleteSubscription(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   await db.delete(subscriptions).where(eq(subscriptions.id, id));
   revalidatePath("/subscriptions");

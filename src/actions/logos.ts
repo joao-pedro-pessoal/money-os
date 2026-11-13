@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { assetLogos, auditLog, holdings } from "@/db/schema";
@@ -155,6 +156,7 @@ const TOP_UP = 10;
  * two is money and the other is decoration.
  */
 export async function topUpLogos(): Promise<void> {
+  await requireServerSession();
   try {
     const { items } = await getPortfolioItems();
     const wanted = new Map<string, Wanted>();
@@ -303,6 +305,7 @@ async function allLogos(): Promise<Map<string, string | null>> {
  * missing would leave a button that can never reach zero.
  */
 export async function logosFor(symbols: (string | null)[]): Promise<StoredLogos> {
+  await requireServerSession();
   const wanted = [...new Set(symbols.filter((s): s is string => Boolean(s)))].slice(0, LOGO_LIMIT);
   if (wanted.length === 0) return { images: {}, due: 0 };
   const all = await allLogos();

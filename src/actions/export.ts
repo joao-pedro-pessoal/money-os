@@ -1,10 +1,13 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 import { requireInvestments } from "./releaseEdition";
 
 import { db } from "@/db/client";
 import * as schema from "@/db/schema";
 import { BACKUP_TABLES, BACKUP_VERSION, validateBackup, toCsv, type BackupTable } from "@/lib/backup";
 import { revalidatePath } from "next/cache";
+import { getTableColumns, getTableName } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/pg-core";
 
 /**
  * Maps backup table names to their Drizzle tables, in dependency order.
@@ -68,6 +71,7 @@ const TABLES: Record<BackupTable, typeof schema.accounts> = {
  * and would have silently lost the entire investments and connections side.
  */
 export async function exportAllData() {
+  await requireServerSession();
   // A balance and its movements must come from the same snapshot, even if
   // another request saves a transaction while these tables are being read.
   const data = await db.transaction(async (tx) => {
@@ -84,6 +88,7 @@ export async function exportAllData() {
 }
 
 export async function exportTransactionsCsv() {
+  await requireServerSession();
   const rows = await db.select().from(schema.transactions);
   const accountsList = await db.select().from(schema.accounts);
   const categoriesList = await db.select().from(schema.categories);
@@ -136,6 +141,7 @@ export async function exportHoldingsCsv() {
 
 /** Checks a backup file without touching anything, for the confirm screen. */
 export async function inspectBackup(json: string) {
+  await requireServerSession();
   try {
     return validateBackup(JSON.parse(json));
   } catch {
@@ -151,6 +157,7 @@ export async function inspectBackup(json: string) {
  * the UI asks for an explicit typed confirmation before calling this.
  */
 export async function restoreBackup(formData: FormData) {
+  await requireServerSession();
   if (formData.get("confirmation") !== "RESTORE") throw new Error("Type RESTORE to confirm.");
   const json = String(formData.get("backup") ?? "");
 
@@ -165,21 +172,56 @@ export async function restoreBackup(formData: FormData) {
   if (!check.ok) throw new Error(`Backup rejected: ${check.errors.join(" ")}`);
 
   const data = (parsed as { data: Record<string, unknown[]> }).data;
+  const restored: Partial<Record<BackupTable, Record<string, unknown>[]>> = {};
+  for (const name of BACKUP_TABLES) {
+    const rows = data[name];
+    if (!Array.isArray(rows)) continue;
+    restored[name] = rows.map(r => withoutOwner(withPlaylistList(reviveDates(r as Record<string, unknown>))));
+  }
+  referencesInsideBackup(restored);
 
   // Any invalid row, missing parent or database failure must roll back the
   // deletions too. The original account remains intact until all inserts pass.
   await db.transaction(async (tx) => {
     for (const name of [...BACKUP_TABLES].reverse()) await tx.delete(TABLES[name]);
     for (const name of BACKUP_TABLES) {
-      const rows = data[name];
+      const rows = restored[name];
       if (!Array.isArray(rows) || rows.length === 0) continue;
-      const revived = rows.map((r) => withoutOwner(withPlaylistList(reviveDates(r as Record<string, unknown>))));
-      await tx.insert(TABLES[name]).values(revived as never);
+      await tx.insert(TABLES[name]).values(rows as never);
     }
   });
 
   revalidatePath("/", "layout");
   return { ok: true as const, counts: check.counts };
+}
+
+/** RLS on a child does not make its FK parent belong to the person restoring. */
+function referencesInsideBackup(data: Partial<Record<BackupTable, Record<string, unknown>[]>>) {
+  const byTable = new Map<string, BackupTable>(BACKUP_TABLES.map(name => [getTableName(TABLES[name]), name]));
+  const keys = new Map(BACKUP_TABLES.map(name => [name, new Map(Object.entries(getTableColumns(TABLES[name])).map(([key, column]) => [column.name, key]))]));
+  const indexes = new Map<string, Set<string>>();
+  for (const name of BACKUP_TABLES) {
+    for (const foreignKey of getTableConfig(TABLES[name]).foreignKeys) {
+      const reference = foreignKey.reference();
+      // The owner is deliberately discarded and filled from the current user.
+      if (reference.columns.every(c => c.name === "user_id")) continue;
+      const target = byTable.get(getTableName(reference.foreignTable));
+      if (!target) continue; // Shared tables are not restored by this format.
+      const parentKeys = reference.foreignColumns.map(c => keys.get(target)!.get(c.name)!);
+      const localKeys = reference.columns.map(c => keys.get(name)!.get(c.name)!);
+      const indexKey = JSON.stringify([target, parentKeys]);
+      let parents = indexes.get(indexKey);
+      if (!parents) {
+        parents = new Set((data[target] ?? []).map(row => JSON.stringify(parentKeys.map(key => row[key]))));
+        indexes.set(indexKey, parents);
+      }
+      for (const row of data[name] ?? []) {
+        const values = localKeys.map(key => row[key]);
+        if (values.some(value => value === null || value === undefined)) continue;
+        if (!parents.has(JSON.stringify(values))) throw new Error("Backup rejected: References must stay inside the backup.");
+      }
+    }
+  }
 }
 
 const DATE_FIELDS = /(At|Date|timestamp|date)$/i;

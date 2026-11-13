@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { accounts, auditLog, categories, subscriptionCharges, subscriptions, transactions } from "@/db/schema";
@@ -48,6 +49,7 @@ export interface DueCharge {
  * each with the expense that may already be it.
  */
 export async function getDueSubscriptionCharges(): Promise<{ charges: DueCharge[]; accounts: { id: string; name: string; currency: string }[] }> {
+  await requireServerSession();
   const today = new Date();
   const since = new Date(today.getFullYear(), today.getMonth(), today.getDate() - LOOKBACK_DAYS - MATCH_DAYS);
 

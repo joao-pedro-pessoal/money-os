@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 import { requireInvestments } from "./releaseEdition";
 
 
@@ -22,6 +23,7 @@ const BENCHMARK_KEY = "benchmark_id";
 
 /** Which index the analytics page compares against. Defaults to the first. */
 export async function getBenchmarkChoice(): Promise<BenchmarkDefinition> {
+  await requireServerSession();
   const [row] = await db.select().from(appSettings).where(eq(appSettings.key, BENCHMARK_KEY));
   return benchmarkById(row?.value ?? "") ?? BENCHMARKS[0];
 }
@@ -149,6 +151,7 @@ export async function refreshBenchmark(id?: string) {
  * honest way to compare a number the app has already declined to state.
  */
 export async function getBenchmarkComparison() {
+  await requireServerSession();
   const [definition, returns, base] = await Promise.all([
     getBenchmarkChoice(),
     getPortfolioReturns(),
@@ -211,6 +214,7 @@ export async function getBenchmarkComparison() {
 
 /** How stale the stored series is, so the page can offer a refresh with a reason. */
 export async function getBenchmarkFreshness() {
+  await requireServerSession();
   const definition = await getBenchmarkChoice();
   const rows = await db
     .select()

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { holdings, playlists } from "@/db/schema";
 import { portfolioSummary, type PositionItem } from "@/lib/portfolio/positionView";
+vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
 
 const fake = vi.hoisted(() => ({ rows: new Map<unknown, unknown[]>(), items: [] as PositionItem[] }));
 vi.mock("@/db/client", () => ({ db: { select: () => ({ from: async (table: unknown) => fake.rows.get(table) ?? [] }) } }));

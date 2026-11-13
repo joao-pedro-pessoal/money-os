@@ -1,4 +1,5 @@
-"use server";
+// Internal database helper, called by actions and the scheduler;
+// exporting it from a "use server" module would let a client invent snapshots.
 
 import { db } from "@/db/client";
 import { accountSnapshots, exchangeRates } from "@/db/schema";

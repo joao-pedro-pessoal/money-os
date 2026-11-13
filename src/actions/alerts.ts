@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 import { currentInvestments } from "@/actions/releaseEdition";
 import { availablePath } from "@/lib/release/edition";
 
@@ -39,6 +40,7 @@ import {
  * function does no deciding; it only fetches and shapes.
  */
 export async function getAlerts(): Promise<{ alerts: Alert[]; currency: string }> {
+  await requireServerSession();
   const investmentsEnabled = await currentInvestments();
   const today = new Date();
 

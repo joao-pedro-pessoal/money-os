@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { investmentsFor } from "@/actions/releaseEdition";
 import { availablePath } from "@/lib/release/edition";
 import { SESSION_COOKIE_NAME, endedBy, newSessionValue, readSession, sessionCookieOptions } from "@/lib/auth";
-import { sessionsNotBefore } from "@/actions/session";
+import { sessionsNotBefore } from "@/actions/sessionRevocation";
 import { safeReturnPath } from "@/lib/accounts/returnPath";
 import { isPublicPath } from "@/lib/accounts/publicPaths";
 
 export async function proxy(req: NextRequest) {
+  const requestedAt = new Date();
   const { pathname } = req.nextUrl;
   if (isPublicPath(pathname) && availablePath(pathname)) {
     return NextResponse.next();
@@ -32,7 +33,7 @@ export async function proxy(req: NextRequest) {
    */
   const response = NextResponse.next();
   if (session.renew) {
-    response.cookies.set(SESSION_COOKIE_NAME, await newSessionValue(session.userId), sessionCookieOptions());
+    response.cookies.set(SESSION_COOKIE_NAME, await newSessionValue(session.userId, requestedAt), sessionCookieOptions());
   }
   return response;
 }

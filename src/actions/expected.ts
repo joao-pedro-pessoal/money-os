@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { accounts, categories, expectedArrivals, expectedMoney, transactions } from "@/db/schema";
@@ -62,6 +63,7 @@ function refresh(accountId?: string | null) {
  * beside what you have, never inside it. See `lib/accounting/expected.ts`.
  */
 export async function listExpected() {
+  await requireServerSession();
   const [rows, accountRows, categoryRows, rates, base] = await Promise.all([
     db.select().from(expectedMoney),
     db.select().from(accounts),
@@ -125,6 +127,7 @@ export async function listExpected() {
 
 /** Everything the form offers, so a page need not fetch it twice. */
 export async function listExpectedOptions() {
+  await requireServerSession();
   const [accountRows, categoryRows] = await Promise.all([
     db.select().from(accounts).where(eq(accounts.active, true)),
     db.select().from(categories),
@@ -191,6 +194,7 @@ async function assertLinks(store: Store, accountId: string | null, categoryId: s
 }
 
 export async function createExpected(formData: FormData) {
+  await requireServerSession();
   const { name, amount, arrival, currency, anchor, accountId, categoryId, notes } = expectedFields(formData);
   const expectedAt = anchorFrom(arrival, anchor, new Date());
   await db.transaction(async store => {
@@ -397,6 +401,7 @@ export async function undoExpectedArrival(formData: FormData) {
 
 /** How many times money that was expected has come, counting what closed before arrivals were recorded. */
 export async function countExpectedArrived() {
+  await requireServerSession();
   const [arrived] = await db.select({ n: sql<number>`count(*)::int` }).from(expectedArrivals);
   const [older] = await db.select({ n: sql<number>`count(*)::int` }).from(expectedMoney)
     .where(sql`${expectedMoney.settledAt} is not null and not exists (select 1 from ${expectedArrivals} where ${expectedArrivals.expectedId} = ${expectedMoney.id})`);
@@ -405,6 +410,7 @@ export async function countExpectedArrived() {
 
 /** The latest arrivals, newest first. Only the newest of each can be undone. */
 export async function listExpectedArrivals() {
+  await requireServerSession();
   const rows = await db
     .select({
       id: expectedArrivals.id,
@@ -430,6 +436,7 @@ export async function listExpectedArrivals() {
 
 /** Stop expecting a recurring one, without erasing that it existed. */
 export async function stopExpected(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   await db
     .update(expectedMoney)
@@ -441,6 +448,7 @@ export async function stopExpected(formData: FormData) {
 }
 
 export async function deleteExpected(formData: FormData) {
+  await requireServerSession();
   await db.delete(expectedMoney).where(eq(expectedMoney.id, String(formData.get("id"))));
   revalidatePath("/expected");
   revalidatePath("/");

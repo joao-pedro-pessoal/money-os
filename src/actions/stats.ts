@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { transactions, accounts, buckets, bucketAllocations, holdings } from "@/db/schema";
@@ -16,6 +17,7 @@ import {
 
 /** Everything the statistics page needs, in the base currency. */
 export async function getStatistics() {
+  await requireServerSession();
   const [series, nw, tx, rates, base, allAccounts, allBuckets, allocations, allHoldings, syncedBalances] =
     await Promise.all([
       getTotalNetWorthOverTime(),

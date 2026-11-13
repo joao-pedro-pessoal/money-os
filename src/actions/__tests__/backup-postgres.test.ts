@@ -9,6 +9,7 @@ import * as schema from "@/db/schema";
 const isolated = vi.hoisted(() => ({ db: null as unknown as PgliteDatabase<typeof schema> }));
 vi.mock("@/db/client", () => ({ get db() { return isolated.db; } }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
 import { exportAllData, restoreBackup } from "../export";
 
 let engine: PGlite;
@@ -70,6 +71,19 @@ describe("restore rehearsal on isolated PostgreSQL with the real migrations and 
     await as("tester-b");
     expect((await isolated.db.select().from(schema.accounts)).map((row) => row.id)).toEqual(["account-tester-b"]);
     await as("tester-a");
+  });
+
+  it.each(["liabilities", "transactions", "expectedMoney"] as const)("refuses a %s reference to another person's account before replacing data", async table => {
+    await as("tester-a");
+    const original = await exportAllData();
+    const forged = JSON.parse(original);
+    forged.data[table][0].accountId = "account-tester-b";
+    try {
+      await expect(restore(JSON.stringify(forged))).rejects.toThrow(/Backup rejected/);
+      expect(JSON.parse(await exportAllData()).data).toEqual(JSON.parse(original).data);
+    } finally {
+      await restore(original);
+    }
   });
 
   it("restores into an account deleted and made again, which has a new id", async () => {

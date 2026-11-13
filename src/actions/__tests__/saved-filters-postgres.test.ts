@@ -8,6 +8,7 @@ import * as schema from "@/db/schema";
 const isolated = vi.hoisted(() => ({ db: null as unknown as PgliteDatabase<typeof schema> }));
 vi.mock("@/db/client", () => ({ get db() { return isolated.db; } }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
 import { deleteSavedFilters, listAnalysisViews, listSavedFilters, saveAnalysisView, saveFilters } from "../savedViews";
 
 let engine: PGlite;

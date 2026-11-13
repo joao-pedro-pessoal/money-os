@@ -1,4 +1,5 @@
 import { currentInvestments } from "@/actions/releaseEdition";
+import { hasSession } from "@/actions/session";
 import { NextResponse } from "next/server";
 import { textForRequest } from "@/actions/pageLanguage";
 import { currentLanguage } from "@/actions/language";
@@ -29,6 +30,7 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
  * the base currency and comes from the same actions the pages render.
  */
 export async function GET() {
+  if (!(await hasSession())) return new Response(null, { status: 401, headers: { "Cache-Control": "no-store" } });
   const investmentsEnabled = await currentInvestments();
   if (!investmentsEnabled) {
     const [nw, series, composition, month] = await Promise.all([getNetWorth(), getTotalNetWorthOverTime(), getAccountComposition(), getMonthShape()]);

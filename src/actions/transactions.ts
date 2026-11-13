@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { transactions, transfers, accounts, categories, interestPayments, auditLog } from "@/db/schema";
@@ -42,6 +43,7 @@ export async function getQuickEntryOptions() {
  * `unconverted`, never silently valued at zero.
  */
 export async function listTransactions(limit = 100) {
+  await requireServerSession();
   const [rows, rates, base] = await Promise.all([
     db
       .select({
@@ -327,11 +329,13 @@ export async function submitInterestPayment(formData: FormData) {
 }
 
 export async function getTransaction(id: string) {
+  await requireServerSession();
   const [tx] = await db.select().from(transactions).where(eq(transactions.id, id));
   return tx;
 }
 
 export async function isTransferLeg(transactionId: string) {
+  await requireServerSession();
   const [leg] = await db
     .select()
     .from(transfers)
@@ -431,10 +435,12 @@ export async function deleteTransaction(formData: FormData) {
 }
 
 export async function listCategories() {
+  await requireServerSession();
   return db.select().from(categories);
 }
 
 export async function createCategory(formData: FormData) {
+  await requireServerSession();
   const name = String(formData.get("name") ?? "").trim();
   const kind = String(formData.get("kind") ?? "expense");
 
@@ -460,6 +466,7 @@ export async function createCategory(formData: FormData) {
  * that is to split it in two.
  */
 export async function setCategoryFixed(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const fixed = String(formData.get("fixed")) === "true";
 
@@ -470,6 +477,7 @@ export async function setCategoryFixed(formData: FormData) {
 }
 
 export async function deleteCategory(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   await db.delete(categories).where(eq(categories.id, id));
   revalidatePath("/settings");

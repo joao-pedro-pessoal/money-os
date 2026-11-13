@@ -90,10 +90,10 @@ describe("a session", () => {
     expect(await readSession(value, later(24 * 3600 + 1))).toMatchObject({ valid: true, renew: true });
   });
 
-  it("is ended when issued before its account's 'Log out other devices', and stands when issued in that second or after", () => {
+  it("ends sessions before the cutoff, including earlier in the same second", () => {
     expect(endedBy(later(5), issued)).toBe(true);
     expect(endedBy(issued, issued)).toBe(false);
-    expect(endedBy(new Date(issued.getTime() + 999), issued)).toBe(false);
+    expect(endedBy(new Date(issued.getTime() + 999), issued)).toBe(true);
     expect(endedBy(null, issued)).toBe(false);
   });
 

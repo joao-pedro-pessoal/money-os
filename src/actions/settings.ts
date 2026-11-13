@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/client";
@@ -20,11 +21,13 @@ const BASE_CURRENCY_KEY = "base_currency";
 
 /** The currency every total is shown in. Falls back to EUR if never set. */
 export async function getBaseCurrency(): Promise<string> {
+  await requireServerSession();
   const [row] = await db.select().from(appSettings).where(eq(appSettings.key, BASE_CURRENCY_KEY));
   return row?.value ?? DEFAULT_BASE_CURRENCY;
 }
 
 export async function setBaseCurrency(formData: FormData) {
+  await requireServerSession();
   const currency = String(formData.get("baseCurrency") ?? "").trim().toUpperCase();
   if (!SUPPORTED_CURRENCIES.some((c) => c.code === currency)) {
     throw new Error(`Unsupported currency: ${currency}`);
@@ -53,6 +56,7 @@ const FAVOURITE_CURRENCIES_KEY = "favourite_currencies";
  * it would leave the app with nothing safe to fall back to.
  */
 export async function getFavouriteCurrencies(): Promise<string[]> {
+  await requireServerSession();
   const [row] = await db
     .select()
     .from(appSettings)
@@ -61,6 +65,7 @@ export async function getFavouriteCurrencies(): Promise<string[]> {
 }
 
 export async function setFavouriteCurrencies(formData: FormData) {
+  await requireServerSession();
   const chosen = formData.getAll("favouriteCurrencies").map(String);
   const base = await getBaseCurrency();
 
@@ -98,6 +103,7 @@ const DASHBOARD_CURRENCY_KEY = "dashboard_currency";
  * is named for the dashboard rather than called a second base.
  */
 export async function getDashboardCurrency(): Promise<string | null> {
+  await requireServerSession();
   const [row] = await db
     .select()
     .from(appSettings)
@@ -112,6 +118,7 @@ export async function getDashboardCurrency(): Promise<string | null> {
 }
 
 export async function setDashboardCurrency(formData: FormData) {
+  await requireServerSession();
   const raw = String(formData.get("dashboardCurrency") ?? "").trim().toUpperCase();
   const favourites = await getFavouriteCurrencies();
 
@@ -137,6 +144,7 @@ const DEFAULT_ACCOUNT_KEY = "defaultAccountId";
 const DASHBOARD_WINDOWS_KEY = "dashboard_windows";
 
 export async function getDashboardWindowPreferences(): Promise<DashboardWindowConfiguration> {
+  await requireServerSession();
   const [row] = await db.select().from(appSettings).where(eq(appSettings.key, DASHBOARD_WINDOWS_KEY));
   if (!row?.value) return dashboardWindowConfiguration(null);
   try {
@@ -147,6 +155,7 @@ export async function getDashboardWindowPreferences(): Promise<DashboardWindowCo
 }
 
 export async function setDashboardWindowPreferences(formData: FormData) {
+  await requireServerSession();
   const values: Record<string, DashboardWindowState> = {};
   for (const id of Object.keys(DEFAULT_DASHBOARD_WINDOW_PREFERENCES) as DashboardWindowId[]) {
     const state = String(formData.get(`dashboardWindow_${id}`) ?? "");
@@ -176,6 +185,7 @@ export async function setDashboardWindowPreferences(formData: FormData) {
  * says nothing to anybody.
  */
 export async function getDefaultAccountId(): Promise<string | null> {
+  await requireServerSession();
   const [row] = await db
     .select()
     .from(appSettings)
@@ -188,6 +198,7 @@ export async function getDefaultAccountId(): Promise<string | null> {
 }
 
 export async function setDefaultAccountId(formData: FormData) {
+  await requireServerSession();
   const raw = String(formData.get("defaultAccountId") ?? "").trim();
 
   /**

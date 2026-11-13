@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { liabilities, accounts } from "@/db/schema";
@@ -18,6 +19,7 @@ import { LIABILITY_KINDS, monthlyInterest, payoffMonths } from "@/lib/accounting
  * dollar loan beside a euro one summed raw is a number in no currency at all.
  */
 export async function listLiabilities() {
+  await requireServerSession();
   const [rows, accountRows, rates, base] = await Promise.all([
     db.select().from(liabilities),
     db.select().from(accounts),
@@ -103,6 +105,7 @@ function revalidate() {
 }
 
 export async function createLiability(formData: FormData) {
+  await requireServerSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Give it a name — you'll want to recognise it later.");
 
@@ -140,6 +143,7 @@ export async function createLiability(formData: FormData) {
 }
 
 export async function updateLiability(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Which debt?");
 
@@ -170,6 +174,7 @@ export async function updateLiability(formData: FormData) {
 }
 
 export async function deleteLiability(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Which debt?");
   await db.delete(liabilities).where(eq(liabilities.id, id));

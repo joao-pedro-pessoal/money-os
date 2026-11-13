@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 import { requireInvestments } from "./releaseEdition";
 
 import { db } from "@/db/client";
@@ -94,6 +95,7 @@ async function loadAllocations() {
 
 /** Buckets with cash and investments counted together, plus both progress figures. */
 export async function listPurposes() {
+  await requireServerSession();
   const allBuckets = await db.select().from(buckets);
   const { cash, invested, base, unconverted } = await loadAllocations();
 
@@ -132,6 +134,7 @@ export async function listPurposes() {
 
 /** How each position is split across goals, for the position's own page. */
 export async function getHoldingAllocations(holdingId: string) {
+  await requireServerSession();
   const [rows, allBuckets] = await Promise.all([
     db.select().from(holdingAllocations).where(eq(holdingAllocations.holdingId, holdingId)),
     db.select().from(buckets),
@@ -227,6 +230,7 @@ export async function removeHoldingAllocation(formData: FormData) {
 
 /** Positions promised to more goals than they can cover. */
 export async function overAllocatedHoldings() {
+  await requireServerSession();
   const { invested, holdingRows } = await loadAllocations();
   const nameOf = new Map(holdingRows.map((h) => [h.id, h.symbol]));
 

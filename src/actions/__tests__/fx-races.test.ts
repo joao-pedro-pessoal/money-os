@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import { exchangeRates } from "@/db/schema";
+vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
 
 type Row = { quote: string; rate: string; manual?: boolean; source?: string; base?: string };
 type Conflict = { target: unknown[]; set: Partial<Row>; setWhere?: SQL };

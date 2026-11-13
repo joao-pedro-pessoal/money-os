@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAlerts } from "@/actions/alerts";
 import { textForRequest } from "@/actions/pageLanguage";
 import { shouldNotify } from "@/lib/alerts/rules";
+import { hasSession } from "@/actions/session";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
  * of its own about what is worth saying.
  */
 export async function GET() {
+  if (!(await hasSession())) return new Response(null, { status: 401, headers: { "Cache-Control": "no-store" } });
   const uiText = await textForRequest();
   const { alerts } = await getAlerts();
   return NextResponse.json(

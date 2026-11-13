@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { accounts, accountSnapshots } from "@/db/schema";
@@ -22,6 +23,7 @@ import { mergeNetWorthSeries } from "@/lib/accounting/composition";
  * account's last known value is carried forward.
  */
 export async function getNetWorthOverTime() {
+  await requireServerSession();
   const [allAccounts, allSnapshots, rates, base] = await Promise.all([
     db.select().from(accounts).where(eq(accounts.active, true)),
     db.select().from(accountSnapshots),
@@ -63,6 +65,7 @@ export async function getNetWorthOverTime() {
  * difference because the difference was an exchange rate.
  */
 export async function getMoneyByLocation() {
+  await requireServerSession();
   const [allAccounts, rates, base] = await Promise.all([
     db.select().from(accounts).where(eq(accounts.active, true)),
     getRates(),
@@ -96,6 +99,7 @@ export async function getMoneyByLocation() {
  * rule: only what genuinely sits outside the balances gets added on top.
  */
 export async function getTotalNetWorthOverTime() {
+  await requireServerSession();
   const [cashSeries, portfolioSeries] = await Promise.all([
     getNetWorthOverTime(),
     // true: only holdings that add on top of a balance, never positions that

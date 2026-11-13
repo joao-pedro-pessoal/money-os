@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { accounts, positions, accountConnections, liabilities } from "@/db/schema";
@@ -20,6 +21,7 @@ import { marketExposedInsideBalances } from "@/lib/portfolio/positionView";
  * if a screen needs a patrimony number, it calls this.
  */
 export async function getNetWorth(): Promise<NetWorthResult & { baseCurrency: string }> {
+  await requireServerSession();
   const [allAccounts, openPositions, rates, base, portfolio, portfolioItems] = await Promise.all([
     db.select().from(accounts).where(eq(accounts.active, true)),
     db.select().from(positions),

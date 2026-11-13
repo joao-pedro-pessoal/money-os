@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { budgets, budgetCategories, categories, transactions, auditLog } from "@/db/schema";
@@ -66,6 +67,7 @@ async function loadEnvelopes(): Promise<Envelope[]> {
  * envelope than to a yearly one.
  */
 export async function listBudgets(offset = 0) {
+  await requireServerSession();
   const today = new Date();
   const [envelopes, spending, categoryRows, base] = await Promise.all([
     loadEnvelopes(),
@@ -114,12 +116,14 @@ export async function listBudgets(offset = 0) {
  * dashboard takes out of Free Cash (see `keptForBudgets`).
  */
 export async function getKeptForBudgets() {
+  await requireServerSession();
   const { total, unconverted } = await getBudgetsLeft();
   return { total, unconverted };
 }
 
 /** What budgets still have to spend; missing FX makes these estimates explicit. */
 export async function getBudgetsLeft() {
+  await requireServerSession();
   const today = new Date();
   const [envelopes, spending] = await Promise.all([loadEnvelopes(), loadSpending()]);
   const states = envelopes.map(e => envelopeState(e, spending.spending, today));
@@ -197,6 +201,7 @@ export async function submitBudgetLimit(formData: FormData) {
 
 /** Adds or removes a category from a budget without rebuilding the whole thing. */
 export async function toggleBudgetCategory(formData: FormData) {
+  await requireServerSession();
   const budgetId = String(formData.get("budgetId"));
   const categoryId = String(formData.get("categoryId"));
   const on = String(formData.get("on")) === "true";
@@ -217,6 +222,7 @@ export async function toggleBudgetCategory(formData: FormData) {
 }
 
 export async function setBudgetRollover(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const rollover = String(formData.get("rollover")) === "true";
   await db.update(budgets).set({ rollover, updatedAt: new Date() }).where(eq(budgets.id, id));
@@ -224,6 +230,7 @@ export async function setBudgetRollover(formData: FormData) {
 }
 
 export async function deleteBudget(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   await db.delete(budgets).where(eq(budgets.id, id));
   revalidatePath("/budgets");
@@ -232,6 +239,7 @@ export async function deleteBudget(formData: FormData) {
 
 /** Spending in the current calendar month that no budget watches. */
 export async function getUnbudgetedSpending() {
+  await requireServerSession();
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);

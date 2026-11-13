@@ -30,6 +30,7 @@ vi.mock("@/db/client", () => ({ db: {
   },
 } }));
 vi.mock("next/cache", () => ({ revalidatePath: fake.revalidate }));
+vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
 import { exportAllData, restoreBackup } from "../export";
 
 function restoreForm() {

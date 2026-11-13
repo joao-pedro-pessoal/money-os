@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import {
@@ -43,6 +44,7 @@ const str = (v: FormDataEntryValue | null): string | null => {
 
 /** Every resource with its taxonomy and type-specific fields resolved. */
 export async function listResources() {
+  await requireServerSession();
   const [rows, metas, cats, subs, resCats, resSubs] = await Promise.all([
     db.select().from(learningResources),
     db.select().from(learningResourceMeta),
@@ -158,12 +160,14 @@ export async function listResources() {
 export type LibraryResource = Awaited<ReturnType<typeof listResources>>[number];
 
 export async function getResourceBySlug(slug: string) {
+  await requireServerSession();
   const all = await listResources();
   return all.find((r) => r.slug === slug) ?? null;
 }
 
 /** The taxonomy, with counts, for the browse-by-category section. */
 export async function listTaxonomy() {
+  await requireServerSession();
   const [cats, subs, resCats] = await Promise.all([
     db.select().from(resourceCategories),
     db.select().from(resourceSubtags),
@@ -194,12 +198,14 @@ export async function listTaxonomy() {
  * would be the app arguing with you.
  */
 export async function missingSeedCount(): Promise<number> {
+  await requireServerSession();
   const rows = await db.select({ slug: learningResources.slug }).from(learningResources);
   const present = new Set(rows.map((r) => r.slug));
   return SEED_RESOURCES.filter((s) => !present.has(s.slug)).length;
 }
 
 export async function getLibraryStats() {
+  await requireServerSession();
   const items = await listResources();
   return libraryStats(
     items.map((r) => ({
@@ -225,6 +231,7 @@ async function uniqueSlug(title: string): Promise<string> {
 }
 
 export async function createResource(formData: FormData) {
+  await requireServerSession();
   const type = String(formData.get("type") ?? "");
   if (!isResourceType(type)) throw new Error(`Unknown resource type: ${type}`);
 
@@ -360,6 +367,7 @@ async function applyTaxonomy(resourceId: string, formData: FormData) {
 }
 
 export async function updateResource(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const [existing] = await db.select().from(learningResources).where(eq(learningResources.id, id));
   if (!existing) throw new Error("Resource not found");
@@ -446,6 +454,7 @@ export async function updateResource(formData: FormData) {
  * a decision, and reopening the book shouldn't quietly erase it.
  */
 export async function setProgress(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const [existing] = await db.select().from(learningResources).where(eq(learningResources.id, id));
   if (!existing) throw new Error("Resource not found");
@@ -510,6 +519,7 @@ export async function setProgress(formData: FormData) {
  * both and a stale one reads as a failed click.
  */
 export async function toggleFavourite(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const [existing] = await db.select().from(learningResources).where(eq(learningResources.id, id));
   if (!existing) return;
@@ -536,6 +546,7 @@ export async function toggleFavourite(formData: FormData) {
 }
 
 export async function toggleFeatured(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   const [existing] = await db.select().from(learningResources).where(eq(learningResources.id, id));
   if (!existing) return;
@@ -548,6 +559,7 @@ export async function toggleFeatured(formData: FormData) {
 
 /** Archiving keeps the row: what you read is history worth keeping. */
 export async function archiveResource(formData: FormData) {
+  await requireServerSession();
   const id = String(formData.get("id"));
   await db
     .update(learningResources)
@@ -576,6 +588,7 @@ export async function archiveResource(formData: FormData) {
  * deleted one isn't.
  */
 export async function refreshStarterDetails() {
+  await requireServerSession();
   const bySlug = new Map(SEED_RESOURCES.map((s) => [s.slug, s]));
   const rows = await db.select().from(learningResources);
   const seeded = rows.filter((r) => bySlug.has(r.slug));
@@ -674,6 +687,7 @@ export async function refreshStarterDetails() {
  * Drives whether the refresh button is worth showing at all.
  */
 export async function staleStarterCount(): Promise<number> {
+  await requireServerSession();
   const bySlug = new Map(SEED_RESOURCES.map((s) => [s.slug, s]));
   const rows = await db.select().from(learningResources);
   return rows.filter((row) => {
@@ -699,6 +713,7 @@ export async function staleStarterCount(): Promise<number> {
  * unique, a second insert of the same row would otherwise fail outright.
  */
 export async function seedLibrary() {
+  await requireServerSession();
   const existingCats = await db.select().from(resourceCategories);
   const catBySlug = new Map(existingCats.map((c) => [c.slug, c]));
 

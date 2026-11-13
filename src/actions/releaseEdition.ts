@@ -3,6 +3,7 @@ import { OWNER_USER_ID } from "@/db/schema";
 import { actingAs } from "@/db/acting";
 import { INVESTMENTS_ENABLED } from "@/lib/release/edition";
 import { currentUserId } from "./session";
+import { requireServerSession } from "./requestSession";
 
 /** Only call with an identity already checked by the server's session reader. */
 export function investmentsFor(userId: string | null): boolean {
@@ -20,4 +21,5 @@ export async function currentInvestments(): Promise<boolean> {
 
 export async function requireInvestments(): Promise<void> {
   if (!(await currentInvestments())) throw new Error("Investments are not available in this version.");
+  await requireServerSession();
 }

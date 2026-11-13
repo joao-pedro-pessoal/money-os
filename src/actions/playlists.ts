@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 import { requireInvestments } from "./releaseEdition";
 
 
@@ -25,6 +26,7 @@ import { playlistNamesOf } from "@/lib/portfolio/playlists";
 
 /** Playlists with the totals of the positions assigned to each one. */
 export async function listPlaylistsWithTotals() {
+  await requireServerSession();
   const [lists, manual, portfolio, trades, rates, base] = await Promise.all([
     db.select().from(playlists), db.select().from(holdings), getPortfolioItems(),
     getTradeAnalysis(), getRates(), getBaseCurrency(),
@@ -55,6 +57,7 @@ export async function listPlaylistsWithTotals() {
 }
 
 export async function listPlaylists() {
+  await requireServerSession();
   return db.select().from(playlists);
 }
 
@@ -114,6 +117,7 @@ export async function deletePlaylist(formData: FormData) {
 // ---------------- Watchlist ----------------
 
 export async function listWatchlist() {
+  await requireServerSession();
   const [items, lists] = await Promise.all([db.select().from(watchlistItems), db.select().from(playlists)]);
   const nameOf = new Map(lists.map((p) => [p.id, p.name]));
 

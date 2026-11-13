@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { cache } from "react";
 import { hasSession } from "./session";
@@ -44,6 +45,7 @@ import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 
 export async function getExistingInvestmentFingerprints(accountId: string): Promise<string[]> {
+  await requireServerSession();
   const rows = await db
     .select({ fingerprint: investmentActivities.fingerprint })
     .from(investmentActivities)
@@ -58,6 +60,7 @@ export async function commitInvestmentActivityImport(input: {
   rowsInFile: number;
   rows: InvestmentActivityInput[];
 }) {
+  await requireServerSession();
   const [account] = await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, input.accountId));
   if (!account) throw new Error("Account not found");
   if (!input.fileName || input.rows.length === 0) throw new Error("There is nothing to import");
@@ -142,6 +145,7 @@ export async function commitInvestmentActivityImport(input: {
 }
 
 export async function listInvestmentActivity() {
+  await requireServerSession();
   const [activity, accountRows, importRows] = await Promise.all([
     db.select().from(investmentActivities).orderBy(desc(investmentActivities.date), desc(investmentActivities.createdAt)),
     db.select({ id: accounts.id, name: accounts.name }).from(accounts),
@@ -206,6 +210,7 @@ export async function listInvestmentActivity() {
 }
 
 export async function undoInvestmentActivityImport(formData: FormData) {
+  await requireServerSession();
   const importId = String(formData.get("importId") ?? "");
   const [row] = await db.select().from(imports).where(eq(imports.id, importId));
   if (!row) throw new Error("Import not found");
@@ -382,6 +387,7 @@ const loadTradeRows = cache(async () => {
 });
 
 export async function getTradeAnalysis() {
+  await requireServerSession();
   const [{ rows: enriched, base, unconvertible, unconvertibleTrades, unconvertibleDates, approximate }, portfolio] = await Promise.all([
     loadTradeRows(),
     getPortfolioItems(),
@@ -444,6 +450,7 @@ export async function getTradeAnalysis() {
  * own total where it has none.
  */
 export async function getRealisedTrades() {
+  await requireServerSession();
   const [{ rows, base, unconvertibleTrades }, connections, rates] = await Promise.all([
     loadTradeRows(),
     db.select().from(accountConnections),
@@ -473,6 +480,7 @@ export async function getRealisedTrades() {
 
 /** Every tag in the vocabulary, for offering what already exists. */
 export async function listTagNames(): Promise<string[]> {
+  await requireServerSession();
   const rows = await db.select().from(tags);
   return rows.map((t) => t.name).sort((a, b) => a.localeCompare(b));
 }

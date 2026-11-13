@@ -5,6 +5,7 @@ import { renderReportPdf } from "@/lib/reports/pdf";
 import { textForRequest } from "@/actions/pageLanguage";
 import { currentLanguage } from "@/actions/language";
 import { reportFonts } from "@/actions/reportFonts";
+import { hasSession } from "@/actions/session";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
  * with the signed-in person's rows, so nobody can download anyone else's.
  */
 export async function GET(request: NextRequest) {
+  if (!(await hasSession())) return new Response(null, { status: 401, headers: { "Cache-Control": "no-store" } });
   const translate = await textForRequest();
   const language = await currentLanguage();
   const fonts = await reportFonts(language);

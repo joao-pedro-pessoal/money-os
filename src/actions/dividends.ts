@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import {
@@ -180,6 +181,7 @@ async function loadPayments(): Promise<{
  * payer.
  */
 export async function getDividendOverview() {
+  await requireServerSession();
   const [loaded, fx, announced, held] = await Promise.all([
     loadPayments(),
     converter(),
@@ -270,6 +272,7 @@ export async function getDividendOverview() {
 
 /** What one instrument has paid, for its own page. */
 export async function getDividendsForTicker(ticker: string) {
+  await requireServerSession();
   const payments = (await loadPayments()).counted.filter((p) => p.ticker === ticker);
   if (payments.length === 0) return null;
 
@@ -295,6 +298,7 @@ export type DividendOverview = Awaited<ReturnType<typeof getDividendOverview>>;
  * so a report over all time and the page cannot differ.
  */
 export async function getIncomePayments() {
+  await requireServerSession();
   const [loaded, fx] = await Promise.all([loadPayments(), converter()]);
   // The days of the ones no rate could convert, so a report counts only its own period's.
   const unconvertedDates: string[] = [];
@@ -324,6 +328,7 @@ export async function getIncomePayments() {
  * a zero reads as a measurement rather than as a missing category.
  */
 export async function getRealisedTotal() {
+  await requireServerSession();
   const [loaded, trades, manual, fx] = await Promise.all([
     loadPayments(),
     getRealisedTrades(),
@@ -368,6 +373,7 @@ export async function getRealisedTotal() {
  * getRealisedTotal for money received and portfolioSummary for open gains.
  */
 export async function getGainAttribution() {
+  await requireServerSession();
   const [realised, portfolio] = await Promise.all([
     getRealisedTotal(),
     getPortfolioItems(),

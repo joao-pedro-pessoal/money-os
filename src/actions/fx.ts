@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { exchangeRates } from "@/db/schema";
@@ -13,6 +14,7 @@ import { fetchRates, DEFAULT_BASE_CURRENCY, type RateMap } from "@/lib/fx";
  * being silently summed at 1:1.
  */
 export async function getRates(): Promise<RateMap> {
+  await requireServerSession();
   const rows = await db.select().from(exchangeRates);
   const rates: RateMap = { [DEFAULT_BASE_CURRENCY]: 1 };
   for (const r of rows) {
@@ -22,6 +24,7 @@ export async function getRates(): Promise<RateMap> {
 }
 
 export async function listRates() {
+  await requireServerSession();
   const rows = await db.select().from(exchangeRates);
   return rows.map((row) => row.quote === DEFAULT_BASE_CURRENCY
     ? { ...row, rate: "1", manual: false, source: "reference" }
@@ -33,6 +36,7 @@ export async function listRates() {
  * alone — an automatic refresh must not override a deliberate choice.
  */
 export async function refreshRates() {
+  await requireServerSession();
   try {
     const fetched = await fetchRates();
     for (const [quote, rate] of Object.entries(fetched)) {
@@ -58,12 +62,14 @@ export async function refreshRates() {
 }
 
 export async function refreshRatesAction() {
+  await requireServerSession();
   await refreshRates();
   revalidatePath("/settings");
 }
 
 /** Pins a rate by hand; it will survive automatic refreshes. */
 export async function setManualRate(formData: FormData) {
+  await requireServerSession();
   const quote = String(formData.get("quote") ?? "").trim().toUpperCase();
   const rate = Number(formData.get("rate") ?? "0");
   if (!quote || !Number.isFinite(rate) || rate <= 0) {
@@ -84,6 +90,7 @@ export async function setManualRate(formData: FormData) {
 
 /** Hands a pinned rate back to automatic updates. */
 export async function unpinRate(formData: FormData) {
+  await requireServerSession();
   const quote = String(formData.get("quote") ?? "").trim().toUpperCase();
   await db.update(exchangeRates).set({ manual: false }).where(eq(exchangeRates.quote, quote));
   await refreshRates();

@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession, SessionRequiredError } from "./requestSession";
 
 import { requireInvestments } from "./releaseEdition";
 
@@ -134,6 +135,7 @@ function applyStablecoinDefaults(input: {
 }
 
 export async function listHoldingsWithPnL() {
+  await requireServerSession();
   const rows = await db.select().from(holdings);
   const [allAccounts, allPlaylists] = await Promise.all([
     db.select().from(accounts),
@@ -168,11 +170,13 @@ export async function listHoldingsWithPnL() {
 }
 
 export async function getHolding(id: string) {
+  await requireServerSession();
   const [h] = await db.select().from(holdings).where(eq(holdings.id, id));
   return h;
 }
 
 export async function getHoldingSnapshots(holdingId: string) {
+  await requireServerSession();
   return db.select().from(holdingSnapshots).where(eq(holdingSnapshots.holdingId, holdingId)).orderBy(holdingSnapshots.timestamp);
 }
 
@@ -423,7 +427,7 @@ export async function submitHoldingOperation(kind: HoldingOperation, formData: F
     }
     return { saved: true };
   } catch (error) {
-    return { error: error instanceof HoldingInputError ? error.message : "Connection interrupted. Retry with the same details; a recorded operation will not be duplicated." };
+    return { error: error instanceof HoldingInputError || error instanceof SessionRequiredError ? error.message : "Connection interrupted. Retry with the same details; a recorded operation will not be duplicated." };
   }
 }
 
@@ -488,6 +492,7 @@ export async function deleteHolding(formData: FormData) {
  * not zero the others.
  */
 export async function getPortfolioValueOverTime(onlyWhatAddsOnTop = false) {
+  await requireServerSession();
   const { manual, synced, allDates } = await seriesInputs(onlyWhatAddsOnTop);
 
   if (allDates.length === 0) return [];
@@ -524,6 +529,7 @@ export async function getPortfolioValueOverTime(onlyWhatAddsOnTop = false) {
  * on record for a past day, so no gain or loss is stated for one.
  */
 export async function getPortfolioAt(date: string) {
+  await requireServerSession();
   const [{ allHoldings, manual, synced, conns }, accountRows, metaRows, names] = await Promise.all([
     seriesInputs(false),
     db.select().from(accounts),
@@ -694,6 +700,7 @@ async function seriesInputs(onlyWhatAddsOnTop: boolean) {
 
 /** Accounts available to hold positions (active only) — used by the forms. */
 export async function listAccountsForHoldings() {
+  await requireServerSession();
   const rows = await db.select().from(accounts).where(eq(accounts.active, true));
   return rows.map((a) => ({ id: a.id, name: a.name, institution: a.institution, currency: a.currency }));
 }
@@ -753,6 +760,7 @@ export async function addRewards(formData: FormData) {
  * uses, so the two cannot drift apart again.
  */
 export async function getPortfolioAnalysis(includeStable = true) {
+  await requireServerSession();
   const { items, baseCurrency } = await getPortfolioItems();
 
   /**
@@ -860,6 +868,7 @@ export async function getGroupedPerformance(
   thenBy: GroupByKey | null = null,
   filters: Partial<Record<string, unknown>> = {}
 ): Promise<{ groups: GroupPerformance[]; options: Record<GroupByKey, FilterChoices>; filters: PerformanceFilters }> {
+  await requireServerSession();
   const [{ items }, trades] = await Promise.all([getPortfolioItems(), getTradeAnalysis()]);
   const shownItems = items.filter(i => includeStable || !isStableAsset(i.symbol, i.assetType));
   const shownTrades = trades.rows.filter(t => includeStable || !isStableAsset(t.symbol ?? '', t.classification?.assetType ?? null));
@@ -896,6 +905,7 @@ export async function getGroupedPerformance(
  * nothing on screen to explain the difference.
  */
 export async function getUnitemisedInvestments() {
+  await requireServerSession();
   const [accountRows, holdingRows, positionRows, base, rates] = await Promise.all([
     db.select().from(accounts).where(eq(accounts.active, true)),
     db.select().from(holdings),
@@ -945,6 +955,7 @@ export async function getUnitemisedInvestments() {
 }
 
 export async function getPortfolioContribution() {
+  await requireServerSession();
   const { holdings: rows } = await listHoldingsWithPnL();
   const [rates, base] = await Promise.all([getRates(), getBaseCurrency()]);
 
@@ -1152,6 +1163,7 @@ export async function sellHolding(formData: FormData) {
  * quietly resolved in the arithmetic.
  */
 export async function getPortfolioReturns() {
+  await requireServerSession();
   const [series, activityRows, base] = await Promise.all([
     getPortfolioValueOverTime(),
     db.select().from(investmentActivities),

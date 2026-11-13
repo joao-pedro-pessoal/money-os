@@ -2,7 +2,7 @@
 
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { asUser, db } from "@/db/client";
 import { categories, exchangeRates, OWNER_USER_ID, users } from "@/db/schema";
@@ -70,8 +70,14 @@ const RecoverRequest = z.object({ email, recoveryCode: z.string().max(64), signI
 const NewCodeRequest = z.object({ signInKey }).strict();
 const DeleteRequest = z.object({ signInKey, confirmEmail: z.string().max(254) }).strict();
 
-async function startSession(userId: string): Promise<void> {
-  (await cookies()).set(SESSION_COOKIE_NAME, await newSessionValue(userId), sessionCookieOptions());
+async function startSession(userId: string, issuedAt: Date = new Date()): Promise<void> {
+  (await cookies()).set(SESSION_COOKIE_NAME, await newSessionValue(userId, issuedAt), sessionCookieOptions());
+}
+
+/** A slow verification cannot authorize a write after the credentials were replaced. */
+function unchangedCredential(user: Pick<typeof users.$inferSelect, "id" | "sessionsNotBefore">, passwordHash: string) {
+  return and(eq(users.id, user.id), eq(users.passwordHash, passwordHash),
+    user.sessionsNotBefore ? eq(users.sessionsNotBefore, user.sessionsNotBefore) : isNull(users.sessionsNotBefore));
 }
 
 /** One more wrong attempt against an account, counted in SQL so a burst cannot count as one. */
@@ -189,7 +195,7 @@ export async function signIn(raw: unknown): Promise<SignInOutcome> {
   const renewed = rehash ? await hashes.run(() => hashPassword(key, random)) : null;
   // An account that came without a recovery code (from the vault) gets one now, shown once.
   const recoveryCode = user.recoveryHash === null ? newRecoveryCode(random) : null;
-  await db
+  const [signedIn] = await db
     .update(users)
     .set({
       failedLogins: 0,
@@ -197,9 +203,12 @@ export async function signIn(raw: unknown): Promise<SignInOutcome> {
       ...(renewed?.ok ? { passwordHash: renewed.value, passwordKind: "keyed" } : {}),
       ...(recoveryCode ? { recoveryHash: recoveryHashOf(recoveryCode) } : {}),
     })
-    .where(eq(users.id, user.id));
+    .where(unchangedCredential(user, stored))
+    .returning({ id: users.id });
+  if (!signedIn) return { kind: "wrong" };
   await asUser(user.id, ensureStartingData);
-  await startSession(user.id);
+  // A revocation during starting-data work must also end this pending sign-in.
+  await startSession(user.id, now);
   return recoveryCode ? { kind: "new-code", recoveryCode } : { kind: "ok" };
 }
 
@@ -350,6 +359,8 @@ export async function recoverAccount(raw: unknown): Promise<RecoveryOutcome> {
   const hashed = await hashes.run(() => hashPassword(key, random));
   if (!hashed.ok) return { kind: "refused", reason: BUSY };
   const next = newRecoveryCode(random);
+  // Include sign-ins begun while the hash was running, including this millisecond.
+  const cutoff = new Date(Date.now() + 1);
   const [recovered] = await db
     .update(users)
     .set({
@@ -358,14 +369,14 @@ export async function recoverAccount(raw: unknown): Promise<RecoveryOutcome> {
       recoveryHash: recoveryHashOf(next),
       failedLogins: 0,
       lockedUntil: null,
-      sessionsNotBefore: now,
+      sessionsNotBefore: cutoff,
     })
     // The slow hash allows another request to consume or replace the code.
     // Check it again atomically with the write, not in a second SELECT.
     .where(and(eq(users.id, user.id), eq(users.recoveryHash, presented)))
     .returning({ id: users.id });
   if (!recovered) return { kind: "wrong" };
-  await startSession(user.id);
+  await startSession(user.id, cutoff);
   return { kind: "ok", recoveryCode: next };
 }
 
@@ -391,10 +402,12 @@ export async function replaceRecoveryCode(raw: unknown): Promise<RecoveryOutcome
     return locked ? lockedAnswer(locked) : { kind: "wrong" };
   }
   const recoveryCode = newRecoveryCode(random);
-  await db
+  const [replaced] = await db
     .update(users)
     .set({ recoveryHash: recoveryHashOf(recoveryCode), failedLogins: 0, lockedUntil: null })
-    .where(eq(users.id, userId));
+    .where(unchangedCredential(user, stored))
+    .returning({ id: users.id });
+  if (!replaced) return { kind: "wrong" };
   return { kind: "ok", recoveryCode };
 }
 
@@ -431,7 +444,8 @@ export async function deleteAccount(raw: unknown): Promise<DeleteOutcome> {
     const locked = await countFailure(user.id, now);
     return locked ? lockedAnswer(locked) : { kind: "wrong" };
   }
-  await db.delete(users).where(eq(users.id, userId));
+  const [deleted] = await db.delete(users).where(unchangedCredential(user, stored)).returning({ id: users.id });
+  if (!deleted) return { kind: "wrong" };
   (await cookies()).delete(SESSION_COOKIE_NAME);
   return { kind: "deleted" };
 }

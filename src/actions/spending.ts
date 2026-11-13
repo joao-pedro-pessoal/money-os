@@ -1,4 +1,5 @@
 "use server";
+import { requireServerSession } from "./requestSession";
 
 import { db } from "@/db/client";
 import { transactions, categories, subcategories, accounts } from "@/db/schema";
@@ -23,6 +24,7 @@ import type { SpendingRow } from "@/lib/spending/analyse";
  * zero: a spend that vanishes flatters the month it was in.
  */
 export async function getSpendingAnalysis() {
+  await requireServerSession();
   const [txRows, categoryRows, subcategoryRows, accountRows, rates, base] = await Promise.all([
     db.select().from(transactions),
     db.select().from(categories),
