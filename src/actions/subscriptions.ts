@@ -11,6 +11,7 @@ import { toBase } from "@/lib/fx";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 import { claimManualRequest, manualEntryResult, manualRequestId } from "./manualRequest";
+import { MANUAL_EDIT_RETRY_MESSAGE } from "@/lib/money/manualRequest";
 import {
   totals,
   nextCharge,
@@ -101,12 +102,17 @@ export async function submitSubscriptionCreation(formData: FormData) {
 }
 
 export async function updateSubscription(formData: FormData) {
-  await requireServerSession();
-  await saveSubscription(formData, String(formData.get("id")));
+  const requestId = await manualRequestId(formData);
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new ManualEntryError("Subscription not found");
+  await saveSubscription(formData, { id, requestId });
 }
 
-async function saveSubscription(formData: FormData, id?: string) {
-  const requestId = id ? null : await manualRequestId(formData);
+export async function submitSubscriptionEdit(formData: FormData) {
+  return manualEntryResult(() => updateSubscription(formData), MANUAL_EDIT_RETRY_MESSAGE);
+}
+
+function subscriptionValues(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const amount = manualAmount(String(formData.get("amount") ?? ""));
   const cadence = String(formData.get("cadence") ?? "monthly");
@@ -117,31 +123,57 @@ async function saveSubscription(formData: FormData, id?: string) {
   if (!name) throw new ManualEntryError("A subscription needs a name.");
   if (!isCadence(cadence)) throw new ManualEntryError("Choose a valid billing period.");
   if (!isCurrencyCode(currency)) throw new ManualEntryError("Choose a valid currency.");
-  const values = { name, amount, cadence, currency, accountId, categoryId,
+  return { name, amount, cadence, currency, accountId, categoryId,
     nextChargeAt: date ? manualDate(date) : null,
     notes: String(formData.get("notes") ?? "").trim() || null };
+}
+
+async function saveSubscription(formData: FormData, edit?: { id: string; requestId: string }) {
+  const id = edit?.id;
+  const requestId = edit?.requestId ?? await manualRequestId(formData);
+  const recordId = id ?? requestId;
+
   await db.transaction(async store => {
-    if (requestId && !(await claimManualRequest(store,requestId,"subscription:create",requestId,JSON.stringify(values)))) {
-      const [existing] = await store.select({id:subscriptions.id}).from(subscriptions).where(eq(subscriptions.id,requestId));
+    const [original] = id === undefined ? [] : await store.select({ nextChargeAt: subscriptions.nextChargeAt })
+      .from(subscriptions).where(eq(subscriptions.id, id)).for("update");
+    if (id !== undefined && !original) throw new ManualEntryError("Subscription not found");
+
+    const values = subscriptionValues(formData);
+    const kind = id === undefined ? "subscription:create" : "subscription:edit";
+    if (!(await claimManualRequest(store, requestId, kind, recordId, JSON.stringify(values)))) {
+      // A confirmed edit is never replayed, even after the subscription changes again.
+      if (id !== undefined) return;
+      const [existing] = await store.select({ id: subscriptions.id }).from(subscriptions).where(eq(subscriptions.id, recordId));
       if (!existing) throw new ManualEntryError("This entry has already been deleted.");
       return;
     }
-    if (accountId) {
-      const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId));
+
+    if (values.accountId) {
+      const [account] = await store.select({ active: accounts.active }).from(accounts).where(eq(accounts.id, values.accountId));
       if (!account?.active) throw new ManualEntryError("Choose an active account.");
     }
-    if (categoryId) {
-      const [category] = await store.select().from(categories).where(eq(categories.id, categoryId));
+    if (values.categoryId) {
+      const [category] = await store.select({ kind: categories.kind }).from(categories).where(eq(categories.id, values.categoryId));
       if (category?.kind !== "expense") throw new ManualEntryError("Choose an expense category.");
     }
-    if (id) {
-      const [updated] = await store.update(subscriptions).set({ ...values, updatedAt: new Date() }).where(eq(subscriptions.id, id)).returning();
-      if (!updated) throw new ManualEntryError("Subscription not found");
+
+    if (id === undefined) {
+      await store.insert(subscriptions).values({ id: recordId, ...values });
     } else {
-      await store.insert(subscriptions).values({id:requestId!,...values});
-      await store.insert(auditLog).values({entityType:"subscription",entityId:requestId!,action:"subscription_created",details:JSON.stringify({name})});
+      // A save that leaves the date alone keeps the original schedule anchor.
+      const oldDate = original?.nextChargeAt;
+      const nextChargeAt = oldDate && oldDate.toISOString().slice(0, 10) === values.nextChargeAt?.toISOString().slice(0, 10)
+        ? oldDate : values.nextChargeAt;
+      await store.update(subscriptions).set({ ...values, nextChargeAt, updatedAt: new Date() }).where(eq(subscriptions.id, id));
     }
+
+    await store.insert(auditLog).values({
+      entityType: "subscription", entityId: recordId,
+      action: id === undefined ? "subscription_created" : "subscription_edited",
+      details: JSON.stringify({ name: values.name }),
+    });
   });
+
   revalidatePath("/subscriptions");
   revalidatePath("/");
 }

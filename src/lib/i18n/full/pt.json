@@ -2245,11 +2245,11 @@
   "This charge was already answered.": "Essa cobrança já foi respondida.",
   "{0} (subscription)": "{0} (assinatura)",
   "That expense is no longer there. Reload and choose again.": "Essa despesa não existe mais. Recarregue e escolha novamente.",
-  "A subscription needs a name.": "Uma assinatura precisa de um nome.",
+  "A subscription needs a name.": "Dá um nome à subscrição.",
   "Enter what it costs each time it is charged.": "Escreve quanto custa de cada vez que é cobrada.",
   "Unknown billing period: {0}": "Período de faturamento desconhecido: {0}",
   "Enter a positive amount.": "Escreve um valor positivo.",
-  "Subscription not found": "Assinatura não encontrada",
+  "Subscription not found": "Subscrição não encontrada",
   "Invalid transaction type.": "Tipo de transação inválido.",
   "Purchase not found.": "Compra não encontrada.",
   "Choose a category for this transaction type.": "Escolhe uma categoria para este tipo de movimento.",
@@ -3438,5 +3438,8 @@
   "Add something coming in": "Acrescentar algo a receber",
   "Money that has not arrived yet, counted nowhere until it does. Say when it arrives, all of it or only some, add more, or change it.": "Dinheiro que ainda não chegou e que não conta em lado nenhum até chegar. Diz quando chega, todo ou só parte, acrescenta mais ou altera.",
   "{0} entry": "{0} entrada",
-  "{0} entries": "{0} entradas"
+  "{0} entries": "{0} entradas",
+  "Edit subscription": "Editar subscrição",
+  "Edit subscription: {0}": "Editar subscrição: {0}",
+  "Billing period": "Periodicidade"
 }

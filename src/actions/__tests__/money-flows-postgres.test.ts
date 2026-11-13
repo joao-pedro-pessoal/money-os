@@ -16,11 +16,12 @@ vi.mock("@/actions/settings", () => ({ getBaseCurrency: async () => isolated.bas
 import { createTransaction, createQuickTransaction, undoQuickTransaction, updateTransaction, deleteTransaction, createTransfer, createInterestPayment } from "../transactions";
 import { createBucket, submitBucketCreation, submitAllocationAddition, submitBucketEdit, submitExactAllocation, updateBucket, deleteBucket, addToAllocation, setAllocation, listBucketsWithTotals } from "../buckets";
 import { createBudget, submitBudgetCreation, submitBudgetLimit, updateBudget, deleteBudget, listBudgets, getUnbudgetedSpending, getBudgetsLeft, getKeptForBudgets, toggleBudgetCategory } from "../budgets";
-import { createSubscription, submitSubscriptionCreation, updateSubscription, toggleSubscription, deleteSubscription } from "../subscriptions";
+import { createSubscription, submitSubscriptionCreation, submitSubscriptionEdit, updateSubscription, toggleSubscription, deleteSubscription } from "../subscriptions";
 import { createHolding, updateHolding, submitHoldingEdit, submitHoldingOperation, updateHoldingPrice, reinforceHolding, sellHolding, addRewards } from "../investments";
 import { setHoldingAllocation } from "../purpose";
 import { createLiability, updateLiability } from "../liabilities";
 import { createExpected } from "../expected";
+import { MANUAL_EDIT_RETRY_MESSAGE } from "@/lib/money/manualRequest";
 import { planDistribution, applyDistribution } from "../distribute";
 import { answerSubscriptionCharge, recordSubscriptionCharge } from "../subscriptionCharges";
 
@@ -214,6 +215,129 @@ describe("goals, budgets and subscriptions", () => {
     await toggleSubscription(form({ id: row.id, active: "true" }));
     await deleteSubscription(form({ id: row.id }));
     expect(await txs()).toEqual([]); expect(await balance("eur-a")).toBe(1000);
+  });
+
+  it("edits every field of a cancelled subscription and leaves its recorded charge and balances intact", async () => {
+    await createSubscription(sub());
+    const [original] = await isolated.db.select().from(schema.subscriptions);
+    expect(await recordSubscriptionCharge(form({
+      subscriptionId: original.id, dueOn: today(), accountId: "eur-a", amount: "10", date: today(),
+    }))).toEqual({ ok: true });
+    await toggleSubscription(form({ id: original.id, active: "false" }));
+    await isolated.db.insert(schema.categories).values({ id: "utilities", name: "Synthetic utilities", kind: "expense" });
+    const oldCharges = await isolated.db.select().from(schema.subscriptionCharges);
+    const oldTransactions = await txs();
+    const oldBalances = await Promise.all(["eur-a", "usd-a"].map(balance));
+
+    const edit = sub({
+      id: original.id, name: "Updated plan", amount: "21,37", currency: "USD", cadence: "quarterly",
+      nextChargeAt: "2027-01-31", accountId: "usd-a", categoryId: "utilities", notes: "Annual renewal reminder",
+    });
+    expect(await submitSubscriptionEdit(edit)).toEqual({ saved: true });
+    const [edited] = await isolated.db.select().from(schema.subscriptions);
+    expect(edited).toMatchObject({
+      id: original.id, createdAt: original.createdAt, active: false, name: "Updated plan", amount: "21.37",
+      currency: "USD", cadence: "quarterly", nextChargeAt: new Date("2027-01-31T12:00:00Z"),
+      accountId: "usd-a", categoryId: "utilities", notes: "Annual renewal reminder",
+    });
+    const audit = await isolated.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "subscription_edited"));
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({ entityType: "subscription", entityId: original.id });
+    expect(await isolated.db.select().from(schema.subscriptionCharges)).toEqual(oldCharges);
+    expect(await txs()).toEqual(oldTransactions);
+    expect(await Promise.all(["eur-a", "usd-a"].map(balance))).toEqual(oldBalances);
+  });
+
+  it("replays one subscription edit without updating its timestamp or reverting a newer edit", async () => {
+    await createSubscription(sub());
+    const [original] = await isolated.db.select().from(schema.subscriptions);
+    const first = sub({ id: original.id, name: "First edit", amount: "15.25" });
+    expect(await submitSubscriptionEdit(first)).toEqual({ saved: true });
+    const [afterFirst] = await isolated.db.select().from(schema.subscriptions);
+    expect(await submitSubscriptionEdit(first)).toEqual({ saved: true });
+    expect(await isolated.db.select().from(schema.subscriptions)).toEqual([afterFirst]);
+    expect(await isolated.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "subscription_edited"))).toHaveLength(1);
+
+    expect(await submitSubscriptionEdit(sub({ id: original.id, name: "Second edit", amount: "19" }))).toEqual({ saved: true });
+    const [afterSecond] = await isolated.db.select().from(schema.subscriptions);
+    expect(afterSecond).toMatchObject({ name: "Second edit", amount: "19.00" });
+    expect(await submitSubscriptionEdit(first)).toEqual({ saved: true });
+    expect(await isolated.db.select().from(schema.subscriptions)).toEqual([afterSecond]);
+    const audit = await isolated.db.select().from(schema.auditLog);
+    expect(audit.filter(row => row.action === "subscription_edited")).toHaveLength(2);
+    expect(audit.filter(row => row.action === "subscription:edit")).toHaveLength(2);
+    expect(await txs()).toEqual([]);
+    expect(await balance("eur-a")).toBe(1000);
+  });
+
+  it.each([
+    [{ amount: "0" }, "Enter a positive amount with at most two decimal places."],
+    [{ amount: "10.123" }, "Enter a positive amount with at most two decimal places."],
+    [{ name: " " }, "A subscription needs a name."],
+    [{ currency: "BTC" }, "Choose a valid currency."],
+    [{ cadence: "daily" }, "Choose a valid billing period."],
+    [{ nextChargeAt: "2027-02-30" }, "Choose a valid date."],
+    [{ accountId: "foreign" }, "Choose an active account."],
+    [{ accountId: "missing" }, "Choose an active account."],
+    [{ accountId: "inactive" }, "Choose an active account."],
+    [{ categoryId: "foreign-category" }, "Choose an expense category."],
+    [{ categoryId: "missing" }, "Choose an expense category."],
+    [{ categoryId: "salary" }, "Choose an expense category."],
+  ] as const)("refuses invalid subscription edit fields %j without writing a receipt", async (invalid, error) => {
+    await isolated.db.insert(schema.accounts).values({
+      id: "inactive", name: "Inactive", institution: "Synthetic", accountType: "bank", active: false,
+    });
+    await createSubscription(sub());
+    const [original] = await isolated.db.select().from(schema.subscriptions);
+    const audit = await isolated.db.select().from(schema.auditLog);
+
+    expect(await submitSubscriptionEdit(sub({ id: original.id, ...invalid }))).toEqual({ error });
+    expect(await isolated.db.select().from(schema.subscriptions)).toEqual([original]);
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual(audit);
+    expect(await txs()).toEqual([]);
+    expect(await balance("eur-a")).toBe(1000);
+  });
+
+  it("returns the same error for a missing subscription and a subscription owned by someone else", async () => {
+    await engine.exec("SELECT set_config('app.user_id','flow-b',false)");
+    const [foreign] = await isolated.db.insert(schema.subscriptions).values({ name: "Private", amount: "10" }).returning();
+    await engine.exec("SELECT set_config('app.user_id','flow-a',false)");
+    for (const id of [foreign.id, "missing", ""]) {
+      expect(await submitSubscriptionEdit(sub({ id, amount: "20" }))).toEqual({ error: "Subscription not found" });
+    }
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
+    await engine.exec("SELECT set_config('app.user_id','flow-b',false)");
+    expect(await isolated.db.select().from(schema.subscriptions)).toEqual([foreign]);
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
+  });
+
+  it("requires a session to edit a subscription even when the database can see it", async () => {
+    await createSubscription(sub());
+    const [original] = await isolated.db.select().from(schema.subscriptions);
+    const audit = await isolated.db.select().from(schema.auditLog);
+    isolated.signedIn = false;
+
+    expect(await submitSubscriptionEdit(sub({ id: original.id, amount: "20" }))).toEqual({ error: "Sign in again." });
+    expect(await isolated.db.select().from(schema.subscriptions)).toEqual([original]);
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual(audit);
+  });
+
+  it("rolls back both the edit and its receipt if the subscription edit audit fails", async () => {
+    await createSubscription(sub());
+    const [original] = await isolated.db.select().from(schema.subscriptions);
+    const audit = await isolated.db.select().from(schema.auditLog);
+    const edit = sub({ id: original.id, amount: "30" });
+    await engine.exec(`RESET ROLE; CREATE FUNCTION synthetic_money_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic failure'; END $$;
+      CREATE TRIGGER fail_money_audit BEFORE INSERT ON audit_log FOR EACH ROW WHEN (NEW.action = 'subscription_edited')
+        EXECUTE FUNCTION synthetic_money_failure(); SET ROLE money_flows_test;`);
+
+    expect(await submitSubscriptionEdit(edit)).toEqual({ error: MANUAL_EDIT_RETRY_MESSAGE });
+    expect(await isolated.db.select().from(schema.subscriptions)).toEqual([original]);
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual(audit);
+
+    await engine.exec("RESET ROLE; DROP TRIGGER fail_money_audit ON audit_log; SET ROLE money_flows_test;");
+    expect(await submitSubscriptionEdit(edit)).toEqual({ saved: true });
+    expect((await isolated.db.select().from(schema.subscriptions))[0].amount).toBe("30.00");
   });
 
   it("refuses an empty subscription name when editing", async () => {

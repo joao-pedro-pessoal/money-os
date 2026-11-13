@@ -19,6 +19,7 @@ import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Section from "@/components/Section";
 import DonutChart from "@/components/DonutChart";
+import SubscriptionEdit from "@/components/SubscriptionEdit";
 import DueSubscriptionCharges from "@/components/DueSubscriptionCharges";
 import { getDueSubscriptionCharges } from "@/actions/subscriptionCharges";
 
@@ -35,6 +36,20 @@ export default async function SubscriptionsPage() {
   ]);
 
   const expenseCategories = categories.filter((c) => c.kind === "expense");
+  const editAccounts = accounts.map(({ id, name }) => ({ id, name }));
+  const editCategories = expenseCategories.map(({ id, name }) => ({ id, name }));
+  const edit = (s: (typeof subs)[number]) => (
+    <SubscriptionEdit
+      subscription={{
+        id: s.id, name: s.name, amount: s.amount, currency: s.currency, cadence: s.cadence,
+        nextChargeAt: s.nextChargeAt?.toISOString().slice(0, 10) ?? "",
+        accountId: s.accountId, accountName: s.accountName,
+        categoryId: s.categoryId, categoryName: s.categoryName, notes: s.notes,
+      }}
+      accounts={editAccounts}
+      categories={editCategories}
+    />
+  );
   const active = subs.filter((s) => s.active);
   const cancelled = subs.filter((s) => !s.active);
 
@@ -144,11 +159,14 @@ export default async function SubscriptionsPage() {
                     </td>
                     <td className="text-xs text-[var(--muted)]"><span translate="no">{s.accountName ?? "—"}</span></td>
                     <td className="text-right">
-                      <form action={toggleSubscription}>
-                        <input type="hidden" name="id" value={s.id} />
-                        <input type="hidden" name="active" value="false" />
-                        <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Cancelled it")}</button>
-                      </form>
+                      <div className="flex flex-wrap items-center justify-end gap-x-2">
+                        {edit(s)}
+                        <form action={toggleSubscription}>
+                          <input type="hidden" name="id" value={s.id} />
+                          <input type="hidden" name="active" value="false" />
+                          <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Cancelled it")}</button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -164,16 +182,19 @@ export default async function SubscriptionsPage() {
           <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table whitespace-nowrap">
             <tbody>
               {cancelled.map((s) => (
-                <tr key={s.id} style={{ opacity: 0.6 }}>
-                  <td><span translate="no">{s.name}</span></td>
-                  <td className="text-right">
+                <tr key={s.id}>
+                  <td className="opacity-60"><span translate="no">{s.name}</span></td>
+                  <td className="text-right opacity-60">
                     <Money value={s.yearly} currency={s.currency} />{uiText(" / year saved")}</td>
                   <td className="text-right">
-                    <form action={toggleSubscription}>
-                      <input type="hidden" name="id" value={s.id} />
-                        <input type="hidden" name="active" value="true" />
-                      <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Resume")}</button>
-                    </form>
+                    <div className="flex flex-wrap items-center justify-end gap-x-2">
+                      {edit(s)}
+                      <form action={toggleSubscription}>
+                        <input type="hidden" name="id" value={s.id} />
+                          <input type="hidden" name="active" value="true" />
+                        <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Resume")}</button>
+                      </form>
+                    </div>
                   </td>
                   <td className="text-right">
                     <form action={deleteSubscription}>

@@ -3438,5 +3438,8 @@
   "Add something coming in": "Add something coming in",
   "Money that has not arrived yet, counted nowhere until it does. Say when it arrives, all of it or only some, add more, or change it.": "Money that has not arrived yet, counted nowhere until it does. Say when it arrives, all of it or only some, add more, or change it.",
   "{0} entry": "{0} entry",
-  "{0} entries": "{0} entries"
+  "{0} entries": "{0} entries",
+  "Edit subscription": "Edit subscription",
+  "Edit subscription: {0}": "Edit subscription: {0}",
+  "Billing period": "Billing period"
 }
