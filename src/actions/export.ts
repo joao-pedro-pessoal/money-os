@@ -224,7 +224,10 @@ function referencesInsideBackup(data: Partial<Record<BackupTable, Record<string,
   }
 }
 
-const DATE_FIELDS = /(At|Date|timestamp|date)$/i;
+// Timestamp columns read back as Date. endsOn (debts), paidOn (dividends) and
+// consentUntil (bank links) end differently: missing them made a backup with a
+// dated debt impossible to restore.
+const DATE_FIELDS = /(At|Date|timestamp|date|Until|endsOn|paidOn)$/i;
 
 /**
  * The rows belong to whoever restores them, whatever account the file was made
