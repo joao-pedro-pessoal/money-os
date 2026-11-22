@@ -88,7 +88,15 @@ describe("what it does for whom", () => {
     return POST(new Request(url, { method: "POST", headers: { "x-sync-secret": "synthetic-sync-secret" } }));
   };
 
-  it("in the launch edition: rates for everyone, investments only for the owner", async () => {
+  it("in the launch edition: rates for everyone, investments for nobody by default", async () => {
+    await run("money");
+    expect(seen.rates).toEqual(["owner", "ana"]);
+    expect(seen.prices).toEqual([]);
+    expect(seen.connections).toEqual([]);
+  });
+
+  it("in the launch edition with OWNER_FULL_EDITION=1: investments only for the owner", async () => {
+    vi.stubEnv("OWNER_FULL_EDITION", "1");
     const response = await run("money");
     expect(response.status).toBe(200);
     expect(seen.rates).toEqual(["owner", "ana"]);
@@ -107,6 +115,7 @@ describe("what it does for whom", () => {
 describe("the edition check inside a scheduled run", () => {
   it("follows the person being worked for, not the absence of a cookie", async () => {
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_EDITION", "money");
+    vi.stubEnv("OWNER_FULL_EDITION", "1");
     vi.resetModules();
     const { asUser } = await import("@/db/acting");
     const { currentInvestments, requireInvestments } = await import("@/actions/releaseEdition");

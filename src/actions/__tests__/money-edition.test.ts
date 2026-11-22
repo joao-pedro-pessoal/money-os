@@ -6,6 +6,7 @@ vi.mock("@/actions/session",()=>({currentUserId:async(required?:string)=>require
 const mutations: [string,string,unknown[]][] = [];
 beforeAll(async()=>{
   vi.stubEnv("NEXT_PUBLIC_PRODUCT_EDITION","money");
+  vi.stubEnv("OWNER_FULL_EDITION","1");
   vi.resetModules();
   for(const [module,names] of [
     ["investments",["createHolding","setHoldingTags","updateHolding","updateHoldingPrice","deleteHolding","addRewards","reinforceHolding","sellHolding"]],
@@ -38,6 +39,15 @@ describe("money edition server boundary",()=>{
 });
 
 describe("C2 edition follows the server identity",()=>{
+  it("gives the owner the normal edition unless the host switches the full one on",async()=>{
+    const {investmentsFor}=await import("../releaseEdition");
+    vi.stubEnv("OWNER_FULL_EDITION","");
+    expect(investmentsFor("owner")).toBe(false);
+    vi.stubEnv("OWNER_FULL_EDITION","true");
+    expect(investmentsFor("owner")).toBe(false);
+    vi.stubEnv("OWNER_FULL_EDITION","1");
+    expect(investmentsFor("owner")).toBe(true);
+  });
   it("grants the exact owner and refuses lookalikes, ordinary accounts and anonymous requests",async()=>{
     const {investmentsFor}=await import("../releaseEdition");
     expect(investmentsFor("owner")).toBe(true);
