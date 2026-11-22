@@ -20,6 +20,7 @@ import { ACCOUNTS_TABS } from "@/lib/navigation";
 import BalanceMeaningField from "@/components/BalanceMeaningField";
 import Link from "next/link";
 import Section from "@/components/Section";
+import ArrangeOrder from "@/components/ArrangeOrder";
 import DonutChart from "@/components/DonutChart";
 import AccountQuick from "@/components/AccountQuick";
 import TryQuickEntry from "@/components/TryQuickEntry";
@@ -70,7 +71,7 @@ export default async function AccountsPage() {
         action={removeEmptyAccounts}
       />
 
-      <Section title="Accounts" defaultOpen essential summary={uiText("{0} active", { "0": accounts.length })}>
+      <Section title="Accounts" defaultOpen essential summary={<>{uiText("{0} active", { "0": accounts.length })} <ArrangeOrder list="accounts" title="Accounts" items={accounts.map((a) => ({ id: a.id, label: a.name }))} /></>}>
         {composition.some((row) => row.composition.total > 0) && (
           <div className="mb-4">
             <DonutChart compact currency={baseCurrency} data={composition.filter((row) => row.composition.total > 0).map((row) => ({ name: row.name, value: row.composition.total }))} />

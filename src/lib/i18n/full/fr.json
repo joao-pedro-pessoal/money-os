@@ -3441,5 +3441,12 @@
   "{0} entries": "{0} entries",
   "Edit subscription": "Edit subscription",
   "Edit subscription: {0}": "Edit subscription: {0}",
-  "Billing period": "Billing period"
+  "Billing period": "Billing period",
+  "Arrange": "Réorganiser",
+  "Change the order": "Modifier l’ordre",
+  "Drag by ⠿ or use the arrows. The order is kept in your account, on every device.": "Faites glisser par ⠿ ou utilisez les flèches. L’ordre est enregistré dans votre compte, sur tous vos appareils.",
+  "Move up": "Monter",
+  "Move down": "Descendre",
+  "Save order": "Enregistrer l’ordre",
+  "Could not save the order. Try again.": "Impossible d’enregistrer l’ordre. Réessayez."
 }

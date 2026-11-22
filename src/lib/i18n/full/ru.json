@@ -3441,5 +3441,12 @@
   "{0} entries": "{0} entries",
   "Edit subscription": "Edit subscription",
   "Edit subscription: {0}": "Edit subscription: {0}",
-  "Billing period": "Billing period"
+  "Billing period": "Billing period",
+  "Arrange": "Упорядочить",
+  "Change the order": "Изменить порядок",
+  "Drag by ⠿ or use the arrows. The order is kept in your account, on every device.": "Перетаскивайте за ⠿ или используйте стрелки. Порядок сохраняется в вашем аккаунте на всех устройствах.",
+  "Move up": "Вверх",
+  "Move down": "Вниз",
+  "Save order": "Сохранить порядок",
+  "Could not save the order. Try again.": "Не удалось сохранить порядок. Попробуйте ещё раз."
 }

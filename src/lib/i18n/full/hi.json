@@ -3441,5 +3441,12 @@
   "{0} entries": "{0} entries",
   "Edit subscription": "Edit subscription",
   "Edit subscription: {0}": "Edit subscription: {0}",
-  "Billing period": "Billing period"
+  "Billing period": "Billing period",
+  "Arrange": "क्रम बदलें",
+  "Change the order": "क्रम बदलें",
+  "Drag by ⠿ or use the arrows. The order is kept in your account, on every device.": "⠿ से खींचें या तीरों का उपयोग करें। क्रम आपके खाते में, हर डिवाइस पर सहेजा रहता है।",
+  "Move up": "ऊपर ले जाएँ",
+  "Move down": "नीचे ले जाएँ",
+  "Save order": "क्रम सहेजें",
+  "Could not save the order. Try again.": "क्रम सहेजा नहीं जा सका। फिर से कोशिश करें।"
 }

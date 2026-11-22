@@ -3441,5 +3441,12 @@
   "{0} entries": "{0} entries",
   "Edit subscription": "Edit subscription",
   "Edit subscription: {0}": "Edit subscription: {0}",
-  "Billing period": "Billing period"
+  "Billing period": "Billing period",
+  "Arrange": "Ordenen",
+  "Change the order": "Volgorde wijzigen",
+  "Drag by ⠿ or use the arrows. The order is kept in your account, on every device.": "Sleep aan ⠿ of gebruik de pijlen. De volgorde wordt in je account bewaard, op elk apparaat.",
+  "Move up": "Omhoog",
+  "Move down": "Omlaag",
+  "Save order": "Volgorde opslaan",
+  "Could not save the order. Try again.": "De volgorde kon niet worden opgeslagen. Probeer het opnieuw."
 }

@@ -3441,5 +3441,12 @@
   "{0} entries": "{0} entries",
   "Edit subscription": "Edit subscription",
   "Edit subscription: {0}": "Edit subscription: {0}",
-  "Billing period": "Billing period"
+  "Billing period": "Billing period",
+  "Arrange": "排序",
+  "Change the order": "更改顺序",
+  "Drag by ⠿ or use the arrows. The order is kept in your account, on every device.": "拖动 ⠿ 或使用箭头。顺序会保存在你的账户中，所有设备通用。",
+  "Move up": "上移",
+  "Move down": "下移",
+  "Save order": "保存顺序",
+  "Could not save the order. Try again.": "无法保存顺序。请重试。"
 }

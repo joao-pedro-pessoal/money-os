@@ -3441,5 +3441,12 @@
   "{0} entries": "{0} entries",
   "Edit subscription": "Edit subscription",
   "Edit subscription: {0}": "Edit subscription: {0}",
-  "Billing period": "Billing period"
+  "Billing period": "Billing period",
+  "Arrange": "সাজান",
+  "Change the order": "ক্রম বদলান",
+  "Drag by ⠿ or use the arrows. The order is kept in your account, on every device.": "⠿ ধরে টানুন বা তীর ব্যবহার করুন। ক্রমটি আপনার অ্যাকাউন্টে, সব ডিভাইসে সংরক্ষিত থাকে।",
+  "Move up": "উপরে সরান",
+  "Move down": "নিচে সরান",
+  "Save order": "ক্রম সংরক্ষণ করুন",
+  "Could not save the order. Try again.": "ক্রম সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।"
 }

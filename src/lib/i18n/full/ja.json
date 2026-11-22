@@ -3441,5 +3441,12 @@
   "{0} entries": "{0} entries",
   "Edit subscription": "Edit subscription",
   "Edit subscription: {0}": "Edit subscription: {0}",
-  "Billing period": "Billing period"
+  "Billing period": "Billing period",
+  "Arrange": "並べ替え",
+  "Change the order": "順序を変更",
+  "Drag by ⠿ or use the arrows. The order is kept in your account, on every device.": "⠿ をドラッグするか矢印を使います。順序はアカウントに保存され、すべての端末で同じです。",
+  "Move up": "上へ移動",
+  "Move down": "下へ移動",
+  "Save order": "順序を保存",
+  "Could not save the order. Try again.": "順序を保存できませんでした。もう一度お試しください。"
 }

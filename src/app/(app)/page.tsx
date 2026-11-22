@@ -3,6 +3,8 @@ import { currentInvestments } from "@/actions/releaseEdition";
 import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
 import MoneyOverview from "@/components/MoneyOverview";
+import ArrangeOrder from "@/components/ArrangeOrder";
+import { inSavedOrder } from "@/actions/orderStore";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
 import { listAccountsWithState } from "@/actions/accounts";
@@ -291,6 +293,181 @@ export default async function DashboardPage({
    */
   const subs = await getSubscriptionTotals();
 
+  const blocks = await inSavedOrder("dashboard", [
+    { id: "networth", label: uiText("Net worth over time"), node: <>
+      {/* Open by default: this is the shape of the whole thing at a glance. */}
+      <Section
+        title="Net worth over time"
+        defaultOpen
+        summary={<Link href="/analytics" className="text-xs text-[var(--accent)]">{uiText("More charts →")}</Link>}
+      >
+        {/* The series is stored in the base currency, so every point converts
+            with the same helper the cards use — a chart labelled in dollars
+            drawing euro values would be the same mislabelling, just harder to
+            notice. */}
+        <NetWorthChart
+          data={netWorthSeries.map((p) => ({ ...p, netWorth: inDisplay(p.netWorth) }))}
+          currency={base}
+        />
+      </Section>
+    </> },
+    { id: "month-goals", label: `${uiText("This month")} · ${uiText("Goals")}`, node: <>
+      {/* This month, split into what's already decided and what isn't. A single
+          expenses figure can't answer "how much of this month is settled?". */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Section title="This month" defaultOpen essential summary={<Link href="/transactions" className="text-xs text-[var(--accent)]">{uiText("Open →")}</Link>}>
+          <FlowBars
+            shape={{
+              flows: {
+                ...month.flows,
+                committedNet: inDisplay(month.flows.committedNet),
+                discretionary: inDisplay(month.flows.discretionary),
+                income: {
+                  ...month.flows.income,
+                  total: inDisplay(month.flows.income.total),
+                  fixed: inDisplay(month.flows.income.fixed),
+                  variable: inDisplay(month.flows.income.variable),
+                  unclassified: inDisplay(month.flows.income.unclassified),
+                  // A percentage is already unit-free; converting it would be
+                  // the bug this whole change is about, in reverse.
+                  fixedPercent: month.flows.income.fixedPercent,
+                },
+                expenses: {
+                  ...month.flows.expenses,
+                  total: inDisplay(month.flows.expenses.total),
+                  fixed: inDisplay(month.flows.expenses.fixed),
+                  variable: inDisplay(month.flows.expenses.variable),
+                  unclassified: inDisplay(month.flows.expenses.unclassified),
+                  fixedPercent: month.flows.expenses.fixedPercent,
+                },
+              },
+              unclassified: month.unclassified.map((u) => ({
+                ...u,
+                amount: inDisplay(u.amount),
+              })),
+            }}
+            currency={base}
+          />
+        </Section>
+
+        <Section
+          title="Goals"
+          defaultOpen
+          summary={
+            <>
+              {topBuckets.length} · <Money value={inDisplay(bucketTotalValue)} currency={base} />{" · "}
+              <Link href="/buckets" className="text-[var(--accent)]">{uiText("Open →")}</Link>
+            </>
+          }
+        >
+          {topBuckets.length === 0 ? (
+            <div className="text-xs text-[var(--muted)] py-4 text-center">{uiText("No buckets yet.")}{" "}
+              <Link href="/buckets" className="text-[var(--accent)]">{uiText("Create one")}</Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {topBuckets.map((b) => (
+                <div key={b.id}>
+                  <div className="flex justify-between items-baseline text-xs mb-1">
+                    <Link href={`/buckets/${b.id}`} className="hover:underline">
+                      <span translate="no">{b.name}</span>
+                    </Link>
+                    <span className="text-[var(--muted)]">
+                      <Money value={inDisplay(b.totals.total)} currency={base} />
+                      {b.progress.percent !== null && ` · ${b.progress.percent.toFixed(0)}%`}
+                    </span>
+                  </div>
+                  {b.progress.percent !== null && (
+                    <div className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden relative">
+                      <div
+                        className="h-full"
+                        style={{
+                          width: `${Math.min(100, b.progress.percent)}%`,
+                          background: b.progress.reached ? "var(--green)" : "var(--accent)",
+                        }}
+                      />
+                      {/* Where the goal stands on guaranteed money alone — a goal
+                          funded by an ETF is not the same as one funded by cash. */}
+                      {b.progress.conservativePercent !== null &&
+                        b.progress.conservativePercent < b.progress.percent && (
+                          <div
+                            className="absolute top-0 bottom-0 w-px bg-[var(--foreground)] opacity-50"
+                            style={{ left: `${Math.min(100, b.progress.conservativePercent)}%` }}
+                            title={uiText("{0}% guaranteed", { "0": b.progress.conservativePercent.toFixed(0) })}
+                          />
+                        )}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <Link href="/buckets" className="text-xs text-[var(--accent)] block pt-1">{uiText("All buckets →")}</Link>
+            </div>
+          )}
+        </Section>
+      </div>
+    </> },
+    { id: "where", label: uiText("Where the money is"), node: <>
+      <Section
+        title="Where the money is"
+        defaultOpen
+        summary={
+          <>
+            {composition.length}{uiText(" accounts")}{totalFloating > 0 && (
+              <>
+                {" · "}
+                <span className="text-[var(--amber)]">
+                  <Money value={inDisplay(totalFloating)} currency={base} />{uiText(" variable")}</span>
+              </>
+            )}
+            {" · "}
+            <Link href="/accounts" className="text-[var(--accent)]">{uiText("Open →")}</Link>
+          </>
+        }
+      >
+        <div className="grid grid-cols-1 gap-6">
+          <div className="min-w-0">
+            <DonutChart
+              data={composition
+                .filter((c) => c.composition.total > 0)
+                .map((c) => ({ name: c.name, value: c.composition.total }))}
+            />
+          </div>
+          <div className="min-w-0">
+            <AccountsCard accounts={accountRows} />
+          </div>
+        </div>
+      </Section>
+    </> },
+    { id: "recent", label: uiText("Recent transactions"), node: <>
+      <Section title="Recent transactions" summary={uiText("{0} shown · {1}", { "0": recentTx.length, "1": recentTxData.baseCurrency })}>
+        {recentTxData.approximate && <p className="text-xs text-[var(--muted)] mb-3">{uiText("Converted amounts use current exchange rates.")}</p>}
+        {recentTxData.unconverted.length > 0 && <p className="text-xs text-[var(--amber)] mb-3">{recentTxData.unconverted.length}{uiText(" transaction(s) omitted because an exchange rate is missing. See all transactions for details.")}</p>}
+        <div className="overflow-x-auto" role="region" aria-label={uiText("Recent transactions")} tabIndex={0}>
+        <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
+          <thead>
+            <tr>
+              <th>{uiText("Date")}</th>
+              <th>{uiText("Description")}</th>
+              <th>{uiText("Amount")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentTx.map((t) => (
+              <tr key={t.id}>
+                <td>{new Date(t.date).toLocaleDateString(numberLocale)}</td>
+                <td><span translate="no">{transactionDescription(t.description,uiText) || t.categoryName || transactionTypeLabel(t.type,uiText)}</span></td>
+                <td>
+                  <Money value={Number(t.amount)} currency={recentTxData.baseCurrency} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </ResponsiveTable></div>
+        </div>
+        <Link href="/transactions" className="text-xs text-[var(--accent)] block pt-3">{uiText("All transactions →")}</Link>
+      </Section>
+    </> }
+  ], (block) => block.id);
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -455,174 +632,9 @@ export default async function DashboardPage({
       )}
 
       <MobileFold simpleOnly title="Details, charts and goals" persistKey="simple-dashboard-details" className="space-y-8">
-      {/* Open by default: this is the shape of the whole thing at a glance. */}
-      <Section
-        title="Net worth over time"
-        defaultOpen
-        summary={<Link href="/analytics" className="text-xs text-[var(--accent)]">{uiText("More charts →")}</Link>}
-      >
-        {/* The series is stored in the base currency, so every point converts
-            with the same helper the cards use — a chart labelled in dollars
-            drawing euro values would be the same mislabelling, just harder to
-            notice. */}
-        <NetWorthChart
-          data={netWorthSeries.map((p) => ({ ...p, netWorth: inDisplay(p.netWorth) }))}
-          currency={base}
-        />
-      </Section>
-
-      {/* This month, split into what's already decided and what isn't. A single
-          expenses figure can't answer "how much of this month is settled?". */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Section title="This month" defaultOpen essential summary={<Link href="/transactions" className="text-xs text-[var(--accent)]">{uiText("Open →")}</Link>}>
-          <FlowBars
-            shape={{
-              flows: {
-                ...month.flows,
-                committedNet: inDisplay(month.flows.committedNet),
-                discretionary: inDisplay(month.flows.discretionary),
-                income: {
-                  ...month.flows.income,
-                  total: inDisplay(month.flows.income.total),
-                  fixed: inDisplay(month.flows.income.fixed),
-                  variable: inDisplay(month.flows.income.variable),
-                  unclassified: inDisplay(month.flows.income.unclassified),
-                  // A percentage is already unit-free; converting it would be
-                  // the bug this whole change is about, in reverse.
-                  fixedPercent: month.flows.income.fixedPercent,
-                },
-                expenses: {
-                  ...month.flows.expenses,
-                  total: inDisplay(month.flows.expenses.total),
-                  fixed: inDisplay(month.flows.expenses.fixed),
-                  variable: inDisplay(month.flows.expenses.variable),
-                  unclassified: inDisplay(month.flows.expenses.unclassified),
-                  fixedPercent: month.flows.expenses.fixedPercent,
-                },
-              },
-              unclassified: month.unclassified.map((u) => ({
-                ...u,
-                amount: inDisplay(u.amount),
-              })),
-            }}
-            currency={base}
-          />
-        </Section>
-
-        <Section
-          title="Goals"
-          defaultOpen
-          summary={
-            <>
-              {topBuckets.length} · <Money value={inDisplay(bucketTotalValue)} currency={base} />{" · "}
-              <Link href="/buckets" className="text-[var(--accent)]">{uiText("Open →")}</Link>
-            </>
-          }
-        >
-          {topBuckets.length === 0 ? (
-            <div className="text-xs text-[var(--muted)] py-4 text-center">{uiText("No buckets yet.")}{" "}
-              <Link href="/buckets" className="text-[var(--accent)]">{uiText("Create one")}</Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {topBuckets.map((b) => (
-                <div key={b.id}>
-                  <div className="flex justify-between items-baseline text-xs mb-1">
-                    <Link href={`/buckets/${b.id}`} className="hover:underline">
-                      <span translate="no">{b.name}</span>
-                    </Link>
-                    <span className="text-[var(--muted)]">
-                      <Money value={inDisplay(b.totals.total)} currency={base} />
-                      {b.progress.percent !== null && ` · ${b.progress.percent.toFixed(0)}%`}
-                    </span>
-                  </div>
-                  {b.progress.percent !== null && (
-                    <div className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden relative">
-                      <div
-                        className="h-full"
-                        style={{
-                          width: `${Math.min(100, b.progress.percent)}%`,
-                          background: b.progress.reached ? "var(--green)" : "var(--accent)",
-                        }}
-                      />
-                      {/* Where the goal stands on guaranteed money alone — a goal
-                          funded by an ETF is not the same as one funded by cash. */}
-                      {b.progress.conservativePercent !== null &&
-                        b.progress.conservativePercent < b.progress.percent && (
-                          <div
-                            className="absolute top-0 bottom-0 w-px bg-[var(--foreground)] opacity-50"
-                            style={{ left: `${Math.min(100, b.progress.conservativePercent)}%` }}
-                            title={uiText("{0}% guaranteed", { "0": b.progress.conservativePercent.toFixed(0) })}
-                          />
-                        )}
-                    </div>
-                  )}
-                </div>
-              ))}
-              <Link href="/buckets" className="text-xs text-[var(--accent)] block pt-1">{uiText("All buckets →")}</Link>
-            </div>
-          )}
-        </Section>
-      </div>
-
-      <Section
-        title="Where the money is"
-        defaultOpen
-        summary={
-          <>
-            {composition.length}{uiText(" accounts")}{totalFloating > 0 && (
-              <>
-                {" · "}
-                <span className="text-[var(--amber)]">
-                  <Money value={inDisplay(totalFloating)} currency={base} />{uiText(" variable")}</span>
-              </>
-            )}
-            {" · "}
-            <Link href="/accounts" className="text-[var(--accent)]">{uiText("Open →")}</Link>
-          </>
-        }
-      >
-        <div className="grid grid-cols-1 gap-6">
-          <div className="min-w-0">
-            <DonutChart
-              data={composition
-                .filter((c) => c.composition.total > 0)
-                .map((c) => ({ name: c.name, value: c.composition.total }))}
-            />
-          </div>
-          <div className="min-w-0">
-            <AccountsCard accounts={accountRows} />
-          </div>
-        </div>
-      </Section>
-
-      <Section title="Recent transactions" summary={uiText("{0} shown · {1}", { "0": recentTx.length, "1": recentTxData.baseCurrency })}>
-        {recentTxData.approximate && <p className="text-xs text-[var(--muted)] mb-3">{uiText("Converted amounts use current exchange rates.")}</p>}
-        {recentTxData.unconverted.length > 0 && <p className="text-xs text-[var(--amber)] mb-3">{recentTxData.unconverted.length}{uiText(" transaction(s) omitted because an exchange rate is missing. See all transactions for details.")}</p>}
-        <div className="overflow-x-auto" role="region" aria-label={uiText("Recent transactions")} tabIndex={0}>
-        <div className="table-scroll" role="region" aria-label={uiText("Scrollable data table")} tabIndex={0}><ResponsiveTable className="data-table">
-          <thead>
-            <tr>
-              <th>{uiText("Date")}</th>
-              <th>{uiText("Description")}</th>
-              <th>{uiText("Amount")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentTx.map((t) => (
-              <tr key={t.id}>
-                <td>{new Date(t.date).toLocaleDateString(numberLocale)}</td>
-                <td><span translate="no">{transactionDescription(t.description,uiText) || t.categoryName || transactionTypeLabel(t.type,uiText)}</span></td>
-                <td>
-                  <Money value={Number(t.amount)} currency={recentTxData.baseCurrency} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </ResponsiveTable></div>
-        </div>
-        <Link href="/transactions" className="text-xs text-[var(--accent)] block pt-3">{uiText("All transactions →")}</Link>
-      </Section>
+      {/* Blocks in the order the person arranged (Arrange), else this one. */}
+      <div className="flex justify-end"><ArrangeOrder list="dashboard" title="Dashboard" items={blocks.map((block) => ({ id: block.id, label: block.label }))} /></div>
+      {blocks.map((block) => <div key={block.id}>{block.node}</div>)}
       </MobileFold>
     </div>
   );

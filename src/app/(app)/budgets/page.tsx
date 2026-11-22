@@ -15,6 +15,8 @@ import { PERIODS, periodRange } from "@/lib/accounting/envelopes";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Section from "@/components/Section";
+import ArrangeOrder from "@/components/ArrangeOrder";
+import { inSavedOrder } from "@/actions/orderStore";
 import ProgressBars, { budgetTone } from "@/components/ProgressBars";
 import Link from "next/link";
 import FilterLink from "@/components/FilterLink";
@@ -37,7 +39,9 @@ export default async function BudgetsPage({
   const sp = await searchParams;
   const offset = Number(sp.offset ?? 0) || 0;
 
-  const [data, unbudgeted] = await Promise.all([listBudgets(offset), getUnbudgetedSpending()]);
+  const [listed, unbudgeted] = await Promise.all([listBudgets(offset), getUnbudgetedSpending()]);
+  // The order the person arranged; without one, the fullest budget first.
+  const data = { ...listed, items: await inSavedOrder("budgets", listed.items, (b) => b.id) };
   const today = localDay();
 
   return (
@@ -65,6 +69,7 @@ export default async function BudgetsPage({
 
       {data.items.length > 0 && (
         <div className="card p-4">
+          <div className="flex justify-end -mt-1 mb-2"><ArrangeOrder list="budgets" title="Budgets" items={data.items.map((b) => ({ id: b.id, label: b.name }))} /></div>
           <ProgressBars currency={data.baseCurrency} items={data.items.map((b) => ({ id: b.id, name: b.name, value: b.spent, max: b.available, tone: budgetTone(b) }))} />
         </div>
       )}

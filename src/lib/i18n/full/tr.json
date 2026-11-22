@@ -3441,5 +3441,12 @@
   "{0} entries": "{0} entries",
   "Edit subscription": "Edit subscription",
   "Edit subscription: {0}": "Edit subscription: {0}",
-  "Billing period": "Billing period"
+  "Billing period": "Billing period",
+  "Arrange": "Düzenle",
+  "Change the order": "Sırayı değiştir",
+  "Drag by ⠿ or use the arrows. The order is kept in your account, on every device.": "⠿ simgesinden sürükleyin veya okları kullanın. Sıra hesabınızda, tüm cihazlarda saklanır.",
+  "Move up": "Yukarı taşı",
+  "Move down": "Aşağı taşı",
+  "Save order": "Sırayı kaydet",
+  "Could not save the order. Try again.": "Sıra kaydedilemedi. Tekrar deneyin."
 }

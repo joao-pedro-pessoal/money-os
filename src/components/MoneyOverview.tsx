@@ -25,6 +25,8 @@ import Section from "./Section";
 import DonutChart from "./DonutChart";
 import ProgressBars, { budgetTone } from "./ProgressBars";
 import AccountQuick from "./AccountQuick";
+import ArrangeOrder from "./ArrangeOrder";
+import { inSavedOrder } from "@/actions/orderStore";
 
 /** Everyday money, using the same totals as the full edition. Never rewrites old data. */
 export default async function MoneyOverview({ analytics = false }: { analytics?: boolean }) {
@@ -47,6 +49,68 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
     { label: "Expenses", value: month.flows.expenses.total, href: "/analytics/spending" },
     { label: "This month", value: month.flows.income.total - month.flows.expenses.total, href: "/transactions" },
   ];
+  const budgetItems = await inSavedOrder("budgets", budgets.items, budget => budget.id);
+  const goalItems = await inSavedOrder("buckets", goals, goal => goal.id);
+  const activeInOrder = await inSavedOrder("subscriptions", activeSubscriptions, sub => sub.id);
+  const blocks = await inSavedOrder("dashboard", [
+    { id: "accounts", label: "Accounts", node: <>
+    <Section title="Accounts" defaultOpen essential summary={<>{!analytics && <ArrangeOrder list="accounts" title="Accounts" items={accounts.map(account => ({ id: account.id, label: account.name }))} />} {openLink("/accounts")}</>}>
+      {accounts.length === 0 ? <Link href="/accounts" className="btn">{t("Add account by hand")}</Link> : <>
+        <DonutChart compact currency={currency} data={composition.filter(row => row.composition.total > 0).map(row => ({ name: row.name, value: row.composition.total }))} />
+        <p className="text-xs text-[var(--muted)] mt-4">{t("Tap an account to set its balance or add an entry.")}</p>
+        <ul className="divide-y divide-[var(--border)]">
+          {accounts.map(account => <li key={account.id}>
+            <AccountQuick canSend={accounts.length > 1} account={{ id: account.id, name: account.name, currency: account.currency, balance: account.balance }} className="flex w-full justify-between gap-3 py-3 min-h-11 text-left">
+              <span translate="no">{account.name}</span><Money value={account.balance} currency={account.currency} />
+            </AccountQuick>
+          </li>)}
+        </ul>
+      </>}
+    </Section>
+    </> },
+    { id: "coming", label: "Coming in", node: <>
+    <Section title="Coming in" defaultOpen essential summary={openLink("/expected")}>
+      {coming.rows.length === 0 ? <Link href="/expected" className="text-[var(--accent)]">{t("Add something coming in")}</Link> : <>
+        <p className="text-xs text-[var(--muted)]">{t("Still coming, in total")}: <Money value={coming.total} currency={currency} /></p>
+        <ul className="divide-y divide-[var(--border)]">
+          {coming.rows.slice(0, 4).map(row => <li key={row.id}>
+            <Link href="/expected" className="flex justify-between gap-3 py-3 min-h-11">
+              <span className="min-w-0 truncate" translate="no">{row.name}</span>
+              <span className="text-right shrink-0"><Money value={row.remaining} currency={row.currency} />{row.next && <span className={`block text-xs ${row.overdue ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>{row.next.toLocaleDateString(locale)}</span>}</span>
+            </Link>
+          </li>)}
+        </ul>
+      </>}
+    </Section>
+    </> },
+    { id: "budgets", label: "Budgets", node: <>
+    <Section title="Budgets" defaultOpen essential summary={<>{!analytics && <ArrangeOrder list="budgets" title="Budgets" items={budgetItems.map(budget => ({ id: budget.id, label: budget.name }))} />} {openLink("/budgets")}</>}>
+      <ProgressBars currency={currency} items={budgetItems.map(budget => ({ id: budget.id, name: budget.name, href: "/budgets", value: budget.spent, max: budget.available, tone: budgetTone(budget) }))} />
+      <Link href="/budgets" className="inline-block mt-3 text-[var(--accent)]">{t("New budget")}</Link>
+    </Section>
+    </> },
+    { id: "buckets", label: "Buckets", node: <>
+    <Section title="Buckets" defaultOpen essential summary={<>{!analytics && <ArrangeOrder list="buckets" title="Buckets" items={goalItems.map(goal => ({ id: goal.id, label: goal.name }))} />} {openLink("/buckets")}</>}>
+      <ProgressBars currency={currency} items={goalItems.map(goal => ({ id: goal.id, name: goal.name, href: `/buckets/${goal.id}`, value: goal.total, max: goal.targetAmount === null ? null : Number(goal.targetAmount) }))} />
+      <Link href="/buckets" className="inline-block mt-3 text-[var(--accent)]">{t("Create bucket")}</Link>
+    </Section>
+    </> },
+    { id: "subscriptions", label: "Subscriptions", node: <>
+    <Section title="Subscriptions" defaultOpen essential summary={<>{!analytics && <ArrangeOrder list="subscriptions" title="Subscriptions" items={activeInOrder.map(sub => ({ id: sub.id, label: sub.name }))} />} {openLink("/subscriptions")}</>}>
+      {activeSubscriptions.length === 0 ? <Link href="/subscriptions" className="text-[var(--accent)]">{t("Add a subscription")}</Link> : <>
+        <p className="text-xs text-[var(--muted)] mb-3">{t("Committed each month")}: <Money value={activeSubscriptions.reduce((sum, sub) => sum + (sub.monthlyInBase ?? 0), 0)} currency={currency} /></p>
+        <DonutChart compact currency={currency} data={activeSubscriptions.map(sub => ({ name: sub.name, value: Math.round((sub.monthlyInBase ?? 0) * 100) / 100 }))} />
+        <Link href="/subscriptions" className="inline-block mt-3 text-[var(--accent)]">{t("Subscriptions")} →</Link>
+      </>}
+    </Section>
+    </> },
+    { id: "networth", label: "Net worth over time", node: <>
+    <Section title="Net worth over time" defaultOpen={analytics} essential={analytics} summary={analytics ? undefined : openLink("/analytics")}>
+      {series.some(point => point.approximate) && <p className="text-xs text-[var(--muted)] mb-3">{t("Historical values are approximate.")}</p>}
+      <NetWorthChart data={series.map(point => ({ date:point.date, netWorth:point.netWorth }))} currency={currency} />
+    </Section>
+    </> }
+  ], block => block.id);
   return <div className="space-y-6">
     <h1 className="text-lg font-semibold">{t(analytics ? "Analytics" : "Dashboard")}</h1>
     {!analytics && userId && <GetStarted key={userId} userId={userId} counts={{accounts:accountCount,transactions:recent.rows.length + recent.unconverted.length,budgets:budgets.items.length,goals:goals.length}} canRecord={accounts.length>0} />}
@@ -66,50 +130,8 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
       {accounts.length > 1 && <TryQuickEntry kind="transfer" label="Send money" className="inline-flex items-center min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--accent)]" />}
       {[{href:"/accounts",label:"Accounts"},{href:"/transactions",label:"Cash Flow"},{href:"/expected",label:"Coming in"},{href:"/import",label:"Import statement"},{href:"/analytics/report",label:"Reports"}].map(link => <Link key={link.href} href={link.href} className="inline-flex items-center min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--accent)]">{t(link.label)}</Link>)}
     </div>
-    <Section title="Accounts" defaultOpen essential summary={openLink("/accounts")}>
-      {accounts.length === 0 ? <Link href="/accounts" className="btn">{t("Add account by hand")}</Link> : <>
-        <DonutChart compact currency={currency} data={composition.filter(row => row.composition.total > 0).map(row => ({ name: row.name, value: row.composition.total }))} />
-        <p className="text-xs text-[var(--muted)] mt-4">{t("Tap an account to set its balance or add an entry.")}</p>
-        <ul className="divide-y divide-[var(--border)]">
-          {accounts.map(account => <li key={account.id}>
-            <AccountQuick canSend={accounts.length > 1} account={{ id: account.id, name: account.name, currency: account.currency, balance: account.balance }} className="flex w-full justify-between gap-3 py-3 min-h-11 text-left">
-              <span translate="no">{account.name}</span><Money value={account.balance} currency={account.currency} />
-            </AccountQuick>
-          </li>)}
-        </ul>
-      </>}
-    </Section>
-    <Section title="Coming in" defaultOpen essential summary={openLink("/expected")}>
-      {coming.rows.length === 0 ? <Link href="/expected" className="text-[var(--accent)]">{t("Add something coming in")}</Link> : <>
-        <p className="text-xs text-[var(--muted)]">{t("Still coming, in total")}: <Money value={coming.total} currency={currency} /></p>
-        <ul className="divide-y divide-[var(--border)]">
-          {coming.rows.slice(0, 4).map(row => <li key={row.id}>
-            <Link href="/expected" className="flex justify-between gap-3 py-3 min-h-11">
-              <span className="min-w-0 truncate" translate="no">{row.name}</span>
-              <span className="text-right shrink-0"><Money value={row.remaining} currency={row.currency} />{row.next && <span className={`block text-xs ${row.overdue ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>{row.next.toLocaleDateString(locale)}</span>}</span>
-            </Link>
-          </li>)}
-        </ul>
-      </>}
-    </Section>
-    <Section title="Budgets" defaultOpen essential summary={openLink("/budgets")}>
-      <ProgressBars currency={currency} items={budgets.items.map(budget => ({ id: budget.id, name: budget.name, href: "/budgets", value: budget.spent, max: budget.available, tone: budgetTone(budget) }))} />
-      <Link href="/budgets" className="inline-block mt-3 text-[var(--accent)]">{t("New budget")}</Link>
-    </Section>
-    <Section title="Buckets" defaultOpen essential summary={openLink("/buckets")}>
-      <ProgressBars currency={currency} items={goals.map(goal => ({ id: goal.id, name: goal.name, href: `/buckets/${goal.id}`, value: goal.total, max: goal.targetAmount === null ? null : Number(goal.targetAmount) }))} />
-      <Link href="/buckets" className="inline-block mt-3 text-[var(--accent)]">{t("Create bucket")}</Link>
-    </Section>
-    <Section title="Subscriptions" defaultOpen essential summary={openLink("/subscriptions")}>
-      {activeSubscriptions.length === 0 ? <Link href="/subscriptions" className="text-[var(--accent)]">{t("Add a subscription")}</Link> : <>
-        <p className="text-xs text-[var(--muted)] mb-3">{t("Committed each month")}: <Money value={activeSubscriptions.reduce((sum, sub) => sum + (sub.monthlyInBase ?? 0), 0)} currency={currency} /></p>
-        <DonutChart compact currency={currency} data={activeSubscriptions.map(sub => ({ name: sub.name, value: Math.round((sub.monthlyInBase ?? 0) * 100) / 100 }))} />
-        <Link href="/subscriptions" className="inline-block mt-3 text-[var(--accent)]">{t("Subscriptions")} →</Link>
-      </>}
-    </Section>
-    <Section title="Net worth over time" defaultOpen={analytics} essential={analytics} summary={analytics ? undefined : openLink("/analytics")}>
-      {series.some(point => point.approximate) && <p className="text-xs text-[var(--muted)] mb-3">{t("Historical values are approximate.")}</p>}
-      <NetWorthChart data={series.map(point => ({ date:point.date, netWorth:point.netWorth }))} currency={currency} />
-    </Section>
+    {/* Blocks in the order the person arranged (Arrange), else this one. */}
+    {!analytics && <div className="flex justify-end"><ArrangeOrder list="dashboard" title="Dashboard" items={blocks.map(block => ({ id: block.id, label: t(block.label) }))} /></div>}
+    {blocks.map(block => <div key={block.id}>{block.node}</div>)}
   </div>;
 }

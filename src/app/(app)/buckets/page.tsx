@@ -17,11 +17,13 @@ import { Money } from "@/components/PrivacyContext";
 import Distributor from "@/components/Distributor";
 import Link from "next/link";
 import Section from "@/components/Section";
+import ArrangeOrder from "@/components/ArrangeOrder";
+import { inSavedOrder } from "@/actions/orderStore";
 import DonutChart from "@/components/DonutChart";
 
 export default async function BucketsPage() {
   const uiText = await textForRequest();
-  const [buckets, accounts, withInvestments, ranked, defaultShares] = await Promise.all([
+  const [listedBuckets, accounts, withInvestments, ranked, defaultShares] = await Promise.all([
     listBucketsWithTotals(),
     listAccountsWithState(),
     listPurposes(),
@@ -29,6 +31,8 @@ export default async function BucketsPage() {
     getDefaultShares(),
   ]);
 
+  // Display order only; the priority below still decides how money is shared out.
+  const buckets = await inSavedOrder("buckets", listedBuckets, (b) => b.id);
   const base = withInvestments.baseCurrency;
   // Where the money actually is, as opposed to where a plan said it should be.
   const shareOfTotal = new Map(withInvestments.purposes.map((p) => [p.id, p.sharePercent]));
@@ -41,7 +45,10 @@ export default async function BucketsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-lg font-semibold">{uiText("Buckets")}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-lg font-semibold">{uiText("Buckets")}</h1>
+        <ArrangeOrder list="buckets" title="Buckets" items={buckets.map((b) => ({ id: b.id, label: b.name }))} />
+      </div>
 
       {buckets.some((b) => b.total > 0) && (
         <div className="card p-4">

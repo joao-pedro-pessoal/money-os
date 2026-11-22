@@ -25,6 +25,7 @@ import { writeSnapshot } from "./snapshots";
 import { ManualEntryError, manualBalance } from "@/lib/money/manualEntry";
 import { MANUAL_EDIT_RETRY_MESSAGE } from "@/lib/money/manualRequest";
 import { claimManualRequest, manualEntryResult, manualRequestId } from "./manualRequest";
+import { inSavedOrder } from "./orderStore";
 
 export async function listAccountsWithState() {
   await requireServerSession();
@@ -45,7 +46,8 @@ export async function listAccountsWithState() {
     getAccountPlatformTotals(),
   ]);
 
-  return allAccounts.map((acc) => {
+  // The order the person arranged, then the rest by creation.
+  return (await inSavedOrder("accounts", allAccounts, (acc) => acc.id)).map((acc) => {
     const balance = Number(acc.balance);
     const allocations = allAllocations
       .filter((a) => a.accountId === acc.id)

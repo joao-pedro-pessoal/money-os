@@ -18,6 +18,8 @@ import { SUPPORTED_CURRENCIES } from "@/lib/fx";
 import { Money } from "@/components/PrivacyContext";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Section from "@/components/Section";
+import ArrangeOrder from "@/components/ArrangeOrder";
+import { inSavedOrder } from "@/actions/orderStore";
 import DonutChart from "@/components/DonutChart";
 import SubscriptionEdit from "@/components/SubscriptionEdit";
 import DueSubscriptionCharges from "@/components/DueSubscriptionCharges";
@@ -50,13 +52,19 @@ export default async function SubscriptionsPage() {
       categories={editCategories}
     />
   );
-  const active = subs.filter((s) => s.active);
-  const cancelled = subs.filter((s) => !s.active);
+  // The order the person arranged; without one, the most expensive first.
+  const ordered = await inSavedOrder("subscriptions", subs, (s) => s.id);
+  const active = ordered.filter((s) => s.active);
+  const cancelled = ordered.filter((s) => !s.active);
+  const priciest = subs.find((s) => s.active);
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold">{uiText("Subscriptions")}</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-lg font-semibold">{uiText("Subscriptions")}</h1>
+          <ArrangeOrder list="subscriptions" title="Subscriptions" items={active.map((s) => ({ id: s.id, label: s.name }))} />
+        </div>
         <p className="text-xs text-[var(--muted)] mt-1 max-w-2xl">{uiText("What leaves every month whether you do anything or not. These are commitments, not transactions — the charges themselves arrive with your statement and are counted there, so nothing on this page is added to your balances or your spending totals.")}</p>
       </div>
 
@@ -81,10 +89,10 @@ export default async function SubscriptionsPage() {
         </div>
         <div className="card p-4">
           <div className="text-xs text-[var(--muted)]">{uiText("Most expensive")}</div>
-          <div className="text-2xl font-semibold mt-1"><span translate="no">{active[0]?.name ?? "—"}</span></div>
-          {active[0] && (
+          <div className="text-2xl font-semibold mt-1"><span translate="no">{priciest?.name ?? "—"}</span></div>
+          {priciest && (
             <div className="text-xs text-[var(--muted)] mt-1">
-              <span translate="no">{fmt(active[0].yearly, active[0].currency)}</span>{uiText(" a year")}</div>
+              <span translate="no">{fmt(priciest.yearly, priciest.currency)}</span>{uiText(" a year")}</div>
           )}
         </div>
       </div>

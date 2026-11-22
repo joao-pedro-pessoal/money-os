@@ -13,6 +13,7 @@ import { hasSession } from "./session";
 import { manualAmount, manualDate, isQuickEntryId } from "@/lib/money/manualEntry";
 import { getDefaultAccountId } from "./settings";
 import { assertCashbackLink, purchaseSavings } from "@/lib/money/savings";
+import { inSavedOrder } from "./orderStore";
 
 async function requireSession() {
   if (!(await hasSession())) {
@@ -27,7 +28,7 @@ export async function getQuickEntryOptions() {
     db.select({ id: categories.id, name: categories.name, kind: categories.kind }).from(categories),
     getDefaultAccountId(),
   ]);
-  return { accounts: accountRows, categories: categoryRows, defaultAccountId };
+  return { accounts: await inSavedOrder("accounts", accountRows, (account) => account.id), categories: categoryRows, defaultAccountId };
 }
 
 /**
