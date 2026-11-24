@@ -94,7 +94,14 @@ export function legalDocument(kind: LegalKind, language: Language, operator: Ope
       : [portuguese
         ? "Se a tua conta só usa Google, confirma Google para a eliminação e escreve o email da conta, em vez de uma palavra-passe Money OS. Apagar a conta também apaga a associação Google; não apaga a tua conta Google. Se perderes acesso ao Google, usa o código de recuperação em Esqueceste a palavra-passe? para definir uma palavra-passe Money OS. Continua disponível o pedido de eliminação pelo contacto indicado nesta página."
         : "If your account uses only Google, confirm Google for deletion and type your account email instead of a Money OS password. Deleting the account also deletes its Google link; it does not delete your Google Account. If you lose Google access, use your recovery code through Forgot your password? to set a Money OS password. The deletion request through the contact on this page remains available."];
-  return { ...document, sections: [...document.sections, { heading: portuguese ? "Entrada com Google, quando disponível" : "Google sign-in, when available", paragraphs }] };
+  const sections = [...document.sections, { heading: portuguese ? "Entrada com Google, quando disponível" : "Google sign-in, when available", paragraphs }];
+  if (kind === "privacy") sections.push({
+    heading: portuguese ? "Proteção de importações e cópias" : "Protecting imports and backups",
+    paragraphs: [portuguese
+      ? "Para limitar importações, exportações e restauros repetidos, o servidor guarda contadores de pedidos e impressões digitais irreversíveis da pessoa e da ligação, sem o endereço IP em claro. Os contadores usam uma janela máxima de um dia; registos inativos com mais de um dia são removidos ao admitir novos pedidos. As reservas de trabalho expiram em seis minutos. O histórico da tua conta conserva recibos com o identificador e a impressão digital da operação, para uma repetição de rede não duplicar movimentos nem substituir novamente os dados."
+      : "To limit repeated imports, exports and restores, the server stores request counters and one-way fingerprints of the person and connection, without a plain IP address. Counters use windows of at most one day; inactive records older than a day are removed when new requests are admitted. Work reservations expire after six minutes. Your account history retains receipts with the operation identifier and fingerprint so a network retry does not duplicate movements or replace your data again."],
+  });
+  return { ...document, sections };
 }
 
 /** "6 October 2026" / "6 de outubro de 2026". */

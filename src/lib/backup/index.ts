@@ -98,23 +98,29 @@ export function validateBackup(raw: unknown): ValidationResult {
   const warnings: string[] = [];
   const counts: Record<string, number> = {};
 
-  if (typeof raw !== "object" || raw === null) {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     return { ok: false, errors: ["The file isn't a JSON object."], warnings, counts };
   }
 
   const backup = raw as Partial<Backup>;
 
-  if (typeof backup.version !== "number") {
+  if (!Number.isSafeInteger(backup.version) || Number(backup.version) < 1) {
     errors.push("No version field — this doesn't look like a Money OS backup.");
-  } else if (backup.version > BACKUP_VERSION) {
+  } else if (backup.version! > BACKUP_VERSION) {
     errors.push(
       `Backup version ${backup.version} is newer than this app understands (${BACKUP_VERSION}).`
     );
   }
 
-  if (typeof backup.data !== "object" || backup.data === null) {
+  if (typeof backup.data !== "object" || backup.data === null || Array.isArray(backup.data)) {
     errors.push("No data section.");
     return { ok: false, errors, warnings, counts };
+  }
+  if (Object.keys(backup.data).length > 256 || Object.keys(backup.data).some(key => key.length > 100)) {
+    return { ok: false, errors: ["Invalid backup table names."], warnings, counts };
+  }
+  if (!BACKUP_TABLES.some(table => Object.prototype.hasOwnProperty.call(backup.data, table))) {
+    return { ok: false, errors: ["No recognised backup tables."], warnings, counts };
   }
 
   for (const table of BACKUP_TABLES) {

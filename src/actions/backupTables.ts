@@ -1,0 +1,56 @@
+import * as schema from "@/db/schema";
+import { type BackupTable } from "@/lib/backup";
+
+/**
+ * Maps backup table names to their Drizzle tables, in dependency order.
+ * Derived from BACKUP_TABLES so adding a table to the backup format and
+ * forgetting it here is a type error rather than silent data loss.
+ */
+export const TABLES: Record<BackupTable, typeof schema.accounts> = {
+  appSettings: schema.appSettings,
+  exchangeRates: schema.exchangeRates,
+  categories: schema.categories,
+  subcategories: schema.subcategories,
+  tags: schema.tags,
+  accounts: schema.accounts,
+  expectedMoney: schema.expectedMoney,
+  liabilities: schema.liabilities,
+  buckets: schema.buckets,
+  bucketAllocations: schema.bucketAllocations,
+  budgets: schema.budgets,
+  budgetCategories: schema.budgetCategories,
+  subscriptions: schema.subscriptions,
+  savedViews: schema.savedViews,
+  resourceCategories: schema.resourceCategories,
+  resourceSubtags: schema.resourceSubtags,
+  learningResources: schema.learningResources,
+  learningResourceMeta: schema.learningResourceMeta,
+  learningResourceCategories: schema.learningResourceCategories,
+  learningResourceSubtags: schema.learningResourceSubtags,
+  imports: schema.imports,
+  transactions: schema.transactions,
+  transactionTags: schema.transactionTags,
+  subscriptionCharges: schema.subscriptionCharges,
+  transfers: schema.transfers,
+  interestPayments: schema.interestPayments,
+  expectedArrivals: schema.expectedArrivals,
+  accountSnapshots: schema.accountSnapshots,
+  playlists: schema.playlists,
+  holdings: schema.holdings,
+  holdingSnapshots: schema.holdingSnapshots,
+  holdingAllocations: schema.holdingAllocations,
+  watchlistItems: schema.watchlistItems,
+  symbolNames: schema.symbolNames,
+  accountConnections: schema.accountConnections,
+  positions: schema.positions,
+  positionSnapshots: schema.positionSnapshots,
+  positionMeta: schema.positionMeta,
+  investmentActivities: schema.investmentActivities,
+  investmentActivityTags: schema.investmentActivityTags,
+  tradeClassifications: schema.tradeClassifications,
+  dividendPayments: schema.dividendPayments,
+  brokerEvents: schema.brokerEvents,
+  platformBalances: schema.platformBalances,
+  syncLogs: schema.syncLogs,
+  auditLog: schema.auditLog,
+} as unknown as Record<BackupTable, typeof schema.accounts>;

@@ -19,6 +19,7 @@ import * as schema from "../../db/schema";
 
 /** Everyone's, and why each may be. */
 const SHARED = new Map([
+  ["work_gates", "internal atomic quotas and execution leases; HMAC scope keys and bounded timestamps, no financial or identity data"],
   ["auth_identities", "pre-login identity lookup, unique issuer/subject; only internal authentication helpers may access"],
   ["google_auth_requests", "short-lived pre-login capabilities, browser/native binding, quotas and atomic consumption"],
   ["qr_sign_ins", "anonymous authentication handshakes; actions require separate random requester and approval capabilities, expire and consume once"],

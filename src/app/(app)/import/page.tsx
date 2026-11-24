@@ -1,3 +1,4 @@
+import { transferLimits } from "@/actions/transferConfig";
 import { currentInvestments } from "@/actions/releaseEdition";
 import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
@@ -157,7 +158,7 @@ export default async function ImportPage() {
         subtitle="You'll see every row and what will happen to it before anything is written."
       >
         <div className="card p-4">
-          <CsvImportForm accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} />
+          <CsvImportForm maxBytes={transferLimits().csvBytes} maxRows={transferLimits().csvRows} accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} />
         </div>
       </Step>
 

@@ -27,6 +27,7 @@ const OWNERS = [
   join("src", "app", "(app)", "expected", "page.tsx"),
   join("src", "db", "schema.ts"),
   join("src", "actions", "export.ts"),
+  join("src", "actions", "backupTables.ts"),
   join("src", "lib", "backup", "index.ts"),
 ];
 

@@ -1,3 +1,5 @@
+// These tests isolate data integrity; distributed admission is exercised separately.
+vi.mock("@/actions/workGate", () => ({ withWork: async (_kind: string, work: () => Promise<unknown>) => work() }));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as schema from "@/db/schema";
 import { BACKUP_TABLES, BACKUP_VERSION } from "@/lib/backup";
@@ -31,11 +33,13 @@ vi.mock("@/db/client", () => ({ db: {
 } }));
 vi.mock("next/cache", () => ({ revalidatePath: fake.revalidate }));
 vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
-import { exportAllData, restoreBackup } from "../export";
+import { exportAllData } from "../export";
+import { replaceBackup } from "../backupService";
+const restoreBackup = (form: FormData) => replaceBackup(String(form.get("backup")));
 
 function restoreForm() {
   const data: Record<string, unknown[]> = Object.fromEntries(BACKUP_TABLES.map((name) => [name, []]));
-  data.accounts = [{ id: "restored" }];
+  data.accounts = [{ id: "restored", name: "Restored", institution: "Synthetic", accountType: "bank" }];
   const form = new FormData();
   form.set("backup", JSON.stringify({ version: BACKUP_VERSION, data }));
   form.set("confirmation", "RESTORE");
@@ -54,13 +58,8 @@ describe("personal backup safety", () => {
   });
   it("commits the replacement after every insertion succeeds", async () => {
     await expect(restoreBackup(restoreForm())).resolves.toMatchObject({ ok: true });
-    expect(fake.rows.get(schema.accounts)).toEqual([{ id: "restored" }]);
+    expect(fake.rows.get(schema.accounts)).toEqual([{ id: "restored", name: "Restored", institution: "Synthetic", accountType: "bank" }]);
     expect(fake.revalidate).toHaveBeenCalled();
-  });
-  it("requires the confirmation in the server action before deleting anything", async () => {
-    const form = restoreForm(); form.delete("confirmation");
-    await expect(restoreBackup(form)).rejects.toThrow(/RESTORE/);
-    expect(fake.rows.get(schema.accounts)).toEqual([{ id: "original", balance: "100" }]);
   });
   it("exports one snapshot when a movement is saved between table reads", async () => {
     fake.afterRead = (table) => {

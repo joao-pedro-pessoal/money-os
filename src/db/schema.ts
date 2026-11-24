@@ -119,6 +119,15 @@ export const requestLimits = pgTable("request_limits", {
   at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [index("request_limits_lookup_idx").on(t.action, t.origin, t.at), index("request_limits_at_idx").on(t.at)]);
 
+// Internal distributed admission state, never financial backup data. Keys are
+// HMAC fingerprints; history/leases contain only times and random execution IDs.
+export const workGates = pgTable("work_gates", {
+  key: text("key").primaryKey(),
+  history: text("history").notNull().default("[]"),
+  leases: text("leases").notNull().default("[]"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, t => [index("work_gates_updated_idx").on(t.updatedAt)]);
+
 /**
  * Whose row this is. Filled by Postgres from the connection's `app.user_id`,
  * so an insert never names it and can never name someone else — and an insert

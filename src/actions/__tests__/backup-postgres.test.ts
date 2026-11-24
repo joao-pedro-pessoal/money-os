@@ -1,3 +1,5 @@
+// These tests isolate data integrity; distributed admission is exercised separately.
+vi.mock("@/actions/workGate", () => ({ withWork: async (_kind: string, work: () => Promise<unknown>) => work() }));
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
@@ -10,7 +12,11 @@ const isolated = vi.hoisted(() => ({ db: null as unknown as PgliteDatabase<typeo
 vi.mock("@/db/client", () => ({ get db() { return isolated.db; } }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
-import { exportAllData, restoreBackup } from "../export";
+import { exportAllData } from "../export";
+import { createHash } from "node:crypto";
+import { completedRestore, replaceBackup } from "../backupService";
+import { commitImport } from "../imports";
+const restoreBackup = (form: FormData) => replaceBackup(String(form.get("backup")));
 
 let engine: PGlite;
 const as = (id: string) => engine.query("select set_config('app.user_id', $1, false)", [id]);
@@ -86,6 +92,42 @@ describe("restore rehearsal on isolated PostgreSQL with the real migrations and 
     }
   });
 
+  it("keeps restore receipts across subsequent restores and never replays an old deletion", async () => {
+    vi.stubEnv("APP_SECRET", "synthetic-restore-receipt-secret");
+    await as("tester-a");
+    const original = await exportAllData();
+    const checksum = (text: string) => createHash("sha256").update(text).digest("hex");
+    const first = "00000000-0000-4000-8000-000000000001";
+    const second = "00000000-0000-4000-8000-000000000002";
+    try {
+      await replaceBackup(original, first, checksum(original));
+      const newer = JSON.parse(original); newer.data.accounts[0].balance = "60.00";
+      const content = JSON.stringify(newer);
+      await replaceBackup(content, second, checksum(content));
+      await isolated.db.update(schema.accounts).set({ balance: "75" });
+      expect(await completedRestore(first, checksum(original))).toMatchObject({ ok: true });
+      vi.stubEnv("APP_SECRET", "synthetic-rotated-restore-secret");
+      expect(await completedRestore(first, checksum(original))).toMatchObject({ ok: true });
+      await replaceBackup(original, first, checksum(original));
+      expect(Number((await isolated.db.select().from(schema.accounts))[0].balance)).toBe(75);
+      await expect(completedRestore(first, checksum(content))).rejects.toThrow(/different file/);
+      await as("tester-b");
+      expect(await completedRestore(first, checksum(original))).toBeUndefined();
+    } finally { await as("tester-a"); await restore(original); vi.unstubAllEnvs(); }
+  });
+  it("does not reapply an old import retry after a later backup restore", async () => {
+    await as("tester-a");
+    const original = await exportAllData();
+    const rows = [{ date: "2026-11-01", amount: -10, description: "synthetic retry after restore" }];
+    try {
+      const saved = await commitImport("account-tester-a", "synthetic.csv", rows, "{}", true);
+      const checksum = createHash("sha256").update(original).digest("hex");
+      await replaceBackup(original, "00000000-0000-4000-8000-000000000003", checksum);
+      expect(await commitImport("account-tester-a", "synthetic.csv", rows, "{}", true)).toEqual(saved);
+      expect(Number((await isolated.db.select().from(schema.accounts))[0].balance)).toBe(100);
+      expect((await isolated.db.select().from(schema.transactions)).some(row => row.description === "synthetic retry after restore")).toBe(false);
+    } finally { await restore(original); }
+  });
   it("restores into an account deleted and made again, which has a new id", async () => {
     const original = await exportAllData();
     await engine.exec(`RESET ROLE; DELETE FROM users WHERE id = 'tester-a'; INSERT INTO users (id) VALUES ('tester-c'); SET ROLE moneyos_restore_test;`);

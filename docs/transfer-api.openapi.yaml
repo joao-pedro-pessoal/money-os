@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  title: Money OS personal data transfers
+  version: 1.0.0
+  description: Same-origin session-cookie endpoints. Never send a userId. All responses use Cache-Control no-store.
+security:
+  - session: []
+paths:
+  /api/import/bank:
+    post:
+      operationId: importBankCsv
+      description: Server parses the original CSV (default 1 MiB and 10000 rows). HTTP JSON envelope is capped at 4 MiB. Reuse requestId only with the same payload when retrying.
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [accountId, fileName, text, mapping, adjustBalance, requestId]
+              properties:
+                accountId: { type: string, minLength: 1, maxLength: 200 }
+                fileName: { type: string, maxLength: 255 }
+                text: { type: string, description: Original UTF-8 CSV text; raw byte size is checked independently of JSON escaping. }
+                mapping: { type: string, maxLength: 16384, description: JSON object using date/amount/debit/credit/description/merchant column names. }
+                adjustBalance: { type: boolean, description: False for historical statements already reflected in the balance. }
+                requestId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Committed or previously committed result; duplicates are skipped under the account lock.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [importId, created, net, categorised, duplicated, ignored]
+                properties:
+                  importId: { type: string }
+                  created: { type: integer, minimum: 0 }
+                  net: { type: number }
+                  categorised: { type: integer, minimum: 0 }
+                  duplicated: { type: integer, minimum: 0 }
+                  ignored: { type: integer, minimum: 0 }
+        '400': { $ref: '#/components/responses/InputError' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '403': { $ref: '#/components/responses/OriginRefused' }
+        '409': { $ref: '#/components/responses/ReplayConflict' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '415': { $ref: '#/components/responses/InputError' }
+        '429': { $ref: '#/components/responses/Limited' }
+        '500': { $ref: '#/components/responses/Unconfirmed' }
+  /api/backup/inspect:
+    post:
+      operationId: inspectPersonalBackup
+      description: Validates all rows and references without database reads of financial data. Defaults 16 MiB and 100000 total rows. Older missing tables produce warnings; unknown tables are ignored but bounded.
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody: { $ref: '#/components/requestBodies/Backup' }
+      responses:
+        '200':
+          description: Valid backup. Restore validates the same schema again.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Inspection' }
+        '400':
+          description: Invalid JSON, envelope, row, precision, date or reference; no replacement occurred.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Inspection'
+                  - $ref: '#/components/schemas/Error'
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '403': { $ref: '#/components/responses/OriginRefused' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '415': { $ref: '#/components/responses/InputError' }
+        '429': { $ref: '#/components/responses/Limited' }
+        '500': { $ref: '#/components/responses/Unconfirmed' }
+  /api/backup/restore:
+    post:
+      operationId: restorePersonalBackup
+      description: Replaces owned financial data atomically after validation. An already completed request returns its receipt without repeating the replacement. Operational import/restore receipts survive later restores.
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+        - name: X-Money-Confirmation
+          in: header
+          required: true
+          schema: { type: string, const: RESTORE }
+        - name: X-Money-Request
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+        - name: X-Money-SHA256
+          in: header
+          required: true
+          schema: { type: string, pattern: '^[a-f0-9]{64}$' }
+          description: SHA-256 of the exact UTF-8 request body, verified by the server before a new replacement.
+      requestBody: { $ref: '#/components/requestBodies/Backup' }
+      responses:
+        '200':
+          description: Replaced or already completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, counts]
+                properties:
+                  ok: { type: boolean, const: true }
+                  counts: { $ref: '#/components/schemas/Counts' }
+        '400': { $ref: '#/components/responses/InputError' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '403': { $ref: '#/components/responses/OriginRefused' }
+        '409': { $ref: '#/components/responses/ReplayConflict' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '415': { $ref: '#/components/responses/InputError' }
+        '429': { $ref: '#/components/responses/Limited' }
+        '500': { $ref: '#/components/responses/Unconfirmed' }
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: moneyos_session
+      description: Existing signed HttpOnly Money OS session, with fresh server-side revocation checks.
+  parameters:
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      schema: { type: string, format: uri }
+      description: Must match the request protocol and actual target Host. Cross-site requests are refused.
+  requestBodies:
+    Backup:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [version, data]
+            properties:
+              version: { type: integer, const: 1 }
+              exportedAt: { type: string }
+              data:
+                type: object
+                maxProperties: 256
+                description: Known tables and row schemas derive from src/db/schema.ts and BACKUP_TABLES. All known table rows are validated; this document does not duplicate their SQL definitions.
+                additionalProperties:
+                  type: array
+                  items: {}
+  schemas:
+    Counts:
+      type: object
+      additionalProperties: { type: integer, minimum: 0 }
+    Inspection:
+      type: object
+      required: [ok, errors, warnings, counts]
+      properties:
+        ok: { type: boolean }
+        errors: { type: array, items: { type: string } }
+        warnings: { type: array, items: { type: string } }
+        counts: { $ref: '#/components/schemas/Counts' }
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error: { type: string }
+        message: { type: string }
+        retryAfter: { type: integer, minimum: 1 }
+  responses:
+    InputError:
+      description: Invalid input or content type; no replacement committed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    SessionRequired:
+      description: Session absent, revoked or deleted. Body is not read.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    OriginRefused:
+      description: Origin differs from the target or Sec-Fetch-Site is cross-site.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ReplayConflict:
+      description: Request id reused with different data or an old import was undone.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooLarge:
+      description: Byte, row, field or column limit exceeded, including limits enforced by the host.
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/Error'
+              - $ref: '#/components/schemas/Inspection'
+    Limited:
+      description: Distributed request or execution limit; protected work did not run.
+      headers:
+        Retry-After:
+          required: true
+          schema: { type: integer, minimum: 1 }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unconfirmed:
+      description: Internal failure or lost acknowledgement. Retry with the same request id and content; never assume an operation did not commit based on a failed response.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

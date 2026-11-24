@@ -1,6 +1,6 @@
 # Money OS — tarefas e estado do projeto
 
-Atualizado em **31 de outubro de 2026**.
+Atualizado em **24 de novembro de 2026**.
 
 **Esta é a única lista de tarefas do projeto.** Atualizar estados, prioridades e
 novos pedidos aqui. Os outros documentos guardam instruções de utilização,
@@ -8,13 +8,13 @@ decisões técnicas e histórico; as listas antigas não definem trabalho atual.
 
 Esta consolidação cruza a documentação com o código consultado e as verificações
 recentes. Não constitui uma nova validação completa de todas as funcionalidades.
-Valores da auditoria são uma fotografia desta data, não valores a fixar no código.
+Valores históricos de auditorias referem-se às datas indicadas, não a valores a fixar no código.
 
 ## 1. Direção atual
 
 - **F29 — Login Google (24/11/2026):** implementado localmente no ramo `codex/google-login`, desligado por omissão. OIDC no site, Credential Manager em `android-shell/`, associação explícita sem juntar emails, registo com convites/BotID/capacidade partilhada e recuperação/eliminação de contas só Google. Migração 0074 gerada e testada em memória; segundo generate sem alterações. 3933 testes na suite completa, TypeScript, compilação money isolada, builds/lint Android home/store e verificações EN/PT no navegador aprovados; teste adicional do rascunho de registo na suite específica. Android 0.10.0/código 13, com proteção contra respostas antigas de widgets/notificações/cookies ao mudar de conta. Sem produção, migração persistente, publicação ou push. Contrato/configuração/evidência em [LOGIN_GOOGLE.md](docs/LOGIN_GOOGLE.md). Validação real Google/Play e pendências R10 continuam em aberto.
 
-- **R10 — Revisão de segurança (11/11/2026):** [verificação com riscos/reprodução/correções, inventário de 273 ações e 6 handlers e decisões](docs/VERIFICACAO_SEGURANCA_2026-11-11.md); quatro correções iniciais e continuação autorizada: sessão em 202 ações/três handlers, revogação no pool/precisão/corridas de credenciais e renovação, conta própria nas importações/ligações, moeda/atomicidade do CSV e FKs próprias no restauro; 3847 testes, TypeScript, lint src e build money aprovados; sem commit/push/produção; APP_SECRET/APP_PASSWORD locais encontrados no histórico continuam intactos para substituição pelo utilizador; schemas integrais/tetos/quotas e formato sensível do backup ainda pendentes; email e quatro variáveis da Vercel apenas listados.
+- **R10 — Revisão de segurança:** correções iniciais de 11/11 em [verificação histórica](docs/VERIFICACAO_SEGURANCA_2026-11-11.md). **Continuação local de 24/11 no ramo `codex/google-login`:** CSV bancário validado no servidor, 1 MiB/10 000 linhas, duplicados revistos sob lock, recibos contra repetição, cêntimos exatos e anulação atómica; backup com tipos/campos/precisão/PKs/FKs de todas as 46 tabelas verificados, 16 MiB/100 000 registos, upload próprio, confirmação e restauro transacional por lotes. Recibos de importação/restauro conservados entre restauros para impedir repetição antiga. Quotas distribuídas por pessoa/ligação e concorrência para parsing/commit CSV, exportação, inspeção e restauro; migração 0075 gerada, ensaiada em memória e segundo generate sem alterações. 4048 testes em 253 ficheiros, TypeScript, lint src e compilação money isolada aprovados. Navegador EN/PT, incluindo 390 px, ficheiros recusados e respostas perdidas depois de importar/restaurar: repetição sem duplicar nem voltar a apagar. Contrato, limites/configuração e alcance da evidência em [IMPORTACOES_RESTAURO.md](docs/IMPORTACOES_RESTAURO.md). **Continua por concluir:** limites/validação dos importadores de investimento/corretora da edição completa; quotas de PDF, widgets, alertas, câmbios, pesquisa/sync e restantes escritas; confirmação da substituição dos segredos expostos, backups e monitorização reais. O backup integral mantém o formato sensível anterior. Uploads de 16 MiB na Vercel dependem da opção de alojamento documentada, ainda não alterada. Email e configuração externa mantêm os estados anteriores. Sem produção, migrações persistentes, publicação ou push.
 
 - **Primeiro lançamento, direção de 30/10/2026:** site e Google Play preparados em paralelo, com contas/saldos, receitas/despesas, transferências, poupanças, orçamentos, objetivos, subscrições, valores esperados e relatórios de dinheiro. Investimentos/corretoras/trades/dividendos, biblioteca e projeções avançadas ficam para a edição completa. Prioridade R08/R09 e operação R01–R06; A02/A03 mantêm-se como reconciliação de dados antigos, sem alterações automáticas e sem bloquear a implementação do âmbito reduzido. Preservar os registos e a edição completa da cópia de casa. Instruções em [PRIMEIRO_LANCAMENTO.md](docs/PRIMEIRO_LANCAMENTO.md).
 

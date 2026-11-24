@@ -1,3 +1,5 @@
+// These tests isolate data integrity; distributed admission is exercised separately.
+vi.mock("@/actions/workGate", () => ({ withWork: async (_kind: string, work: () => Promise<unknown>) => work() }));
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
@@ -9,7 +11,7 @@ const isolated = vi.hoisted(() => ({ db: null as unknown as PgliteDatabase<typeo
 vi.mock("@/db/client", () => ({ get db() { return isolated.db; } }));
 vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-import { commitImport } from "../imports";
+import { commitImport, undoImport } from "../imports";
 import { importBrokerStatement, previewBrokerStatement } from "../brokerImport";
 import { createConnection } from "../connections";
 
@@ -55,6 +57,53 @@ describe("imports enforce owned parents and commit atomically", () => {
     expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
     const [account] = await isolated.db.select().from(schema.accounts).where(eq(schema.accounts.id, "my-usd-account"));
     expect(Number(account.balance)).toBe(100);
+  });
+  it("validates the entire bank payload before inserting the first row", async () => {
+    await expect(commitImport("my-usd-account", "synthetic.csv", [...rows, { ...rows[0], date: "2026-02-31" }], "{}", true)).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.transactions)).toEqual([]);
+    expect(await isolated.db.select().from(schema.imports)).toEqual([]);
+    expect(await isolated.db.select().from(schema.auditLog)).toEqual([]);
+  });
+  it("returns a saved result on network retry and rejects changed details under the same id", async () => {
+    const id = "00000000-0000-4000-8000-000000000001";
+    const first = await commitImport("my-usd-account", "synthetic.csv", rows, "{}", true, undefined, id);
+    expect(await commitImport("my-usd-account", "synthetic.csv", rows, "{}", true, undefined, id)).toEqual(first);
+    await expect(commitImport("my-usd-account", "synthetic.csv", [{ ...rows[0], amount: -20 }], "{}", true, undefined, id)).rejects.toThrow(/different details/);
+    expect(await isolated.db.select().from(schema.transactions)).toHaveLength(1);
+    expect(Number((await isolated.db.select().from(schema.accounts))[0].balance)).toBe(90);
+  });
+  it("rechecks duplicates at commit, even with a different request id or a stale preview", async () => {
+    await commitImport("my-usd-account", "synthetic.csv", rows, "{}", true);
+    const duplicate = await commitImport("my-usd-account", "other-name.csv", rows, "{}", true);
+    expect(duplicate).toMatchObject({ created: 0, net: 0, duplicated: 1 });
+    expect(await isolated.db.select().from(schema.transactions)).toHaveLength(1);
+    expect(Number((await isolated.db.select().from(schema.accounts))[0].balance)).toBe(90);
+  });
+  it("undoes atomically once and refuses an old commit retry after undo", async () => {
+    const first = await commitImport("my-usd-account", "synthetic.csv", rows, "{}", true);
+    const form = new FormData(); form.set("importId", first.importId);
+    await undoImport(form); await undoImport(form);
+    expect(await isolated.db.select().from(schema.transactions)).toHaveLength(0);
+    expect(Number((await isolated.db.select().from(schema.accounts))[0].balance)).toBe(100);
+    await expect(commitImport("my-usd-account", "synthetic.csv", rows, "{}", true)).rejects.toThrow(/undone/);
+  });
+  it("keeps undo deletions and the balance unchanged when the audit write fails", async () => {
+    const first = await commitImport("my-usd-account", "synthetic.csv", rows, "{}", true);
+    await engine.exec(`RESET ROLE; CREATE FUNCTION reject_synthetic_undo() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+      IF NEW.action = 'csv_import_undone' THEN RAISE EXCEPTION 'synthetic undo failure'; END IF; RETURN NEW; END $$;
+      CREATE TRIGGER reject_synthetic_undo BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION reject_synthetic_undo(); SET ROLE import_security_test;`);
+    try {
+      const form = new FormData(); form.set("importId", first.importId);
+      await expect(undoImport(form)).rejects.toThrow();
+      expect(await isolated.db.select().from(schema.transactions)).toHaveLength(1);
+      expect(await isolated.db.select().from(schema.imports)).toHaveLength(1);
+      expect(Number((await isolated.db.select().from(schema.accounts))[0].balance)).toBe(90);
+    } finally { await engine.exec("RESET ROLE; DROP TRIGGER reject_synthetic_undo ON audit_log; DROP FUNCTION reject_synthetic_undo(); SET ROLE import_security_test;"); }
+  });
+  it("adds exact cents and keeps a historical import from changing the balance by default", async () => {
+    const result = await commitImport("my-usd-account", "synthetic.csv", [{ ...rows[0], amount: 0.1 }, { ...rows[0], description: "second", amount: 0.2 }], "{}");
+    expect(result.net).toBe(0.3);
+    expect(Number((await isolated.db.select().from(schema.accounts))[0].balance)).toBe(100);
   });
   it("cannot preview a broker statement against another person's account", async () => {
     await expect(previewBrokerStatement(statement, "other-account")).rejects.toThrow("Account not found");

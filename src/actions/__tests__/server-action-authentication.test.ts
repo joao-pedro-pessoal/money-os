@@ -88,8 +88,6 @@ const entries = [
   ["export","exportAllData"],
   ["export","exportTransactionsCsv"],
   ["export","exportHoldingsCsv"],
-  ["export","inspectBackup"],
-  ["export","restoreBackup"],
   ["exposure","getExposure"],
   ["exposure","getFeesByYear"],
   ["exposure","getAnnouncedDividends"],

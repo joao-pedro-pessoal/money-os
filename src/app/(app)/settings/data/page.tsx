@@ -1,16 +1,12 @@
 import { textForRequest } from "@/actions/pageLanguage";
 import BackupPanel from "@/components/BackupPanel";
 import SettingRow from "@/components/SettingRow";
-import { restoreBackup } from "@/actions/export";
+import { transferLimits } from "@/actions/transferConfig";
 import Link from "next/link";
-
-async function restoreBackupAction(formData: FormData) {
-  "use server";
-  await restoreBackup(formData);
-}
 
 export default async function SettingsDataPage() {
   const uiText = await textForRequest();
+  const limits = transferLimits();
   return (
     <>
       <div className="card">
@@ -19,7 +15,7 @@ export default async function SettingsDataPage() {
           description={uiText("You should never be locked into this app to reach your own data. The export is plain JSON and CSV — readable in a spreadsheet, restorable here.")}
           stacked
         >
-          <BackupPanel restoreAction={restoreBackupAction} />
+          <BackupPanel maxBytes={limits.backupBytes} maxRows={limits.backupRows} />
         </SettingRow>
       </div>
 

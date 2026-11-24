@@ -9,6 +9,8 @@ const LEGAL = new Set(Object.values(LEGAL_PATHS));
  * /login is where an account is made or signed into, so it cannot need one.
  *
  * /api/register accepts only same-origin JSON and validates BotID, invitation and limits itself.
+ * The exact bank-upload and backup endpoints check their own session before
+ * reading a body, so they can return JSON 401/413/429 instead of a login page.
  * The BotID check it needs is loaded before that from beneath BOTID_CHALLENGE_ROOT,
  * which only passes through to Vercel; redirected to /login, every registration
  * on the published site was refused.
@@ -32,7 +34,7 @@ const LEGAL = new Set(Object.values(LEGAL_PATHS));
  */
 export function isPublicPath(pathname: string): boolean {
   return (
-    ["/api/auth/google/start", "/api/auth/google/callback", "/api/auth/google/native", "/api/auth/google/complete", "/api/register/google"].includes(pathname) ||
+    ["/api/backup/inspect", "/api/backup/restore", "/api/import/bank", "/api/auth/google/start", "/api/auth/google/callback", "/api/auth/google/native", "/api/auth/google/complete", "/api/register/google"].includes(pathname) ||
     pathname === REGISTRATION_PATH ||
     pathname.startsWith(BOTID_CHALLENGE_ROOT + "/") ||
     pathname.startsWith("/login") ||

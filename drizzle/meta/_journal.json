@@ -526,6 +526,13 @@
       "when": 1795534609848,
       "tag": "0074_bent_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1795544087046,
+      "tag": "0075_goofy_pixie",
+      "breakpoints": true
     }
   ]
 }

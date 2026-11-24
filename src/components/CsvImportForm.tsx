@@ -6,20 +6,18 @@ import { useText } from "@/components/useText";
 import ResponsiveTable from "@/components/ResponsiveTable";
 
 
-import { useState } from "react";
-import Papa from "papaparse";
-import { commitImport, getExistingKeys } from "@/actions/imports";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getExistingKeys } from "@/actions/imports";
 import { detectColumns, buildRows, summarize, type ColumnMapping, type ParsedRow } from "@/lib/csv";
 import { looksLikeBrokerStatement } from "@/lib/csv/broker";
 import { checkCanonicalHeader } from "@/lib/csv/prompt";
-import { countDataRows, controlSums, reconcile } from "@/lib/csv/integrity";
-import { sha256Text } from "@/lib/hash/sha256";
-
-/**
- * SHA-256 of the file's text, so the same file is recognisable later. Not
- * crypto.subtle directly: it is missing over plain http on a phone.
- */
-const sha256 = sha256Text;
+import { controlSums, reconcile } from "@/lib/csv/integrity";
+import { boundedCsv } from "@/lib/csv/validation";
+import { randomUuid } from "@/lib/money/quickEntryId";
+import { transferText } from "@/lib/backup/text";
+import { useLanguage } from "./LanguageContext";
+import { transferRequest } from "./transferClient";
 
 /**
  * Upload → map columns → preview → import (MVP_SPEC §7).
@@ -27,7 +25,14 @@ const sha256 = sha256Text;
  * Nothing is written until the preview has been seen, and the mapping is
  * guessed from the headers so the common case needs no work.
  */
-export default function CsvImportForm({ accounts }: { accounts: { id: string; name: string }[] }) {
+export default function CsvImportForm({ accounts, maxBytes, maxRows }: { accounts: { id: string; name: string }[]; maxBytes: number; maxRows: number }) {
+  const { language } = useLanguage();
+  const router = useRouter();
+  const feedback = transferText(language);
+  const pending = useRef(false);
+  const lastRequest = useRef({ payload: "", id: "" });
+  const [problem, setProblem] = useState("");
+  const [fileText, setFileText] = useState("");
   const investmentsEnabled = useInvestments();
   const uiText = useText();
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
@@ -36,7 +41,6 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
   const [raw, setRaw] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState<ColumnMapping>({ date: "" });
   const [existing, setExisting] = useState<Set<string>>(new Set());
-  const [fileHash, setFileHash] = useState("");
   const [rowsInFile, setRowsInFile] = useState(0);
   const [adjustBalance, setAdjustBalance] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -48,33 +52,26 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !accountId) return;
-
-    const text = await file.text();
-    const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
-    const cols = parsed.meta.fields ?? [];
-
-    // Measured from the raw bytes, before anything is interpreted. A statement
-    // that passed through an AI can lose a row silently, and you cannot see the
-    // transaction that isn't there — so the file is counted independently of
-    // the parser and the two are compared.
-    setFileHash(await sha256(text));
-    setRowsInFile(countDataRows(text));
-
-    setFileName(file.name);
-    setHeaders(cols);
-    setRaw(parsed.data);
-    setMapping(detectColumns(cols));
-    setExisting(new Set(await getExistingKeys(accountId)));
-    setResult(null);
+    if (!file || !accountId || pending.current) return;
+    pending.current = true; setBusy(true); setProblem("");
+    setRaw([]); setHeaders([]); setFileText(""); setResult(null);
+    try {
+      if (file.size > maxBytes) { setProblem(feedback.tooLarge); return; }
+      const text = await file.text();
+      const parsed = boundedCsv(text, maxBytes, maxRows);
+      const cols = parsed.meta.fields ?? [];
+      setRowsInFile(parsed.data.length);
+      setFileName(file.name); setFileText(text); setHeaders(cols); setRaw(parsed.data);
+      setMapping(detectColumns(cols));
+      setExisting(new Set(await getExistingKeys(accountId)));
+      lastRequest.current = { payload: "", id: "" };
+    } catch (error) { setProblem(error instanceof Error ? feedback.validation(error.message) : feedback.failed); }
+    finally { pending.current = false; setBusy(false); }
   }
 
   const rows: ParsedRow[] = mapping.date ? buildRows(raw, mapping, existing) : [];
   const stats = summarize(rows);
-  const importable = rows.filter((r) => r.problem === null && !r.duplicate);
-
-  // The canonical format carries a category column; other banks rarely do.
-  const categoryColumn = headers.find((h) => h.trim().toLowerCase() === "category");
+  const categoryColumn = headers.find(h => h.trim().toLowerCase() === "category");
 
   // Catches the markdown fence an AI leaves around its answer, which otherwise
   // shows up as an unreadable first row and no obvious cause.
@@ -104,36 +101,17 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
       : [];
 
   async function doImport() {
-    if (!investmentsEnabled && looksLikeBroker) return;
-    setBusy(true);
+    if (looksLikeBroker || pending.current) return;
+    pending.current = true; setBusy(true); setProblem("");
+    const payload = JSON.stringify({ accountId, fileName, text: fileText, mapping: JSON.stringify(mapping), adjustBalance });
     try {
-      const res = await commitImport(
-        accountId,
-        fileName,
-        importable.map((r) => ({
-          date: r.date!.toISOString(),
-          amount: r.amount!,
-          description: r.description,
-          merchant: r.merchant,
-          // Only used if it matches a category that already exists.
-          category: r.raw[categoryColumn ?? ""] ?? undefined,
-        })),
-        JSON.stringify(mapping),
-        adjustBalance,
-        {
-          fileHash,
-          rowsInFile,
-          debitTotal: sums.debits,
-          creditTotal: sums.credits,
-        }
-      );
+      if (lastRequest.current.payload !== payload) lastRequest.current = { payload, id: randomUuid() };
+      const res = await transferRequest("/api/import/bank", JSON.stringify({ ...JSON.parse(payload), requestId: lastRequest.current.id }), language);
       setResult({ created: res.created, net: res.net, categorised: res.categorised });
-      setRaw([]);
-      setHeaders([]);
-      setFileName("");
-    } finally {
-      setBusy(false);
-    }
+      setRaw([]); setHeaders([]); setFileName(""); setFileText("");
+      router.refresh();
+    } catch (error) { setProblem(`${error instanceof Error ? error.message : feedback.failed} ${feedback.retryImport}`); }
+    finally { pending.current = false; setBusy(false); }
   }
 
   const columnSelect = (
@@ -145,6 +123,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
       <span className="text-[var(--muted)]">{uiText(label ?? "")}</span>
       <select
         className="input mt-1"
+        disabled={busy}
         value={(mapping[key] as string) ?? ""}
         onChange={(e) => setMapping({ ...mapping, [key]: e.target.value || undefined })}
       >
@@ -159,8 +138,13 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
   );
 
   return (
-    <div className="space-y-4">
-      <select className="input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+    <div className="space-y-4" aria-busy={busy}>
+      {problem && <p role="alert" className="text-sm text-[var(--red)]">{problem}</p>}
+      <select className="input" value={accountId} disabled={busy} onChange={async e => {
+        const id = e.target.value; setAccountId(id); setProblem(""); setBusy(true); pending.current = true;
+        try { setExisting(new Set(await getExistingKeys(id))); } catch { setExisting(new Set()); setProblem(feedback.failed); }
+        finally { setBusy(false); pending.current = false; }
+      }}>
         {accounts.map((a) => (
           <option translate="no" key={a.id} value={a.id}>
             {a.name}
@@ -168,7 +152,9 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
         ))}
       </select>
 
-      <input type="file" accept=".csv,text/csv" onChange={handleFile} className="input text-xs" />
+      <input type="file" accept=".csv,text/csv" onChange={handleFile} disabled={busy} className="input text-xs" />
+
+      <p className="text-xs text-[var(--muted)]">{feedback.limit(maxBytes, maxRows)}</p>
 
       {result && (
         <div className="text-xs text-[var(--green)]">{uiText("Imported ")}{result.created}{uiText(" transactions (net ")}{result.net.toFixed(2)})
@@ -312,7 +298,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
                 <input
                   type="checkbox"
                   checked={adjustBalance}
-                  onChange={(e) => setAdjustBalance(e.target.checked)}
+                  disabled={busy} onChange={(e) => setAdjustBalance(e.target.checked)}
                   className="mt-0.5"
                 />
                 <span className="text-[var(--muted)]">{uiText("Also add the net (")}{stats.net.toFixed(2)}{uiText(") to the account balance. Leave this off when importing past statements — the balance already includes those movements, and adding them again would count the same money twice.")}</span>
@@ -321,7 +307,7 @@ export default function CsvImportForm({ accounts }: { accounts: { id: string; na
               <button
                 type="button"
                 onClick={doImport}
-                disabled={busy || stats.importable === 0 || (!investmentsEnabled && looksLikeBroker)}
+                disabled={busy || stats.importable === 0 || looksLikeBroker}
                 className="btn w-full"
                 style={busy || stats.importable === 0 ? { opacity: 0.5 } : undefined}
               >

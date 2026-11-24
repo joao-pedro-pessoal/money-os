@@ -1,3 +1,5 @@
+// These tests isolate data integrity; distributed admission is exercised separately.
+vi.mock("@/actions/workGate", () => ({ withWork: async (_kind: string, work: () => Promise<unknown>) => work() }));
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
@@ -11,7 +13,9 @@ const isolated = vi.hoisted(() => ({ db: null as unknown as PgliteDatabase<typeo
 vi.mock("@/db/client", () => ({ get db() { return isolated.db; } }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
-import { exportAllData, restoreBackup } from "../export";
+import { exportAllData } from "../export";
+import { replaceBackup } from "../backupService";
+const restoreBackup = (form: FormData) => replaceBackup(String(form.get("backup")));
 
 const demo = readFileSync("docs/play-store/demo-account-backup.json", "utf8");
 let engine: PGlite;
