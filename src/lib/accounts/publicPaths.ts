@@ -32,6 +32,7 @@ const LEGAL = new Set(Object.values(LEGAL_PATHS));
  */
 export function isPublicPath(pathname: string): boolean {
   return (
+    ["/api/auth/google/start", "/api/auth/google/callback", "/api/auth/google/native", "/api/auth/google/complete", "/api/register/google"].includes(pathname) ||
     pathname === REGISTRATION_PATH ||
     pathname.startsWith(BOTID_CHALLENGE_ROOT + "/") ||
     pathname.startsWith("/login") ||

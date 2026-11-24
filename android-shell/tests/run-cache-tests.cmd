@@ -6,6 +6,10 @@ if not defined ANDROID_HOME set "ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 call gradlew.bat assembleHomeDebug assembleStoreDebug --offline
 if errorlevel 1 exit /b 1
+"%JAVA_HOME%\bin\javac.exe" -d build\cache-tests app\src\main\java\com\joaonovais\moneyos\shell\SessionGuard.java tests\SessionGuardTest.java
+if errorlevel 1 exit /b 1
+"%JAVA_HOME%\bin\java.exe" -cp build\cache-tests com.joaonovais.moneyos.shell.SessionGuardTest
+if errorlevel 1 exit /b 1
 set "ANDROID_JAR=%ANDROID_HOME%\platforms\android-36\android.jar"
 for %%V in (home store) do (
   call :check %%V

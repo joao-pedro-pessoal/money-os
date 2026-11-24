@@ -3,6 +3,7 @@
 import { useText } from "@/components/useText";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import GoogleButton from "./GoogleButton";
 import { recoverAccount, signIn } from "@/actions/auth";
 import { signInKeyFor } from "@/lib/accounts/credentials";
 import { passwordProblem } from "@/lib/accounts/password";
@@ -29,7 +30,7 @@ type Step = "sign-in" | "sign-up" | "recover" | "code";
  * A new account, a recovered one and the owner's first sign-in each end on the
  * recovery code, shown once: the only way back in without the password.
  */
-export default function LoginScreen({ signUps, inviteRequired = false, destination = "/" }: { signUps: boolean; inviteRequired?: boolean; destination?: string }) {
+export default function LoginScreen({ signUps, inviteRequired = false, destination = "/", googleEnabled = false, googleFailed = false }: { signUps: boolean; inviteRequired?: boolean; destination?: string; googleEnabled?: boolean; googleFailed?: boolean }) {
   const uiText = useText();
   const router = useRouter();
   const { m, language } = useLanguage();
@@ -326,6 +327,7 @@ export default function LoginScreen({ signUps, inviteRequired = false, destinati
   return (
     <>
       <Heading title={w.signIn}>{w.signInText}</Heading>
+      {googleEnabled && <GoogleButton destination={destination} initialError={googleFailed} />}
       {form(
         signInNow,
         <>

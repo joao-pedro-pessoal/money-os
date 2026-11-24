@@ -5,8 +5,7 @@ import { cookies } from "next/headers";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { asUser, db } from "@/db/client";
-import { categories, exchangeRates, OWNER_USER_ID, users } from "@/db/schema";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/db/defaultCategories";
+import { authIdentities, OWNER_USER_ID, users } from "@/db/schema";
 import { newSessionValue, ownerPassword, sessionCookieOptions, SESSION_COOKIE_NAME } from "@/lib/auth";
 import {
   KEY_HEX,
@@ -16,12 +15,13 @@ import {
   sameKey,
   signInKeyFor,
 } from "@/lib/accounts/credentials";
-import { createGate } from "@/lib/accounts/gate";
-import { afterFailedLogin, lockedUntil, maxAccounts, registrationRefusal } from "@/lib/accounts/limits";
+import { accountHashes as hashes, countFailure } from "./passwordWork";
+import { lockedUntil, maxAccounts, registrationRefusal } from "@/lib/accounts/limits";
 import { hashPassword, needsRehash, PASSWORD_MAX, verifyPassword } from "@/lib/accounts/password";
 import type { DeleteOutcome, RecoveryOutcome, SignInOutcome, SignUpOutcome } from "@/lib/accounts/outcomes";
 import { currentUserId } from "./session";
-import { refreshRates } from "./fx";
+import { ensureStartingData, ensureRates, seedNewAccount, registrationCounts, insertRegisteredUser, RegistrationRefused } from "./accountProvisioning";
+import { withGoogleConfirmation } from "./googleFlow";
 import { registrationAccess } from "@/lib/accounts/registration";
 import { TOO_MANY_ATTEMPTS } from "@/lib/accounts/attempts";
 import { admitted } from "./attemptGate";
@@ -47,7 +47,6 @@ import { registrationBotRefusal } from "./registrationBot";
 const random = (n: number) => new Uint8Array(randomBytes(n));
 
 /** The slow hashes: two at once, eight waiting, the rest told to try again (lib/accounts/gate.ts). */
-const hashes = createGate({ running: 2, waiting: 8 });
 const BUSY = "The server is busy with other sign-ins. Try again in a moment.";
 
 let decoy: Promise<string> | null = null;
@@ -67,8 +66,8 @@ const SignUpRequest = z
   .object({ email, signInKey, inviteCode: z.string().max(256).optional(), website: z.string().max(200).optional() })
   .strict();
 const RecoverRequest = z.object({ email, recoveryCode: z.string().max(64), signInKey }).strict();
-const NewCodeRequest = z.object({ signInKey }).strict();
-const DeleteRequest = z.object({ signInKey, confirmEmail: z.string().max(254) }).strict();
+const NewCodeRequest = z.object({ signInKey: signInKey.optional() }).strict();
+const DeleteRequest = z.object({ signInKey: signInKey.optional(), confirmEmail: z.string().max(254) }).strict();
 
 async function startSession(userId: string, issuedAt: Date = new Date()): Promise<void> {
   (await cookies()).set(SESSION_COOKIE_NAME, await newSessionValue(userId, issuedAt), sessionCookieOptions());
@@ -78,19 +77,6 @@ async function startSession(userId: string, issuedAt: Date = new Date()): Promis
 function unchangedCredential(user: Pick<typeof users.$inferSelect, "id" | "sessionsNotBefore">, passwordHash: string) {
   return and(eq(users.id, user.id), eq(users.passwordHash, passwordHash),
     user.sessionsNotBefore ? eq(users.sessionsNotBefore, user.sessionsNotBefore) : isNull(users.sessionsNotBefore));
-}
-
-/** One more wrong attempt against an account, counted in SQL so a burst cannot count as one. */
-async function countFailure(userId: string, now: Date): Promise<Date | null> {
-  const [counted] = await db
-    .update(users)
-    .set({ failedLogins: sql`${users.failedLogins} + 1` })
-    .where(eq(users.id, userId))
-    .returning({ failedLogins: users.failedLogins });
-  if (!counted) return null;
-  const next = afterFailedLogin(counted.failedLogins - 1, now);
-  if (next.lockedUntil !== null) await db.update(users).set(next).where(eq(users.id, userId));
-  return next.lockedUntil;
 }
 
 function lockedAnswer(until: Date): { kind: "locked"; until: string } {
@@ -137,22 +123,19 @@ async function claimOwner(address: string, key: string, now: Date): Promise<Sign
   const hashed = await hashes.run(() => hashPassword(key, random));
   if (!hashed.ok) return { kind: "refused", reason: BUSY };
   const recoveryCode = newRecoveryCode(random);
-  await db.transaction(async (tx) => {
-    // An account from the vault with the owner's own address has nothing in it
-    // (a vault's money stayed on its devices): the owner's account takes the address.
-    await tx.delete(users).where(and(eq(users.email, address), sql`${users.id} <> ${OWNER_USER_ID}`));
-    await tx
-      .update(users)
-      .set({
-        email: address,
-        passwordHash: hashed.value,
-        passwordKind: "keyed",
-        recoveryHash: recoveryHashOf(recoveryCode),
-        failedLogins: 0,
-        lockedUntil: null,
-      })
-      .where(eq(users.id, OWNER_USER_ID));
-  });
+  try {
+    await db.transaction(async (tx) => {
+      const [taken] = await tx.select({ id: users.id }).from(users).where(and(eq(users.email, address), sql`${users.id} <> ${OWNER_USER_ID}`));
+      if (taken) throw new RegistrationRefused("This address belongs to another account.");
+      const [claimed] = await tx.update(users).set({ email: address, passwordHash: hashed.value,
+        passwordKind: "keyed", recoveryHash: recoveryHashOf(recoveryCode), failedLogins: 0, lockedUntil: null })
+        .where(and(eq(users.id, OWNER_USER_ID), isNull(users.passwordHash))).returning({ id: users.id });
+      if (!claimed) throw new RegistrationRefused("Already claimed.");
+    });
+  } catch (error) {
+    if (error instanceof RegistrationRefused || isUniqueViolation(error)) return { kind: "wrong" };
+    throw error;
+  }
   await startSession(OWNER_USER_ID);
   return { kind: "new-code", recoveryCode };
 }
@@ -212,18 +195,6 @@ export async function signIn(raw: unknown): Promise<SignInOutcome> {
   return recoveryCode ? { kind: "new-code", recoveryCode } : { kind: "ok" };
 }
 
-/** Accounts made so far, and in the last hour and day, for `registrationRefusal`. */
-async function registrationCounts(reader: Pick<typeof db, "select"> = db) {
-  const [counts] = await reader
-    .select({
-      total: sql<number>`count(*)::int`,
-      lastHour: sql<number>`count(*) filter (where ${users.createdAt} > now() - interval '1 hour')::int`,
-      lastDay: sql<number>`count(*) filter (where ${users.createdAt} > now() - interval '1 day')::int`,
-    })
-    .from(users);
-  return counts;
-}
-
 /** Postgres's unique_violation, through however many wrappers the driver adds. */
 function isUniqueViolation(error: unknown): boolean {
   let current: unknown = error;
@@ -232,47 +203,6 @@ function isUniqueViolation(error: unknown): boolean {
     current = (current as { cause?: unknown }).cause;
   }
   return false;
-}
-
-/**
- * What an account starts with, for one that has nothing yet: every new one,
- * and the vault's accounts, which arrived with a sign-in and no categories.
- * Run as the account, so the rows are its own.
- */
-async function ensureStartingData(): Promise<void> {
-  await ensureRates();
-  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(categories);
-  if (row && row.n > 0) return;
-  await seedNewAccount();
-}
-
-/** How long a sign-in waits for the rate provider before going ahead without it. */
-const RATES_WAIT_MS = 5000;
-
-/**
- * Exchange rates, for an account that has none.
- *
- * They are each person's own rows (`exchange_rates` has a `user_id`), and a new
- * account started with none at all: a dollar share or a USD account was left
- * out of every total — Analysis said "Nothing to analyse yet" beside a position
- * — until the person happened to open Connections or the rates page, or the
- * home computer's scheduled sync ran. A provider that fails or hangs leaves it
- * as it was: `refreshRates` never throws, and signing in waits for it at most
- * `RATES_WAIT_MS`.
- */
-async function ensureRates(): Promise<void> {
-  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(exchangeRates);
-  if (row && row.n > 0) return;
-  await Promise.race([refreshRates(), new Promise((resolve) => setTimeout(resolve, RATES_WAIT_MS))]);
-}
-
-/** What every new account starts with. */
-async function seedNewAccount(): Promise<void> {
-  const rows = [
-    ...DEFAULT_INCOME_CATEGORIES.map((name) => ({ name, kind: "income" })),
-    ...DEFAULT_EXPENSE_CATEGORIES.map((name) => ({ name, kind: "expense" })),
-  ];
-  await db.insert(categories).values(rows).onConflictDoNothing();
 }
 
 export async function signUp(raw: unknown): Promise<SignUpOutcome> {
@@ -304,20 +234,12 @@ export async function signUp(raw: unknown): Promise<SignUpOutcome> {
   let userId: string;
   try {
     const result = await db.transaction(async (tx) => {
-      // Serialize the final capacity check across server processes. Hashing
-      // stays outside the lock; counts and insertion share this transaction.
-      await tx.execute(sql`select pg_advisory_xact_lock(1297040207, 1)`);
-      const reason = registrationRefusal(await registrationCounts(tx), maxAccounts(process.env));
-      if (reason) return { kind: "refused" as const, reason };
-      const [made] = await tx
-        .insert(users)
-        .values({ email: address, passwordHash: hashed.value, passwordKind: "keyed", recoveryHash: recoveryHashOf(recoveryCode) })
-        .returning({ id: users.id });
-      return { kind: "created" as const, id: made.id };
+      const id = await insertRegisteredUser(tx, { email: address, passwordHash: hashed.value, passwordKind: "keyed", recoveryHash: recoveryHashOf(recoveryCode) });
+      return { kind: "created" as const, id };
     });
-    if (result.kind === "refused") return result;
     userId = result.id;
   } catch (error) {
+    if (error instanceof RegistrationRefused) return { kind: "refused", reason: error.message };
     if (isUniqueViolation(error)) return { kind: "refused", reason: taken };
     throw error;
   }
@@ -361,7 +283,8 @@ export async function recoverAccount(raw: unknown): Promise<RecoveryOutcome> {
   const next = newRecoveryCode(random);
   // Include sign-ins begun while the hash was running, including this millisecond.
   const cutoff = new Date(Date.now() + 1);
-  const [recovered] = await db
+  const recovered = await db.transaction(async tx => {
+    const [recovered] = await tx
     .update(users)
     .set({
       passwordHash: hashed.value,
@@ -370,11 +293,15 @@ export async function recoverAccount(raw: unknown): Promise<RecoveryOutcome> {
       failedLogins: 0,
       lockedUntil: null,
       sessionsNotBefore: cutoff,
+      authVersion: sql`${users.authVersion} + 1`,
     })
     // The slow hash allows another request to consume or replace the code.
     // Check it again atomically with the write, not in a second SELECT.
     .where(and(eq(users.id, user.id), eq(users.recoveryHash, presented)))
     .returning({ id: users.id });
+    if (recovered) await tx.update(authIdentities).set({ enabled: false }).where(eq(authIdentities.userId, user.id));
+    return recovered;
+  });
   if (!recovered) return { kind: "wrong" };
   await startSession(user.id, cutoff);
   return { kind: "ok", recoveryCode: next };
@@ -391,11 +318,21 @@ export async function replaceRecoveryCode(raw: unknown): Promise<RecoveryOutcome
   if (!userId) return { kind: "refused", reason: "Sign in again." };
   const now = new Date();
   const [user] = await db.select().from(users).where(eq(users.id, userId));
-  if (!user || user.passwordHash === null) return { kind: "refused", reason: "Sign in again." };
+  if (!user) return { kind: "refused", reason: "Sign in again." };
+  if (user.passwordHash === null) {
+    try {
+      const recoveryCode = newRecoveryCode(random);
+      await withGoogleConfirmation("recovery-code", async (tx, confirmed) => {
+        await tx.update(users).set({ recoveryHash: recoveryHashOf(recoveryCode) }).where(eq(users.id, confirmed.id));
+      });
+      return { kind: "ok", recoveryCode };
+    } catch { return { kind: "refused", reason: "Confirm Google again for this operation." }; }
+  }
+  if (!parsed.data.signInKey) return { kind: "wrong" };
   const until = lockedUntil(user, now);
   if (until) return lockedAnswer(until);
   const stored = user.passwordHash;
-  const checked = await hashes.run(() => verifyPassword(parsed.data.signInKey, stored));
+  const checked = await hashes.run(() => verifyPassword(parsed.data.signInKey!, stored));
   if (!checked.ok) return { kind: "refused", reason: BUSY };
   if (!checked.value) {
     const locked = await countFailure(user.id, now);
@@ -431,14 +368,25 @@ export async function deleteAccount(raw: unknown): Promise<DeleteOutcome> {
   }
   const now = new Date();
   const [user] = await db.select().from(users).where(eq(users.id, userId));
-  if (!user || user.passwordHash === null || user.email === null) return { kind: "refused", reason: "Sign in again." };
+  if (!user || user.email === null) return { kind: "refused", reason: "Sign in again." };
   if (normalizeEmail(parsed.data.confirmEmail) !== user.email) {
     return { kind: "refused", reason: "Type your account's email exactly, to confirm." };
   }
+  if (user.passwordHash === null) {
+    try {
+      await withGoogleConfirmation("delete", async (tx, confirmed) => {
+        if (confirmed.id === OWNER_USER_ID || confirmed.email !== normalizeEmail(parsed.data.confirmEmail)) throw new Error("Invalid confirmation");
+        await tx.delete(users).where(eq(users.id, confirmed.id));
+      });
+      (await cookies()).delete(SESSION_COOKIE_NAME);
+      return { kind: "deleted" };
+    } catch { return { kind: "refused", reason: "Confirm Google again for this operation." }; }
+  }
+  if (!parsed.data.signInKey) return { kind: "wrong" };
   const until = lockedUntil(user, now);
   if (until) return lockedAnswer(until);
   const stored = user.passwordHash;
-  const checked = await hashes.run(() => verifyPassword(parsed.data.signInKey, stored));
+  const checked = await hashes.run(() => verifyPassword(parsed.data.signInKey!, stored));
   if (!checked.ok) return { kind: "refused", reason: BUSY };
   if (!checked.value) {
     const locked = await countFailure(user.id, now);

@@ -12,6 +12,7 @@ const fake = vi.hoisted(() => ({
 vi.mock("@/db/client", () => ({
   asUser: async (_id: string, work: () => Promise<void>) => work(),
   db: {
+    async transaction(work: (tx: unknown) => Promise<unknown>): Promise<unknown> { return work(this); },
     select: () => ({ from: () => ({ where: async () => [{
       id: "test-person", recoveryHash: fake.recoveryHash, passwordHash: fake.passwordHash,
       failedLogins: 0, lockedUntil: null,

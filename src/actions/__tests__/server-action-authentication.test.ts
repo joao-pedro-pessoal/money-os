@@ -6,6 +6,8 @@ const boundary = vi.hoisted(() => ({ touched: 0 }));
 vi.mock("@/db/client", () => ({ db: new Proxy({}, { get() { boundary.touched++; throw new Error("Data access before authentication"); } }) }));
 vi.mock("@/actions/session", () => ({ hasSession: async () => false, currentUserId: async () => null }));
 const entries = [
+  ["googleSettings","setGooglePassword"],
+  ["googleSettings","disconnectGoogle"],
   ["accounts","listAccountsWithState"],
   ["accounts","listArchivedAccounts"],
   ["accounts","createAccount"],

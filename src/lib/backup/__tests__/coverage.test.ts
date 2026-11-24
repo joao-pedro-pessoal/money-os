@@ -8,8 +8,11 @@ const entries: [string, unknown][] = Object.entries(schema);
 const tables = entries.filter((entry): entry is [string, PgTable] => is(entry[1], PgTable));
 describe("personal backup coverage and dependency order", () => {
   it("includes every user-owned table, without exporting identity or shared market data", () => {
-    const owned = tables.filter(([, table]) => getTableConfig(table).columns.some((column) => column.name === "user_id"));
+    // Identity links are login credentials, globally looked up before sign-in;
+    // an individual financial restore must never import or replace them.
+    const owned = tables.filter(([name, table]) => name !== "authIdentities" && getTableConfig(table).columns.some((column) => column.name === "user_id"));
     expect([...BACKUP_TABLES].sort()).toEqual(owned.map(([name]) => name).sort());
+    for (const name of ["authIdentities", "googleAuthRequests", "users", "qrSignIns", "requestLimits"]) expect(BACKUP_TABLES).not.toContain(name);
   });
   it("restores each parent before its children", () => {
     const order = new Map<string, number>(BACKUP_TABLES.map((name, index) => [name, index]));

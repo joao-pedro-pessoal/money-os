@@ -11,6 +11,7 @@ import { createHmac } from "node:crypto";
  * and are generous enough for a household behind one router.
  */
 export const ATTEMPT_LIMITS = {
+  google: [{ minutes: 10, max: 40 }],
   "sign-in": [{ minutes: 10, max: 30 }],
   "sign-up": [
     { minutes: 60, max: 5 },

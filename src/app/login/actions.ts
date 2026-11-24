@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE_NAME } from "@/lib/auth";
+import { cancelGoogleRequest } from "@/actions/googleFlow";
 
 /**
  * Forgets the session on this device. Its cookie is still a valid session
@@ -10,6 +11,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth";
  * Signing in, making an account and recovering one are in actions/auth.ts.
  */
 export async function logout() {
+  await cancelGoogleRequest();
   const store = await cookies();
   store.delete(SESSION_COOKIE_NAME);
   redirect("/login");

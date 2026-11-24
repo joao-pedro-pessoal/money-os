@@ -180,19 +180,23 @@ final class WidgetData {
 
     /** Asks the site for fresh figures. Blocking: call off the main thread. */
     static void refresh(Context context) {
+        long stamp = Site.sessionStamp();
         SharedPreferences prefs = prefs(context);
         try {
             String body = Site.get(context, "/api/widget");
             new WidgetData(new JSONObject(body), System.currentTimeMillis()); // validates
-            prefs.edit()
+            synchronized (Site.class) {
+              if (!Site.acceptsStamp(stamp)) return;
+              prefs.edit()
                     .putString(KEY_JSON, body)
                     .putLong(KEY_READ_AT, System.currentTimeMillis())
                     .remove(KEY_PROBLEM)
                     .apply();
+            }
         } catch (Site.Unavailable e) {
-            recordProblem(prefs, e.reason);
+            synchronized (Site.class) { if (Site.acceptsStamp(stamp)) recordProblem(prefs, e.reason); }
         } catch (JSONException | RuntimeException e) {
-            recordProblem(prefs, PROBLEM_OFFLINE);
+            synchronized (Site.class) { if (Site.acceptsStamp(stamp)) recordProblem(prefs, PROBLEM_OFFLINE); }
         }
     }
 

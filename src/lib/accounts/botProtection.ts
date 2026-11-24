@@ -1,6 +1,6 @@
 /** Only account creation is challenged; existing sign-ins and recovery keep their own limits. */
 export const REGISTRATION_PATH = "/api/register";
-export const REGISTRATION_BOT_ROUTES = [{ path: REGISTRATION_PATH, method: "POST", advancedOptions: { checkLevel: "basic" as const } }];
+export const REGISTRATION_BOT_ROUTES = [REGISTRATION_PATH, "/api/register/google"].map(path => ({ path, method: "POST", advancedOptions: { checkLevel: "basic" as const } }));
 /**
  * Where the browser fetches BotID's check from on this domain: `withBotId` in
  * next.config.ts rewrites everything below it to Vercel. Fixed by the botid

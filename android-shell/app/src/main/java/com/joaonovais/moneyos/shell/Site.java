@@ -17,6 +17,15 @@ import java.nio.charset.StandardCharsets;
  * nothing the pages could not. A redirect is the login page, never the data.
  */
 final class Site {
+    private static final SessionGuard sessionGuard = new SessionGuard();
+    static synchronized long sessionStamp() { return sessionGuard.stamp(); }
+    static synchronized boolean acceptsStamp(long stamp) { return sessionGuard.accepts(stamp); }
+    static synchronized void beginSessionChange(Context context) {
+        sessionGuard.begin();
+        WidgetData.recordProblem(QuickEntry.prefs(context), PROBLEM_LOGIN);
+        Alerts.accountChanged(context);
+    }
+    static synchronized void finishSessionChange() { sessionGuard.finish(); }
     static final String PROBLEM_LOGIN = "login";
     static final String PROBLEM_OFFLINE = "offline";
     static final String PROBLEM_NO_ADDRESS = "address";
@@ -66,6 +75,8 @@ final class Site {
 
     /** The body of a GET to `path` on the site. Blocking: call off the main thread. */
     static String get(Context context, String path) throws Unavailable {
+        long stamp = sessionStamp();
+        if (!acceptsStamp(stamp)) throw new Unavailable(PROBLEM_OFFLINE);
         String address = address(context);
         if (address == null) throw new Unavailable(PROBLEM_NO_ADDRESS);
         String cookie = null;
@@ -91,8 +102,12 @@ final class Site {
                 throw new Unavailable(PROBLEM_LOGIN);
             }
             if (status != 200) throw new Unavailable(PROBLEM_OFFLINE);
-            keepRenewedSession(address, connection);
-            return read(connection.getInputStream());
+            String body = read(connection.getInputStream());
+            synchronized (Site.class) {
+                if (!acceptsStamp(stamp) || !SessionGuard.sameSession(cookie, CookieManager.getInstance().getCookie(address))) throw new Unavailable(PROBLEM_OFFLINE);
+                keepRenewedSession(address, connection);
+                return body;
+            }
         } catch (IOException | RuntimeException e) {
             throw new Unavailable(PROBLEM_OFFLINE);
         } finally {

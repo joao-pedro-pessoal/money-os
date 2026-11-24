@@ -22,7 +22,7 @@ import type { LegalKind } from "./paths";
 export { LEGAL_KINDS, LEGAL_PATHS, type LegalKind } from "./paths";
 
 /** The day the text last changed in substance. */
-export const LEGAL_UPDATED = "2026-10-30";
+export const LEGAL_UPDATED = "2026-11-24";
 
 /** Who runs this copy of Money OS, and how to reach them. Either may be unset. */
 export interface Operator {
@@ -56,7 +56,7 @@ export function operatorFrom(env: { [name: string]: string | undefined }): Opera
   return { name, email: email && EMAIL.test(email) ? email : null };
 }
 
-export function legalDocument(kind: LegalKind, language: Language, operator: Operator): LegalDocument {
+function baseLegalDocument(kind: LegalKind, language: Language, operator: Operator): LegalDocument {
   if (language === "pt") return pt(operator)[kind];
   if (language === "en") return en(operator)[kind];
   // Translate fixed templates before inserting identity, never user content.
@@ -78,6 +78,23 @@ export function legalDocument(kind: LegalKind, language: Language, operator: Ope
     title: translate(template.title), intro: translate(template.intro), updatedLabel: translate(template.updatedLabel),
     sections: template.sections.map(section => ({ heading: translate(section.heading), paragraphs: section.paragraphs.map(translate) })),
   };
+}
+
+export function legalDocument(kind: LegalKind, language: Language, operator: Operator): LegalDocument {
+  const document = baseLegalDocument(kind, language, operator);
+  // The launch supports en/pt. Other full-edition languages retain their existing
+  // translations and show this new provider disclosure in English until reviewed.
+  const portuguese = language === "pt";
+  const paragraphs = kind === "privacy" ? [portuguese
+    ? "Quando a entrada com Google está ativa e a escolhes, a Money OS guarda o identificador estável da tua conta Google e o email fornecido. Google trata a autenticação e os seus dados técnicos; não lhe enviamos registos financeiros nem pedimos acesso a Gmail, Drive ou contactos. Os tokens Google não são conservados para uso futuro. Cookies de segurança associam a tentativa ao navegador durante até cinco minutos; uma confirmação verificada para uma operação sensível dura até um minuto."
+    : "Where Google sign-in is enabled and you choose it, Money OS keeps your stable Google account identifier and the email provided. Google handles authentication and its technical data; we do not send it financial records or request Gmail, Drive or contacts access. Google tokens are not retained for future use. Security cookies bind a request to its browser for up to five minutes; a verified confirmation for a sensitive operation lasts up to one minute."]
+    : kind === "terms" ? [portuguese
+      ? "Se associares Google, também podes entrar por esse método. As indicações sobre perder a palavra-passe e o código de recuperação referem-se a contas sem outro método disponível. Uma conta só Google recebe um código de recuperação: usá-lo define uma palavra-passe Money OS, renova o código, termina sessões antigas e suspende a associação Google até a associares novamente. Desassociar Google exige uma palavra-passe Money OS funcional. Contas com emails iguais não são juntas automaticamente."
+      : "If you link Google, you can also sign in that way. The guidance about losing both your password and recovery code applies to accounts without another available method. A Google-only account receives a recovery code: using it sets a Money OS password, rotates the code, ends older sessions and suspends the Google link until you link it again. Disconnecting Google requires a working Money OS password. Accounts with matching emails are never joined automatically."]
+      : [portuguese
+        ? "Se a tua conta só usa Google, confirma Google para a eliminação e escreve o email da conta, em vez de uma palavra-passe Money OS. Apagar a conta também apaga a associação Google; não apaga a tua conta Google. Se perderes acesso ao Google, usa o código de recuperação em Esqueceste a palavra-passe? para definir uma palavra-passe Money OS. Continua disponível o pedido de eliminação pelo contacto indicado nesta página."
+        : "If your account uses only Google, confirm Google for deletion and type your account email instead of a Money OS password. Deleting the account also deletes its Google link; it does not delete your Google Account. If you lose Google access, use your recovery code through Forgot your password? to set a Money OS password. The deletion request through the contact on this page remains available."];
+  return { ...document, sections: [...document.sections, { heading: portuguese ? "Entrada com Google, quando disponível" : "Google sign-in, when available", paragraphs }] };
 }
 
 /** "6 October 2026" / "6 de outubro de 2026". */

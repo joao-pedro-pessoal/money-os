@@ -37,21 +37,21 @@ describe("the site's login", () => {
   });
 
   /**
-   * A session is handed out in four places: the sign-in actions after the
+   * Session issuers are deliberately enumerated: sign-in actions after the
    * password or the recovery code, the proxy renewing one it has just checked,
    * "Log out other devices" re-signing the device that pressed it, and QR
    * consumption after explicit approval by an existing session (integration
    * tests in qr-sign-in.test.ts cover capability binding, expiry and replay). Every
    * export of a "use server" module is an endpoint anyone can call, so a
-   * fifth — or the helper in auth.ts becoming an export — would give a
-   * session to whoever asked for one.
+   * new issuer needs its own credential/capability tests. Google issuers have
+   * signed-token HTTP tests plus browser/native binding and revocation tests.
    */
-  it("issues a session only after a password or an existing session", () => {
+  it("keeps session issuance confined to reviewed credential and capability paths", () => {
     const issuers = sourceFiles(SRC)
       .filter((file) => /\.set\(\s*SESSION_COOKIE_NAME/.test(readFileSync(file, "utf8")))
       .map((file) => relative(SRC, file).replace(/\\/g, "/"))
       .sort();
-    expect(issuers).toEqual(["actions/auth.ts", "actions/qrSignIn.ts", "actions/session.ts", "proxy.ts"]);
+    expect(issuers).toEqual(["actions/auth.ts", "actions/googleFlow.ts", "actions/googleSettings.ts", "actions/qrSignIn.ts", "actions/session.ts", "proxy.ts"]);
     const auth = readFileSync(join(SRC, "actions/auth.ts"), "utf8");
     expect(auth).not.toMatch(/export\s+(async\s+)?function\s+startSession/);
   });

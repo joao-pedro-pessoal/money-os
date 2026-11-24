@@ -27,6 +27,7 @@ import { currentUserId, logOutOtherDevices } from "@/actions/session";
 import { sessionsNotBefore } from "@/actions/sessionRevocation";
 import { accountEmail } from "@/actions/auth";
 import AccountSettings from "@/components/AccountSettings";
+import { googleAccountState } from "@/actions/googleFlow";
 import { OWNER_USER_ID } from "@/db/schema";
 import { currentLanguage } from "@/actions/language";
 import { localeOf } from "@/lib/i18n/languages";
@@ -47,6 +48,7 @@ export default async function SettingsGeneralPage() {
   const userId = await currentUserId();
   const sessionsEndedAt = userId ? await sessionsNotBefore(userId) : null;
   const email = await accountEmail();
+  const google = await googleAccountState();
   const language = await currentLanguage();
   const w = messagesFor(language).settings;
   const legal = messagesFor(language).legal;
@@ -205,7 +207,7 @@ export default async function SettingsGeneralPage() {
           title={w.accountTitle}
           description={w.accountText}
         >
-          <AccountSettings email={email} canDelete={userId !== null && userId !== OWNER_USER_ID} />
+          <AccountSettings email={email} canDelete={userId !== null && userId !== OWNER_USER_ID} google={google} />
         </SettingRow>
         <SettingRow
           title={w.devicesTitle}

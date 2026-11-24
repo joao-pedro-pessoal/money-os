@@ -6,7 +6,7 @@ afterEach(()=>vi.unstubAllEnvs());
 describe("registration-only BotID client",()=>{
   it("protects only the dedicated registration POST with Basic",async()=>{
     vi.stubEnv("NEXT_PUBLIC_REGISTRATION_BOT_PROTECTION","1");await import("../../../instrumentation-client");
-    expect(init).toHaveBeenCalledExactlyOnceWith({protect:[{path:"/api/register",method:"POST",advancedOptions:{checkLevel:"basic"}}]});
+    expect(init).toHaveBeenCalledExactlyOnceWith({protect:["/api/register", "/api/register/google"].map(path => ({path,method:"POST",advancedOptions:{checkLevel:"basic"}}))});
   });
   it("does not initialise challenges in a home/local build",async()=>{
     vi.stubEnv("NEXT_PUBLIC_REGISTRATION_BOT_PROTECTION","0");await import("../../../instrumentation-client");expect(init).not.toHaveBeenCalled();

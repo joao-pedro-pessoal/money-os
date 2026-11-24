@@ -82,6 +82,7 @@ public class MainActivity extends Activity {
 
     private FrameLayout root;
     private WebView web;
+    private GoogleLogin googleLogin;
     private View overlay;
     private ValueCallback<Uri[]> pendingFiles;
     private String shellScript = "";
@@ -159,6 +160,8 @@ public class MainActivity extends Activity {
         settings.setUserAgentString(settings.getUserAgentString() + " MoneyOSAndroid/0.1");
         CookieManager.getInstance().setAcceptCookie(true);
         view.addJavascriptInterface(new Bridge(), "MoneyOSAndroid");
+        if (googleLogin != null) googleLogin.close();
+        googleLogin = new GoogleLogin(this, view, address);
 
         view.setWebViewClient(new WebViewClient() {
             @Override
@@ -182,6 +185,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView v, String url) {
                 if (address.equals(pageOrigin)) {
+                    if (googleLogin != null) googleLogin.pageFinished();
                     v.evaluateJavascript(shellScript, null);
                     pageReady = true;
                     deliverQuickEntry();
@@ -191,6 +195,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void doUpdateVisitedHistory(WebView v, String url, boolean isReload) {
+                if (googleLogin != null) googleLogin.pageFinished();
                 updateBackHandling();
             }
 
@@ -703,6 +708,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (googleLogin != null) googleLogin.close();
         if (web != null) {
             root.removeView(web);
             web.destroy();

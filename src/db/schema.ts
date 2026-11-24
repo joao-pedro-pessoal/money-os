@@ -44,7 +44,9 @@ export const users = pgTable("users", {
   /** Null only on the owner's row, until its first sign-in claims it (see OWNER_USER_ID). */
   email: text("email").unique(),
   passwordHash: text("password_hash"),
-  passwordKind: text("password_kind").notNull().default("keyed"), // "keyed" | "legacy"
+  passwordKind: text("password_kind").notNull().default("keyed"), // "keyed" | "legacy" | "google" (no password yet)
+  /** Invalidates pending identity changes after recovery or a method change. */
+  authVersion: integer("auth_version").notNull().default(0),
   /** sha256 of the recovery code shown once at sign-up; how a forgotten password is replaced. */
   recoveryHash: text("recovery_hash"),
   failedLogins: integer("failed_logins").notNull().default(0),
@@ -61,6 +63,37 @@ export const users = pgTable("users", {
  * APP_EMAIL and APP_PASSWORD.
  */
 export const OWNER_USER_ID = "owner";
+
+// Authentication metadata, deliberately readable before sign-in like users.
+// Only internal, capability-checked authentication helpers access these tables.
+export const authIdentities = pgTable("auth_identities", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  issuer: text("issuer").notNull(),
+  subject: text("subject").notNull(),
+  email: text("email").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [unique("auth_identity_subject_unique").on(t.issuer, t.subject), unique("auth_identity_user_issuer_unique").on(t.userId, t.issuer)]);
+
+export const googleAuthRequests = pgTable("google_auth_requests", {
+  id: text("id").primaryKey(),
+  browserHash: text("browser_hash").notNull(),
+  mode: text("mode").notNull(),
+  intent: text("intent").notNull(),
+  purpose: text("purpose"),
+  nativeChallenge: text("native_challenge"),
+  nonce: text("nonce").notNull(),
+  destination: text("destination").notNull(),
+  targetUserId: text("target_user_id").references(() => users.id, { onDelete: "cascade" }),
+  targetVersion: integer("target_version"),
+  sessionHash: text("session_hash"),
+  subject: text("subject"),
+  email: text("email"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}, (t) => [index("google_auth_requests_expiry_idx").on(t.expiresAt)]);
 
 // Short-lived authentication handshakes, not financial rows. Before approval
 // there is no owner; actions require independent high-entropy capabilities.

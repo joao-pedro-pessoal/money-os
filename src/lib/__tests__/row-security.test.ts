@@ -19,6 +19,8 @@ import * as schema from "../../db/schema";
 
 /** Everyone's, and why each may be. */
 const SHARED = new Map([
+  ["auth_identities", "pre-login identity lookup, unique issuer/subject; only internal authentication helpers may access"],
+  ["google_auth_requests", "short-lived pre-login capabilities, browser/native binding, quotas and atomic consumption"],
   ["qr_sign_ins", "anonymous authentication handshakes; actions require separate random requester and approval capabilities, expire and consume once"],
   ["users", "the accounts themselves: sign-in has to find one before anyone is signed in"],
   ["request_limits", "attempts counted per connection before anyone is signed in; a keyed hash of the address, no account data, deleted after a day"],

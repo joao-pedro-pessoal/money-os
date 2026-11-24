@@ -7,6 +7,10 @@ import { deleteAccount, replaceRecoveryCode } from "@/actions/auth";
 import { signInKeyFor } from "@/lib/accounts/credentials";
 import { serverMessageIn } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageContext";
+import GoogleMethods from "./GoogleMethods";
+import GoogleButton from "./GoogleButton";
+import type { GoogleAccountState } from "@/lib/accounts/google";
+import { googleText } from "@/lib/accounts/googleText";
 
 /**
  * The account itself in Settings: whose it is, and a new recovery code.
@@ -15,12 +19,13 @@ import { useLanguage } from "./LanguageContext";
  * unlocked, a cookie seen — must not be enough to take the way back in, and
  * the old code stops working the moment the new one exists.
  */
-export default function AccountSettings({ email, canDelete }: { email: string | null; canDelete: boolean }) {
+export default function AccountSettings({ email, canDelete, google = { enabled: false, hasPassword: true, linked: false, email: null, confirmation: null } }: { email: string | null; canDelete: boolean; google?: GoogleAccountState }) {
   const uiText = useText();
   const router = useRouter();
-  const { m } = useLanguage();
+  const { m, language } = useLanguage();
+  const googleSays = googleText(language);
   const w = m.account;
-  const [asking, setAsking] = useState(false);
+  const [asking, setAsking] = useState(!google.hasPassword && google.confirmation === "recovery-code");
   const [deleting, setDeleting] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
@@ -32,11 +37,11 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
 
   const make = async () => {
     if (busy || !email) return;
-    if (!password) return setProblem(w.writePassword);
+    if (google.hasPassword && !password) return setProblem(w.writePassword);
     setBusy(true);
     setProblem(null);
     try {
-      const outcome = await replaceRecoveryCode({ signInKey: await signInKeyFor(email, password) });
+      const outcome = await replaceRecoveryCode(google.hasPassword ? { signInKey: await signInKeyFor(email, password) } : {});
       if (outcome.kind === "ok") {
         setCode(outcome.recoveryCode);
         setAsking(false);
@@ -46,7 +51,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
       } else if (outcome.kind === "locked") {
         setProblem(w.tooMany);
       } else {
-        setProblem(serverMessageIn(m, outcome.reason));
+        setProblem(googleSays(serverMessageIn(m, outcome.reason)));
       }
     } catch {
       setProblem(w.unreachable);
@@ -56,12 +61,12 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
 
   const remove = async () => {
     if (busy || !email) return;
-    if (!deletePassword) return setDeleteProblem(w.writePassword);
+    if (google.hasPassword && !deletePassword) return setDeleteProblem(w.writePassword);
     setBusy(true);
     setDeleteProblem(null);
     try {
       const outcome = await deleteAccount({
-        signInKey: await signInKeyFor(email, deletePassword),
+        ...(google.hasPassword ? { signInKey: await signInKeyFor(email, deletePassword) } : {}),
         confirmEmail,
       });
       if (outcome.kind === "deleted") {
@@ -73,7 +78,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
           ? w.notThisPasswordNothingDeleted
           : outcome.kind === "locked"
             ? w.tooMany
-            : serverMessageIn(m, outcome.reason)
+            : googleSays(serverMessageIn(m, outcome.reason))
       );
     } catch {
       setDeleteProblem(w.unreachableNothingDeleted);
@@ -86,6 +91,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
       <div className="text-sm">
         {w.signedInAs} <span className="font-medium">{email ?? "—"}</span>
       </div>
+      <GoogleMethods email={email} state={google} />
 
       {code && (
         <div className="rounded-lg border p-3 space-y-1" style={{ borderColor: "var(--amber)" }}>
@@ -95,7 +101,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
         </div>
       )}
 
-      {asking ? (
+      {!google.hasPassword && !asking ? <GoogleButton intent="confirm" purpose="recovery-code" /> : asking ? (
         <form
           method="post"
           action="/settings"
@@ -105,7 +111,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
             void make();
           }}
         >
-          <label className="text-xs">
+          {google.hasPassword && <label className="text-xs">
             {w.yourPassword}
             <input
               className="input mt-1"
@@ -115,7 +121,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-          </label>
+          </label>}
           <button type="submit" className="btn" disabled={busy}>
             {busy ? w.checking : w.makeCode}
           </button>
@@ -161,7 +167,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
                     onChange={(e) => setConfirmEmail(e.target.value)}
                   />
                 </label>
-                <label className="text-xs">
+                {google.hasPassword && <label className="text-xs">
                   {w.yourPassword}
                   <input
                     className="input mt-1"
@@ -170,9 +176,10 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
                     value={deletePassword}
                     onChange={(e) => setDeletePassword(e.target.value)}
                   />
-                </label>
+                </label>}
               </div>
               <div className="flex flex-wrap gap-2">
+                {!google.hasPassword && google.confirmation !== "delete" ? <GoogleButton intent="confirm" purpose="delete" /> :
                 <button
                   type="submit"
                   className="btn"
@@ -180,7 +187,7 @@ export default function AccountSettings({ email, canDelete }: { email: string | 
                   disabled={busy || confirmEmail.trim().toLowerCase() !== (email ?? "").toLowerCase()}
                 >
                   {busy ? w.deleting : w.deleteMine}
-                </button>
+                </button>}
                 <button type="button" className="btn-quiet w-auto!" onClick={() => setDeleting(false)}>
                   {w.cancel}
                 </button>

@@ -97,6 +97,10 @@ final class Alerts {
         QuickEntry.prefs(context).edit().remove(KEY_NOTIFIED).apply();
     }
 
+    static void accountChanged(Context context) {
+        clearNotifications(context);
+    }
+
     /**
      * Asks the site and notifies what is new. Blocking: call off the main thread.
      *
@@ -105,6 +109,7 @@ final class Alerts {
      * down, and forgotten, so if it comes back it is news again.
      */
     static void check(Context context) {
+        long stamp = Site.sessionStamp();
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         if (!wanted(context) || manager == null || !manager.areNotificationsEnabled()) return;
 
@@ -113,7 +118,7 @@ final class Alerts {
             alerts = new JSONObject(Site.get(context, "/api/alerts")).getJSONArray("alerts");
         } catch (Site.Unavailable e) {
             if (Site.PROBLEM_LOGIN.equals(e.reason) || Site.PROBLEM_NO_ADDRESS.equals(e.reason)) {
-                clearNotifications(context);
+                synchronized (Site.class) { if (Site.acceptsStamp(stamp)) clearNotifications(context); }
             }
             return;
         } catch (JSONException | RuntimeException e) {
@@ -121,6 +126,8 @@ final class Alerts {
             return;
         }
 
+        synchronized (Site.class) {
+        if (!Site.acceptsStamp(stamp)) return;
         createChannel(context, manager);
         SharedPreferences prefs = QuickEntry.prefs(context);
         Set<String> notified = new HashSet<>(prefs.getStringSet(KEY_NOTIFIED, new HashSet<>()));
@@ -136,6 +143,7 @@ final class Alerts {
             if (!current.contains(gone)) manager.cancel(gone, NOTIFICATION_ID);
         }
         prefs.edit().putStringSet(KEY_NOTIFIED, current).apply();
+        }
     }
 
     private static void createChannel(Context context, NotificationManager manager) {
