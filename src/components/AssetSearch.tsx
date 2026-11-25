@@ -46,7 +46,7 @@ export default function AssetSearch({ navigate = false }: { navigate?: boolean }
     <label className="block text-xs">{navigate ? uiText("Find an asset") : uiText("Asset name, ticker or ISIN")}
       <input role="combobox" aria-autocomplete="list" aria-expanded={expanded && results.length > 0} aria-controls={`${id}-results`}
         aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined} autoComplete="off" name={navigate ? undefined : 'symbol'}
-        className="input w-full mt-1" required={!navigate} value={query} placeholder={uiText("e.g. Apple, BTC, S&P 500, IE00B5BMR087")}
+        className="input w-full mt-1" required={!navigate} maxLength={200} value={query} placeholder={uiText("e.g. Apple, BTC, S&P 500, IE00B5BMR087")}
         onFocus={() => setExpanded(true)} onChange={e => { setQuery(e.target.value); setSelected(null); setResults([]); setMessage(''); setActive(-1); setExpanded(true); }}
         onKeyDown={e => {
           if (e.key === 'Escape') { setExpanded(false); setActive(-1); }

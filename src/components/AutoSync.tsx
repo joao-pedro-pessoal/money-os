@@ -3,6 +3,8 @@ import { useFormat } from "@/components/useFormat";
 
 import { useText } from "@/components/useText";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useLanguage } from "./LanguageContext";
+import { readText } from "@/lib/accounts/readText";
 
 /**
  * Keeps connected platforms up to date without anyone clicking anything.
@@ -18,15 +20,18 @@ export default function AutoSync({
   staleMinutes = 5,
   intervalMinutes = 5,
 }: {
-  syncAction: () => Promise<void>;
+  syncAction: () => Promise<void | { ok: boolean; error?: string }>;
   lastSyncAt: string | null;
   staleMinutes?: number;
   intervalMinutes?: number;
 }) {
   const { locale: numberLocale } = useFormat();
   const uiText = useText();
+  const { language } = useLanguage();
   const [isPending, startTransition] = useTransition();
   const [ranAt, setRanAt] = useState<Date | null>(null);
+  const [failure, setFailure] = useState("");
+  const inFlight = useRef(false);
   // Guards against React 18 double-mounting in dev firing two syncs.
   const started = useRef(false);
 
@@ -39,10 +44,15 @@ export default function AutoSync({
 
     const run = () => {
       // Don't waste a request on a tab sitting in the background.
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible" || inFlight.current) return;
+      inFlight.current = true;
       startTransition(async () => {
-        await syncAction();
-        setRanAt(new Date());
+        try {
+          const result = await syncAction();
+          if (result && !result.ok) { setFailure(result.error ?? readText(language).syncFailed); return; }
+          setFailure(""); setRanAt(new Date());
+        } catch { setFailure(readText(language).syncFailed); }
+        finally { inFlight.current = false; }
       });
     };
 
@@ -53,13 +63,13 @@ export default function AutoSync({
 
     const id = setInterval(run, intervalMinutes * 60_000);
     return () => clearInterval(id);
-  }, [syncAction, lastSyncAt, staleMinutes, intervalMinutes]);
+  }, [syncAction, lastSyncAt, staleMinutes, intervalMinutes, language]);
 
   return (
     <div className="text-xs text-[var(--muted)]">
       {isPending ? (
         <span className="text-[var(--accent)]">{uiText("Syncing…")}</span>
-      ) : ranAt ? (
+      ) : failure ? <span role="status">{failure}</span> : ranAt ? (
         <>{uiText("Auto-synced at ")}{ranAt.toLocaleTimeString(numberLocale)}{uiText(" · refreshes every ")}{intervalMinutes}{uiText(" min")}</>
       ) : (
         <>{uiText("Auto-syncs every ")}{intervalMinutes}{uiText(" min while this page is open")}</>

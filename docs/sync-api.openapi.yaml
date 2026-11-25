@@ -1,0 +1,104 @@
+openapi: 3.1.0
+info:
+  title: Money OS scheduled synchronization
+  version: 1.1.0
+  description: Server scheduler credentials only. User cookies and client userId parameters cannot select who is processed. All responses use Cache-Control private, no-store.
+paths:
+  /api/sync:
+    get:
+      operationId: scheduledSyncGet
+      description: Host cron. Shares a global one-per-minute, twelve-per-hour budget and a single execution slot with POST. Each account is processed sequentially under its own RLS context and edition rules.
+      security:
+        - schedulerBearer: []
+      responses:
+        '200': {$ref: '#/components/responses/Completed'}
+        '207': {$ref: '#/components/responses/Partial'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '429': {$ref: '#/components/responses/Limited'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    post:
+      operationId: scheduledSyncPost
+      description: Home scheduler. Same budget as GET. Existing secret query parameter is retained for legacy callers; prefer the header or bearer to keep credentials out of URLs.
+      security:
+        - schedulerBearer: []
+        - schedulerHeader: []
+        - legacySchedulerQuery: []
+      responses:
+        '200': {$ref: '#/components/responses/Completed'}
+        '207': {$ref: '#/components/responses/Partial'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '429': {$ref: '#/components/responses/Limited'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+components:
+  securitySchemes:
+    schedulerBearer:
+      type: http
+      scheme: bearer
+      description: Existing CRON_SECRET or SYNC_SECRET.
+    schedulerHeader:
+      type: apiKey
+      in: header
+      name: x-sync-secret
+      description: Existing SYNC_SECRET or CRON_SECRET, accepted only by POST.
+    legacySchedulerQuery:
+      type: apiKey
+      in: query
+      name: secret
+      description: Legacy POST credential. Not accepted by GET.
+  schemas:
+    Result:
+      type: object
+      required: [synced, failed, accounts, fxUpdated, accountsFailed, pricesAttempted, pricesUpdated, results]
+      properties:
+        synced: {type: integer, minimum: 0}
+        failed: {type: integer, minimum: 0}
+        accounts: {type: integer, minimum: 0}
+        fxUpdated: {type: integer, minimum: 0}
+        accountsFailed: {type: integer, minimum: 0}
+        pricesAttempted: {type: integer, minimum: 0}
+        pricesUpdated: {type: integer, minimum: 0}
+        results:
+          type: array
+          items:
+            type: object
+            required: [id, platform, ok]
+            additionalProperties: false
+            properties:
+              id: {type: string}
+              platform: {type: string}
+              ok: {type: boolean}
+    Failure:
+      type: object
+      required: [error]
+      properties:
+        error: {type: string}
+        retryAfter: {type: integer, minimum: 1}
+  responses:
+    Completed:
+      description: All attempted work completed successfully.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Result'}
+    Partial:
+      description: At least one account had a rates, pricing or connection failure; other accounts were still attempted. Internal provider diagnostics are excluded.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Result'}
+    Unauthorized:
+      description: Missing or invalid scheduler credential. No users or counters read.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Failure'}
+    Limited:
+      description: Shared scheduler quota or execution slot unavailable.
+      headers:
+        Retry-After:
+          schema: {type: integer, minimum: 1}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Failure'}
+    Unavailable:
+      description: No scheduler secret configured or admission/service unavailable.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Failure'}

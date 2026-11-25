@@ -2,7 +2,8 @@ import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
-import { listRates, refreshRatesAction, setManualRate, unpinRate } from "@/actions/fx";
+import { listRates, setManualRate } from "@/actions/fx";
+import RateRefresh from "@/components/RateRefresh";
 import { getBaseCurrency } from "@/actions/settings";
 import { DEFAULT_BASE_CURRENCY } from "@/lib/fx";
 import SettingRow from "@/components/SettingRow";
@@ -21,9 +22,7 @@ export default async function SettingsRatesPage() {
           <>{uiText("Rates are per 1 ")}{DEFAULT_BASE_CURRENCY}{uiText(", even when totals are shown in ")}{baseCurrency}{uiText(", and refresh automatically. A rate you set by hand is kept and never overwritten by a refresh — an automatic update must not undo a deliberate choice.")}</>
         }
       >
-        <form action={refreshRatesAction}>
-          <button type="submit" className="btn whitespace-nowrap">{uiText("Refresh now")}</button>
-        </form>
+        <RateRefresh />
       </SettingRow>
 
       <SettingRow title={uiText("Current rates")} stacked>
@@ -59,10 +58,7 @@ export default async function SettingsRatesPage() {
                     </td>
                     <td className="text-right">
                       {r.manual && (
-                        <form action={unpinRate}>
-                          <input type="hidden" name="quote" value={r.quote} />
-                          <button type="submit" className="text-xs text-[var(--accent)] hover:underline">{uiText("Use automatic")}</button>
-                        </form>
+                        <RateRefresh quote={r.quote} />
                       )}
                     </td>
                   </tr>

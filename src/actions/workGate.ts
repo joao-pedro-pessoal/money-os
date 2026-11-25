@@ -12,26 +12,44 @@ export class WorkLimitedError extends Error {
   constructor(public readonly retryAfter: number) { super(`Too many requests. Try again in ${retryAfter} seconds.`); }
 }
 
+type Scope = { key: string; windows: readonly { seconds: number; max: number }[]; capacity: number };
+
+function scopeKey(kind: WorkKind, scope: string) {
+  const secret = process.env.APP_SECRET;
+  if (!secret) throw new Error("APP_SECRET is required for request quotas.");
+  return createHmac("sha256", secret).update(`work|${kind}|${scope}`).digest("hex");
+}
+
 /** Same PostgreSQL state on every instance; all scopes admitted or none are. */
 export async function acquireWork(kind: WorkKind): Promise<() => Promise<void>> {
   await requireServerSession();
-  const secret = process.env.APP_SECRET;
-  if (!secret) throw new Error("APP_SECRET is required for request quotas.");
-  const fingerprint = (scope: string) => createHmac("sha256", secret).update(`work|${kind}|${scope}`).digest("hex");
   const identity = await db.execute<{ id: string; now: Date }>(sql`select current_setting('app.user_id', true) as id, clock_timestamp() as now`);
   const user = identity.rows[0];
   if (!user?.id) throw new Error("Sign in again.");
   const policy = WORK_LIMITS[kind];
-  const scopes = [
-    { key: fingerprint(`user:${user.id}`), windows: policy.user, capacity: policy.simultaneous },
-    { key: fingerprint("global"), windows: [], capacity: policy.global },
+  const scopes: Scope[] = [
+    { key: scopeKey(kind, `user:${user.id}`), windows: policy.user, capacity: policy.simultaneous },
+    { key: scopeKey(kind, "global"), windows: [], capacity: policy.global },
   ];
   // No connection header on the home copy: user and global quotas still apply.
   let address: string | null = null;
   try { address = clientAddress(await headers()); } catch { /* no request context */ }
-  if (address) scopes.push({ key: fingerprint(`connection:${address}`), windows: policy.connection, capacity: policy.global });
+  if (address) scopes.push({ key: scopeKey(kind, `connection:${address}`), windows: policy.connection, capacity: policy.global });
+  return admitScopes(scopes);
+}
+
+/** Internal only: called by the scheduler route AFTER checking its secret. */
+export async function withScheduledWork<T>(work: () => Promise<T>): Promise<T> {
+  const policy = WORK_LIMITS["scheduled-sync"];
+  const release = await admitScopes([{ key: scopeKey("scheduled-sync", "global"), windows: policy.user, capacity: 1 }]);
+  try { return await work(); }
+  finally { try { await release(); } catch { console.error("scheduled_gate_release_failed"); } }
+}
+
+async function admitScopes(scopes: Scope[]): Promise<() => Promise<void>> {
   scopes.sort((a, b) => a.key.localeCompare(b.key));
   const token = randomUUID();
+  let cleanupTime = 0;
   await db.transaction(async tx => {
     // Get the database time after waiting for locks, avoiding process clock skew.
     const locked = [];
@@ -42,6 +60,7 @@ export async function acquireWork(kind: WorkKind): Promise<() => Promise<void>> 
     }
     const time = await tx.execute<{ now: Date }>(sql`select clock_timestamp() as now`);
     const now = new Date(time.rows[0].now).getTime();
+    cleanupTime = now;
     const admitted = locked.map(({ scope, row }) => ({ scope, next: nextAdmission(JSON.parse(row.history), JSON.parse(row.leases), scope.windows, scope.capacity, now) }));
     const wait = Math.max(...admitted.map(a => a.next.retryAfter));
     if (wait > 0) throw new WorkLimitedError(wait);
@@ -57,7 +76,7 @@ export async function acquireWork(kind: WorkKind): Promise<() => Promise<void>> 
   });
   // Cleanup holds no other gate locks, avoiding lock-order inversion with an
   // admission that is reviving an old scope. No personal content is retained.
-  try { await db.delete(workGates).where(lt(workGates.updatedAt, new Date(new Date(user.now).getTime() - 86400_000))); }
+  try { await db.delete(workGates).where(lt(workGates.updatedAt, new Date(cleanupTime - 86400_000))); }
   catch { console.error("work_gate_cleanup_failed"); }
   return async () => {
     for (const scope of scopes) await db.transaction(async tx => {

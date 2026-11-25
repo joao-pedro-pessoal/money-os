@@ -6,6 +6,10 @@ import { exchangeRates } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { fetchRates, DEFAULT_BASE_CURRENCY, type RateMap } from "@/lib/fx";
+import { providerJson } from "./providerHttp";
+import { withWork, WorkLimitedError } from "./workGate";
+import { currentLanguage } from "./language";
+import { readText } from "@/lib/accounts/readText";
 
 /**
  * Current rates from the DB, always including the base at 1.
@@ -37,34 +41,49 @@ export async function listRates() {
  */
 export async function refreshRates() {
   await requireServerSession();
-  try {
-    const fetched = await fetchRates();
-    for (const [quote, rate] of Object.entries(fetched)) {
-      if (quote === DEFAULT_BASE_CURRENCY) continue;
-      const values = { rate: String(rate), fetchedAt: new Date(), source: "frankfurter" };
-      // Check the manual flag when writing, not in a snapshot that another
-      // request can change. The unique key also serializes first-time inserts.
-      await db.insert(exchangeRates)
-        .values({ base: DEFAULT_BASE_CURRENCY, quote, ...values })
-        .onConflictDoUpdate({
-          target: [exchangeRates.userId, exchangeRates.quote],
-          set: values,
-          setWhere: eq(exchangeRates.manual, false),
-        });
-    }
+  return guardedRefresh();
+}
 
-    revalidatePath("/settings");
-    revalidatePath("/");
-    return { ok: true as const, count: Object.keys(fetched).length - 1 };
+async function guardedRefresh(unpin?: string) {
+  const text = readText(await currentLanguage());
+  try {
+    return await withWork("fx-refresh", async () => {
+      const fetched = await fetchRates(async url => {
+        const raw = await providerJson(url) as { base?: unknown; rates?: unknown } | null;
+        if (!raw || typeof raw !== "object" || (raw.base !== undefined && raw.base !== DEFAULT_BASE_CURRENCY) || !raw.rates || typeof raw.rates !== "object" || Array.isArray(raw.rates)) throw new Error("Invalid rates");
+        const entries = Object.entries(raw.rates);
+        if (!entries.length || entries.length > 200 || entries.some(([currency, value]) => !/^[A-Z]{3}$/.test(currency) || typeof value !== "number" || !Number.isFinite(value) || value < 0.0000000001 || value > 1_000_000_000 || (currency === DEFAULT_BASE_CURRENCY && value !== 1))) throw new Error("Invalid rates");
+        return raw;
+      });
+      await db.transaction(async tx => {
+        if (unpin) await tx.update(exchangeRates).set({ manual: false }).where(eq(exchangeRates.quote, unpin));
+        for (const [quote, rate] of Object.entries(fetched)) {
+          if (quote === DEFAULT_BASE_CURRENCY) continue;
+          const values = { rate: String(rate), fetchedAt: new Date(), source: "frankfurter" };
+          // Check the manual flag when writing, not in a snapshot that another
+          // request can change. The unique key also serializes first-time inserts.
+          await tx.insert(exchangeRates)
+            .values({ base: DEFAULT_BASE_CURRENCY, quote, ...values })
+            .onConflictDoUpdate({
+              target: [exchangeRates.userId, exchangeRates.quote],
+              set: values,
+              setWhere: eq(exchangeRates.manual, false),
+            });
+        }
+      });
+      try { revalidatePath("/settings"); revalidatePath("/"); }
+      catch { console.error("fx_revalidation_failed"); }
+      return { ok: true as const, count: Object.keys(fetched).filter(quote => quote !== DEFAULT_BASE_CURRENCY).length };
+    });
   } catch (err) {
-    return { ok: false as const, error: err instanceof Error ? err.message : String(err) };
+    if (err instanceof WorkLimitedError) return { ok: false as const, error: text.limited(err.retryAfter), retryAfter: err.retryAfter };
+    return { ok: false as const, error: text.fxFailed };
   }
 }
 
 export async function refreshRatesAction() {
   await requireServerSession();
-  await refreshRates();
-  revalidatePath("/settings");
+  return refreshRates();
 }
 
 /** Pins a rate by hand; it will survive automatic refreshes. */
@@ -92,7 +111,6 @@ export async function setManualRate(formData: FormData) {
 export async function unpinRate(formData: FormData) {
   await requireServerSession();
   const quote = String(formData.get("quote") ?? "").trim().toUpperCase();
-  await db.update(exchangeRates).set({ manual: false }).where(eq(exchangeRates.quote, quote));
-  await refreshRates();
-  revalidatePath("/settings");
+  if (!/^[A-Z]{3}$/.test(quote) || quote === DEFAULT_BASE_CURRENCY) return { ok: false as const, error: readText(await currentLanguage()).invalid };
+  return guardedRefresh(quote);
 }

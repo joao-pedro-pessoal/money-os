@@ -1,5 +1,8 @@
 "use server";
 import { requireServerSession } from "./requestSession";
+import { withWork, WorkLimitedError } from "./workGate";
+import { currentLanguage } from "./language";
+import { readText } from "@/lib/accounts/readText";
 
 import { requireInvestments } from "./releaseEdition";
 
@@ -680,15 +683,17 @@ export async function convertToManual(formData: FormData) {
 
 export async function syncConnectionAction(formData: FormData) {
   await requireServerSession();
+  await requireInvestments();
   const id = String(formData.get("id"));
   // A synced account is often in another currency, and a balance with no
   // exchange rate is excluded from every total. Refreshing first means the
   // first manual sync of a new connection lands in Net Worth straight away.
   await refreshRates();
-  await syncConnection(id, "manual");
+  const result = await syncConnection(id, "manual");
   revalidatePath("/connections");
   revalidatePath("/positions");
   revalidatePath("/");
+  return result;
 }
 
 /**
@@ -708,6 +713,15 @@ export async function syncConnectionAction(formData: FormData) {
  */
 export async function syncConnection(connectionId: string, trigger: "manual" | "scheduled" = "manual") {
   await requireInvestments();
+  if (typeof connectionId !== "string" || !connectionId || connectionId.length > 100 || !["manual", "scheduled"].includes(trigger)) throw new Error("Invalid connection sync");
+  try { return await withWork("connection-sync", () => performConnectionSync(connectionId, trigger)); }
+  catch (error) {
+    if (error instanceof WorkLimitedError) return { ok: false as const, error: readText(await currentLanguage()).limited(error.retryAfter), retryAfter: error.retryAfter };
+    throw error;
+  }
+}
+
+async function performConnectionSync(connectionId: string, trigger: "manual" | "scheduled") {
   const [conn] = await db
     .select()
     .from(accountConnections)
@@ -1064,18 +1078,32 @@ export async function syncConnection(connectionId: string, trigger: "manual" | "
 /** Fire-and-forget sync of every connection, for the AutoSync client component. */
 export async function autoSyncAction() {
   await requireServerSession();
-  // Refresh FX first so converted totals use today's rate, not yesterday's.
-  await refreshRates();
-  await syncAllConnections("scheduled");
-  revalidatePath("/connections");
-  revalidatePath("/positions");
-  revalidatePath("/");
+  await requireInvestments();
+  const text = readText(await currentLanguage());
+  try {
+    // Refresh FX first so converted totals use today's rate, not yesterday's.
+    const fx = await refreshRates();
+    const results = await syncAllConnections("scheduled");
+    revalidatePath("/connections");
+    revalidatePath("/positions");
+    revalidatePath("/");
+    if (!fx.ok) return fx;
+    return results.some(result => !result.ok) ? { ok: false as const, error: text.syncFailed } : { ok: true as const };
+  } catch (error) {
+    return { ok: false as const, error: error instanceof WorkLimitedError ? text.limited(error.retryAfter) : text.syncFailed };
+  }
 }
 
 /** Syncs every active connection. Used by the schedulable route. */
 export async function syncAllConnections(trigger: "manual" | "scheduled" = "scheduled") {
   await requireInvestments();
-  const conns = await db.select().from(accountConnections).where(eq(accountConnections.active, true));
+  if (!["manual", "scheduled"].includes(trigger)) throw new Error("Invalid sync trigger");
+  return withWork("sync-batch", () => performBatchSync(trigger));
+}
+
+async function performBatchSync(trigger: "manual" | "scheduled") {
+  const conns = await db.select().from(accountConnections).where(eq(accountConnections.active, true)).limit(21);
+  if (conns.length > 20) throw new Error(readText(await currentLanguage()).syncLimit);
   const results = [];
   for (const c of conns) {
     results.push({ id: c.id, platform: c.platform, ...(await syncConnection(c.id, trigger)) });

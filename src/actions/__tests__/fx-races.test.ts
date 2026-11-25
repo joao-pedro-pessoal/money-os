@@ -3,6 +3,8 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import { exchangeRates } from "@/db/schema";
 vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
+vi.mock("@/actions/language", () => ({ currentLanguage: async () => "en" }));
+vi.mock("@/actions/workGate", async original => ({ ...await original<typeof import("@/actions/workGate")>(), withWork: async (_kind: string, work: () => Promise<unknown>) => work() }));
 
 type Row = { quote: string; rate: string; manual?: boolean; source?: string; base?: string };
 type Conflict = { target: unknown[]; set: Partial<Row>; setWhere?: SQL };
@@ -26,6 +28,7 @@ function allows(condition: SQL | undefined, row: Row): boolean {
 }
 
 vi.mock("@/db/client", () => ({ db: {
+  transaction: async function (work: (tx: unknown) => Promise<unknown>) { return work(this); },
   select: () => ({ from: () => {
     // Independent snapshots reproduce a read followed by another request's write.
     const snapshot = [...fake.rows.values()].map((r) => ({ ...r }));

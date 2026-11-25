@@ -8,7 +8,7 @@
 import { cookies } from "next/headers";
 import { LANGUAGE_COOKIE, type Language } from "@/lib/i18n/languages";
 import { languageForEdition } from "@/lib/i18n/editionLanguages";
-import { messagesFor, type Messages } from "@/lib/i18n/messages";
+import type { Messages } from "@/lib/i18n/messages";
 
 export async function currentLanguage(): Promise<Language> {
   return languageForEdition((await cookies()).get(LANGUAGE_COOKIE)?.value);
@@ -16,5 +16,8 @@ export async function currentLanguage(): Promise<Language> {
 
 /** Every word, in the language this request asked for. */
 export async function words(): Promise<Messages> {
+  // Reading a language cookie (e.g. a quota message) does not need to load
+  // every translated catalog or their password-display dependencies.
+  const { messagesFor } = await import("@/lib/i18n/messages");
   return messagesFor(await currentLanguage());
 }

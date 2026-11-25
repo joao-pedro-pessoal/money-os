@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const seen = vi.hoisted(() => ({ rates: [] as string[], prices: [] as string[], connections: [] as string[] }));
+const seen = vi.hoisted(() => ({ rates: [] as string[], prices: [] as string[], connections: [] as string[], failConnections: false }));
 // One instance for the whole file: each test reloads the modules to choose its edition, and a real
 // server has one copy of who is being worked for.
 vi.mock("@/db/acting", async (original) => await original());
@@ -10,6 +10,9 @@ vi.mock("@/db/client", async () => ({
 }));
 // A scheduler has no session: nothing here may lean on a cookie.
 vi.mock("@/actions/session", () => ({ currentUserId: async () => null, hasSession: async () => false }));
+// Edition/credential tests remain independent of storage; real gate admission
+// and overlap are covered by outbound-postgres.test.ts.
+vi.mock("@/actions/workGate", async original => ({ ...await original<typeof import("@/actions/workGate")>(), withScheduledWork: async (work: () => Promise<unknown>) => work() }));
 vi.mock("@/actions/fx", async () => {
   const { actingAs } = await import("@/db/acting");
   return { refreshRates: async () => { seen.rates.push(actingAs()!); return { ok: true }; } };
@@ -23,7 +26,7 @@ vi.mock("@/actions/quotes", async () => {
 vi.mock("@/actions/connections", async () => {
   const { actingAs } = await import("@/db/acting");
   // Imported per call: a mock's factory runs once, and each test loads its own edition.
-  return { syncAllConnections: async () => { await (await import("@/actions/releaseEdition")).requireInvestments(); seen.connections.push(actingAs()!); return []; } };
+  return { syncAllConnections: async () => { await (await import("@/actions/releaseEdition")).requireInvestments(); seen.connections.push(actingAs()!); if (seen.failConnections && actingAs() === "owner") throw new Error("Synthetic connection admission failure"); return []; } };
 });
 
 const load = async (edition: string) => {
@@ -35,6 +38,7 @@ const url = "https://example.test/api/sync";
 
 beforeEach(() => {
   seen.rates = []; seen.prices = []; seen.connections = [];
+  seen.failConnections = false;
   vi.stubEnv("SYNC_SECRET", "synthetic-sync-secret");
   vi.stubEnv("CRON_SECRET", "");
 });
@@ -108,6 +112,14 @@ describe("what it does for whom", () => {
   it("in the full edition: everything for everyone", async () => {
     await run("full");
     expect(seen.prices).toEqual(["owner", "ana"]);
+    expect(seen.connections).toEqual(["owner", "ana"]);
+  });
+
+  it("counts completed price work even if that person's connection sync fails afterwards", async () => {
+    seen.failConnections = true;
+    const response = await run("full");
+    expect(response.status).toBe(207);
+    expect(await response.json()).toMatchObject({ accounts: 2, accountsFailed: 1, pricesAttempted: 4, pricesUpdated: 2 });
     expect(seen.connections).toEqual(["owner", "ana"]);
   });
 });

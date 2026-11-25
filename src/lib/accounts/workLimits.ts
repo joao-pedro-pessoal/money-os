@@ -1,6 +1,11 @@
 type Window = { seconds: number; max: number };
 export type WorkPolicy = { user: Window[]; connection: Window[]; simultaneous: number; global: number };
 export const WORK_LIMITS = {
+  "fx-refresh": { user: [{ seconds: 60, max: 3 }, { seconds: 3600, max: 12 }], connection: [{ seconds: 60, max: 15 }, { seconds: 3600, max: 100 }], simultaneous: 1, global: 4 },
+  "asset-search": { user: [{ seconds: 60, max: 20 }, { seconds: 3600, max: 240 }], connection: [{ seconds: 60, max: 60 }, { seconds: 3600, max: 1200 }], simultaneous: 2, global: 8 },
+  "connection-sync": { user: [{ seconds: 60, max: 10 }, { seconds: 3600, max: 60 }], connection: [{ seconds: 60, max: 30 }, { seconds: 3600, max: 180 }], simultaneous: 1, global: 4 },
+  "sync-batch": { user: [{ seconds: 60, max: 2 }, { seconds: 3600, max: 12 }], connection: [{ seconds: 60, max: 10 }, { seconds: 3600, max: 60 }], simultaneous: 1, global: 2 },
+  "scheduled-sync": { user: [{ seconds: 60, max: 1 }, { seconds: 3600, max: 12 }], connection: [], simultaneous: 1, global: 1 },
   pdf: { user: [{ seconds: 60, max: 3 }, { seconds: 3600, max: 20 }], connection: [{ seconds: 60, max: 15 }, { seconds: 3600, max: 100 }], simultaneous: 1, global: 2 },
   widget: { user: [{ seconds: 60, max: 12 }, { seconds: 3600, max: 240 }], connection: [{ seconds: 60, max: 60 }, { seconds: 3600, max: 1200 }], simultaneous: 12, global: 32 },
   alerts: { user: [{ seconds: 60, max: 12 }, { seconds: 3600, max: 240 }], connection: [{ seconds: 60, max: 60 }, { seconds: 3600, max: 1200 }], simultaneous: 12, global: 32 },

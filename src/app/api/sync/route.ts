@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { NextResponse } from "next/server";
+import { readJson } from "@/actions/readHttp";
+import { withScheduledWork, WorkLimitedError } from "@/actions/workGate";
 import { investmentsFor } from "@/actions/releaseEdition";
 import { asUser, db } from "@/db/client";
 import { users } from "@/db/schema";
@@ -9,6 +10,8 @@ import { refreshQuotedPrices } from "@/actions/quotes";
 import { REPRICE_AFTER_MINUTES } from "@/lib/quotes/staleness";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 /**
  * Schedulable sync endpoint.
@@ -42,14 +45,23 @@ const sameSecret = (a: string, b: string) => timingSafeEqual(createHash("sha256"
 async function sync(provided: (string | null)[]) {
   const secrets = [process.env.SYNC_SECRET, process.env.CRON_SECRET].filter((s): s is string => Boolean(s));
   if (secrets.length === 0) {
-    return NextResponse.json(
+    return readJson(
       { error: "SYNC_SECRET is not configured; scheduled sync is disabled." },
-      { status: 503 }
+      503
     );
   }
   if (!provided.some((given) => given !== null && secrets.some((secret) => sameSecret(given, secret)))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return readJson({ error: "Unauthorized" }, 401);
   }
+
+  try { return await withScheduledWork(runSync); }
+  catch (error) {
+    if (error instanceof WorkLimitedError) return readJson({ error: "rate_limited", retryAfter: error.retryAfter }, 429, { "Retry-After": String(error.retryAfter) });
+    return readJson({ error: "unavailable" }, 503);
+  }
+}
+
+async function runSync() {
 
   /**
    * Once per account, as that account: rates, prices and connections are all
@@ -58,12 +70,14 @@ async function sync(provided: (string | null)[]) {
    * every account's requests onto it at once.
    */
   const accounts = await db.select({ id: users.id }).from(users);
-  const totals = { fxUpdated: 0, pricesAttempted: 0, pricesUpdated: 0 };
+  const totals = { fxUpdated: 0, pricesAttempted: 0, pricesUpdated: 0, accountsFailed: 0 };
   const results: Awaited<ReturnType<typeof syncAllConnections>> = [];
   for (const { id } of accounts) {
-    await asUser(id, async () => {
+    let accountFailed = false;
+    try { await asUser(id, async () => {
       const fx = await refreshRates();
       if (fx.ok) totals.fxUpdated++;
+      else accountFailed = true;
       // Rates are everyone's; what follows is investments, which this edition may not give this person.
       if (!investmentsFor(id)) return;
 
@@ -80,25 +94,31 @@ async function sync(provided: (string | null)[]) {
        * `needsRepricing` decides what is worth asking for.
        */
       const prices = await refreshQuotedPrices({ olderThanMinutes: REPRICE_AFTER_MINUTES });
-      results.push(...(await syncAllConnections("scheduled")));
       totals.pricesAttempted += prices.attempted;
       totals.pricesUpdated += prices.updated;
-    });
+      const connections = await syncAllConnections("scheduled");
+      results.push(...connections);
+      if (connections.some(connection => !connection.ok) || prices.results?.some(result => !result.ok)) accountFailed = true;
+    }); } catch { accountFailed = true; }
+    if (accountFailed) totals.accountsFailed++;
   }
   const failed = results.filter((r) => !r.ok);
 
-  return NextResponse.json(
+  return readJson(
     {
       synced: results.length,
       failed: failed.length,
       accounts: accounts.length,
       /** Accounts whose rates were refreshed. */
       fxUpdated: totals.fxUpdated,
+      accountsFailed: totals.accountsFailed,
       /** What it did, not only that it ran — a stuck price is invisible otherwise. */
       pricesAttempted: totals.pricesAttempted,
       pricesUpdated: totals.pricesUpdated,
-      results,
+      // Internal connector errors can include provider URLs; don't publish
+      // their diagnostics in a scheduler response.
+      results: results.map(result => ({ id: result.id, platform: result.platform, ok: result.ok })),
     },
-    { status: failed.length > 0 ? 207 : 200 }
+    failed.length > 0 || totals.accountsFailed > 0 ? 207 : 200
   );
 }

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh() {} }) }));
+vi.mock("@/components/LanguageContext", () => ({ useLanguage: () => ({ language: "en", t: {} }) }));
+vi.mock("@/components/useText", () => ({ useText: () => (text: string) => text }));
 
 vi.mock("@/actions/settings", () => ({ getBaseCurrency: async () => "USD" }));
 vi.mock("@/actions/fx", () => ({

@@ -7,13 +7,13 @@ import {
   listConnections,
   createConnection,
   deleteConnection,
-  syncConnectionAction,
   getSyncLogs,
   autoSyncAction,
   canStoreSecrets,
   convertToManual,
 } from "@/actions/connections";
 import AutoSync from "@/components/AutoSync";
+import SyncConnectionButton from "@/components/SyncConnectionButton";
 import PageTabs from "@/components/PageTabs";
 import { investmentTabs } from "@/lib/navigation";
 import { NEW_ACCOUNT, PLATFORM_SETUP, BYBIT_REGIONS, PLATFORM_LABELS } from "@/lib/connectors/constants";
@@ -202,10 +202,7 @@ ENCRYPTION_KEY=&quot;paste-a-long-random-string-here-at-least-16-chars&quot;
                   {c.lockedHere ? (
                     <span className="text-xs text-[var(--muted)]" title={uiText("This copy does not hold ENCRYPTION_KEY")}>{uiText("Synced where its key is")}</span>
                   ) : (
-                    <form action={syncConnectionAction}>
-                      <input type="hidden" name="id" value={c.id} />
-                      <button type="submit" className="btn">{uiText("Sync now")}</button>
-                    </form>
+                    <SyncConnectionButton id={c.id} />
                   )}
                   <form action={deleteConnection} className="connection-remove">
                     <input type="hidden" name="id" value={c.id} />

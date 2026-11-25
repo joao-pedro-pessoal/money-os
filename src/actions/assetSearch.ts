@@ -6,12 +6,26 @@ import { db } from '@/db/client';
 import { holdings, watchlistItems, positions, platformBalances } from '@/db/schema';
 import { searchQuery, parseAssetSuggestions, mergeAssetSuggestions, type AssetSuggestion } from '@/lib/quotes/assetSearch';
 import { knownListingFor } from '@/lib/quotes/knownListings';
+import { withWork, WorkLimitedError } from './workGate';
+import { providerJson } from './providerHttp';
+import { currentLanguage } from './language';
+import { readText } from '@/lib/accounts/readText';
 
-export async function searchAssets(raw: string): Promise<{ results: AssetSuggestion[]; warning: string | null }> {
+export async function searchAssets(raw: string): Promise<{ results: AssetSuggestion[]; warning: string | null; retryAfter?: number }> {
   await requireInvestments();
   if (!(await hasSession())) throw new Error('Sign in again.');
+  const text = readText(await currentLanguage());
+  if (typeof raw !== 'string' || raw.length > 200) return { results: [], warning: text.searchInvalid };
   const query = searchQuery(raw);
   if (query.length < 2) return { results: [], warning: null };
+  try { return await withWork('asset-search', () => performSearch(raw, query, text.searchFailed)); }
+  catch (error) {
+    if (error instanceof WorkLimitedError) return { results: [], warning: text.limited(error.retryAfter), retryAfter: error.retryAfter };
+    return { results: [], warning: text.searchFailed };
+  }
+}
+
+async function performSearch(raw: string, query: string, unavailable: string) {
   const [manual, watching, live, balances] = await Promise.all([
     db.select({ symbol: holdings.symbol, name: holdings.name, assetType: holdings.assetType }).from(holdings),
     db.select({ symbol: watchlistItems.symbol, name: watchlistItems.name, assetType: watchlistItems.assetType }).from(watchlistItems),
@@ -25,11 +39,9 @@ export async function searchAssets(raw: string): Promise<{ results: AssetSuggest
   try {
     const url = new URL('https://query1.finance.yahoo.com/v1/finance/search');
     url.search = new URLSearchParams({ q: known?.symbol ?? query, quotesCount: '10', newsCount: '0', enableFuzzyQuery: 'false' }).toString();
-    const response = await fetch(url, { signal: AbortSignal.timeout(6000), cache: 'no-store' });
-    if (!response.ok) throw new Error('Search unavailable');
-    const remote = parseAssetSuggestions(await response.json());
+    const remote = parseAssetSuggestions(await providerJson(url));
     return { results: mergeAssetSuggestions(raw, local, [...verified, ...remote]), warning: null };
   } catch {
-    return { results: mergeAssetSuggestions(raw, local, verified), warning: 'Online search is unavailable. Your saved assets are still searchable; you can also type a ticker manually.' };
+    return { results: mergeAssetSuggestions(raw, local, verified), warning: unavailable };
   }
 }
