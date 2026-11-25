@@ -2,7 +2,7 @@
 import { db } from "@/db/client";
 import { createHash } from "node:crypto";
 import { and, eq, getTableColumns, getTableName, inArray, sql } from "drizzle-orm";
-import { auditLog, users } from "@/db/schema";
+import { auditLog, privateSnapshots, users } from "@/db/schema";
 import { getTableConfig, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { revalidatePath } from "next/cache";
 import { BACKUP_TABLES, validateBackup, type BackupTable, type ValidationResult } from "@/lib/backup";
@@ -181,6 +181,9 @@ export async function replaceBackup(json: string, requestId?: string, checksum?:
   const prepared = prepareBackup(json);
   if (!prepared.rows || !prepared.check.ok) throw new TransferInputError(prepared.check.errors.join(" "), prepared.status);
   await db.transaction(async tx => {
+    // Also invalidates in-flight snapshot writers: their token-checked update
+    // cannot publish pre-restore figures into the now-empty cache.
+    await tx.delete(privateSnapshots);
     let retained: (typeof auditLog.$inferSelect)[] = [];
     if (receiptId) {
       await tx.select({ id: users.id }).from(users).where(eq(users.id, sql`current_setting('app.user_id')`)).for("update");

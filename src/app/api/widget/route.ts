@@ -1,138 +1,15 @@
-import { currentInvestments } from "@/actions/releaseEdition";
 import { hasSession } from "@/actions/session";
-import { NextResponse } from "next/server";
-import { textForRequest } from "@/actions/pageLanguage";
-import { currentLanguage } from "@/actions/language";
-import { localeOf } from "@/lib/i18n/languages";
-import { getNetWorth } from "@/actions/networth";
-import { getTotalNetWorthOverTime } from "@/actions/analytics";
-import { getAccountComposition, getMonthShape, getPortfolioItems } from "@/actions/dashboard";
-import { getDividendOverview } from "@/actions/dividends";
-import { listAllPositions, listConnections } from "@/actions/connections";
-import { getRates } from "@/actions/fx";
-import { leftOut, openTotals, resultInBase } from "@/lib/trading/openTotals";
-import { groupItems, hasPnl, portfolioSummary } from "@/lib/portfolio/positionView";
-import { symbolLabel } from "@/lib/portfolio/symbolNames";
-import { getSymbolNames } from "@/actions/symbolNames";
-import { tagLabel } from "@/lib/portfolio/tags";
-import { downsample, movers, topPositions, topSlices } from "@/lib/widgets/summary";
+import { widgetSnapshot } from "@/actions/widgetData";
+import { withWork } from "@/actions/workGate";
+import { readFailure, readJson } from "@/actions/readHttp";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-
-/**
- * Figures for the Android app's home-screen widgets and quick settings tile.
- *
- * Behind the session cookie like every page (see src/proxy.ts): the app sends
- * the cookie its WebView holds, so a phone that is not logged in gets the login
- * redirect and the widget says so instead of showing anything. Everything is in
- * the base currency and comes from the same actions the pages render.
- */
 export async function GET() {
   if (!(await hasSession())) return new Response(null, { status: 401, headers: { "Cache-Control": "no-store" } });
-  const investmentsEnabled = await currentInvestments();
-  if (!investmentsEnabled) {
-    const [nw, series, composition, month] = await Promise.all([getNetWorth(), getTotalNetWorthOverTime(), getAccountComposition(), getMonthShape()]);
-    const now = new Date();
-    const locale = localeOf(await currentLanguage());
-    const income = month.flows.income.total, expenses = month.flows.expenses.total;
-    return NextResponse.json({currency:nw.baseCurrency,updatedAt:now.toISOString(),netWorth:round2(nw.total),
-      series:downsample(series.map(p => ({date:p.date,value:p.netWorth})),60),
-      where:topSlices(composition.map(c => ({name:c.name,value:c.composition.total})),4),
-      month:{label:now.toLocaleDateString(locale,{month:"long",year:"numeric"}),income:round2(income),expenses:round2(expenses),net:round2(income-expenses)},
-    },{headers:{"Cache-Control":"no-store"}});
-  }
-  const uiText = await textForRequest();
-  const locale = localeOf(await currentLanguage());
-  const [nw, series, composition, month, portfolio, dividends, open, connections, rates] =
-    await Promise.all([
-      getNetWorth(),
-      getTotalNetWorthOverTime(),
-      getAccountComposition(),
-      getMonthShape(),
-      // The same list and summary the Investments page shows.
-      getPortfolioItems(),
-      getDividendOverview(),
-      // The same rows and totals as the Open positions page.
-      listAllPositions(),
-      listConnections(),
-      getRates(),
-    ]);
-  const names = await getSymbolNames();
-  const base = nw.baseCurrency;
-  // The same totals as the Open positions page, from the same function.
-  const trading = openTotals(open, connections, rates, base);
-
-  const invested = portfolioSummary(portfolio.items);
-  const measuredItems = portfolio.items.map((i) => ({
-    name: symbolLabel(i.symbol, names),
-    value: i.value,
-    pnl: i.pnl,
-    measured: hasPnl(i) && !i.costUnknown && !i.atCost,
-  }));
-
-  const income = month.flows.income.total;
-  const expenses = month.flows.expenses.total;
-  const now = new Date();
-  const thisYear = dividends.byYear.find((y) => y.year === now.getFullYear());
-  const next = dividends.upcoming[0];
-
-  return NextResponse.json(
-    {
-      currency: base,
-      updatedAt: now.toISOString(),
-      netWorth: round2(nw.total),
-      series: downsample(series.map((p) => ({ date: p.date, value: p.netWorth })), 60),
-      where: topSlices(
-        composition.map((c) => ({ name: c.name, value: c.composition.total })),
-        4
-      ),
-      investments: {
-        value: round2(invested.floating + invested.stable),
-        pnl: invested.pnl,
-        pnlPercent: invested.pnlPercent,
-        count: portfolio.items.length,
-        // Every position: the widget scrolls.
-        top: topPositions(measuredItems),
-        allocation: topSlices(
-          groupItems(portfolio.items, "assetType").map((g) => ({
-            name: uiText(g.key === "—" ? "Untagged" : tagLabel(g.key, "assetType") ?? g.key),
-            value: g.value,
-          })),
-          4
-        ),
-        movers: movers(measuredItems, 5),
-      },
-      dividends: {
-        any: dividends.hasAny,
-        total: round2(dividends.totalAll),
-        thisYear: round2(thisYear?.total ?? 0),
-        paymentsThisYear: thisYear?.payments ?? 0,
-        next: next
-          ? { name: next.instrumentName ?? next.ticker, month: next.date.toISOString() }
-          : null,
-      },
-      trading: {
-        count: open.length,
-        unrealized: trading.unrealized.total,
-        margin: trading.margin.total,
-        /** What the result above could not include, or null. The 0.7.0 app ignores it. */
-        leftOut: leftOut(trading.unrealized, "position") ? uiText(leftOut(trading.unrealized, "position")!) : null,
-        top: open
-          .map((p) => ({ p, pnl: resultInBase(p, rates, base) }))
-          // Largest move first; a result that could not be measured last.
-          .sort((a, b) => (b.pnl === null ? -1 : Math.abs(b.pnl)) - (a.pnl === null ? -1 : Math.abs(a.pnl)))
-          .slice(0, 8)
-          .map(({ p, pnl }) => ({ name: p.coin, side: p.side, leverage: p.leverage, pnl })),
-      },
-      month: {
-        label: now.toLocaleDateString(locale, { month: "long", year: "numeric" }),
-        income: round2(income),
-        expenses: round2(expenses),
-        net: round2(income - expenses),
-      },
-    },
-    { headers: { "Cache-Control": "no-store" } }
-  );
+  try {
+    return await withWork("widget", async () => readJson((await widgetSnapshot()).value, 200));
+  } catch (error) { return readFailure(error, "widget"); }
 }

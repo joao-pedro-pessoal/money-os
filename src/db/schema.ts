@@ -9,6 +9,7 @@ import {
   unique,
   integer,
   index,
+  pgPolicy,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
@@ -127,6 +128,22 @@ export const workGates = pgTable("work_gates", {
   leases: text("leases").notNull().default("[]"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, t => [index("work_gates_updated_idx").on(t.updatedAt)]);
+
+// Recomputable private read snapshots, never part of a financial restore.
+// Unlike quota counters, these contain financial figures and must obey RLS.
+export const privateSnapshots = pgTable("private_snapshots", {
+  userId: ownedBy(),
+  key: text("key").notNull(),
+  payload: text("payload"),
+  generatedAt: timestamp("generated_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  leaseToken: text("lease_token"),
+  leaseUntil: timestamp("lease_until", { withTimezone: true }).notNull(),
+}, t => [
+  primaryKey({ columns: [t.userId, t.key] }),
+  index("private_snapshots_expiry_idx").on(t.expiresAt),
+  pgPolicy("own_rows", { for: "all", to: "public", using: sql`${t.userId} = current_setting('app.user_id', true)`, withCheck: sql`${t.userId} = current_setting('app.user_id', true)` }),
+]).enableRLS();
 
 /**
  * Whose row this is. Filled by Postgres from the connection's `app.user_id`,

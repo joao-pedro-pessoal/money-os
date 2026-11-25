@@ -6,8 +6,16 @@ import { textForRequest } from "@/actions/pageLanguage";
 import { currentLanguage } from "@/actions/language";
 import { reportFonts } from "@/actions/reportFonts";
 import { hasSession } from "@/actions/session";
+import { withWork } from "@/actions/workGate";
+import { readFailure, readJson } from "@/actions/readHttp";
+import { checkReportOutput, checkReportSource, pdfLimits } from "@/actions/reportLimits";
+import { pdfRequest, ReportLimitError } from "@/lib/reports/request";
+import { localDay } from "@/lib/calendar/localDay";
+import { readText } from "@/lib/accounts/readText";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 /**
  * The report as a PDF, drawn here rather than printed by the browser.
@@ -19,32 +27,45 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   if (!(await hasSession())) return new Response(null, { status: 401, headers: { "Cache-Control": "no-store" } });
-  const translate = await textForRequest();
-  const language = await currentLanguage();
-  const fonts = await reportFonts(language);
-  const report = await loadReport(Object.fromEntries(request.nextUrl.searchParams));
-  const bytes = await renderReportPdf({
-    title: translate(REPORT_TITLE[report.kind]),
-    label: translate(report.label),
-    translate,
-    language,
-    fonts,
-    from: report.from,
-    to: report.to,
-    currency: report.currency,
-    generatedOn: report.today,
-    money: report.money,
-    investments: report.investments,
-    notes: report.notes,
-  });
+  try {
+    const limits = pdfLimits();
+    const params = pdfRequest(request.nextUrl.searchParams, localDay(), limits.days);
+    return await withWork("pdf", async () => {
+      await checkReportSource(params, limits.sourceRows);
+      const report = await loadReport(params);
+      checkReportOutput(report, limits.renderRows);
+      const translate = await textForRequest();
+      const language = await currentLanguage();
+      const fonts = await reportFonts(language);
+      const bytes = await renderReportPdf({
+        title: translate(REPORT_TITLE[report.kind]),
+        label: translate(report.label),
+        translate,
+        language,
+        fonts,
+        from: report.from,
+        to: report.to,
+        currency: report.currency,
+        generatedOn: report.today,
+        money: report.money,
+        investments: report.investments,
+        notes: report.notes,
+      });
+      if (bytes.byteLength > limits.bytes) throw new ReportLimitError("rows");
 
-  // A Buffer, which a Response takes as a body in every runtime this is built for.
-  return new Response(Buffer.from(bytes), {
-    headers: {
-      "content-type": "application/pdf",
-      "content-disposition": `attachment; filename="${reportFileName(report, "pdf")}"`,
-      // Someone's whole financial position: never kept by a cache along the way.
-      "cache-control": "private, no-store",
-    },
-  });
+      return new Response(Buffer.from(bytes), {
+        headers: {
+          "content-type": "application/pdf",
+          "content-disposition": `attachment; filename="${reportFileName(report, "pdf")}"`,
+          "cache-control": "private, no-store",
+        },
+      });
+    });
+  } catch (error) {
+    if (error instanceof ReportLimitError) {
+      const text = readText(await currentLanguage());
+      return readJson({ error: `pdf_${error.reason}`, message: error.reason === "invalid" ? text.invalid : error.reason === "range" ? text.pdfRange : text.pdfRows }, error.reason === "invalid" ? 400 : 413);
+    }
+    return readFailure(error, "pdf");
+  }
 }

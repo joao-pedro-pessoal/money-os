@@ -1,0 +1,132 @@
+openapi: 3.1.0
+info:
+  title: Money OS private polling and PDF
+  version: 1.0.0
+  description: Authenticated session-cookie reads. No userId parameter. All responses use Cache-Control no-store. Financial calculations are unchanged.
+security:
+  - session: []
+paths:
+  /api/widget:
+    get:
+      operationId: readWidgets
+      description: Existing widget JSON; server derives edition and language. Up to 15 seconds reuse per person and variant. Default quota 12/minute and 240/hour per person.
+      responses:
+        '200':
+          description: Existing widget payload. updatedAt identifies the reused calculation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [currency, updatedAt, netWorth]
+                properties:
+                  currency: {type: string}
+                  updatedAt: {type: string, format: date-time}
+                  netWorth: {type: number}
+                additionalProperties: true
+        '401': {$ref: '#/components/responses/SessionRequired'}
+        '429': {$ref: '#/components/responses/Limited'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/alerts:
+    get:
+      operationId: readNotificationAlerts
+      description: Alerts eligible for Android notification, translated after private calculation reuse. Default quota 12/minute and 240/hour per person, shared with the getAlerts RPC.
+      responses:
+        '200':
+          description: Valid results, including an empty alerts array.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [checkedAt, alerts]
+                properties:
+                  checkedAt: {type: string, format: date-time}
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, severity, title, detail, href]
+                      properties:
+                        id: {type: string}
+                        severity: {type: string}
+                        title: {type: string}
+                        detail: {type: [string, 'null']}
+                        href: {type: string}
+        '401': {$ref: '#/components/responses/SessionRequired'}
+        '429': {$ref: '#/components/responses/Limited'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/report/pdf:
+    get:
+      operationId: downloadReportPdf
+      description: Existing financial report, bounded before rendering. Defaults 3660 days, 100000 source rows, 10000 output array entries, 4 MiB PDF; 3 requests/minute and 20/hour per person. Unknown or repeated query keys are rejected. Source bound includes retained investment history used by net worth, not just the chosen dates.
+      parameters:
+        - name: period
+          in: query
+          schema: {type: string, enum: [week, month, year, custom], default: month}
+        - name: at
+          in: query
+          description: Existing period key for week, month or year.
+          schema: {type: string, maxLength: 40}
+        - name: month
+          in: query
+          description: Legacy YYYY-MM monthly key.
+          schema: {type: string, maxLength: 40}
+        - name: from
+          in: query
+          schema: {type: string, format: date}
+        - name: to
+          in: query
+          schema: {type: string, format: date}
+        - name: scope
+          in: query
+          description: Money edition always uses money scope.
+          schema: {type: string, enum: [money, investments, both]}
+      responses:
+        '200':
+          description: Private PDF attachment.
+          content:
+            application/pdf:
+              schema: {type: string, format: binary}
+        '400':
+          description: Invalid or duplicate report parameters (pdf_invalid).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Failure'}
+        '401': {$ref: '#/components/responses/SessionRequired'}
+        '413':
+          description: Range too long (pdf_range) or source/render/output bound exceeded (pdf_rows). Use CSV for data bounds.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Failure'}
+        '429': {$ref: '#/components/responses/Limited'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: moneyos_session
+      description: Existing signed HttpOnly Money OS session, with fresh server-side revocation checks.
+  schemas:
+    Failure:
+      type: object
+      required: [error, message]
+      properties:
+        error: {type: string}
+        message: {type: string}
+        retryAfter: {type: integer, minimum: 1}
+  responses:
+    SessionRequired:
+      description: Missing or revoked session. May have an empty response body.
+    Limited:
+      description: Request window, concurrent capacity or calculation wait exceeded.
+      headers:
+        Retry-After:
+          schema: {type: integer, minimum: 1}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Failure'}
+    Unavailable:
+      description: Temporary failure with a generic localized message, no SQL or private diagnostics.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Failure'}

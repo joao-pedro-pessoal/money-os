@@ -22,7 +22,7 @@ import type { LegalKind } from "./paths";
 export { LEGAL_KINDS, LEGAL_PATHS, type LegalKind } from "./paths";
 
 /** The day the text last changed in substance. */
-export const LEGAL_UPDATED = "2026-11-24";
+export const LEGAL_UPDATED = "2026-11-25";
 
 /** Who runs this copy of Money OS, and how to reach them. Either may be unset. */
 export interface Operator {
@@ -96,10 +96,13 @@ export function legalDocument(kind: LegalKind, language: Language, operator: Ope
         : "If your account uses only Google, confirm Google for deletion and type your account email instead of a Money OS password. Deleting the account also deletes its Google link; it does not delete your Google Account. If you lose Google access, use your recovery code through Forgot your password? to set a Money OS password. The deletion request through the contact on this page remains available."];
   const sections = [...document.sections, { heading: portuguese ? "Entrada com Google, quando disponível" : "Google sign-in, when available", paragraphs }];
   if (kind === "privacy") sections.push({
-    heading: portuguese ? "Proteção de importações e cópias" : "Protecting imports and backups",
+    heading: portuguese ? "Proteção de pedidos e cópias" : "Protecting requests and backups",
     paragraphs: [portuguese
-      ? "Para limitar importações, exportações e restauros repetidos, o servidor guarda contadores de pedidos e impressões digitais irreversíveis da pessoa e da ligação, sem o endereço IP em claro. Os contadores usam uma janela máxima de um dia; registos inativos com mais de um dia são removidos ao admitir novos pedidos. As reservas de trabalho expiram em seis minutos. O histórico da tua conta conserva recibos com o identificador e a impressão digital da operação, para uma repetição de rede não duplicar movimentos nem substituir novamente os dados."
-      : "To limit repeated imports, exports and restores, the server stores request counters and one-way fingerprints of the person and connection, without a plain IP address. Counters use windows of at most one day; inactive records older than a day are removed when new requests are admitted. Work reservations expire after six minutes. Your account history retains receipts with the operation identifier and fingerprint so a network retry does not duplicate movements or replace your data again."],
+      ? "Para limitar importações, exportações, restauros, relatórios PDF, widgets e alertas repetidos, o servidor guarda contadores de pedidos e impressões digitais irreversíveis da pessoa e da ligação, sem o endereço IP em claro. Os contadores usam uma janela máxima de um dia; registos inativos com mais de um dia são removidos ao admitir novos pedidos. As reservas de trabalho expiram em seis minutos. O histórico da tua conta conserva recibos com o identificador e a impressão digital da operação, para uma repetição de rede não duplicar movimentos nem substituir novamente os dados."
+      : "To limit repeated imports, exports, restores, PDF reports, widgets and alerts, the server stores request counters and one-way fingerprints of the person and connection, without a plain IP address. Counters use windows of at most one day; inactive records older than a day are removed when new requests are admitted. Work reservations expire after six minutes. Your account history retains receipts with the operation identifier and fingerprint so a network retry does not duplicate movements or replace your data again.",
+      portuguese
+      ? "Para evitar repetir cálculos, os widgets e alertas podem reutilizar resultados durante 15 segundos. Estes resultados ficam temporariamente na mesma base de dados, separados por pessoa e acessíveis apenas à respetiva conta. São substituídos quando renovados e apagados ao restaurar os dados ou eliminar a conta; não fazem parte da cópia financeira individual. O navegador e serviços intermédios não recebem autorização para guardar estas respostas em cache."
+      : "To avoid repeated calculations, widgets and alerts may reuse results for 15 seconds. These results are stored temporarily in the same database, separated by person and accessible only to that account. They are replaced on refresh and removed on financial restore or account deletion; they are excluded from the individual financial backup. Browsers and intermediary services are not instructed to cache these responses."],
   });
   return { ...document, sections };
 }

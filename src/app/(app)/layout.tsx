@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/ThemeContext";
 import Nav from "@/components/Nav";
 import { NavProvider } from "@/components/NavContext";
 import TopBar from "@/components/TopBar";
-import { getAlerts } from "@/actions/alerts";
+import { pageAlerts } from "@/actions/alertData";
 import { getQuickEntryOptions } from "@/actions/transactions";
 import QuickEntry from "@/components/QuickEntry";
 import MobileNav from "@/components/MobileNav";
@@ -16,13 +16,12 @@ export const dynamic = "force-dynamic";
 
 /**
  * Alerts are read here rather than on each page so the bell is present
- * everywhere. It costs the queries behind `getAlerts` on every navigation,
- * which is the price of the warning being where you are rather than where you
- * happened to go looking.
+ * everywhere. The private 15-second snapshot coalesces
+ * repeated reads without consuming the public polling quota on navigation.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const investmentsEnabled = await currentInvestments();
-  const [{ alerts }, quickEntry, symbolNames] = await Promise.all([getAlerts(), getQuickEntryOptions(), investmentsEnabled ? getSymbolNames() : {}]);
+  const [alertState, quickEntry, symbolNames] = await Promise.all([pageAlerts(), getQuickEntryOptions(), investmentsEnabled ? getSymbolNames() : {}]);
 
   return (
     <EditionProvider investmentsEnabled={investmentsEnabled}>
@@ -40,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               the table scrolls inside its own container instead.
             */}
             <div id="app-content" className="flex-1 min-w-0 flex flex-col">
-              <TopBar alerts={alerts} quickEntry={<QuickEntry {...quickEntry} />} />
+              <TopBar alerts={alertState.alerts} alertsRetryAfter={alertState.retryAfter ?? (alertState.unavailable ? 15 : undefined)} quickEntry={<QuickEntry {...quickEntry} />} />
               <main className="app-main flex-1 p-4 md:p-8 max-w-5xl">{children}</main>
               <MobileNav />
             </div>

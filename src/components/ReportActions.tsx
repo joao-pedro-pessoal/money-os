@@ -1,7 +1,10 @@
 "use client";
 
 import { useText } from "@/components/useText";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useLanguage } from "./LanguageContext";
+import { readText } from "@/lib/accounts/readText";
+import { reportDownload } from "./reportDownload";
 
 /**
  * Download the report as CSV or as a PDF the app draws itself.
@@ -23,8 +26,11 @@ export default function ReportActions({
   pdfFilename: string;
 }) {
   const uiText = useText();
+  const { language } = useLanguage();
+  const text = readText(language);
+  const pending = useRef(false);
   const [making, setMaking] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState("");
 
   function save(blob: Blob, name: string) {
     const url = URL.createObjectURL(blob);
@@ -41,18 +47,16 @@ export default function ReportActions({
   }
 
   async function downloadPdf() {
+    if (pending.current) return;
+    pending.current = true;
     setMaking(true);
-    setFailed(false);
+    setFailed("");
     try {
-      const response = await fetch(pdfHref, { cache: "no-store" });
-      // A session that ended answers with the login page, which is not a PDF.
-      if (!response.ok || !response.headers.get("content-type")?.includes("application/pdf")) {
-        throw new Error(`No PDF: ${response.status}`);
-      }
-      save(await response.blob(), pdfFilename);
-    } catch {
-      setFailed(true);
+      save(await reportDownload(pdfHref, language), pdfFilename);
+    } catch (error) {
+      setFailed(error instanceof Error ? error.message : text.pdfFailed);
     } finally {
+      pending.current = false;
       setMaking(false);
     }
   }
@@ -64,7 +68,7 @@ export default function ReportActions({
         {making ? uiText("Making the PDF…") : uiText("Download PDF")}
       </button>
       {failed && (
-        <span className="text-xs text-[var(--red)]" role="alert">{uiText("The PDF could not be made. Reload the page and try again.")}</span>
+        <span className="text-xs text-[var(--red)]" role="alert">{failed}</span>
       )}
     </div>
   );

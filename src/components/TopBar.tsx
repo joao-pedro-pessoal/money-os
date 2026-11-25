@@ -7,6 +7,7 @@ import { useNav } from "./NavContext";
 import AlertBell from "./AlertBell";
 import type { Alert } from "@/lib/alerts/rules";
 import { useLanguage } from "./LanguageContext";
+import { readText } from "@/lib/accounts/readText";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -35,7 +36,7 @@ function SunMoonIcon({ light }: { light: boolean }) {
   );
 }
 
-export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickEntry?: React.ReactNode }) {
+export default function TopBar({ alerts, alertsRetryAfter, quickEntry }: { alerts: Alert[]; alertsRetryAfter?: number; quickEntry?: React.ReactNode }) {
   const { hidden, toggle } = usePrivacy();
   const { mode, toggleMode } = useTheme();
   const { open, setOpen } = useNav();
@@ -69,7 +70,9 @@ export default function TopBar({ alerts, quickEntry }: { alerts: Alert[]; quickE
       {quickEntry}
 
       {/* Only rendered when there is something to say; see AlertBell. */}
-      <AlertBell alerts={alerts} />
+      {alertsRetryAfter
+        ? <span role="status" className="text-xs text-[var(--muted)] max-w-48">{readText(language).unavailable}</span>
+        : <AlertBell alerts={alerts} />}
 
       <button translate="no"
         onClick={toggle}

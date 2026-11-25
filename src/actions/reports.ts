@@ -1,3 +1,4 @@
+import { resolveReportPeriod, type ReportParams } from "@/lib/reports/request";
 import { currentInvestments } from "@/actions/releaseEdition";
 /**
  * Everything a report needs, read once, for the page and for its PDF.
@@ -27,29 +28,13 @@ import { getBaseCurrency } from "./settings";
 import { localDay } from "@/lib/calendar/localDay";
 import { portfolioSummary } from "@/lib/portfolio/positionView";
 import { buildInvestmentReport, type InvestmentReport } from "@/lib/reports/investments";
-import { buildReport, customKey, parseCustomKey, reportPeriodsOf, reportWindow, type PeriodReport } from "@/lib/reports/monthly";
+import { buildReport, reportPeriodsOf, reportWindow, type PeriodReport } from "@/lib/reports/monthly";
 import {
-  isDay,
-  isPeriodKey,
-  periodOf,
   periodsBetween,
-  REPORT_KINDS,
-  shiftDay,
   type ReportKind,
   type ReportPeriod,
 } from "@/lib/reports/periods";
 import { isReportScope, type ReportContents, type ReportScope } from "@/lib/reports/document";
-
-/** The address parameters a report reads. */
-export interface ReportParams {
-  period?: string;
-  at?: string;
-  /** The address the monthly report had before it had siblings. */
-  month?: string;
-  from?: string;
-  to?: string;
-  scope?: string;
-}
 
 /** What a budget of each report's length is called in `envelopes.ts`. */
 const BUDGET_PERIOD: Record<ReportPeriod, string> = { week: "weekly", month: "monthly", year: "yearly" };
@@ -65,36 +50,11 @@ export interface LoadedReport extends ReportContents {
   notes: string[];
 }
 
-/**
- * Which days the address asks for.
- *
- * A period still to come has no report, so one typed into the address opens
- * the current one; a custom range is cut at today for the same reason, and a
- * range with no valid days falls back to the last thirty days.
- */
-function resolvePeriod(params: ReportParams, today: string): { kind: ReportKind; key: string; current: string | null } {
-  const kind: ReportKind = REPORT_KINDS.some((k) => k.value === params.period)
-    ? (params.period as ReportKind)
-    : "month";
-
-  if (kind === "custom") {
-    const to = params.to && isDay(params.to) && params.to <= today ? params.to : today;
-    const from = params.from && isDay(params.from) && params.from <= to ? params.from : shiftDay(to, -29);
-    const key = customKey(from, to);
-    return { kind, key: parseCustomKey(key) ? key : customKey(shiftDay(today, -29), today), current: null };
-  }
-
-  const current = periodOf(kind, today);
-  const requested = params.at ?? (kind === "month" ? params.month : undefined);
-  const key = requested && isPeriodKey(kind, requested) && requested <= current ? requested : current;
-  return { kind, key, current };
-}
-
 export async function loadReport(params: ReportParams): Promise<LoadedReport> {
   const investmentsEnabled = await currentInvestments();
   // The period on the wall, not in UTC: see `localDay`.
   const today = localDay();
-  const { kind, key, current } = resolvePeriod(params, today);
+  const { kind, key, current } = resolveReportPeriod(params, today);
   const scope: ReportScope = !investmentsEnabled ? "money" : isReportScope(params.scope) ? params.scope : "both";
   const wantsMoney = scope !== "investments";
   const wantsInvestments = scope !== "money";

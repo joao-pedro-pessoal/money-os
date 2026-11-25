@@ -533,6 +533,13 @@
       "when": 1795544087046,
       "tag": "0075_goofy_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1795617890857,
+      "tag": "0076_daffy_black_crow",
+      "breakpoints": true
     }
   ]
 }

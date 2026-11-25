@@ -14,7 +14,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
 import { exportAllData } from "../export";
 import { createHash } from "node:crypto";
-import { completedRestore, replaceBackup } from "../backupService";
+import { completedRestore, prepareBackup, replaceBackup } from "../backupService";
 import { commitImport } from "../imports";
 const restoreBackup = (form: FormData) => replaceBackup(String(form.get("backup")));
 
@@ -127,6 +127,20 @@ describe("restore rehearsal on isolated PostgreSQL with the real migrations and 
       expect(Number((await isolated.db.select().from(schema.accounts))[0].balance)).toBe(100);
       expect((await isolated.db.select().from(schema.transactions)).some(row => row.description === "synthetic retry after restore")).toBe(false);
     } finally { await restore(original); }
+  });
+  it("excludes private snapshots from financial export and invalidates them atomically on restore", async () => {
+    await as("tester-a");
+    const original = await exportAllData();
+    await isolated.db.insert(schema.privateSnapshots).values({ key: "widget:v1:money:en", payload: '{"netWorth":999}', generatedAt: new Date(), expiresAt: new Date(Date.now() + 15000), leaseUntil: new Date(1) });
+    expect(JSON.parse(await exportAllData()).data).not.toHaveProperty("privateSnapshots");
+    const conflict = JSON.parse(original); conflict.data.accounts[0].id = "account-tester-b";
+    // A valid shape but a globally occupied PK must roll back cache deletion too.
+    conflict.data.liabilities = []; conflict.data.expectedMoney = []; conflict.data.transactions = []; conflict.data.subscriptionCharges = [];
+    expect(prepareBackup(JSON.stringify(conflict)).check.ok).toBe(true);
+    await expect(restore(JSON.stringify(conflict))).rejects.toThrow();
+    expect(await isolated.db.select().from(schema.privateSnapshots)).toHaveLength(1);
+    await restore(original);
+    expect(await isolated.db.select().from(schema.privateSnapshots)).toEqual([]);
   });
   it("restores into an account deleted and made again, which has a new id", async () => {
     const original = await exportAllData();
