@@ -25,6 +25,8 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import MobileFold from "@/components/MobileFold";
 import MultiSelect from "@/components/MultiSelect";
 import SavedFilters from "@/components/SavedFilters";
+import PhoneTransactionRow from "@/components/PhoneTransactionRow";
+import { dayKey } from "@/lib/ui/phoneSummary";
 
 /**
  * The transaction list, over whatever slice is chosen.
@@ -62,6 +64,28 @@ export default function TransactionList({
   const filtered = useMemo(() => applyTransactionFilters(rows, filters), [rows, filters]);
   const totals = useMemo(() => transactionTotals(filtered), [filtered]);
   const options = useMemo(() => transactionFilterOptions(rows), [rows]);
+
+  /** The phone lists by day (F30), newest first, each day with what it came to. */
+  const days = useMemo(() => {
+    const locale = localeOf(language);
+    const today = new Date();
+    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    const groups: { key: string; label: string; net: number; rows: TransactionRow[] }[] = [];
+    for (const row of filtered) {
+      const date = new Date(row.date);
+      const key = dayKey(date);
+      let group = groups.find(g => g.key === key);
+      if (!group) {
+        const label = key === dayKey(today) ? uiText("Today") : key === dayKey(yesterday) ? uiText("Yesterday")
+          : date.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "short", ...(date.getFullYear() === today.getFullYear() ? {} : { year: "numeric" }) });
+        group = { key, label, net: 0, rows: [] };
+        groups.push(group);
+      }
+      group.rows.push(row);
+      if (row.type !== "transfer") group.net = Math.round((group.net + row.amount) * 100) / 100;
+    }
+    return groups;
+  }, [filtered, language, uiText]);
 
   const active = hasActiveTransactionFilters(filters);
   const hidden = rows.length - filtered.length;
@@ -210,7 +234,26 @@ export default function TransactionList({
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <ul className="cash-flow-phone-only ph-days" aria-label={uiText("Transactions")}>
+          {days.map(day => (
+            <li key={day.key}>
+              <div className="ph-day-head"><span>{day.label}</span>{day.net !== 0 && <span>{day.net < 0 ? "−" : "+"}<Money value={Math.abs(day.net)} currency={currency} /></span>}</div>
+              <ul className="ph-rows">
+                {day.rows.map(t => (
+                  <PhoneTransactionRow key={t.id} row={t} uiText={uiText} currency={currency} actions={<>
+                    <Link href={`/transactions/${t.id}/edit`} className="ph-quiet-button">{uiText("Edit")}</Link>
+                    <form action={deleteAction}>
+                      <input type="hidden" name="id" value={t.id} />
+                      <ConfirmSubmitButton label={uiText("Delete")} confirmMessage="Remove this transaction? The account balance goes back to what it was." />
+                    </form>
+                  </>} />
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+
+        <div className="overflow-x-auto cash-flow-desktop-only">
           <div className="table-scroll mobile-records cash-flow-records" role="region" aria-label={uiText("Transactions")} tabIndex={0}><ResponsiveTable className="data-table" role="table">
             <thead>
               <tr>

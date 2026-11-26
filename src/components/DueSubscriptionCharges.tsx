@@ -23,20 +23,23 @@ export default function DueSubscriptionCharges({
   charges,
   accounts,
   compact = false,
+  titleId = "due-charges-title",
 }: {
   charges: DueCharge[];
   accounts: { id: string; name: string; currency: string }[];
   /** On the dashboard: the first few, with a link to the rest. */
   compact?: boolean;
+  /** A second copy on the same page (the phone's home) needs its own id. */
+  titleId?: string;
 }) {
   const uiText = useText();
   if (charges.length === 0) return null;
   const shown = compact ? charges.slice(0, 3) : charges;
 
   return (
-    <section className="card p-4 space-y-3" aria-labelledby="due-charges-title">
+    <section className="card p-4 space-y-3" aria-labelledby={titleId}>
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <h2 id="due-charges-title" className="text-sm font-medium">{uiText("Subscription charges to confirm · ")}{charges.length}
+        <h2 id={titleId} className="text-sm font-medium">{uiText("Subscription charges to confirm · ")}{charges.length}
         </h2>
         {compact && charges.length > shown.length && (
           <Link href="/subscriptions" className="text-xs text-[var(--accent)]">{uiText("See all")}</Link>

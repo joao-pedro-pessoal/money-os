@@ -21,6 +21,7 @@ import {
 import { reconstructHoldings } from "@/lib/portfolio/reconstruct";
 import type { BrokerEvent } from "@/lib/csv/broker";
 import { and, eq, gte, lt } from "drizzle-orm";
+import { monthlySpending, type SpendRow } from "@/lib/ui/phoneSummary";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
 import { toBase, isCurrencyCode } from "@/lib/fx";
@@ -614,4 +615,32 @@ export async function getFixedRunway(availableCash: number) {
     months: fixedRunway(availableCash, flows.expenses.fixed),
     monthlyFixed: flows.expenses.fixed,
   };
+}
+
+/**
+ * What was spent in each of the last few calendar months, for the phone's
+ * cash-flow chart (F30). Converted to the base currency before it is added up;
+ * a row with no rate is left out and counted, never added as zero.
+ */
+export async function getMonthlySpending(months = 6) {
+  await requireServerSession();
+  const span = Math.min(12, Math.max(2, Math.trunc(Number(months)) || 6));
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (span - 1), 1);
+  const [txRows, rates, base] = await Promise.all([
+    db
+      .select({ date: transactions.date, amount: transactions.amount, currency: transactions.currency, type: transactions.type })
+      .from(transactions)
+      .where(and(gte(transactions.date, start), eq(transactions.type, "expense"))),
+    getRates(),
+    getBaseCurrency(),
+  ]);
+  const rows: SpendRow[] = [];
+  let missing = 0;
+  for (const t of txRows) {
+    const amount = toBase(Number(t.amount), t.currency, rates, base);
+    if (amount === null) { missing++; continue; }
+    rows.push({ date: new Date(t.date), amount, type: t.type });
+  }
+  return { baseCurrency: base, months: monthlySpending(rows, now, span), missing };
 }

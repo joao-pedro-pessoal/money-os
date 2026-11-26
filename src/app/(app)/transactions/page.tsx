@@ -8,16 +8,22 @@ import { getDefaultAccountId } from "@/actions/settings";
 import PurchaseSavingsFields from '@/components/PurchaseSavingsFields';
 import MobileFold from "@/components/MobileFold";
 import { localDay } from "@/lib/calendar/localDay";
+import { getMonthlySpending } from "@/actions/dashboard";
+import { currentLanguage } from "@/actions/language";
+import { formatFor } from "@/lib/format";
+import PhoneSpendingChart from "@/components/PhoneSpendingChart";
 
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ direction?: string }> }) {
   const uiText = await textForRequest();
   const { direction: asked } = await searchParams;
   const direction = asked === "in" || asked === "out" ? asked : null;
-  const [txData, accounts, categories, defaultAccountId] = await Promise.all([
+  const [txData, accounts, categories, defaultAccountId, spending, language] = await Promise.all([
     listTransactions(200),
     listAccountsWithState(),
     listCategories(),
     getDefaultAccountId(),
+    getMonthlySpending(6),
+    currentLanguage(),
   ]);
 
   const today = localDay();
@@ -35,6 +41,10 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
         <Link href="/savings" className="btn">{uiText("Savings / cashback")}</Link>
         <Link href="/import" className="btn whitespace-nowrap">{uiText("Import statement")}</Link>
         </div>
+      </div>
+
+      <div className="cash-flow-phone-only">
+        <PhoneSpendingChart months={spending.months} currency={spending.baseCurrency} missing={spending.missing} uiText={uiText} locale={formatFor(language).locale} />
       </div>
 
       <MobileFold title="Add a transaction or transfer" persistKey="add-forms">

@@ -1,48 +1,59 @@
 "use client";
-import { useInvestments } from "@/components/EditionContext";
 
 import { directionOf } from "@/lib/i18n/languages";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isNavigationActive } from "@/lib/navigation";
-import { useNav } from "./NavContext";
-import { useMobileMode } from "./MobileMode";
 import { useLanguage } from "./LanguageContext";
+import { useText } from "./useText";
+import PhoneIcon from "./PhoneIcon";
+import type { PhoneIconName } from "@/lib/ui/phoneIcons";
 import type { Messages } from "@/lib/i18n/messages";
 
 /**
- * The phone's bottom bar. Its words come from the chosen language like the
- * rest of the menu: they were written in English here, so choosing a language
- * changed nothing at all on a phone.
+ * The phone's bottom bar (F30): four places and, in the middle, the button
+ * that records money from any screen. It used to be four places, the menu and
+ * a separate floating button that covered the last row of every list.
+ *
+ * "More" is a page of its own with everything else, so the side menu is no
+ * longer the only way to reach a page on a phone. Its words come from the
+ * chosen language like the rest of the menu.
  */
-const shortcuts: { href: string; word: keyof Messages["nav"]; path: string }[] = [
-  { href: "/", word: "home", path: "m3 10 9-7 9 7v10H3Z M9 20v-7h6v7" },
-  { href: "/accounts", word: "accounts", path: "M3 7h18v13H3Z M3 7V4h15v3 M16 12h5v4h-5Z" },
-  { href: "/transactions", word: "cashFlowShort", path: "M7 3v18m-4-4 4 4 4-4 M17 21V3m-4 4 4-4 4 4" },
-  { href: "/investments", word: "invest", path: "M3 3v18h18 M6 15l5-5 4 3 6-8 M16 5h5v5" },
+const places: { href: string; word: keyof Messages["nav"]; icon: PhoneIconName }[] = [
+  { href: "/", word: "home", icon: "home" },
+  { href: "/accounts", word: "accounts", icon: "wallet" },
+  { href: "/transactions", word: "cashFlowShort", icon: "flows" },
+  { href: "/more", word: "more", icon: "grid" },
 ];
 
 export default function MobileNav() {
-  const investmentsEnabled = useInvestments();
   const pathname = usePathname();
-  const { open, setOpen } = useNav();
-  const { simple } = useMobileMode();
-  const { t, language } = useLanguage();
-  const visibleShortcuts = investmentsEnabled ? shortcuts : shortcuts.filter(link => link.href !== "/investments");
-  const moreActive = !visibleShortcuts.some(({ href }) => (!simple || href !== "/investments") && isNavigationActive(pathname, href));
+  const { t, language, m } = useLanguage();
+  const uiText = useText();
+  const listed = places.slice(0, 3).some(({ href }) => isNavigationActive(pathname, href));
+
+  const link = ({ href, word, icon }: (typeof places)[number]) => {
+    const current = href === "/more" ? !listed : isNavigationActive(pathname, href);
+    return (
+      <Link key={href} href={href} aria-current={current ? "page" : undefined}>
+        <PhoneIcon name={icon} size={22} strokeWidth={current ? 2 : 1.8} />
+        <span>{word === "more" ? uiText("More") : t[word] as string}</span>
+      </Link>
+    );
+  };
 
   return (
-    <nav translate="no" lang={language} dir={directionOf(language)} className="mobile-bottom-nav" data-money-edition={!investmentsEnabled || undefined} aria-label={t.quickNavigation}>
-      {visibleShortcuts.map(({ href, word, path }) => (
-        <Link key={href} href={href} aria-current={isNavigationActive(pathname, href) ? "page" : undefined}>
-          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={path} /></svg>
-          <span>{t[word] as string}</span>
-        </Link>
-      ))}
-      <button type="button" onClick={() => setOpen(true)} aria-expanded={open} aria-controls="app-nav" data-active={moreActive || undefined}>
-        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
-        <span>{t.more}</span>
+    <nav translate="no" lang={language} dir={directionOf(language)} className="mobile-bottom-nav" aria-label={t.quickNavigation}>
+      {places.slice(0, 2).map(link)}
+      <button
+        type="button"
+        className="mobile-record"
+        aria-label={m.quickEntry.open}
+        onClick={() => window.dispatchEvent(new CustomEvent("money-os:quick-entry", { detail: "expense" }))}
+      >
+        <PhoneIcon name="plus" size={24} strokeWidth={2.4} />
       </button>
+      {places.slice(2).map(link)}
     </nav>
   );
 }

@@ -20,6 +20,7 @@ import Section from "@/components/Section";
 import ArrangeOrder from "@/components/ArrangeOrder";
 import { inSavedOrder } from "@/actions/orderStore";
 import DonutChart from "@/components/DonutChart";
+import PhoneGoals from "@/components/PhoneGoals";
 
 export default async function BucketsPage() {
   const uiText = await textForRequest();
@@ -50,8 +51,12 @@ export default async function BucketsPage() {
         <ArrangeOrder list="buckets" title="Buckets" items={buckets.map((b) => ({ id: b.id, label: b.name }))} />
       </div>
 
+      <div className="phone-only">
+        <PhoneGoals uiText={uiText} currency={base} goals={buckets} />
+      </div>
+
       {buckets.some((b) => b.total > 0) && (
-        <div className="card p-4">
+        <div className="card p-4 desktop-only">
           <DonutChart compact currency={base} data={buckets.filter((b) => b.total > 0).map((b) => ({ name: b.name, value: b.total }))} />
         </div>
       )}
@@ -246,7 +251,7 @@ export default async function BucketsPage() {
       </Section>
 
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 desktop-only">
         {buckets.map((b) => {
           const target = b.targetAmount ? Number(b.targetAmount) : null;
           const pct = target ? Math.min(100, Math.round((b.total / target) * 100)) : null;
@@ -307,6 +312,7 @@ export default async function BucketsPage() {
         })}
       </div>
 
+      <div id="create-bucket" className="scroll-mt-4">
       <Section title="Create bucket" defaultOpen className="max-w-md">
         <RetryableForm action={submitBucketCreation} fieldsClassName="space-y-3">
           <input name="name" placeholder={uiText("Name (e.g. Emergency Fund)")} className="input" required />
@@ -316,6 +322,7 @@ export default async function BucketsPage() {
           <p className="text-xs text-[var(--muted)]">{uiText("No percentage to set here. How much each goal gets comes from its rank above, and you can override the split when you distribute.")}</p>
         </RetryableForm>
       </Section>
+      </div>
     </div>
   );
 }

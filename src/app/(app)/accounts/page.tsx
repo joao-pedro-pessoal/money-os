@@ -26,6 +26,9 @@ import AccountQuick from "@/components/AccountQuick";
 import TryQuickEntry from "@/components/TryQuickEntry";
 import { getAccountComposition } from "@/actions/dashboard";
 import { getBaseCurrency } from "@/actions/settings";
+import { getNetWorth } from "@/actions/networth";
+import { listLiabilities } from "@/actions/liabilities";
+import PhoneAccounts from "@/components/PhoneAccounts";
 
 const STATE_COLOR: Record<string, string> = {
   RECONCILED: "text-[var(--green)]",
@@ -36,7 +39,7 @@ const STATE_COLOR: Record<string, string> = {
 export default async function AccountsPage() {
   const investmentsEnabled = await currentInvestments();
   const uiText = await textForRequest();
-  const [accounts, archived, platformTotals, removable, connections, composition, baseCurrency] =
+  const [accounts, archived, platformTotals, removable, connections, composition, baseCurrency, worth, debts] =
     await Promise.all([
       listAccountsWithState(),
       listArchivedAccounts(),
@@ -45,6 +48,8 @@ export default async function AccountsPage() {
       listConnections(),
       getAccountComposition(),
       getBaseCurrency(),
+      getNetWorth(),
+      listLiabilities(),
     ]);
 
   // What could be connected instead of typed in, and what already is.
@@ -60,7 +65,14 @@ export default async function AccountsPage() {
       <h1 className="text-lg font-semibold">{uiText("Accounts")}</h1>
       <p className="simple-only text-sm text-[var(--muted)]">{uiText("Each account’s balance and available cash. Tap its name for details and reserved money.")}</p>
       <PageTabs tabs={ACCOUNTS_TABS} />
-      {accounts.length > 1 && <TryQuickEntry kind="transfer" label="Send money" />}
+      <div className="phone-only">
+        <PhoneAccounts uiText={uiText} currency={baseCurrency} cash={worth.cash}
+          accounts={accounts.map(a => ({ id: a.id, name: a.name, institution: a.institution, accountType: a.accountType, currency: a.currency, balance: a.balance }))}
+          composition={composition.map(row => ({ name: row.name, value: row.composition.total }))}
+          debts={debts.items.filter(d => d.active && d.accountId === null).map(d => ({ id: d.id, name: d.name, balance: d.balance, currency: d.currency, monthlyPayment: d.monthlyPayment }))}
+          debtTotal={worth.liabilities} />
+      </div>
+      {accounts.length > 1 && <div className="desktop-only"><TryQuickEntry kind="transfer" label="Send money" /></div>}
 
       <TidyEmptyAccounts
         removable={removable.map((a) => ({
@@ -71,7 +83,7 @@ export default async function AccountsPage() {
         action={removeEmptyAccounts}
       />
 
-      <Section title="Accounts" defaultOpen essential summary={<>{uiText("{0} active", { "0": accounts.length })} <ArrangeOrder list="accounts" title="Accounts" items={accounts.map((a) => ({ id: a.id, label: a.name }))} /></>}>
+      <Section className="desktop-only" title="Accounts" defaultOpen essential summary={<>{uiText("{0} active", { "0": accounts.length })} <ArrangeOrder list="accounts" title="Accounts" items={accounts.map((a) => ({ id: a.id, label: a.name }))} /></>}>
         {composition.some((row) => row.composition.total > 0) && (
           <div className="mb-4">
             <DonutChart compact currency={baseCurrency} data={composition.filter((row) => row.composition.total > 0).map((row) => ({ name: row.name, value: row.composition.total }))} />
@@ -142,6 +154,7 @@ export default async function AccountsPage() {
       </Section>
 
       <ConnectablePlatforms options={options}>
+        <div id="add-account" className="scroll-mt-4">
         <Section title="Add account by hand" defaultOpen className="max-w-md">
           <form action={createAccount} className="space-y-3">
             <input
@@ -186,6 +199,7 @@ export default async function AccountsPage() {
             <button type="submit" className="btn w-full">{uiText("Add")}</button>
           </form>
         </Section>
+        </div>
       </ConnectablePlatforms>
 
       {archived.length > 0 && (

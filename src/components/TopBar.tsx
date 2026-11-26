@@ -8,6 +8,32 @@ import AlertBell from "./AlertBell";
 import type { Alert } from "@/lib/alerts/rules";
 import { useLanguage } from "./LanguageContext";
 import { readText } from "@/lib/accounts/readText";
+import { usePathname } from "next/navigation";
+import { useSyncExternalStore } from "react";
+import { localeOf } from "@/lib/i18n/languages";
+import { greetingFor } from "@/lib/ui/phoneSummary";
+import { useText } from "./useText";
+
+const never = () => () => {};
+
+/**
+ * The phone's home screen opens with the day and a greeting (F30) instead of
+ * the app's name. Read on the device, after hydration, so the server's clock
+ * and time zone never decide what "this afternoon" is.
+ */
+function PhoneGreeting() {
+  const { language } = useLanguage();
+  const uiText = useText();
+  const hour = useSyncExternalStore(never, () => new Date().getHours(), () => null);
+  const day = useSyncExternalStore(never, () => new Date().toLocaleDateString(localeOf(language), { weekday: "long", day: "numeric", month: "long" }), () => "");
+  if (hour === null) return <span className="mobile-brand">Money OS</span>;
+  return (
+    <div className="phone-greeting">
+      <span>{day}</span>
+      <strong>{uiText(greetingFor(hour))}</strong>
+    </div>
+  );
+}
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -41,6 +67,7 @@ export default function TopBar({ alerts, alertsRetryAfter, quickEntry }: { alert
   const { mode, toggleMode } = useTheme();
   const { open, setOpen } = useNav();
   const { t, language } = useLanguage();
+  const pathname = usePathname();
 
   return (
     <div lang={language} dir={directionOf(language)} className="app-topbar flex items-center gap-2 px-4 md:px-8 pt-4 md:pt-6">
@@ -52,7 +79,7 @@ export default function TopBar({ alerts, alertsRetryAfter, quickEntry }: { alert
         Tailwind import and so beats a utility of equal specificity. Any
         `md:hidden` written directly on an `.icon-btn` is silently ignored.
       */}
-      <div className="md:hidden">
+      <div className="md:hidden topbar-menu">
         <button translate="no"
           onClick={() => setOpen(!open)}
           className="icon-btn"
@@ -66,7 +93,7 @@ export default function TopBar({ alerts, alertsRetryAfter, quickEntry }: { alert
         </button>
       </div>
 
-      <div className="flex-1 min-w-0"><span className="mobile-brand">Money OS</span></div>
+      <div className="flex-1 min-w-0">{pathname === "/" ? <PhoneGreeting /> : <span className="mobile-brand">Money OS</span>}</div>
       {quickEntry}
 
       {/* Only rendered when there is something to say; see AlertBell. */}
@@ -76,7 +103,7 @@ export default function TopBar({ alerts, alertsRetryAfter, quickEntry }: { alert
 
       <button translate="no"
         onClick={toggle}
-        className="icon-btn"
+        className="icon-btn topbar-privacy"
         aria-label={hidden ? t.showValues : t.hideValues}
         title={hidden ? t.showValues : t.hideValues}
       >
@@ -84,7 +111,7 @@ export default function TopBar({ alerts, alertsRetryAfter, quickEntry }: { alert
       </button>
       <button translate="no"
         onClick={toggleMode}
-        className="icon-btn"
+        className="icon-btn topbar-theme"
         aria-label={mode === "light" ? t.switchDark : t.switchLight}
         title={mode === "light" ? t.switchDark : t.switchLight}
       >

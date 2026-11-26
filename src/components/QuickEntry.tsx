@@ -13,6 +13,9 @@ import TransferForm from './TransferForm';
 import { localDay } from "@/lib/calendar/localDay";
 import { serverMessageIn } from "@/lib/i18n/messages";
 import { useLanguage } from "./LanguageContext";
+import { useMobileMode } from "./MobileMode";
+import PhoneIcon from "./PhoneIcon";
+import { categoryIcon } from "@/lib/ui/phoneIcons";
 
 const today = () => localDay();
 
@@ -29,6 +32,9 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
   const { m, language } = useLanguage();
   const w = m.quickEntry;
   const [type, setType] = useState<Kind>("expense");
+  // On a phone the category is a row of buttons (F30) and this holds the choice.
+  const [categoryId, setCategoryId] = useState("");
+  const { phone } = useMobileMode();
   // Starts each transfer afresh, from the account it was opened on.
   const [opened, setOpened] = useState(0);
   const [accountId, setAccountId] = useState(defaultAccountId ?? accounts[0]?.id ?? "");
@@ -86,6 +92,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
     setOpened(n => n + 1);
     form.current?.reset();
     setType(kind);
+    setCategoryId("");
     setDate(today());
     setError("");
     setSavedId(null);
@@ -155,7 +162,7 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
   const kinds = (
     <div className={`grid ${canTransfer ? "grid-cols-3" : "grid-cols-2"} gap-2`} role="group" aria-label={w.kind}>
       {(["expense", "income", ...(canTransfer ? ["transfer"] as const : [])] as const).map(value => (
-        <button key={value} type="button" aria-pressed={type === value} className="quick-kind" onClick={() => setType(value)}>
+        <button key={value} type="button" aria-pressed={type === value} className="quick-kind" onClick={() => { setType(value); setCategoryId(""); }}>
           {value === "expense" ? w.expense : value === "income" ? w.income : uiText("Transfer")}
         </button>
       ))}
@@ -195,6 +202,62 @@ export default function QuickEntry({ accounts, categories, defaultAccountId }: Q
             {kinds}
             <TransferForm key={opened} bare accounts={accounts} today={today()} initialFromId={accountId} />
           </div>
+        ) : phone ? (
+          /* The phone's form (F30): the amount large, then categories and
+             accounts as buttons, so a coffee takes three taps and no list.
+             The same fields reach the same action as the form below. */
+          <form ref={form} onSubmit={submit} className="space-y-5 ph-entry">
+            <fieldset disabled={pending} className="space-y-5">
+              {kinds}
+              <input type="hidden" name="type" value={type} />
+              <input type="hidden" name="accountId" value={accountId} />
+              <input type="hidden" name="categoryId" value={categoryId} />
+              <div className="ph-entry-amount">
+                <label htmlFor="quick-amount">{uiText(type === "expense" ? "How much did you spend?" : "How much came in?")}</label>
+                <span>
+                  <input id="quick-amount" name="amount" inputMode="decimal" placeholder="0,00" required autoFocus autoComplete="off" maxLength={15} />
+                  {currency && <span aria-hidden="true">{currency}</span>}
+                </span>
+              </div>
+              {categories.some(category => category.kind === type) && (
+                <div role="group" aria-labelledby="quick-category-label">
+                  <span id="quick-category-label" className="ph-entry-label">{w.category}</span>
+                  <div className="ph-entry-categories">
+                    {categories.filter(category => category.kind === type).map(category => (
+                      <button key={category.id} type="button" aria-pressed={categoryId === category.id} onClick={() => setCategoryId(id => id === category.id ? "" : category.id)}>
+                        <span><PhoneIcon name={categoryIcon(category.name, type)} size={22} /></span>
+                        <span translate="no">{category.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div role="group" aria-labelledby="quick-account-label">
+                <span id="quick-account-label" className="ph-entry-label">{w.account}</span>
+                <div className="ph-entry-chips">
+                  {accounts.map(account => (
+                    <button key={account.id} type="button" aria-pressed={accountId === account.id} onClick={() => setAccountId(account.id)}>
+                      <span translate="no">{account.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="ph-entry-details">
+                <label className="ph-entry-date">
+                  <span className="sr-only">{w.date}</span>
+                  <PhoneIcon name="calendar" size={18} />
+                  <input id="quick-date" name="date" type="date" required value={date} onChange={event => setDate(event.target.value)} />
+                </label>
+                <label className="ph-entry-note">
+                  <span className="sr-only">{w.description}</span>
+                  <input id="quick-description" name="description" maxLength={500} placeholder={`${w.description} (${w.optional.toLowerCase()})`} />
+                </label>
+              </div>
+              {type === 'expense' && <PurchaseSavingsFields />}
+              {error && <p role="alert" className="text-sm text-[var(--red)]">{uiText(error ?? "")}</p>}
+              <button type="submit" className="btn w-full ph-entry-save">{pending ? w.saving : type === "expense" ? w.saveExpense : w.saveIncome}</button>
+            </fieldset>
+          </form>
         ) : (
           <form ref={form} onSubmit={submit} className="space-y-4">
             <fieldset disabled={pending} className="space-y-4">

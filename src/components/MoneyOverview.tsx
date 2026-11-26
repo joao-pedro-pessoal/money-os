@@ -28,6 +28,7 @@ import AccountQuick from "./AccountQuick";
 import ArrangeOrder from "./ArrangeOrder";
 import { inSavedOrder } from "@/actions/orderStore";
 import { RECORDED_VALUE_COPY } from "@/lib/accounting/recordedHistory";
+import PhoneHome from "./PhoneHome";
 
 /** Everyday money, using the same totals as the full edition. Never rewrites old data. */
 export default async function MoneyOverview({ analytics = false }: { analytics?: boolean }) {
@@ -36,7 +37,7 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
   const [worth, month, accounts, budgets, goals, series, due, composition, subscriptions, recent, userId, coming, language] = await Promise.all([
     getNetWorth(), getMonthShape(), listAccountsWithState(), listBudgets(),
     listBucketsWithTotals(), getTotalNetWorthOverTime(), getDueSubscriptionCharges(),
-    getAccountComposition(), listSubscriptions(), listTransactions(1), currentUserId(), listExpected(), currentLanguage(),
+    getAccountComposition(), listSubscriptions(), listTransactions(5), currentUserId(), listExpected(), currentLanguage(),
   ]);
   const { locale } = formatFor(language);
   /** Every panel opens the page it summarises. */
@@ -113,9 +114,24 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
     </Section>
     </> }
   ], block => block.id);
+  const getStarted = !analytics && userId ? <GetStarted key={userId} userId={userId} counts={{accounts:accountCount,transactions:recent.rows.length + recent.unconverted.length,budgets:budgets.items.length,goals:goals.length}} canRecord={accounts.length>0} /> : null;
+  const nextSubscription = activeSubscriptions.filter(sub => sub.nextChargeOn).sort((a, b) => new Date(a.nextChargeOn!).getTime() - new Date(b.nextChargeOn!).getTime())[0];
+  /** The phone's own home screen (F30); a computer keeps the layout below. */
+  const phone = analytics ? null : <div className="phone-only"><PhoneHome
+    uiText={t} locale={locale} currency={currency}
+    worth={{ total: worth.total, cash: worth.cash, liabilities: worth.liabilities }}
+    month={{ income: month.flows.income.total, expenses: month.flows.expenses.total }}
+    series={series} recent={recent.rows.slice(0, 5)} budgets={budgetItems} goals={goalItems}
+    coming={{ total: coming.total, rows: coming.rows }}
+    subscriptions={{ count: activeSubscriptions.length, monthly: Math.round(activeSubscriptions.reduce((sum, sub) => sum + (sub.monthlyInBase ?? 0), 0) * 100) / 100, next: nextSubscription ? { name: nextSubscription.name, on: new Date(nextSubscription.nextChargeOn!), amount: nextSubscription.monthlyInBase } : null }}
+    due={{ charges: due.charges, accounts: due.accounts }}
+    canSend={accounts.length > 1} hasAccounts={accounts.length > 0} getStarted={getStarted}
+  /></div>;
   return <div className="space-y-6">
+    {phone}
+    <div className={analytics ? "space-y-6" : "desktop-only space-y-6"}>
     <h1 className="text-lg font-semibold">{t(analytics ? "Analytics" : "Dashboard")}</h1>
-    {!analytics && userId && <GetStarted key={userId} userId={userId} counts={{accounts:accountCount,transactions:recent.rows.length + recent.unconverted.length,budgets:budgets.items.length,goals:goals.length}} canRecord={accounts.length>0} />}
+    {getStarted}
     {analytics && <PageTabs tabs={analyticsTabs(investmentsEnabled)} />}
     {worth.unconverted.length > 0 && <p role="status" className="card p-3 text-sm text-[var(--amber)]">{t("Some amounts could not be converted to ")}{currency}. {t("Add a rate in Settings.")}</p>}
     <p className="text-sm text-[var(--muted)]">{t("Income and expenses for the current month.")}</p>
@@ -135,5 +151,6 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
     {/* Blocks in the order the person arranged (Arrange), else this one. */}
     {!analytics && <div className="flex justify-end"><ArrangeOrder list="dashboard" title="Dashboard" items={blocks.map(block => ({ id: block.id, label: t(block.label) }))} /></div>}
     {blocks.map(block => <div key={block.id}>{block.node}</div>)}
+    </div>
   </div>;
 }
