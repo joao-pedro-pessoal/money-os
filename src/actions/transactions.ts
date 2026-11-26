@@ -14,6 +14,9 @@ import { manualAmount, manualDate, isQuickEntryId } from "@/lib/money/manualEntr
 import { getDefaultAccountId } from "./settings";
 import { assertCashbackLink, purchaseSavings } from "@/lib/money/savings";
 import { inSavedOrder } from "./orderStore";
+import { withWork, WorkLimitedError } from "./workGate";
+import { currentLanguage } from "./language";
+import { readText } from "@/lib/accounts/readText";
 
 async function requireSession() {
   if (!(await hasSession())) {
@@ -208,6 +211,18 @@ export async function undoQuickTransaction(id: string) {
   await deleteTransaction(form);
 }
 
+/** Revalidation cannot undo a committed record or change its success result. */
+function revalidateMoneyRecords(paths: string[]) {
+  for (const path of paths) {
+    try { revalidatePath(path); }
+    catch { console.error("money_record_revalidation_failed"); }
+  }
+}
+
+async function limitedMoneyRecord(error: WorkLimitedError) {
+  return { error: readText(await currentLanguage()).limited(error.retryAfter), retryAfter: error.retryAfter };
+}
+
 /**
  * Internal transfer between two of the user's own accounts.
  * Does not count as income/expense. Cross-currency legs retain actual amounts.
@@ -224,7 +239,7 @@ export async function createTransfer(formData: FormData) {
   if (!isQuickEntryId(requestId)) throw new Error("Refresh this page before recording a transfer.");
   if (fromAccountId === toAccountId) throw new Error("Cannot transfer to the same account");
 
-  await db.transaction(async (store) => {
+  await withWork("money-record", () => db.transaction(async (store) => {
     // Stable account ordering serialises retries and opposite-direction transfers.
     const locked = await store.select().from(accounts)
       .where(inArray(accounts.id, [fromAccountId, toAccountId])).orderBy(asc(accounts.id)).for("update");
@@ -263,16 +278,15 @@ export async function createTransfer(formData: FormData) {
     await store.insert(transfers).values({ fromTransactionId: outgoing.id, toTransactionId: incoming.id });
     await store.update(accounts).set({ balance: sql`${accounts.balance} - ${amount}`, updatedAt: new Date() }).where(eq(accounts.id, from.id));
     await store.update(accounts).set({ balance: sql`${accounts.balance} + ${received}`, updatedAt: new Date() }).where(eq(accounts.id, to.id));
-  });
-  revalidatePath("/transactions");
-  revalidatePath("/accounts");
-  revalidatePath("/");
+  }));
+  revalidateMoneyRecords(["/transactions", "/accounts", "/"]);
 }
 
 /** Expected form failures are returned so production can show translated guidance. */
 export async function submitTransfer(formData: FormData) {
   try { await createTransfer(formData); return { saved: true }; }
   catch (error) {
+    if (error instanceof WorkLimitedError) return limitedMoneyRecord(error);
     const message = error instanceof Error ? error.message : "";
     const expected = [
       "Your session has expired. Sign in again.", "Refresh this page before recording a transfer.",
@@ -295,7 +309,7 @@ export async function createInterestPayment(formData: FormData) {
   const date = manualDate(String(formData.get("date") ?? ""));
   const requestId = String(formData.get("requestId") ?? "");
   if (!isQuickEntryId(requestId)) throw new Error("Refresh this page before recording interest.");
-  await db.transaction(async store => {
+  await withWork("money-record", () => db.transaction(async store => {
     const [account] = await store.select().from(accounts).where(eq(accounts.id, accountId)).for("update");
     if (!account?.active) throw new Error("Choose an active account.");
     const details = JSON.stringify({ accountId, amount, date: date.toISOString(), currency: account.currency });
@@ -315,13 +329,14 @@ export async function createInterestPayment(formData: FormData) {
     await store.insert(transactions).values({ id: requestId, accountId, type: "income", amount, currency: account.currency, date,
       categoryId: interestCategory?.id ?? null, description: "Interest", source: "manual" });
     await store.update(accounts).set({ balance: sql`${accounts.balance} + ${amount}`, updatedAt: new Date() }).where(eq(accounts.id, accountId));
-  });
-  revalidatePath("/interest"); revalidatePath("/transactions"); revalidatePath("/accounts"); revalidatePath(`/accounts/${accountId}`); revalidatePath("/");
+  }));
+  revalidateMoneyRecords(["/interest", "/transactions", "/accounts", `/accounts/${accountId}`, "/"]);
 }
 
 export async function submitInterestPayment(formData: FormData) {
   try { await createInterestPayment(formData); return { saved: true }; }
   catch (error) {
+    if (error instanceof WorkLimitedError) return limitedMoneyRecord(error);
     const message = error instanceof Error ? error.message : "";
     const expected = ["Your session has expired. Sign in again.", "Choose an active account.", "Enter a positive amount with at most two decimal places.", "Choose a valid date.",
       "Refresh this page before recording interest.", "This interest request was already used with different details.", "This interest payment has already been deleted."];

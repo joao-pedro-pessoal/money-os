@@ -1,6 +1,7 @@
 type Window = { seconds: number; max: number };
 export type WorkPolicy = { user: Window[]; connection: Window[]; simultaneous: number; global: number };
 export const WORK_LIMITS = {
+  "money-record": { user: [{ seconds: 60, max: 30 }, { seconds: 3600, max: 300 }], connection: [{ seconds: 60, max: 120 }, { seconds: 3600, max: 1200 }], simultaneous: 2, global: 16 },
   "fx-manual": { user: [{ seconds: 60, max: 20 }, { seconds: 3600, max: 120 }], connection: [{ seconds: 60, max: 60 }, { seconds: 3600, max: 600 }], simultaneous: 1, global: 8 },
   "fx-refresh": { user: [{ seconds: 60, max: 3 }, { seconds: 3600, max: 12 }], connection: [{ seconds: 60, max: 15 }, { seconds: 3600, max: 100 }], simultaneous: 1, global: 4 },
   "asset-search": { user: [{ seconds: 60, max: 20 }, { seconds: 3600, max: 240 }], connection: [{ seconds: 60, max: 60 }, { seconds: 3600, max: 1200 }], simultaneous: 2, global: 8 },

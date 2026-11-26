@@ -9,6 +9,7 @@ import * as schema from "@/db/schema";
 // client, .env, broker calls or persisted personal data in this suite.
 const isolated = vi.hoisted(() => ({ base: "EUR", signedIn: true, db: null as unknown as PgliteDatabase<typeof schema> }));
 vi.mock("@/db/client", () => ({ get db() { return isolated.db; } }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/actions/session", () => ({ hasSession: async () => isolated.signedIn }));
 vi.mock("@/actions/fx", () => ({ getRates: async () => ({ EUR: 1, USD: 1.25 }) }));
@@ -43,6 +44,7 @@ const budget = (extra: Record<string, string | string[]> = {}) => form({ name: "
 const sub = (extra: Record<string, string> = {}) => form({ name: "Synthetic subscription", amount: "10", cadence: "monthly", currency: "EUR", accountId: "eur-a", categoryId: "food", ...extra });
 
 beforeAll(async () => {
+  vi.stubEnv("APP_SECRET", "synthetic-money-flows-quota-test-only");
   engine = new PGlite();
   isolated.db = drizzle(engine, { schema });
   await migrate(isolated.db, { migrationsFolder: "./drizzle" });
@@ -54,7 +56,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   isolated.base = "EUR";
   isolated.signedIn = true;
-  await engine.exec(`RESET ROLE; DELETE FROM users;
+  await engine.exec(`RESET ROLE; DELETE FROM work_gates; DELETE FROM users;
     INSERT INTO users(id) VALUES ('flow-a'), ('flow-b');
     SET ROLE money_flows_test;
     SELECT set_config('app.user_id','flow-b',false);`);
@@ -80,7 +82,7 @@ afterEach(async () => {
     DROP FUNCTION IF EXISTS synthetic_money_failure();
     SET ROLE money_flows_test;`);
 });
-afterAll(async () => { await engine?.close(); });
+afterAll(async () => { await engine?.close(); vi.unstubAllEnvs(); });
 
 describe("manual money flows against isolated PostgreSQL", () => {
   it("creates, edits and deletes a movement, adjusting the account by each delta exactly once", async () => {
