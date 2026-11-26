@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Запись расходов</string>
     <string name="shortcut_income" formatted="false">Доход</string>
     <string name="shortcut_income_long" formatted="false">Рекордный доход</string>
-    <string name="widget_dashboard_description" formatted="false">Чистый капитал в этом месяце и линия с течением времени</string>
-    <string name="widget_net_worth_description" formatted="false">Чистый капитал с течением времени и как далеко он продвинулся</string>
     <string name="widget_where_money_description" formatted="false">Где деньги, как пончик с процентами</string>
     <string name="widget_cash_flow_description" formatted="false">В этом месяце: деньги получены, деньги выплачены и что осталось</string>
     <string name="widget_investments_description" formatted="false">Стоимость портфеля, нереализованные прибыли и убытки и каждая позиция с ее прибылями и убытками в евро и процентах.</string>

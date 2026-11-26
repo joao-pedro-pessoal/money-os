@@ -2,8 +2,9 @@ import { currentLanguage } from "@/actions/language";
 import { formatFor } from "@/lib/format";
 import { textForRequest } from "@/actions/pageLanguage";
 import ResponsiveTable from "@/components/ResponsiveTable";
-import { listRates, setManualRate } from "@/actions/fx";
+import { listRates } from "@/actions/fx";
 import RateRefresh from "@/components/RateRefresh";
+import ManualRateForm from "@/components/ManualRateForm";
 import { getBaseCurrency } from "@/actions/settings";
 import { DEFAULT_BASE_CURRENCY } from "@/lib/fx";
 import SettingRow from "@/components/SettingRow";
@@ -74,18 +75,7 @@ export default async function SettingsRatesPage() {
         description={uiText("Useful for a currency the provider doesn't cover, or to hold a rate steady while checking figures. {0} is the reference and always equals 1.", { "0": DEFAULT_BASE_CURRENCY })}
         stacked
       >
-        <form action={setManualRate} className="flex gap-2 max-w-md">
-          <input name="quote" placeholder={uiText("Currency (e.g. USD)")} className="input" required />
-          <input
-            name="rate"
-            type="number"
-            step="0.0001"
-            placeholder={uiText("Units per 1 {0}", { "0": DEFAULT_BASE_CURRENCY })}
-            className="input"
-            required
-          />
-          <button type="submit" className="btn whitespace-nowrap">{uiText("Pin")}</button>
-        </form>
+        <ManualRateForm />
       </SettingRow>
     </div>
   );

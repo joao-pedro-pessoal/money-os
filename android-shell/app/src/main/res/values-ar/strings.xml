@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">سجل النفقات</string>
     <string name="shortcut_income" formatted="false">الدخل</string>
     <string name="shortcut_income_long" formatted="false">سجل الدخل</string>
-    <string name="widget_dashboard_description" formatted="false">صافي القيمة، هذا الشهر والخط مع مرور الوقت</string>
-    <string name="widget_net_worth_description" formatted="false">صافي القيمة مع مرور الوقت، وإلى أي مدى انتقلت</string>
     <string name="widget_where_money_description" formatted="false">أين المال، مثل الكعك مع النسب المئوية</string>
     <string name="widget_cash_flow_description" formatted="false">هذا الشهر: دخول المال، خروج المال، وما بقي</string>
     <string name="widget_investments_description" formatted="false">قيمة المحفظة والربح والخسارة غير المحققة وكل مركز مع الربح والخسارة باليورو والنسبة المئوية</string>

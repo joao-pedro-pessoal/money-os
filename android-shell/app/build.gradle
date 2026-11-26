@@ -41,8 +41,8 @@ android {
         minSdk = 29
         targetSdk = 36
         // Google Play refuses an upload whose versionCode is not higher than the last.
-        versionCode = 13
-        versionName = '0.10.0'
+        versionCode = 14
+        versionName = '0.10.1'
     }
 
     buildFeatures {

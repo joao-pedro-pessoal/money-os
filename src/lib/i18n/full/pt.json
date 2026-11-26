@@ -3448,5 +3448,16 @@
   "Move up": "Subir",
   "Move down": "Descer",
   "Save order": "Guardar ordem",
-  "Could not save the order. Try again.": "Não foi possível guardar a ordem. Tenta outra vez."
+  "Could not save the order. Try again.": "Não foi possível guardar a ordem. Tenta outra vez.",
+  "Recorded value over time": "Valor registado ao longo do tempo",
+  "Recorded value changes": "Variações do valor registado",
+  "Change in recorded account and holding values over each period. Includes money added or withdrawn and market movements; this is not an investment return.": "Variação dos valores registados de contas e posições em cada período. Inclui entradas, saídas e movimentos do mercado; não é uma rentabilidade do investimento.",
+  "Falls in recorded value": "Quedas do valor registado",
+  "Understand your recorded savings and account values over time.": "Consulta as poupanças e os valores das contas registados ao longo do tempo.",
+  "Chart: separate debts not deducted.": "Gráfico sem abater dívidas separadas.",
+  "Separate debts are not deducted.": "As dívidas separadas não são descontadas.",
+  "Change unavailable": "Variação indisponível",
+  "Latest recorded date: {0}.": "Data do último registo: {0}.",
+  "Chart through ": "Gráfico até ",
+  "Recorded through ": "Registado até "
 }

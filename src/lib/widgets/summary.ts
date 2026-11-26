@@ -23,8 +23,8 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 /**
  * At most `max` points, always keeping the first and the last.
  *
- * The last point is today's figure, and a line that stops short of it would
- * disagree with the number printed beside it.
+ * The last point is the latest recorded value. It need not match live net
+ * worth: this history does not contain the past balances of separate debts.
  */
 export function downsample(points: WidgetPoint[], max: number): WidgetPoint[] {
   if (max < 2 || points.length <= max) return points.map((p) => ({ date: p.date, value: round2(p.value) }));

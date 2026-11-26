@@ -10,6 +10,7 @@ import { providerJson } from "./providerHttp";
 import { withWork, WorkLimitedError } from "./workGate";
 import { currentLanguage } from "./language";
 import { readText } from "@/lib/accounts/readText";
+import { manualRate, ManualRateError, type ManualRateResult } from "@/lib/fx/manual";
 
 /**
  * Current rates from the DB, always including the base at 1.
@@ -89,22 +90,27 @@ export async function refreshRatesAction() {
 /** Pins a rate by hand; it will survive automatic refreshes. */
 export async function setManualRate(formData: FormData) {
   await requireServerSession();
-  const quote = String(formData.get("quote") ?? "").trim().toUpperCase();
-  const rate = Number(formData.get("rate") ?? "0");
-  if (!quote || !Number.isFinite(rate) || rate <= 0) {
-    throw new Error("Enter a currency and a rate greater than zero");
-  }
-  if (quote === DEFAULT_BASE_CURRENCY) {
-    throw new Error(`The ${DEFAULT_BASE_CURRENCY} reference rate is always 1`);
-  }
+  const { quote, rate } = manualRate(String(formData.get("quote") ?? ""), String(formData.get("rate") ?? ""));
+  await withWork("fx-manual", async () => {
+    const values = { rate, manual: true, fetchedAt: new Date(), source: "manual" };
+    await db.insert(exchangeRates)
+      .values({ base: DEFAULT_BASE_CURRENCY, quote, ...values })
+      .onConflictDoUpdate({ target: [exchangeRates.userId, exchangeRates.quote], set: values });
+  });
 
-  const values = { rate: String(rate), manual: true, fetchedAt: new Date(), source: "manual" };
-  await db.insert(exchangeRates)
-    .values({ base: DEFAULT_BASE_CURRENCY, quote, ...values })
-    .onConflictDoUpdate({ target: [exchangeRates.userId, exchangeRates.quote], set: values });
+  try { revalidatePath("/settings"); revalidatePath("/"); }
+  catch { console.error("fx_revalidation_failed"); }
+}
 
-  revalidatePath("/settings");
-  revalidatePath("/");
+export async function submitManualRate(formData: FormData): Promise<ManualRateResult> {
+  await requireServerSession();
+  try { await setManualRate(formData); return { saved: true }; }
+  catch (error) {
+    const text = readText(await currentLanguage());
+    if (error instanceof ManualRateError) return { error: error.reason === "currency" ? text.fxCurrency : error.reason === "reference" ? text.fxReference : text.fxValue };
+    if (error instanceof WorkLimitedError) return { error: text.limited(error.retryAfter), retryAfter: error.retryAfter };
+    return { error: text.fxUnconfirmed };
+  }
 }
 
 /** Hands a pinned rate back to automatic updates. */

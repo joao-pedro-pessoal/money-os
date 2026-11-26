@@ -33,6 +33,9 @@ final class WidgetData {
 
     final String currency;
     final double netWorth;
+    final double recordedValue;
+    final double recordedChange;
+    final String recordedDate;
     final List<double[]> series = new ArrayList<>();
     final List<String> sliceNames = new ArrayList<>();
     final List<Double> sliceValues = new ArrayList<>();
@@ -85,6 +88,13 @@ final class WidgetData {
         for (int i = 0; i < points.length(); i++) {
             series.add(new double[]{i, points.getJSONObject(i).getDouble("value")});
         }
+        // The chart has account/holding snapshots, not historical debt balances.
+        // Old servers still supply its final point, but no trusted change summary.
+        recordedValue = series.isEmpty() ? Double.NaN : series.get(series.size() - 1)[1];
+        recordedDate = points.length() == 0 ? "" : points.getJSONObject(points.length() - 1).optString("date", "");
+        JSONObject history = json.optJSONObject("history");
+        recordedChange = series.size() >= 2 && history != null && "recorded-assets".equals(history.optString("basis"))
+                ? history.optDouble("change", Double.NaN) : Double.NaN;
         JSONArray where = json.getJSONArray("where");
         for (int i = 0; i < where.length(); i++) {
             sliceNames.add(where.getJSONObject(i).getString("name"));

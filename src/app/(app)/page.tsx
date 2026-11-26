@@ -25,6 +25,7 @@ import { portfolioSummary } from "@/lib/portfolio/positionView";
 import { listPurposes } from "@/actions/purpose";
 import { listGoalsByPriority } from "@/actions/distribute";
 import { getTotalNetWorthOverTime } from "@/actions/analytics";
+import { RECORDED_VALUE_COPY } from "@/lib/accounting/recordedHistory";
 import Link from "next/link";
 import TryQuickEntry from "@/components/TryQuickEntry";
 import { explainFree, splitPortfolioCash } from "@/lib/accounting/unallocated";
@@ -294,10 +295,11 @@ export default async function DashboardPage({
   const subs = await getSubscriptionTotals();
 
   const blocks = await inSavedOrder("dashboard", [
-    { id: "networth", label: uiText("Net worth over time"), node: <>
+    { id: "networth", label: uiText(RECORDED_VALUE_COPY.overTime), node: <>
       {/* Open by default: this is the shape of the whole thing at a glance. */}
       <Section
-        title="Net worth over time"
+        title={RECORDED_VALUE_COPY.overTime}
+        persistKey="Net worth over time"
         defaultOpen
         summary={<Link href="/analytics" className="text-xs text-[var(--accent)]">{uiText("More charts →")}</Link>}
       >
@@ -305,6 +307,7 @@ export default async function DashboardPage({
             with the same helper the cards use — a chart labelled in dollars
             drawing euro values would be the same mislabelling, just harder to
             notice. */}
+        <p className="text-xs text-[var(--muted)] mb-3">{uiText(RECORDED_VALUE_COPY.note)}</p>
         <NetWorthChart
           data={netWorthSeries.map((p) => ({ ...p, netWorth: inDisplay(p.netWorth) }))}
           currency={base}

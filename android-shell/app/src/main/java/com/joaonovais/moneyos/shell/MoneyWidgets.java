@@ -141,7 +141,7 @@ public final class MoneyWidgets {
 
     // ------------------------------------------------------------ drawing
 
-    private static final String[] TITLES = {"Money OS", "Net worth", "Where the money is", "Cash flow",
+    private static final String[] TITLES = {"Money OS", "Recorded value", "Where the money is", "Cash flow",
             "Investments", "Allocation", "Winners & losers", "Dividends", "Open trades"};
     private static final String[] PATHS = {"/", "/analytics", "/", "/transactions",
             "/investments", "/investments/analysis", "/investments", "/investments/dividends", "/positions"};
@@ -171,6 +171,10 @@ public final class MoneyWidgets {
         WidgetData data = WidgetData.cached(context);
         String problem = WidgetData.problem(context);
         views.setTextViewText(R.id.widget_status, status(context, data, problem));
+        if ((kind == 0 || kind == 1) && data != null && data.recordedDate.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            views.setTextViewText(R.id.widget_status, LocalText.text(context, kind == 0 ? "Chart through " : "Recorded through ")
+                    + data.recordedDate + "\n" + status(context, data, problem));
+        }
 
         if (kind == 4) {
             // Every position, in a list that scrolls inside the widget.
@@ -183,6 +187,7 @@ public final class MoneyWidgets {
         }
 
         if (data == null) {
+            if (kind == 0 || kind == 1) views.setViewVisibility(R.id.widget_history_note, View.GONE);
             views.setTextViewText(R.id.widget_value, "—");
             if (kind == 4) {
                 views.setTextViewText(R.id.widget_sub, "");
@@ -204,19 +209,23 @@ public final class MoneyWidgets {
                 views.setTextViewText(R.id.widget_value, WidgetData.money(data.netWorth, data.currency));
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
                 views.setTextViewText(R.id.widget_sub, signed(LocalText.text(context, "This month "), data.net, data.currency));
-                int chartHeight = Math.round(Math.max(20, heightDp - 96) * density);
+                views.setViewVisibility(R.id.widget_history_note, View.VISIBLE);
+                views.setTextViewText(R.id.widget_history_note, LocalText.text(context, "Chart: separate debts not deducted."));
+                int chartHeight = Math.round(Math.max(20, heightDp - 120) * density);
                 views.setViewVisibility(R.id.widget_chart, View.VISIBLE);
                 views.setImageViewBitmap(R.id.widget_chart, Charts.line(data.series, chartWidth, chartHeight, density));
                 break;
             }
-            case 1: { // Net worth over time: the line, and how far it moved.
+            case 1: { // Recorded values: compare only points with the same historical basis.
                 views.setViewVisibility(R.id.widget_legend, View.GONE);
-                views.setTextViewText(R.id.widget_value, WidgetData.money(data.netWorth, data.currency));
+                views.setTextViewText(R.id.widget_value, Double.isFinite(data.recordedValue) ? WidgetData.money(data.recordedValue, data.currency) : "—");
                 views.setViewVisibility(R.id.widget_sub, View.VISIBLE);
-                double change = data.series.size() < 2 ? 0
-                        : data.series.get(data.series.size() - 1)[1] - data.series.get(0)[1];
-                views.setTextViewText(R.id.widget_sub, signed(LocalText.text(context, "Since tracking began "), change, data.currency));
-                int chartHeight = Math.round(Math.max(30, heightDp - 90) * density);
+                views.setTextViewText(R.id.widget_sub, Double.isFinite(data.recordedChange)
+                        ? signed(LocalText.text(context, "Since tracking began "), data.recordedChange, data.currency)
+                        : LocalText.text(context, "Change unavailable"));
+                views.setViewVisibility(R.id.widget_history_note, View.VISIBLE);
+                views.setTextViewText(R.id.widget_history_note, LocalText.text(context, "Separate debts are not deducted."));
+                int chartHeight = Math.round(Math.max(20, heightDp - 114) * density);
                 views.setViewVisibility(R.id.widget_chart, View.VISIBLE);
                 views.setImageViewBitmap(R.id.widget_chart, Charts.line(data.series, chartWidth, chartHeight, density));
                 break;

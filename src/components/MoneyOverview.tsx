@@ -27,6 +27,7 @@ import ProgressBars, { budgetTone } from "./ProgressBars";
 import AccountQuick from "./AccountQuick";
 import ArrangeOrder from "./ArrangeOrder";
 import { inSavedOrder } from "@/actions/orderStore";
+import { RECORDED_VALUE_COPY } from "@/lib/accounting/recordedHistory";
 
 /** Everyday money, using the same totals as the full edition. Never rewrites old data. */
 export default async function MoneyOverview({ analytics = false }: { analytics?: boolean }) {
@@ -104,8 +105,9 @@ export default async function MoneyOverview({ analytics = false }: { analytics?:
       </>}
     </Section>
     </> },
-    { id: "networth", label: "Net worth over time", node: <>
-    <Section title="Net worth over time" defaultOpen={analytics} essential={analytics} summary={analytics ? undefined : openLink("/analytics")}>
+    { id: "networth", label: RECORDED_VALUE_COPY.overTime, node: <>
+    <Section title={RECORDED_VALUE_COPY.overTime} persistKey="Net worth over time" defaultOpen={analytics} essential={analytics} summary={analytics ? undefined : openLink("/analytics")}>
+      <p className="text-xs text-[var(--muted)] mb-3">{t(RECORDED_VALUE_COPY.note)}</p>
       {series.some(point => point.approximate) && <p className="text-xs text-[var(--muted)] mb-3">{t("Historical values are approximate.")}</p>}
       <NetWorthChart data={series.map(point => ({ date:point.date, netWorth:point.netWorth }))} currency={currency} />
     </Section>

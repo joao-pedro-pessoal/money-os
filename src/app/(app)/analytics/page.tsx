@@ -2,6 +2,7 @@ import { currentInvestments } from "@/actions/releaseEdition";
 import MoneyOverview from "@/components/MoneyOverview";
 import { textForRequest } from "@/actions/pageLanguage";
 import { getTotalNetWorthOverTime, getMoneyByLocation } from "@/actions/analytics";
+import { RECORDED_VALUE_COPY } from "@/lib/accounting/recordedHistory";
 import { getPortfolioContribution } from "@/actions/investments";
 import { listBucketsWithTotals } from "@/actions/buckets";
 import { listBudgets } from "@/actions/budgets";
@@ -96,7 +97,7 @@ export default async function AnalyticsPage() {
       <PageTabs tabs={analyticsTabs(investmentsEnabled)} />
 
       <TimeSeriesCard
-        title={uiText("Net worth over time")}
+        title={uiText(RECORDED_VALUE_COPY.overTime)}
         series={netWorthSeries.map((p) => ({ date: p.date, value: p.netWorth }))}
         currency={baseCurrency}
         action={
@@ -109,7 +110,7 @@ export default async function AnalyticsPage() {
           ) : undefined
         }
         note={
-          <>{uiText("Each dot is a day your balances were actually recorded; the lines between them are straight because nothing was measured in between.")}{approximatePoints > 0 && (
+          <>{uiText(RECORDED_VALUE_COPY.note)}{" "}{uiText("Each dot is a day your balances were actually recorded; the lines between them are straight because nothing was measured in between.")}{approximatePoints > 0 && (
               <span className="text-[var(--amber)]">
                 {" "}
                 {approximatePoints}{uiText(" of ")}{netWorthSeries.length}{uiText(" points predate exchange rates being stored with each snapshot, so they use today's rate rather than the rate of their own day.")}</span>

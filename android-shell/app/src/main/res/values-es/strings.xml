@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Gasto récord</string>
     <string name="shortcut_income" formatted="false">Ingresos</string>
     <string name="shortcut_income_long" formatted="false">Ingresos récord</string>
-    <string name="widget_dashboard_description" formatted="false">Patrimonio neto, este mes y línea a lo largo del tiempo.</string>
-    <string name="widget_net_worth_description" formatted="false">Patrimonio neto a lo largo del tiempo y hasta dónde se ha movido</string>
     <string name="widget_where_money_description" formatted="false">Dónde está el dinero, en forma de donut con porcentajes.</string>
     <string name="widget_cash_flow_description" formatted="false">Este mes: entrada de dinero, salida de dinero y lo que queda</string>
     <string name="widget_investments_description" formatted="false">Valor de la cartera, pérdidas y ganancias no realizadas y cada posición con sus pérdidas y ganancias en euros y porcentaje</string>

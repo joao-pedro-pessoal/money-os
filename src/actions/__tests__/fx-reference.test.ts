@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toBase } from "@/lib/fx";
 vi.mock("@/actions/session", () => ({ hasSession: async () => true }));
+vi.mock("@/actions/workGate", async original => ({ ...await original<typeof import("@/actions/workGate")>(), withWork: async (_kind: string, work: () => Promise<unknown>) => work() }));
 
 const fake = vi.hoisted(() => ({
   rows: [] as { quote: string; rate: string }[],

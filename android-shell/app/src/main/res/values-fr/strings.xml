@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Enregistrer les dépenses</string>
     <string name="shortcut_income" formatted="false">Revenu</string>
     <string name="shortcut_income_long" formatted="false">Revenu record</string>
-    <string name="widget_dashboard_description" formatted="false">Valeur nette, ce mois-ci et évolution au fil du temps</string>
-    <string name="widget_net_worth_description" formatted="false">Valeur nette au fil du temps et jusqu\'où elle a évolué</string>
     <string name="widget_where_money_description" formatted="false">Où est l\'argent, comme un beignet avec des pourcentages</string>
     <string name="widget_cash_flow_description" formatted="false">Ce mois-ci : argent entrant, sortant et ce qui reste</string>
     <string name="widget_investments_description" formatted="false">Valeur du portefeuille, P&amp;L latent et chaque position avec son P&amp;L en euros et en pourcentage</string>

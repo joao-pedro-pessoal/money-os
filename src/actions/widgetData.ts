@@ -19,6 +19,7 @@ import { requireServerSession } from "./requestSession";
 import { privateSnapshot } from "./privateSnapshot";
 import { withWork } from "./workGate";
 import type { Language } from "@/lib/i18n/languages";
+import { recordedHistory } from "@/lib/accounting/recordedHistory";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -36,8 +37,9 @@ async function calculateWidget(investmentsEnabled: boolean, language: Language) 
     const now = new Date();
     const locale = localeOf(language);
     const income = month.flows.income.total, expenses = month.flows.expenses.total;
+    const chart = downsample(series.map(p => ({ date: p.date, value: p.netWorth })), 60);
     return {currency:nw.baseCurrency,updatedAt:now.toISOString(),netWorth:round2(nw.total),
-      series:downsample(series.map(p => ({date:p.date,value:p.netWorth})),60),
+      series:chart, history:recordedHistory(chart),
       where:topSlices(composition.map(c => ({name:c.name,value:c.composition.total})),4),
       month:{label:now.toLocaleDateString(locale,{month:"long",year:"numeric"}),income:round2(income),expenses:round2(expenses),net:round2(income-expenses)},
     };
@@ -76,12 +78,14 @@ async function calculateWidget(investmentsEnabled: boolean, language: Language) 
   const now = new Date();
   const thisYear = dividends.byYear.find((y) => y.year === now.getFullYear());
   const next = dividends.upcoming[0];
+  const chart = downsample(series.map(p => ({ date: p.date, value: p.netWorth })), 60);
 
   return {
     currency: base,
     updatedAt: now.toISOString(),
     netWorth: round2(nw.total),
-    series: downsample(series.map((p) => ({ date: p.date, value: p.netWorth })), 60),
+    series: chart,
+    history: recordedHistory(chart),
     where: topSlices(
       composition.map((c) => ({ name: c.name, value: c.composition.total })),
       4
@@ -138,5 +142,5 @@ export async function widgetSnapshot() {
   await requireServerSession();
   const investments = await currentInvestments();
   const language = await currentLanguage();
-  return privateSnapshot(`widget:v1:${investments ? "full" : "money"}:${language.toLowerCase()}`, () => withWork("widget-work", () => calculateWidget(investments, language)));
+  return privateSnapshot(`widget:v2:${investments ? "full" : "money"}:${language.toLowerCase()}`, () => withWork("widget-work", () => calculateWidget(investments, language)));
 }

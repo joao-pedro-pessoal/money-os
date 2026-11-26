@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Ausgaben erfassen</string>
     <string name="shortcut_income" formatted="false">Einkommen</string>
     <string name="shortcut_income_long" formatted="false">Rekordeinkommen</string>
-    <string name="widget_dashboard_description" formatted="false">Nettovermögen, diesen Monat und die Linie im Laufe der Zeit</string>
-    <string name="widget_net_worth_description" formatted="false">Nettovermögen im Laufe der Zeit und wie weit es sich verändert hat</string>
     <string name="widget_where_money_description" formatted="false">Wo das Geld ist, als Donut mit Prozentsätzen</string>
     <string name="widget_cash_flow_description" formatted="false">Diesen Monat: Geld rein, Geld raus und was übrig bleibt</string>
     <string name="widget_investments_description" formatted="false">Portfoliowert, nicht realisierter Gewinn und Verlust und jede Position mit Gewinn und Verlust in Euro und Prozent</string>

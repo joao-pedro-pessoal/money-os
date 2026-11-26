@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Registar despesa</string>
     <string name="shortcut_income" formatted="false">Receita</string>
     <string name="shortcut_income_long" formatted="false">Registar receita</string>
-    <string name="widget_dashboard_description" formatted="false">Património líquido, este mês e a evolução ao longo do tempo</string>
-    <string name="widget_net_worth_description" formatted="false">Património líquido ao longo do tempo e quanto já cresceu</string>
     <string name="widget_where_money_description" formatted="false">Onde está o dinheiro, num anel com percentagens</string>
     <string name="widget_cash_flow_description" formatted="false">Este mês: dinheiro que entrou, que saiu e o que sobra</string>
     <string name="widget_investments_description" formatted="false">Valor da carteira, ganho não realizado e cada posição com o ganho em euros e em percentagem</string>
@@ -30,4 +28,7 @@
     <string name="ui_record_expense" formatted="false">Registar despesa</string>
     <string name="ui_refresh" formatted="false">Atualizar</string>
     <string name="ui_chart" formatted="false">Gráfico</string>
+    <string name="ui_recorded_value" formatted="false">Valor registado</string>
+    <string name="widget_dashboard_recorded_description" formatted="false">Património líquido atual, movimentos do mês e histórico sem descontar dívidas separadas</string>
+    <string name="widget_recorded_value_description" formatted="false">Histórico de contas e posições; dívidas separadas não descontadas</string>
 </resources>

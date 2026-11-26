@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Record expense</string>
     <string name="shortcut_income" formatted="false">Income</string>
     <string name="shortcut_income_long" formatted="false">Record income</string>
-    <string name="widget_dashboard_description" formatted="false">Net worth, this month and the line over time</string>
-    <string name="widget_net_worth_description" formatted="false">Net worth over time, and how far it has moved</string>
     <string name="widget_where_money_description" formatted="false">Where the money is, as a donut with percentages</string>
     <string name="widget_cash_flow_description" formatted="false">This month: money in, money out and what is left</string>
     <string name="widget_investments_description" formatted="false">Portfolio value, unrealized P&amp;L and every position with its P&amp;L in euros and percent</string>
@@ -30,4 +28,7 @@
     <string name="ui_record_expense" formatted="false">Record expense</string>
     <string name="ui_refresh" formatted="false">Refresh</string>
     <string name="ui_chart" formatted="false">Chart</string>
+    <string name="ui_recorded_value" formatted="false">Recorded value</string>
+    <string name="widget_dashboard_recorded_description" formatted="false">Net worth now, monthly cash flow and recorded values excluding separate debts</string>
+    <string name="widget_recorded_value_description" formatted="false">Account and holding snapshots over time; separate debts are not deducted</string>
 </resources>

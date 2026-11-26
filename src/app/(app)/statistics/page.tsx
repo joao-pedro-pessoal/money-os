@@ -10,6 +10,7 @@ import Section from "@/components/Section";
 import TrendsViews from "@/components/TrendsViews";
 import ProjectionScenario from "@/components/ProjectionScenario";
 import IndependencePlan from "@/components/IndependencePlan";
+import { RECORDED_VALUE_COPY } from "@/lib/accounting/recordedHistory";
 
 export default async function StatisticsPage() {
   const investmentsEnabled = await currentInvestments();
@@ -36,7 +37,7 @@ export default async function StatisticsPage() {
       )}
 
       <TrendsViews progress={<>
-        <p className="text-sm text-[var(--muted)]">{uiText("Understand what you have saved and how your net worth has changed.")}</p>
+        <p className="text-sm text-[var(--muted)]">{uiText(RECORDED_VALUE_COPY.progress)}</p>
       {/* ---- Savings & cash flow ---- */}
       <Section
         title="Your monthly cash flow" persistKey="Saving & spending"
@@ -106,8 +107,9 @@ export default async function StatisticsPage() {
       </Section>
 
       {/* ---- Returns by period ---- */}
-      <Section title="Net worth changes" persistKey="How the money has moved" defaultOpen essential>
-        <p className="text-xs text-[var(--muted)] mb-4">{uiText("Change in your recorded net worth over each period. Includes money added or withdrawn as well as market movements; this is not an investment return.")}</p>
+      <Section title={RECORDED_VALUE_COPY.changes} persistKey="How the money has moved" defaultOpen essential>
+        <p className="text-xs text-[var(--muted)] mb-4">{uiText(RECORDED_VALUE_COPY.changesNote)}{" "}{uiText(RECORDED_VALUE_COPY.note)}</p>
+        {s.history.latestDate && <p className="text-xs text-[var(--muted)] mb-4">{uiText(RECORDED_VALUE_COPY.latestDate, { 0: s.history.latestDate })}</p>}
         {s.historyPoints < 2 ? (
           <div className="text-sm text-[var(--muted)] py-6 text-center">{uiText("Not enough history yet. This fills in as balances change — each update adds a point.")}</div>
         ) : (
@@ -144,11 +146,11 @@ export default async function StatisticsPage() {
       {/* ---- Drawdown ---- */}
       {s.drawdown.maxDrawdown > 0 && (
         <Section
-          title="Falls in net worth" persistKey="Worst fall so far"
+          title={RECORDED_VALUE_COPY.falls} persistKey="Worst fall so far"
           defaultOpen
           summary={uiText("{0}% from peak", { "0": s.drawdown.maxDrawdownPercent.toFixed(1) })}
         >
-          <p className="text-xs text-[var(--muted)] mb-4">{uiText("The largest recorded fall from a previous high. Withdrawals and account changes can also cause a fall.")}</p>
+          <p className="text-xs text-[var(--muted)] mb-4">{uiText("The largest recorded fall from a previous high. Withdrawals and account changes can also cause a fall.")}{" "}{uiText(RECORDED_VALUE_COPY.note)}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Stat
               label={uiText("Biggest drop")}

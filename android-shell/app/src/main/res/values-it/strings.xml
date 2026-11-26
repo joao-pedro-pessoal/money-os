@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Registrare le spese</string>
     <string name="shortcut_income" formatted="false">Reddito</string>
     <string name="shortcut_income_long" formatted="false">Entrate record</string>
-    <string name="widget_dashboard_description" formatted="false">Patrimonio netto, questo mese e la linea nel tempo</string>
-    <string name="widget_net_worth_description" formatted="false">Patrimonio netto nel tempo e quanto si è spostato</string>
     <string name="widget_where_money_description" formatted="false">Dove sono i soldi, come una ciambella con le percentuali</string>
     <string name="widget_cash_flow_description" formatted="false">Questo mese: soldi in entrata, soldi in uscita e ciò che resta</string>
     <string name="widget_investments_description" formatted="false">Valore del portafoglio, profitti e perdite non realizzati e ogni posizione con i relativi profitti e perdite in euro e percentuali</string>

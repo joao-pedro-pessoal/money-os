@@ -25,7 +25,7 @@ vi.mock("@/actions/releaseEdition", () => ({
 }));
 vi.mock("@/actions/quotes", () => ({ refreshQuotedPrices: async () => { throw new Error("Synthetic private quote diagnostic"); } }));
 vi.mock("@/actions/connections", () => ({ syncAllConnections: vi.fn() }));
-import { refreshRates, refreshRatesAction, unpinRate } from "../fx";
+import { refreshRates, refreshRatesAction, unpinRate, setManualRate, submitManualRate } from "../fx";
 import { searchAssets } from "../assetSearch";
 import { acquireWork, withScheduledWork } from "../workGate";
 import { GET, POST } from "@/app/api/sync/route";
@@ -72,6 +72,27 @@ beforeEach(async () => {
 afterAll(async () => { if (server) { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); } await engine?.close(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe("outbound quotas and real HTTP stand-ins with migrated PostgreSQL", () => {
+  it("shares the manual-write quota between the raw action and the form, preserving the last confirmed choice", async () => {
+    const form = new FormData(); form.set("quote", "USD"); form.set("rate", "1,2345678901");
+    for (let i = 0; i < 10; i++) { await setManualRate(form); expect(await submitManualRate(form)).toEqual({ saved: true }); }
+    form.set("rate", "9"); fixture.language = "pt";
+    expect(await submitManualRate(form)).toMatchObject({ error: expect.stringContaining("Demasiados"), retryAfter: expect.any(Number) });
+    await expect(setManualRate(form)).rejects.toThrow("Too many");
+    expect((await fixture.db.select().from(schema.exchangeRates).where(eq(schema.exchangeRates.quote, "USD")))[0]).toMatchObject({ rate: "1.2345678901", manual: true });
+    expect(fixture.calls).toEqual([]);
+    await as("outbound-b"); expect(await submitManualRate(form)).toEqual({ saved: true });
+    expect((await fixture.db.select().from(schema.exchangeRates))[0]).toMatchObject({ rate: "9.0000000000", manual: true });
+    await as("outbound-a"); expect((await fixture.db.select().from(schema.exchangeRates).where(eq(schema.exchangeRates.quote, "USD")))[0].rate).toBe("1.2345678901");
+  });
+  it("saves the full decimal precision and rejects invalid rates before any write", async () => {
+    const form = new FormData(); form.set("quote", "CHF"); form.set("rate", "9999999999.9999999999");
+    expect(await submitManualRate(form)).toEqual({ saved: true });
+    expect((await fixture.db.select().from(schema.exchangeRates).where(eq(schema.exchangeRates.quote, "CHF")))[0].rate).toBe("9999999999.9999999999");
+    for (const [quote, rate] of [["EUR", "2"], ["USD", "0.00000000001"], ["USDT", "1"]]) {
+      form.set("quote", quote); form.set("rate", rate); expect(await submitManualRate(form)).toHaveProperty("error");
+    }
+    expect(await fixture.db.select().from(schema.exchangeRates)).toHaveLength(2); expect(fixture.calls).toEqual([]);
+  });
   it("shares the FX budget across direct, legacy and unpin RPCs, without changing a pinned rate on refusal", async () => {
     expect((await refreshRates()).ok).toBe(true); expect((await refreshRatesAction()).ok).toBe(true); expect((await refreshRates()).ok).toBe(true);
     const form = new FormData(); form.set("quote", "USD"); fixture.language = "pt";

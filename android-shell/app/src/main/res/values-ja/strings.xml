@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">経費を記録する</string>
     <string name="shortcut_income" formatted="false">収入</string>
     <string name="shortcut_income_long" formatted="false">過去最高の収入</string>
-    <string name="widget_dashboard_description" formatted="false">今月の純資産と長期にわたるライン</string>
-    <string name="widget_net_worth_description" formatted="false">長期にわたる純資産とその純資産の推移</string>
     <string name="widget_where_money_description" formatted="false">お金はどこにあるのか、パーセンテージ付きのドーナツとして</string>
     <string name="widget_cash_flow_description" formatted="false">今月: 入ったお金、出たお金、そして残ったもの</string>
     <string name="widget_investments_description" formatted="false">ポートフォリオの価値、未実現損益、および損益を含むすべてのポジション（ユーロとパーセント）</string>

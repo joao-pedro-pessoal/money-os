@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Kosten registreren</string>
     <string name="shortcut_income" formatted="false">Inkomen</string>
     <string name="shortcut_income_long" formatted="false">Recordinkomen</string>
-    <string name="widget_dashboard_description" formatted="false">Nettowaarde, deze maand en de lijn in de loop van de tijd</string>
-    <string name="widget_net_worth_description" formatted="false">Het nettovermogen in de loop van de tijd, en hoe ver het is geëvolueerd</string>
     <string name="widget_where_money_description" formatted="false">Waar het geld is, als een donut met percentages</string>
     <string name="widget_cash_flow_description" formatted="false">Deze maand: geld erin, geld eruit en wat er nog over is</string>
     <string name="widget_investments_description" formatted="false">Portefeuillewaarde, ongerealiseerde winst-en-verliesrekening en elke positie met zijn winst-en-verliesrekening in euro\'s en procenten</string>

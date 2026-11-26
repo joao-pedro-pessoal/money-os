@@ -12,7 +12,9 @@ import { seriesFromSnapshots, type SnapshotRow } from "@/lib/fx/historical";
 import { mergeNetWorthSeries } from "@/lib/accounting/composition";
 
 /**
- * Net worth over time, from the frozen conversions on each snapshot.
+ * Recorded account value over time, from each snapshot's frozen conversion.
+ * Separate debts have no snapshot history and are not deducted here. The
+ * legacy function/field names remain for callers; UI labels say recorded value.
  *
  * This function used to sum `balance` straight from the rows, which meant a
  * dollar account's balance was added to a euro account's as if they were the
@@ -83,8 +85,8 @@ export async function getMoneyByLocation() {
 }
 
 /**
- * Net worth over time, including the investments that aren't already in a
- * balance.
+ * Recorded asset value, including investments not already in a balance.
+ * This is not historical net worth: separate debt balances are not recorded.
  *
  * The previous version of this comment claimed "account balances are cash only,
  * so the two series can simply be added — there is no overlap to double count."

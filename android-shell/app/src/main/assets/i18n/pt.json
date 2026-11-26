@@ -77,5 +77,17 @@
   "Where the money is, as a donut with percentages": "Onde está o dinheiro, num anel com percentagens",
   "Winners & losers": "Melhores e piores",
   "Your phone and computer must use the same Wi-Fi, and the site must be running.": "O telemóvel e o computador têm de estar no mesmo Wi-Fi, e o site tem de estar a correr.",
-  "− Expense": "− Despesa"
+  "− Expense": "− Despesa",
+  "Recorded value over time": "Valor registado ao longo do tempo",
+  "Recorded value changes": "Variações do valor registado",
+  "Change in recorded account and holding values over each period. Includes money added or withdrawn and market movements; this is not an investment return.": "Variação dos valores registados de contas e posições em cada período. Inclui entradas, saídas e movimentos do mercado; não é uma rentabilidade do investimento.",
+  "Falls in recorded value": "Quedas do valor registado",
+  "Understand your recorded savings and account values over time.": "Consulta as poupanças e os valores das contas registados ao longo do tempo.",
+  "Chart: separate debts not deducted.": "Gráfico sem abater dívidas separadas.",
+  "Separate debts are not deducted.": "As dívidas separadas não são descontadas.",
+  "Change unavailable": "Variação indisponível",
+  "Recorded value": "Valor registado",
+  "Latest recorded date: {0}.": "Data do último registo: {0}.",
+  "Chart through ": "Gráfico até ",
+  "Recorded through ": "Registado até "
 }

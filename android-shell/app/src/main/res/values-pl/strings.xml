@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Rekordowy wydatek</string>
     <string name="shortcut_income" formatted="false">Dochód</string>
     <string name="shortcut_income_long" formatted="false">Rekordowy dochód</string>
-    <string name="widget_dashboard_description" formatted="false">Wartość netto w tym miesiącu i linia w czasie</string>
-    <string name="widget_net_worth_description" formatted="false">Wartość netto w czasie i jak daleko się przesunęła</string>
     <string name="widget_where_money_description" formatted="false">Gdzie są pieniądze, jak pączek z procentami</string>
     <string name="widget_cash_flow_description" formatted="false">W tym miesiącu: wpłaty, wypłaty i to, co zostało</string>
     <string name="widget_investments_description" formatted="false">Wartość portfela, niezrealizowane zyski i straty oraz każda pozycja z jej zyskami i stratami w euro i procentach</string>

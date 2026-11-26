@@ -77,5 +77,17 @@
   "Where the money is, as a donut with percentages": "钱在哪里，就像一个带有百分比的甜甜圈",
   "Winners & losers": "赢家和输家",
   "Your phone and computer must use the same Wi-Fi, and the site must be running.": "您的手机和计算机必须使用相同的 Wi-Fi，并且该网站必须正在运行。",
-  "− Expense": "− 费用"
+  "− Expense": "− 费用",
+  "Recorded value over time": "Recorded value over time",
+  "Recorded value changes": "Recorded value changes",
+  "Change in recorded account and holding values over each period. Includes money added or withdrawn and market movements; this is not an investment return.": "Change in recorded account and holding values over each period. Includes money added or withdrawn and market movements; this is not an investment return.",
+  "Falls in recorded value": "Falls in recorded value",
+  "Understand your recorded savings and account values over time.": "Understand your recorded savings and account values over time.",
+  "Chart: separate debts not deducted.": "Chart: separate debts not deducted.",
+  "Separate debts are not deducted.": "Separate debts are not deducted.",
+  "Change unavailable": "Change unavailable",
+  "Recorded value": "Recorded value",
+  "Latest recorded date: {0}.": "Latest recorded date: {0}.",
+  "Chart through ": "Chart through ",
+  "Recorded through ": "Recorded through "
 }

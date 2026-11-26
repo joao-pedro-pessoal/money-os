@@ -97,6 +97,7 @@ const entries = [
   ["fx","refreshRates"],
   ["fx","refreshRatesAction"],
   ["fx","setManualRate"],
+  ["fx","submitManualRate"],
   ["fx","unpinRate"],
   ["imports","getExistingKeys"],
   ["imports","commitImport"],

@@ -57,6 +57,17 @@
         android:visibility="gone" />
 
     <TextView
+        android:id="@+id/widget_history_note"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:textColor="#ffb9b1a2"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/widget_legend"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -84,7 +95,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:maxLines="1"
+        android:maxLines="2"
         android:textColor="#ff8a8375"
         android:textSize="10sp" />
 </LinearLayout>

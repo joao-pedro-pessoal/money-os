@@ -22,6 +22,15 @@ paths:
                   currency: {type: string}
                   updatedAt: {type: string, format: date-time}
                   netWorth: {type: number}
+                  history:
+                    description: Recorded account/holding snapshots; excludes separate debts. Independent of live netWorth. Older clients may ignore this field.
+                    type: object
+                    required: [basis, latestValue, change, latestDate]
+                    properties:
+                      basis: {type: string, const: recorded-assets}
+                      latestValue: {type: [number, 'null']}
+                      change: {type: [number, 'null']}
+                      latestDate: {type: [string, 'null'], format: date}
                 additionalProperties: true
         '401': {$ref: '#/components/responses/SessionRequired'}
         '429': {$ref: '#/components/responses/Limited'}

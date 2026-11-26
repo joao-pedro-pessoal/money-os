@@ -4,6 +4,7 @@ import { useFormat } from "@/components/useFormat";
 import { useText } from "@/components/useText";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { usePrivacy } from "./PrivacyContext";
+import { RECORDED_VALUE_COPY } from "@/lib/accounting/recordedHistory";
 
 export default function NetWorthChart({
   data,
@@ -72,6 +73,7 @@ export default function NetWorthChart({
             isAnimationActive={false}
             type="linear"
             dataKey="netWorth"
+            name={uiText(RECORDED_VALUE_COPY.title)}
             stroke="var(--accent)"
             strokeWidth={2}
             fill="url(#nw-gradient)"

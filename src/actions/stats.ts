@@ -5,6 +5,7 @@ import { db } from "@/db/client";
 import { transactions, accounts, buckets, bucketAllocations, holdings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getTotalNetWorthOverTime } from "./analytics";
+import { recordedHistory } from "@/lib/accounting/recordedHistory";
 import { getNetWorth } from "./networth";
 import { getRates } from "./fx";
 import { getBaseCurrency } from "./settings";
@@ -150,6 +151,7 @@ export async function getStatistics() {
     returns: periodReturns(points),
     drawdown: drawdown(points),
     historyPoints: points.length,
+    history: recordedHistory(points),
     flows,
     avgSavingsRate: averageSavingsRate(flows),
     avgMonthlyExpenses,

@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">Gideri kaydedin</string>
     <string name="shortcut_income" formatted="false">Gelir</string>
     <string name="shortcut_income_long" formatted="false">Rekor gelir</string>
-    <string name="widget_dashboard_description" formatted="false">Net değer, bu ay ve zaman içindeki çizgi</string>
-    <string name="widget_net_worth_description" formatted="false">Zaman içindeki net değer ve ne kadar ilerlediği</string>
     <string name="widget_where_money_description" formatted="false">Yüzdeli çörek olarak paranın olduğu yer</string>
     <string name="widget_cash_flow_description" formatted="false">Bu ay: para girdi, para çıktı ve geriye ne kaldı</string>
     <string name="widget_investments_description" formatted="false">Portföy değeri, gerçekleşmemiş K&amp;Z ve P&amp;Z ile birlikte her pozisyon euro ve yüzde olarak</string>

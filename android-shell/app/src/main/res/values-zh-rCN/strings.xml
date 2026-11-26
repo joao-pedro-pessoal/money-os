@@ -8,8 +8,6 @@
     <string name="shortcut_expense_long" formatted="false">记录费用</string>
     <string name="shortcut_income" formatted="false">收入</string>
     <string name="shortcut_income_long" formatted="false">创纪录的收入</string>
-    <string name="widget_dashboard_description" formatted="false">本月净资产以及一段时间内的净资产</string>
-    <string name="widget_net_worth_description" formatted="false">随着时间的推移，净资产以及其变化程度</string>
     <string name="widget_where_money_description" formatted="false">钱在哪里，就像一个带有百分比的甜甜圈</string>
     <string name="widget_cash_flow_description" formatted="false">本月：资金流入、资金流出以及剩余金额</string>
     <string name="widget_investments_description" formatted="false">投资组合价值、未实现损益以及每个头寸及其损益（以欧元和百分比表示）</string>
